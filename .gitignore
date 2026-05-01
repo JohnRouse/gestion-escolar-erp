@@ -1,0 +1,34 @@
+
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Producción
+dist/
+build/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Prisma
+*.db
+*.db-journal
+
+# Docker
+.docker/
+
+# Editor
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Documentación generada
+docs/database/*.png
+docs/flows/*.png
+docs/mockups/*.png
