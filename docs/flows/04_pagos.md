@@ -1,4 +1,3 @@
-markdown
 # Flujo: Gestión de Pagos
 
 ## 1. Diagrama de Actividad

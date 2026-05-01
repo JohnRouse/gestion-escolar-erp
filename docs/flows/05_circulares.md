@@ -1,4 +1,3 @@
-markdown
 # Flujo: Envío de Circulares
 
 ## 1. Diagrama de Actividad

@@ -1,4 +1,3 @@
-markdown
 # Flujo: Proceso de Matrícula
 
 ## 1. Diagrama de Actividad

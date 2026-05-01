@@ -1,4 +1,3 @@
-markdown
 # Flujo: Registro de Calificaciones
 
 ## 1. Diagrama de Actividad

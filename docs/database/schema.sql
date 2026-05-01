@@ -1,5 +1,9 @@
 -- =====================================================================
--- SISTEMA DE GESTIÓN ESCOLAR ERP - MODELO DE DATOS OPTIMIZADO
+-- SISTEMA DE GESTIÓN ESCOLAR ERP - MODELO DE DATOS OPTIMIZADO v1.1
+-- Correcciones aplicadas:
+--   - Índice en apoderado_estudiante(id_estudiante)
+--   - PRIMARY KEY compuesta en circular_destinatario
+--   - Índice en pago_transaccion(id_cronograma) para consultas frecuentes
 -- =====================================================================
 CREATE DATABASE IF NOT EXISTS gestion_escolar_erp;
 USE gestion_escolar_erp;
@@ -289,6 +293,7 @@ CREATE TABLE circular_destinatario (
     id_circular INT NOT NULL,
     id_nivel TINYINT,
     id_seccion INT,
+    PRIMARY KEY (id_circular, id_nivel, id_seccion),
     FOREIGN KEY (id_circular) REFERENCES circular(id_circular),
     FOREIGN KEY (id_nivel) REFERENCES nivel(id_nivel),
     FOREIGN KEY (id_seccion) REFERENCES seccion(id_seccion)
@@ -304,3 +309,5 @@ CREATE INDEX idx_cronograma_vencimiento ON cronograma_pagos(fecha_vencimiento, e
 CREATE INDEX idx_asignacion_docente_anio ON asignacion_docente(id_docente, id_anio);
 CREATE INDEX idx_asistencia_fecha ON asistencia(fecha);
 CREATE INDEX idx_circular_fecha ON circular(fecha_creacion);
+CREATE INDEX idx_apoderado_estudiante_est ON apoderado_estudiante(id_estudiante);
+CREATE INDEX idx_pago_transaccion_cronograma ON pago_transaccion(id_cronograma);
