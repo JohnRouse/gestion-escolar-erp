@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ── MÓDULO DE IDENTIDAD Y ACCESO ──
+model Rol {
+  id_rol     Int       @id @default(autoincrement())
+  nombre_rol String    @unique @db.VarChar(50)
+  usuarios   Usuario[]
+}
+
+model Persona {
+  id_persona       Int          @id @default(autoincrement())
+  dni              String       @unique @db.Char(8)
+  nombres          String       @db.VarChar(100)
+  apellido_paterno String       @db.VarChar(100)
+  apellido_materno String       @db.VarChar(100)
+  fecha_nacimiento DateTime     @db.Date
+  genero           String?      @db.VarChar(1)
+  direccion        String?      @db.VarChar(255)
+  telefono         String?      @db.VarChar(20)
+  correo           String?      @unique @db.VarChar(150)
+  created_at       DateTime     @default(now()) @db.Timestamp(0)
+  usuarios         Usuario[]
+  apoderados       Apoderado[]
+  docentes         Docente[]
+  estudiantes      Estudiante[]
+}
+
+model Usuario {
+  id_usuario    Int               @id @default(autoincrement())
+  username      String            @unique @db.VarChar(50)
+  password_hash String            @db.VarChar(255)
+  id_persona    Int
+  id_rol        Int
+  estado        Boolean           @default(true)
+  persona       Persona           @relation(fields: [id_persona], references: [id_persona])
+  rol           Rol               @relation(fields: [id_rol], references: [id_rol])
+  pagos_cajero  PagoTransaccion[]
+  circulares    Circular[]
+}
+
+// ── MÓDULO ACADÉMICO ──
+model Nivel {
+  id_nivel     Int                    @id @default(autoincrement())
+  nombre_nivel String                 @db.VarChar(50)
+  grados       Grado[]
+  circulares   CircularDestinatario[]
+}
+
+model Grado {
+  id_grado     Int       @id @default(autoincrement())
+  nombre_grado String    @db.VarChar(50)
+  id_nivel     Int
+  nivel        Nivel     @relation(fields: [id_nivel], references: [id_nivel])
+  secciones    Seccion[]
+}
+
+model Aula {
+  id_aula     Int       @id @default(autoincrement())
+  nombre_aula String    @db.VarChar(50)
+  capacidad   Int       @db.TinyInt
+  secciones   Seccion[]
+}
+
+model Seccion {
+  id_seccion   Int                    @id @default(autoincrement())
+  letra        String                 @db.Char(1)
+  id_grado     Int
+  id_aula      Int
+  grado        Grado                  @relation(fields: [id_grado], references: [id_grado])
+  aula         Aula                   @relation(fields: [id_aula], references: [id_aula])
+  matriculas   Matricula[]
+  asignaciones AsignacionDocente[]
+  circulares   CircularDestinatario[]
+}
+
+model AreaCurricular {
+  id_area        Int                   @id @default(autoincrement())
+  nombre_area    String                @db.VarChar(100)
+  cursos         Curso[]
+  especialidades DocenteEspecialidad[]
+}
+
+model Curso {
+  id_curso     Int                 @id @default(autoincrement())
+  nombre_curso String              @db.VarChar(100)
+  id_area      Int
+  area         AreaCurricular      @relation(fields: [id_area], references: [id_area])
+  asignaciones AsignacionDocente[]
+}
+
+// ── MÓDULO DE TIEMPO ──
+model AnioLectivo {
+  id_anio      Int                 @id @default(autoincrement())
+  nombre_anio  String              @db.VarChar(50)
+  fecha_inicio DateTime            @db.Date
+  fecha_fin    DateTime            @db.Date
+  estado       String              @default("Planificación") @db.VarChar(20)
+  bimestres    Bimestre[]
+  matriculas   Matricula[]
+  conceptos    ConceptoPago[]
+  asignaciones AsignacionDocente[]
+}
+
+model Bimestre {
+  id_bimestre  Int         @id @default(autoincrement())
+  numero       Int         @db.TinyInt
+  fecha_inicio DateTime    @db.Date
+  fecha_fin    DateTime    @db.Date
+  id_anio      Int
+  anio         AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+  unidades     Unidad[]
+}
+
+model Unidad {
+  id_unidad      Int                 @id @default(autoincrement())
+  numero         Int                 @db.TinyInt
+  fecha_inicio   DateTime            @db.Date
+  fecha_fin      DateTime            @db.Date
+  id_bimestre    Int
+  estado_abierto Boolean             @default(false)
+  bimestre       Bimestre            @relation(fields: [id_bimestre], references: [id_bimestre])
+  evaluaciones   EvaluacionDetalle[]
+}
+
+// ── ACTORES ──
+model Apoderado {
+  id_persona  Int                   @id
+  ocupacion   String?               @db.VarChar(100)
+  persona     Persona               @relation(fields: [id_persona], references: [id_persona])
+  estudiantes ApoderadoEstudiante[]
+  pagos       PagoTransaccion[]
+}
+
+model Docente {
+  id_persona     Int                   @id
+  fecha_ingreso  DateTime?             @db.Date
+  persona        Persona               @relation(fields: [id_persona], references: [id_persona])
+  especialidades DocenteEspecialidad[]
+  asignaciones   AsignacionDocente[]
+}
+
+model Estudiante {
+  id_persona        Int                   @id
+  codigo_estudiante String                @unique @db.VarChar(20)
+  persona           Persona               @relation(fields: [id_persona], references: [id_persona])
+  apoderados        ApoderadoEstudiante[]
+  matriculas        Matricula[]
+}
+
+model ApoderadoEstudiante {
+  id_apoderado  Int
+  id_estudiante Int
+  parentesco    String     @db.VarChar(30)
+  apoderado     Apoderado  @relation(fields: [id_apoderado], references: [id_persona])
+  estudiante    Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+
+  @@id([id_apoderado, id_estudiante])
+  @@index([id_estudiante])
+}
+
+model DocenteEspecialidad {
+  id_docente Int
+  id_area    Int
+  docente    Docente        @relation(fields: [id_docente], references: [id_persona])
+  area       AreaCurricular @relation(fields: [id_area], references: [id_area])
+
+  @@id([id_docente, id_area])
+}
+
+// ── MATRÍCULA ──
+model Matricula {
+  id_matricula     Int               @id @default(autoincrement())
+  id_estudiante    Int
+  id_seccion       Int
+  id_anio          Int
+  fecha_matricula  DateTime          @default(now())
+  estado_matricula String            @default("Activo") @db.VarChar(20)
+  estudiante       Estudiante        @relation(fields: [id_estudiante], references: [id_persona])
+  seccion          Seccion           @relation(fields: [id_seccion], references: [id_seccion])
+  anio             AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
+  notas            NotaAlumno[]
+  asistencias      Asistencia[]
+  cronogramas      CronogramaPagos[]
+
+  @@index([id_estudiante, id_anio])
+  @@index([id_seccion])
+}
+
+// ── ASIGNACIÓN DOCENTE Y EVALUACIONES ──
+model AsignacionDocente {
+  id_asignacion Int                 @id @default(autoincrement())
+  id_docente    Int
+  id_curso      Int
+  id_seccion    Int
+  id_anio       Int
+  docente       Docente             @relation(fields: [id_docente], references: [id_persona])
+  curso         Curso               @relation(fields: [id_curso], references: [id_curso])
+  seccion       Seccion             @relation(fields: [id_seccion], references: [id_seccion])
+  anio          AnioLectivo         @relation(fields: [id_anio], references: [id_anio])
+  evaluaciones  EvaluacionDetalle[]
+
+  @@index([id_docente, id_anio])
+}
+
+model TipoEvaluacion {
+  id_tipo_eval Int                 @id @default(autoincrement())
+  nombre_tipo  String              @db.VarChar(50)
+  evaluaciones EvaluacionDetalle[]
+}
+
+model EvaluacionDetalle {
+  id_evaluacion_det     Int               @id @default(autoincrement())
+  id_asignacion         Int
+  id_unidad             Int
+  id_tipo_eval          Int
+  descripcion_actividad String?           @db.VarChar(100)
+  fecha_evaluacion      DateTime?         @db.Date
+  asignacion            AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
+  unidad                Unidad            @relation(fields: [id_unidad], references: [id_unidad])
+  tipo                  TipoEvaluacion    @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
+  notas                 NotaAlumno[]
+}
+
+model EscalaCalificacion {
+  id_escala         Int     @id @default(autoincrement())
+  nombre_escala     String  @db.VarChar(50)
+  nota_minima       Decimal @db.Decimal(4, 2)
+  nota_maxima       Decimal @db.Decimal(4, 2)
+  nota_aprobatoria  Decimal @db.Decimal(4, 2)
+  tipo_calificacion String  @default("Numérica") @db.VarChar(20)
+}
+
+model NotaAlumno {
+  id_nota           Int               @id @default(autoincrement())
+  id_matricula      Int
+  id_evaluacion_det Int
+  valor_nota        Decimal           @db.Decimal(4, 2)
+  comentario        String?           @db.Text
+  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
+  evaluacion        EvaluacionDetalle @relation(fields: [id_evaluacion_det], references: [id_evaluacion_det])
+
+  @@index([id_matricula])
+}
+
+// ── ASISTENCIA ──
+model Asistencia {
+  id_asistencia Int       @id @default(autoincrement())
+  id_matricula  Int
+  fecha         DateTime  @db.Date
+  estado        String    @db.VarChar(20)
+  matricula     Matricula @relation(fields: [id_matricula], references: [id_matricula])
+
+  @@unique([id_matricula, fecha])
+  @@index([fecha])
+}
+
+// ── MÓDULO DE PAGOS ──
+model ConceptoPago {
+  id_concepto     Int               @id @default(autoincrement())
+  nombre_concepto String            @db.VarChar(100)
+  monto_base      Decimal           @db.Decimal(10, 2)
+  id_anio         Int
+  es_pension      Boolean           @default(true)
+  anio            AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
+  cronogramas     CronogramaPagos[]
+}
+
+model CronogramaPagos {
+  id_cronograma     Int               @id @default(autoincrement())
+  id_matricula      Int
+  id_concepto       Int
+  fecha_vencimiento DateTime          @db.Date
+  estado_pago       String            @default("Pendiente") @db.VarChar(20)
+  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
+  concepto          ConceptoPago      @relation(fields: [id_concepto], references: [id_concepto])
+  pagos             PagoTransaccion[]
+
+  @@index([fecha_vencimiento, estado_pago])
+}
+
+model PagoTransaccion {
+  id_transaccion    Int             @id @default(autoincrement())
+  id_cronograma     Int
+  id_apoderado      Int
+  id_usuario_cajero Int
+  monto_pagado      Decimal         @db.Decimal(10, 2)
+  fecha_pago        DateTime        @default(now())
+  metodo_pago       String?         @db.VarChar(20)
+  nro_operacion     String?         @db.VarChar(50)
+  cronograma        CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
+  apoderado         Apoderado       @relation(fields: [id_apoderado], references: [id_persona])
+  cajero            Usuario         @relation(fields: [id_usuario_cajero], references: [id_usuario])
+
+  @@index([id_cronograma])
+}
+
+// ── CIRCULARES ──
+model Circular {
+  id_circular          Int                    @id @default(autoincrement())
+  titulo               String                 @db.VarChar(150)
+  contenido            String                 @db.Text
+  fecha_creacion       DateTime               @default(now())
+  remitente_id_usuario Int
+  remitente            Usuario                @relation(fields: [remitente_id_usuario], references: [id_usuario])
+  destinatarios        CircularDestinatario[]
+
+  @@index([fecha_creacion])
+}
+
+model CircularDestinatario {
+  id          Int      @id @default(autoincrement())
+  id_circular Int
+  id_nivel    Int?
+  id_seccion  Int?
+  circular    Circular @relation(fields: [id_circular], references: [id_circular])
+  nivel       Nivel?   @relation(fields: [id_nivel], references: [id_nivel])
+  seccion     Seccion? @relation(fields: [id_seccion], references: [id_seccion])
+
+  @@unique([id_circular, id_nivel, id_seccion])
+}
