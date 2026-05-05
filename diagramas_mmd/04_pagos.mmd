@@ -1,0 +1,35 @@
+graph TD
+    A[Secretaria: Intranet - Módulo Tesorería] --> B[Sistema: Buscador de alumno + filtros]
+    B --> C[Secretaria: Busca alumno y selecciona 'Ver estado de cuenta']
+    C --> D[Sistema: Muestra deudas con concepto, vencimiento, monto y estado]
+    D --> E[Secretaria: Selecciona deudas pendientes - Click 'Registrar pago']
+    E --> F[Sistema: Muestra modal con monto total, método de pago, nro operación]
+    F --> G[Secretaria: Completa datos y confirma]
+    G --> H{Sistema: Validaciones}
+    H -->|Deuda ya pagada| I[Error: Cronograma ya fue pagado]
+    H -->|Monto inválido| J[Error: Monto incorrecto]
+    H -->|OK| K[Sistema: Inserta pago_transaccion]
+    K --> L[Sistema: Actualiza cronograma a 'Pagado']
+    L --> M[Sistema: Muestra confirmación y opción de comprobante]
+    M --> N[Apoderado: Consulta estado de cuenta desde la app]
+graph TD
+    A[Secretaria: Confirma matrícula] --> B[Sistema: Crea matricula]
+    B --> C[Sistema: Lee conceptos_pago del año lectivo]
+    C --> D[Por cada concepto, genera un registro en cronograma_pagos]
+    D --> E{¿Es pensión mensual?}
+    E -->|Sí| F[Asigna fecha de vencimiento: día 5 de cada mes]
+    E -->|No| G[Asigna fecha de vencimiento: día hábil siguiente]
+    F --> H[Cronograma_pagos creado con estado Pendiente]
+    G --> H
+    H --> I[Apoderado puede ver deudas en su app]
+graph TD
+    A[Apoderado: App - Ver estado de cuenta] --> B[Selecciona deudas pendientes]
+    B --> C[Click en 'Pagar en línea']
+    C --> D[Sistema: Redirige a pasarela de pagos]
+    D --> E[Apoderado: Ingresa datos de tarjeta/transferencia]
+    E --> F{Pasarela: ¿Pago exitoso?}
+    F -->|Sí| G[Pasarela notifica al backend]
+    G --> H[Sistema: Registra pago_transaccion automáticamente]
+    H --> I[Sistema: Actualiza cronograma a 'Pagado']
+    I --> J[Sistema: Envía comprobante por correo]
+    F -->|No| K[Sistema: Muestra error y permite reintentar]

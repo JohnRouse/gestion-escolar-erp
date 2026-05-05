@@ -1,0 +1,27 @@
+{
+  "name": "gestion-escolar-erp",
+  "version": "1.0.0",
+  "description": "ERP completo para institución educativa con niveles Inicial, Primaria y Secundaria.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JohnRouse/gestion-escolar-erp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/JohnRouse/gestion-escolar-erp/issues"
+  },
+  "homepage": "https://github.com/JohnRouse/gestion-escolar-erp#readme",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^11.14.0"
+  }
+}

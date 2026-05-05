@@ -1,0 +1,15 @@
+graph TD
+    A[Docente: Ingresa a Intranet - Módulo Asistencia] --> B[Sistema: Muestra selector de sección y fecha]
+    B --> C[Docente: Selecciona sección y fecha - Click Cargar]
+    C --> D{Sistema: ¿Ya existe asistencia para esa fecha?}
+    D -->|No| E[Sistema: Muestra lista con todos en 'Presente']
+    D -->|Sí| F[Sistema: Muestra lista con estados actuales - permite editar]
+    E --> G[Docente: Cambia estados: Ausente, Tardanza, Justificado]
+    F --> G
+    G --> H[Docente: Click en Guardar]
+    H --> I{Sistema: Validaciones}
+    I -->|Bimestre cerrado| J[Error: No se puede modificar asistencia]
+    I -->|Sin permiso| K[Error: No autorizado]
+    I -->|OK| L[Sistema: Inserta/Actualiza registros en asistencia]
+    L --> M[Sistema: Muestra mensaje de éxito]
+    M --> N[Padre: Puede consultar asistencia desde la app]

@@ -1,0 +1,20 @@
+graph TD
+    A[Directivo/Secretaria: Intranet - Módulo Circulares] --> B[Sistema: Muestra historial y botón Nueva circular]
+    B --> C[Directivo: Click en Nueva circular]
+    C --> D[Sistema: Muestra formulario - título, contenido, adjunto, destinatarios]
+    D --> E[Directivo: Completa, selecciona niveles o secciones, adjunta archivo]
+    E --> F[Directivo: Click en Enviar]
+    F --> G{Sistema: Validaciones}
+    G -->|Sin destinatarios| H[Error: Seleccione al menos un destinatario]
+    G -->|OK| I[Sistema: Inserta circular y destinatarios]
+    I --> J[Sistema: Envía notificaciones push/correo a apoderados]
+    J --> K[Padre: Recibe notificación y consulta circular en la app]
+graph TD
+    A[Padre: App - Módulo Circulares] --> B[Sistema: Obtiene secciones/niveles de sus hijos]
+    B --> C[Sistema: Muestra circulares relevantes ordenadas por fecha]
+    C --> D[Padre: Puede filtrar por fecha o buscar por palabra clave]
+    D --> E[Padre: Selecciona una circular]
+    E --> F[Sistema: Muestra detalle completo]
+    F --> G{¿Tiene archivo adjunto?}
+    G -->|Sí| H[Padre: Puede descargar o visualizar el adjunto]
+    G -->|No| I[Fin de la consulta]

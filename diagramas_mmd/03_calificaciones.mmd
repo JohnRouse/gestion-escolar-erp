@@ -1,0 +1,40 @@
+graph TD
+    A[Docente: Intranet - Módulo Notas] --> B[Sistema: Muestra filtros - Asignación, Bimestre, Unidad]
+    B --> C[Docente: Selecciona y carga]
+    C --> D{Sistema: ¿Existen evaluaciones creadas?}
+    D -->|No| E[Docente: Crea nueva evaluación]
+    D -->|Sí| F[Docente: Selecciona evaluación existente]
+    E --> F
+    F --> G[Sistema: Muestra tabla de alumnos para cargar notas]
+    G --> H[Docente: Ingresa notas y comentarios]
+    H --> I[Docente: Click en Guardar]
+    I --> J{Sistema: Validaciones}
+    J -->|Unidad cerrada| K[Error: No se puede modificar]
+    J -->|Nota fuera de rango| L[Error: Nota inválida]
+    J -->|OK| M[Sistema: Guarda en nota_alumno]
+    M --> N[Director: Puede cerrar unidad cuando finaliza]
+    N --> O[Sistema: Calcula promedios y bloquea edición]
+    O --> P[Padre: Consulta calificaciones desde la app]
+graph TD
+    A[Docente: Intranet - Módulo Notas] --> B[Docente: Selecciona pestaña 'Por unidad completa']
+    B --> C[Sistema: Muestra filtros - Sección, Curso, Bimestre, Unidad]
+    C --> D[Docente: Selecciona y presiona 'Cargar grilla']
+    D --> E[Sistema: Genera grilla con alumnos en filas y todas las evaluaciones de la unidad en columnas]
+    E --> F[Docente: Llena las notas celda por celda desde su formato físico]
+    F --> G[Docente: Click en 'Guardar todos los cambios']
+    G --> H{Sistema: Validaciones}
+    H -->|Unidad cerrada| I[Error: No se puede modificar]
+    H -->|Nota fuera de rango| J[Error: Nota inválida en celda X]
+    H -->|OK| K[Sistema: Guarda todas las notas de la unidad en una sola transacción]
+    K --> L[Sistema: Muestra grilla con promedios calculados automáticamente]
+    L --> M[Docente: Puede imprimir formato físico vacío desde la misma pantalla]
+graph TD
+    A[Director: Intranet - Módulo Académico] --> B[Selecciona bimestre y unidad]
+    B --> C[Revisa que todas las notas estén completas]
+    C --> D{¿Todas las evaluaciones tienen notas?}
+    D -->|No| E[Sistema: Muestra evaluaciones pendientes]
+    D -->|Sí| F[Director: Click en 'Cerrar unidad']
+    F --> G[Sistema: Calcula promedio de la unidad por alumno]
+    G --> H[Sistema: Marca unidad como cerrada]
+    H --> I[Sistema: Calcula promedio del bimestre]
+    I --> J[Padre y Docente ya no pueden modificar notas de esa unidad]

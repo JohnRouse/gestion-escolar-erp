@@ -1,0 +1,32 @@
+graph TD
+    A[Secretaria: Ingresa a Intranet] --> B[Sistema: Muestra formulario de matrícula]
+    B --> C{Secretaria: Busca alumno por DNI}
+    C -->|No existe| D[Secretaria: Click en 'Registrar nuevo alumno']
+    D --> E[Secretaria: Llena datos de persona y apoderado]
+    E --> F[Sistema: Guarda persona, apoderado y usuario]
+    C -->|Ya existe| G[Secretaria: Selecciona alumno de la lista]
+    F --> H[Sistema: Muestra segunda parte del formulario]
+    G --> H
+    H --> I[Secretaria: Selecciona Nivel, Grado, Sección y apoderado]
+    I --> J[Secretaria: Click en 'Matricular']
+    J --> K{Sistema: Validaciones}
+    K -->|Matrícula duplicada| L[Error: El alumno ya está matriculado en este año]
+    K -->|Sección sin cupo| M[Error: Sección llena, elija otra]
+    K -->|Campos incompletos| N[Error: Complete todos los campos obligatorios]
+    K -->|Validaciones OK| O[Sistema: Crea matrícula en estado Activo]
+    O --> P[Sistema: Genera deudas en cronograma_pagos]
+    P --> Q[Sistema: Registra relación apoderado-estudiante]
+    Q --> R[Sistema: Muestra mensaje de éxito]
+    R --> S[Sistema: Envía notificación al apoderado]
+graph TD
+    A[Secretaria: Selecciona 'Renovar matrícula'] --> B[Sistema: Muestra alumnos del año anterior]
+    B --> C[Secretaria: Selecciona alumno a renovar]
+    C --> D[Sistema: Sugiere siguiente grado según promoción]
+    D --> E{¿Alumno repitió?}
+    E -->|No| F[Sistema: Asigna automáticamente el siguiente grado]
+    E -->|Sí| G[Secretaria: Selecciona manualmente el mismo grado]
+    F --> H[Secretaria: Selecciona sección disponible]
+    G --> H
+    H --> I[Secretaria: Confirma matrícula]
+    I --> J[Sistema: Ejecuta validaciones de cupo y duplicados]
+    J --> K[Sistema: Crea matrícula y genera deudas]

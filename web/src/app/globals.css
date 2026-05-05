@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #1E1B4B;
+  --color-indigo: #3730A3;
+  --color-violet: #6D28D9;
+  --color-purple-lt: #EDE9FE;
+  --color-green-lt: #DCFCE7;
+  --color-green: #16A34A;
+  --color-red-lt: #FEE2E2;
+  --color-red: #DC2626;
+  --color-amber-lt: #FEF3C7;
+  --color-amber: #D97706;
+  --color-blue-lt: #DBEAFE;
+  --color-blue: #2563EB;
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-700: #374151;
+  --color-gray-900: #111827;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 font-sans;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors;
+  }
+  .btn-primary {
+    @apply bg-navy text-white border-navy hover:bg-indigo hover:border-indigo;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo focus:ring-2 focus:ring-purple-lt;
+  }
+  .label {
+    @apply block text-xs font-medium text-gray-600 mb-1;
+  }
+  .card {
+    @apply bg-white border border-gray-200 rounded-xl shadow-sm;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-green  { @apply bg-green-lt text-green; }
+  .badge-red    { @apply bg-red-lt text-red; }
+  .badge-amber  { @apply bg-amber-lt text-amber; }
+  .badge-blue   { @apply bg-blue-lt text-blue; }
+  .badge-purple { @apply bg-purple-lt text-indigo; }
+}
