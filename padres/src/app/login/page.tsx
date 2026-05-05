@@ -12,36 +12,31 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
+  try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const response = await axios.post(`${apiUrl}/auth/login`, {
+      username,
+      password,
+    });
 
-    try {
-      const response = await axios.post(`${apiUrl}/auth/login`, {
-        username,
-        password,
-      });
-
-      const { access_token, user } = response.data;
-
-      // Guardar token y datos de usuario en localStorage
-      localStorage.setItem("token", access_token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // Redirigir al dashboard
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response) {
-        setError(err.response.data.message || "Credenciales inválidas");
-      } else {
-        setError("Error de conexión con el servidor");
-      }
-    } finally {
-      setLoading(false);
+    const { access_token, user } = response.data;
+    localStorage.setItem("token", access_token);
+    localStorage.setItem("user", JSON.stringify(user));
+    window.location.href = "/dashboard";
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response) {
+      setError(err.response.data.message || "Credenciales inválidas");
+    } else {
+      setError("Error de conexión con el servidor");
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
