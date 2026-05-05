@@ -4,6 +4,7 @@ import { AcademicosModule } from './academicos/academicos.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
 import { ComunicacionesModule } from './comunicaciones/comunicaciones.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { CalificacionesModule } from './calificaciones/calificaciones.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AcademicosModule,
     FinanzasModule,
     ComunicacionesModule,
+    CalificacionesModule,
   ],
   controllers: [],
   providers: [],

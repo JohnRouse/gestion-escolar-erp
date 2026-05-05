@@ -201,6 +201,16 @@ await prisma.usuario.upsert({
     estado: true,
   },
 });
+
+await prisma.evaluacionDetalle.createMany({
+  data: [
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 1', fecha_evaluacion: new Date('2025-03-10') },
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 2', fecha_evaluacion: new Date('2025-03-17') },
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 4, descripcion_actividad: 'Examen', fecha_evaluacion: new Date('2025-03-24') },
+  ],
+  skipDuplicates: true,
+});
+
 // Asignar al docente a la sección 1 (Inicial 3 años A) en el año 1, curso Matemática (id_curso=2)
 await prisma.asignacionDocente.upsert({
   where: { id_asignacion: 1 },
