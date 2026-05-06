@@ -79,14 +79,15 @@ export default function AsistenciaPage() {
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#E5E7EB" strokeWidth="3" />
                 <circle
-                  cx="18"
-                  cy="18"
-                  r="15.9"
-                  fill="none"
-                  stroke="#16A34A"
-                  strokeWidth="3"
-                  strokeDasharray={`${porcentaje} 100`}
-                />
+  cx="18"
+  cy="18"
+  r="15.9"
+  fill="none"
+  stroke="#16A34A"
+  strokeWidth="3"
+  strokeDasharray={`${porcentaje} 100`}
+  strokeLinecap="round"
+/>
               </svg>
               <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-navy">
                 {porcentaje}%

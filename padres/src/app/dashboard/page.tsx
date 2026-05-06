@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import { LogOut } from 'lucide-react';
 
 interface Hijo {
   id_estudiante: number;
@@ -142,24 +143,24 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-gray-50 pb-16">
       {/* Topbar */}
-      <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-purple-lt flex items-center justify-center text-xs font-semibold text-indigo">
-            {user.nombre
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
-          </div>
-          <div>
-            <p className="text-xs font-medium">{user.nombre}</p>
-            <p className="text-[10px] text-gray-400">Apoderado</p>
-          </div>
-        </div>
-        <div className="relative">
-          <span className="text-lg">🔔</span>
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red rounded-full"></span>
-        </div>
-      </header>
+      <header className="bg-white border-b border-border px-4 py-3 flex items-center justify-between">
+  <div className="flex items-center gap-3">
+    <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-sm font-semibold text-primary">
+      {user.nombre.charAt(0)}
+    </div>
+    <div>
+      <p className="text-xs font-semibold text-text">{user.nombre}</p>
+      <p className="text-[10px] text-text-secondary">Apoderado</p>
+    </div>
+  </div>
+  <button
+    onClick={handleLogout}
+    className="text-text-muted hover:text-danger transition-colors p-2"
+    title="Cerrar sesión"
+  >
+    <LogOut size={18} />
+  </button>
+</header>
 
       {/* Selector de hijo */}
       {hijos.length > 1 && (
@@ -223,19 +224,25 @@ export default function DashboardPage() {
             </div>
 
             {/* Estado de pagos */}
-            <div className="card p-4 flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-gray-400 mb-1">Estado de pagos</p>
-                <p className="text-sm font-medium text-gray-900">{dashboardData?.estadoPagos}</p>
-              </div>
-              <span
-                className={`badge ${
-                  dashboardData?.estadoPagos === "Al día" ? "badge-green" : "badge-amber"
-                }`}
-              >
-                {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Pendiente"}
-              </span>
-            </div>
+            <div className={`card p-4 flex justify-between items-center ${
+  dashboardData?.estadoPagos === "Al día"
+    ? "border-success/30 bg-success-light/30"
+    : "border-warning/30 bg-warning-light/30"
+}`}>
+  <div>
+    <p className="text-[10px] text-text-secondary mb-1 font-semibold uppercase tracking-wide">
+      Estado de pagos
+    </p>
+    <p className="text-sm font-semibold text-text">
+      {dashboardData?.estadoPagos === "Al día" ? "Al día" : `${dashboardData?.estadoPagos} pendiente`}
+    </p>
+  </div>
+  <span className={`badge text-xs font-semibold px-3 py-1 ${
+    dashboardData?.estadoPagos === "Al día" ? "badge-success" : "badge-warning"
+  }`}>
+    {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Pendiente"}
+  </span>
+</div>
 
             {/* Circular reciente */}
             {dashboardData?.circularReciente && (
@@ -249,11 +256,6 @@ export default function DashboardPage() {
             )}
           </>
         )}
-
-        {/* Botón de logout temporal */}
-        <button onClick={handleLogout} className="btn btn-primary w-full mt-2">
-          Cerrar sesión
-        </button>
       </div>
 
       {/* Navegación inferior */}

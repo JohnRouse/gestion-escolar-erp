@@ -126,13 +126,15 @@ export default function CalificacionesPage() {
                     </div>
                   ))}
                   {curso.promedioBimestre !== null && (
-                    <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
-                      <span className="text-xs font-semibold text-gray-700">Promedio Bimestre</span>
-                      <span className={`badge ${curso.promedioBimestre >= 11 ? "badge-green" : "badge-red"} text-sm`}>
-                        {curso.promedioBimestre.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
+  <div className="flex items-center gap-2 mt-2">
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+      curso.promedioBimestre >= 11 ? "bg-success" : "bg-danger"
+    }`}>
+      {curso.promedioBimestre.toFixed(1)}
+    </div>
+    <span className="text-xs text-text-secondary">Promedio Bimestre</span>
+  </div>
+)}
                 </div>
               </div>
             ))}
