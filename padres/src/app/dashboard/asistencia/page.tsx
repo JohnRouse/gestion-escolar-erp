@@ -127,7 +127,7 @@ export default function AsistenciaPage() {
                 className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-gray-100"
               >
                 <span className="text-xs text-gray-700">
-                  {new Date(item.fecha).toLocaleDateString("es-PE", { weekday: "short", day: "2-digit", month: "short" })}
+                  {new Date(item.fecha + 'T00:00:00').toLocaleDateString("es-PE", { weekday: "short", day: "2-digit", month: "short" })}
                 </span>
                 <span className={`badge ${getBadgeClass(item.estado)}`}>{item.estado}</span>
               </div>

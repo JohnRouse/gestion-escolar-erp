@@ -204,26 +204,29 @@ export class AcademicosService {
       }
 
       // 3. Generar deudas automáticas
-      const conceptos = await tx.conceptoPago.findMany({
-        where: { id_anio: dto.id_anio },
-      });
-      for (const concepto of conceptos) {
-        // Fecha de vencimiento: si es pensión, el día 5 del mes siguiente; sino, día siguiente
-        let fechaVenc = new Date();
-        if (concepto.es_pension) {
-          fechaVenc.setMonth(fechaVenc.getMonth() + 1, 5); // día 5 del mes siguiente
-        } else {
-          fechaVenc.setDate(fechaVenc.getDate() + 1);
-        }
-        await tx.cronogramaPagos.create({
-          data: {
-            id_matricula: matricula.id_matricula,
-            id_concepto: concepto.id_concepto,
-            fecha_vencimiento: fechaVenc,
-            estado_pago: 'Pendiente',
-          },
-        });
-      }
+const conceptos = await tx.conceptoPago.findMany({
+  where: { id_anio: dto.id_anio },
+});
+const fechaBase = new Date(); // fecha actual
+for (let i = 0; i < conceptos.length; i++) {
+  const concepto = conceptos[i];
+  let fechaVenc = new Date(fechaBase);
+  if (concepto.es_pension) {
+    // La primera pensión vence el día 5 del mes siguiente; las sucesivas, el día 5 de los meses subsiguientes
+    fechaVenc.setMonth(fechaVenc.getMonth() + 1 + i, 5);
+  } else {
+    // Conceptos no pensión (ej. matrícula) vencen al día siguiente
+    fechaVenc.setDate(fechaVenc.getDate() + 1);
+  }
+  await tx.cronogramaPagos.create({
+    data: {
+      id_matricula: matricula.id_matricula,
+      id_concepto: concepto.id_concepto,
+      fecha_vencimiento: fechaVenc,
+      estado_pago: 'Pendiente',
+    },
+  });
+}
 
       return matricula;
     });
@@ -260,6 +263,11 @@ async getAsistencia(seccionId: number, fecha: string) {
 }
 
 async saveAsistencia(seccionId: number, fecha: string, asistencias: { id_matricula: number; estado: string }[]) {
+
+  const fechaAsistencia = new Date(fecha);
+if (fechaAsistencia.getDay() === 0 || fechaAsistencia.getDay() === 6) {
+  throw new BadRequestException('No se puede registrar asistencia en fines de semana');
+}
   const data = asistencias.map((a) => ({
     id_matricula: a.id_matricula,
     fecha: new Date(fecha),
