@@ -100,4 +100,25 @@ async getAsistenciaAlumno(
 ) {
   return this.academicosService.getAsistenciaAlumno(Number(alumnoId), desde, hasta);
 }
+
+@Get('padres/hijos')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Apoderado', 'Admin')
+async getHijosApoderado(@Request() req) {
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: req.user.userId },
+    include: { persona: { include: { apoderados: true } } },
+  });
+  const apoderado = usuario?.persona?.apoderados?.[0];
+  if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+  return this.academicosService.getHijosApoderado(apoderado.id_persona);
+}
+
+@Get('padres/horario')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Apoderado', 'Admin')
+async getHorarioAlumno(@Query('alumno_id') alumnoId: string) {
+  return this.academicosService.getHorarioAlumno(Number(alumnoId));
+}
+
 }

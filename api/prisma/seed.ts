@@ -222,6 +222,18 @@ await prisma.asignacionDocente.upsert({
     id_anio: 1,
   },
 });
+const horarios = [
+  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 1, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '09:30', hora_fin: '10:15' },
+  { id_seccion: 7, id_curso: 3, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '09:30', hora_fin: '10:15' },
+  { id_seccion: 7, id_curso: 4, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 5, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '09:30', hora_fin: '10:15' },
+];
+
+for (const h of horarios) {
+  await prisma.horario.create({ data: h });
+}
 
   console.log('✅ Seed completado: roles, admin, niveles, grados, secciones, año lectivo, conceptos de pago, tipos de evaluación, escala.');
 }

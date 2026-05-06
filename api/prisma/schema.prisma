@@ -78,6 +78,7 @@ model Seccion {
   matriculas   Matricula[]
   asignaciones AsignacionDocente[]
   circulares   CircularDestinatario[]
+  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
 }
 
 model AreaCurricular {
@@ -93,6 +94,7 @@ model Curso {
   id_area      Int
   area         AreaCurricular      @relation(fields: [id_area], references: [id_area])
   asignaciones AsignacionDocente[]
+  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
 }
 
 // ── MÓDULO DE TIEMPO ──
@@ -144,6 +146,7 @@ model Docente {
   persona        Persona               @relation(fields: [id_persona], references: [id_persona])
   especialidades DocenteEspecialidad[]
   asignaciones   AsignacionDocente[]
+  horarios       Horario[] // <-- AGREGAR ESTA LÍNEA
 }
 
 model Estudiante {
@@ -324,4 +327,17 @@ model CircularDestinatario {
   seccion     Seccion? @relation(fields: [id_seccion], references: [id_seccion])
 
   @@unique([id_circular, id_nivel, id_seccion])
+}
+
+model Horario {
+  id_horario  Int     @id @default(autoincrement())
+  id_seccion  Int
+  id_curso    Int
+  id_docente  Int
+  dia_semana  Int // 1 = Lunes ... 5 = Viernes
+  hora_inicio String  @db.VarChar(5) // HH:mm
+  hora_fin    String  @db.VarChar(5)
+  seccion     Seccion @relation(fields: [id_seccion], references: [id_seccion])
+  curso       Curso   @relation(fields: [id_curso], references: [id_curso])
+  docente     Docente @relation(fields: [id_docente], references: [id_persona])
 }

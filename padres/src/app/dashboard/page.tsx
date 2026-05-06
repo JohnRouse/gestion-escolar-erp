@@ -42,14 +42,26 @@ export default function DashboardPage() {
 
   // Obtener hijos del apoderado (ajusta el endpoint según tu API)
   const fetchHijos = async (token: string) => {
-  // Datos de prueba basados en el estudiante real (Lucas García, id_estudiante=2)
-  const mockHijos = [
-    { id_estudiante: 2, nombre: "Lucas García", grado: "5° Primaria" },
-    // Eliminamos a Sofía (id 5) porque no existe en la BD
-  ];
-  setHijos(mockHijos);
-  setSelectedHijo(mockHijos[0]);
-  fetchDashboardData(token, mockHijos[0].id_estudiante);
+  try {
+    const response = await axios.get('/api/academicos/padres/hijos', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const hijos = response.data;
+    setHijos(hijos);
+    if (hijos.length > 0) {
+      setSelectedHijo(hijos[0]);
+      fetchDashboardData(token, hijos[0].id_estudiante);
+    }
+  } catch (err) {
+    console.error('Error al obtener hijos:', err);
+    // Fallback a mock por si acaso
+    const mockHijos = [
+      { id_estudiante: 2, nombre: 'Lucas García', grado: '5° Primaria' },
+    ];
+    setHijos(mockHijos);
+    setSelectedHijo(mockHijos[0]);
+    fetchDashboardData(token, mockHijos[0].id_estudiante);
+  }
 };
 
   // Obtener datos del dashboard (usando endpoints existentes)

@@ -316,4 +316,63 @@ async getAsistenciaAlumno(estudianteId: number, desde: string, hasta: string) {
   );
 }
 
+async getHijosApoderado(apoderadoId: number) {
+  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+    where: { id_apoderado: apoderadoId },
+    include: {
+      estudiante: {
+        include: {
+          persona: true,
+          matriculas: {
+            where: { estado_matricula: 'Activo' },
+            include: { seccion: { include: { grado: true } } },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  return relaciones.map((r) => {
+    const matricula = r.estudiante.matriculas[0];
+    const seccion = matricula?.seccion;
+    return {
+      id_estudiante: r.id_estudiante,
+      nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
+      grado: seccion
+        ? `${seccion.grado.nombre_grado} ${seccion.letra}`
+        : 'Sin matrícula activa',
+    };
+  });
+}
+
+async getHorarioAlumno(alumnoId: number) {
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    include: { seccion: true },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const horarios = await this.prisma.horario.findMany({
+    where: { id_seccion: matriculaActiva.id_seccion },
+    orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+    include: { curso: true, docente: { include: { persona: true } } },
+  });
+
+  // Agrupar por día
+  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  const resultado: any = {};
+  for (const h of horarios) {
+    const diaNombre = dias[h.dia_semana - 1];
+    if (!resultado[diaNombre]) resultado[diaNombre] = [];
+    resultado[diaNombre].push({
+      hora_inicio: h.hora_inicio,
+      hora_fin: h.hora_fin,
+      curso: h.curso.nombre_curso,
+      docente: `${h.docente.persona.nombres} ${h.docente.persona.apellido_paterno}`,
+    });
+  }
+  return resultado;
+}
+
 }

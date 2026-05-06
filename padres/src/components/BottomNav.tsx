@@ -8,6 +8,7 @@ const navItems = [
   { label: "Asistencia", icon: "✓", path: "/dashboard/asistencia" },
   { label: "Pagos", icon: "$", path: "/dashboard/pagos" },
   { label: "Circulares", icon: "✉", path: "/dashboard/circulares" },
+  { label: "Horario", icon: "🕒", path: "/dashboard/horario" },
 ];
 
 export default function BottomNav() {
