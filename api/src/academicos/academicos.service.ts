@@ -385,4 +385,10 @@ async getTotalDocentes() {
   return this.prisma.docente.count();
 }
 
+async getAnios() {
+  return this.prisma.anioLectivo.findMany({
+    orderBy: { fecha_inicio: 'desc' },
+  });
+}
+
 }

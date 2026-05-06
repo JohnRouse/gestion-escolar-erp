@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
-import { LogOut } from 'lucide-react';
+import { LogOut, Megaphone } from "lucide-react";
 
 interface Hijo {
   id_estudiante: number;
@@ -15,6 +15,7 @@ interface Hijo {
 interface DashboardData {
   asistencia: number | null;
   promedio: number | null;
+  totalPendiente: number;
   estadoPagos: string;
   circularReciente: { titulo: string; fecha: string } | null;
 }
@@ -27,7 +28,6 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Verificar autenticación al cargar
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -41,49 +41,50 @@ export default function DashboardPage() {
     fetchHijos(token);
   }, [router]);
 
-  // Obtener hijos del apoderado (ajusta el endpoint según tu API)
   const fetchHijos = async (token: string) => {
-  try {
-    const response = await axios.get('/api/academicos/padres/hijos', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const hijos = response.data;
-    setHijos(hijos);
-    if (hijos.length > 0) {
-      setSelectedHijo(hijos[0]);
-      fetchDashboardData(token, hijos[0].id_estudiante);
+    try {
+      const response = await axios.get("/api/academicos/padres/hijos", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const hijosData = response.data;
+      setHijos(hijosData);
+      if (hijosData.length > 0) {
+        setSelectedHijo(hijosData[0]);
+        fetchDashboardData(token, hijosData[0].id_estudiante);
+      }
+    } catch {
+      // Fallback a datos de prueba
+      const mockHijos = [
+        { id_estudiante: 2, nombre: "Lucas García", grado: "5° Primaria" },
+      ];
+      setHijos(mockHijos);
+      setSelectedHijo(mockHijos[0]);
+      fetchDashboardData(token, mockHijos[0].id_estudiante);
     }
-  } catch (err) {
-    console.error('Error al obtener hijos:', err);
-    // Fallback a mock por si acaso
-    const mockHijos = [
-      { id_estudiante: 2, nombre: 'Lucas García', grado: '5° Primaria' },
-    ];
-    setHijos(mockHijos);
-    setSelectedHijo(mockHijos[0]);
-    fetchDashboardData(token, mockHijos[0].id_estudiante);
-  }
-};
+  };
 
-  // Obtener datos del dashboard (usando endpoints existentes)
   const fetchDashboardData = async (token: string, alumnoId: number) => {
-  
   try {
-    // Asistencia del bimestre actual
-    const asistenciaRes = await axios.get(
-  `/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`,
-  { headers: { Authorization: `Bearer ${token}` } }
-);
+    const [asistenciaRes, notasRes, pagosRes, circularesRes] = await Promise.all([
+      axios.get(`/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get(`/api/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get(`/api/circulares/padres`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
     const asistencias = asistenciaRes.data;
     const total = asistencias.length;
     const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
     const porcentajeAsistencia = total > 0 ? Math.round((presentes / total) * 100) : null;
 
-    // Calificaciones del bimestre 1
-    const notasRes = await axios.get(
-  `/api/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=1`,
-  { headers: { Authorization: `Bearer ${token}` } }
-);
     const notasData = notasRes.data;
     const promedios = notasData.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
     const promedioGeneral =
@@ -91,18 +92,9 @@ export default function DashboardPage() {
         ? Math.round((promedios.reduce((a: number, b: number) => a + b, 0) / promedios.length) * 10) / 10
         : null;
 
-    // Estado de pagos
-    const pagosRes = await axios.get(
-  `/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`,
-  { headers: { Authorization: `Bearer ${token}` } }
-);
-    const totalPendiente = pagosRes.data.total_pendiente || 0;
-    const estadoPagos = totalPendiente === 0 ? "Al día" : `${totalPendiente} pendiente`;
+    const totalPendiente = pagosRes.data.total_pendiente ?? 0;
+    const estadoPagos = totalPendiente === 0 ? "Al día" : "Pendiente";
 
-    // Circulares recientes
-    const circularesRes = await axios.get("/api/circulares/padres", {
-  headers: { Authorization: `Bearer ${token}` },
-});
     const circulares = circularesRes.data;
     const circularReciente =
       circulares.length > 0
@@ -112,22 +104,20 @@ export default function DashboardPage() {
     setDashboardData({
       asistencia: porcentajeAsistencia,
       promedio: promedioGeneral,
+      totalPendiente,
       estadoPagos,
       circularReciente,
     });
-  }  catch (err) {
-  if (axios.isAxiosError(err) && err.response?.status === 404) {
-    // No mostrar error, simplemente usar datos mockeados
-  } else {
+  } catch (err) {
     console.error("Error al cargar datos del dashboard:", err);
-  }
-  setDashboardData({
-    asistencia: 92,
-    promedio: 15.4,
-    estadoPagos: "1 pendiente",
-    circularReciente: { titulo: "Reunión de padres - Primaria", fecha: "2025-05-09" },
-  });
-} finally {
+    setDashboardData({
+      asistencia: 92,
+      promedio: 15.4,
+      totalPendiente: 3150,
+      estadoPagos: "Pendiente",
+      circularReciente: { titulo: "Reunión de padres - Primaria", fecha: "2025-05-09" },
+    });
+  } finally {
     setLoading(false);
   }
 };
@@ -141,32 +131,32 @@ export default function DashboardPage() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-16">
-      {/* Topbar */}
-      <header className="bg-white border-b border-border px-4 py-3 flex items-center justify-between">
-  <div className="flex items-center gap-3">
-    <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-sm font-semibold text-primary">
-      {user.nombre.charAt(0)}
-    </div>
-    <div>
-      <p className="text-xs font-semibold text-text">{user.nombre}</p>
-      <p className="text-[10px] text-text-secondary">Apoderado</p>
-    </div>
-  </div>
-  <button
-    onClick={handleLogout}
-    className="text-text-muted hover:text-danger transition-colors p-2"
-    title="Cerrar sesión"
-  >
-    <LogOut size={18} />
-  </button>
-</header>
+    <main className="min-h-screen bg-slate-100 pb-20">
+      {/* Header mejorado */}
+      <header className="bg-white border-b border-border px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary">
+            {user.nombre.charAt(0)}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-text">{user.nombre}</p>
+            <p className="text-[10px] text-text-secondary">Apoderado</p>
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="text-text-muted hover:text-danger transition-colors p-2"
+          title="Cerrar sesión"
+        >
+          <LogOut size={18} />
+        </button>
+      </header>
 
-      {/* Selector de hijo */}
+      {/* Selector de hijo (si hay varios) */}
       {hijos.length > 1 && (
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+        <div className="px-4 py-3 bg-white border-b border-border">
           <select
-            className="input text-xs"
+            className="input text-sm"
             value={selectedHijo?.id_estudiante || ""}
             onChange={(e) => {
               const hijo = hijos.find((h) => h.id_estudiante === Number(e.target.value));
@@ -186,71 +176,95 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Tarjetas de resumen */}
-      <div className="px-4 py-4 flex flex-col gap-3">
+      {/* Contenido del dashboard */}
+      <div className="px-4 py-5 space-y-4">
         {loading ? (
-          <p className="text-center text-gray-400 text-sm">Cargando datos...</p>
+          <div className="space-y-4 animate-pulse">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="card h-32 bg-gray-200" />
+              <div className="card h-32 bg-gray-200" />
+            </div>
+            <div className="card h-20 bg-gray-200" />
+            <div className="card h-16 bg-gray-200" />
+          </div>
         ) : (
           <>
-            {/* Asistencia */}
-            {selectedHijo && (
-  <div className="px-4 py-2 bg-purple-lt border-b border-purple-100">
-    <p className="text-xs text-indigo font-medium">
-      Viendo datos de: <strong>{selectedHijo.nombre}</strong> — {selectedHijo.grado}
-    </p>
-  </div>
-)}
-            <div className="card p-4 flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-gray-400 mb-1">Asistencia — Bimestre I</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {dashboardData?.asistencia !== null ? `${dashboardData?.asistencia}%` : "—"}
+            {/* KPIs principales */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Asistencia */}
+              <div className="card p-5 text-center">
+                <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-success-light flex items-center justify-center">
+                  <span className="text-2xl font-bold text-success">
+                    {dashboardData?.asistencia ?? "—"}%
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                  Asistencia
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-full border-2 border-green flex items-center justify-center text-green text-sm">
-                ✓
+
+              {/* Promedio */}
+              <div className="card p-5 text-center">
+                <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-primary-light flex items-center justify-center">
+                  <span className="text-2xl font-bold text-primary">
+                    {dashboardData?.promedio ?? "—"}
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                  Promedio
+                </p>
               </div>
             </div>
 
-            {/* Promedio general */}
-            <div className="card p-4 flex justify-between items-center">
+            {/* Estado de pagos - tarjeta grande y destacada */}
+            <div
+              className={`card p-5 flex items-center justify-between ${
+                dashboardData?.estadoPagos === "Al día"
+                  ? "border-l-4 border-l-success"
+                  : "border-l-4 border-l-warning"
+              }`}
+            >
               <div>
-                <p className="text-[10px] text-gray-400 mb-1">Promedio general</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {dashboardData?.promedio !== null ? dashboardData?.promedio : "—"}
+                <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide mb-1">
+                  Estado de pagos
+                </p>
+                <p className="text-2xl font-bold text-text">
+                  S/{" "}
+                  {dashboardData?.totalPendiente?.toLocaleString("es-PE", {
+                    minimumFractionDigits: 2,
+                  }) ?? "0.00"}
+                </p>
+                <p className="text-xs text-text-muted mt-1">
+                  {dashboardData?.estadoPagos === "Al día"
+                    ? "Sin deudas pendientes"
+                    : "Pendiente de pago"}
                 </p>
               </div>
-              <span className="badge badge-green">Aprobado</span>
+              <span
+                className={`badge text-sm font-bold px-4 py-2 ${
+                  dashboardData?.estadoPagos === "Al día"
+                    ? "badge-success"
+                    : "badge-danger"
+                }`}
+              >
+                {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Pendiente"}
+              </span>
             </div>
-
-            {/* Estado de pagos */}
-            <div className={`card p-4 flex justify-between items-center ${
-  dashboardData?.estadoPagos === "Al día"
-    ? "border-success/30 bg-success-light/30"
-    : "border-warning/30 bg-warning-light/30"
-}`}>
-  <div>
-    <p className="text-[10px] text-text-secondary mb-1 font-semibold uppercase tracking-wide">
-      Estado de pagos
-    </p>
-    <p className="text-sm font-semibold text-text">
-      {dashboardData?.estadoPagos === "Al día" ? "Al día" : `${dashboardData?.estadoPagos} pendiente`}
-    </p>
-  </div>
-  <span className={`badge text-xs font-semibold px-3 py-1 ${
-    dashboardData?.estadoPagos === "Al día" ? "badge-success" : "badge-warning"
-  }`}>
-    {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Pendiente"}
-  </span>
-</div>
 
             {/* Circular reciente */}
             {dashboardData?.circularReciente && (
               <div className="card p-4">
-                <p className="text-[10px] font-medium mb-2">Circular reciente</p>
-                <p className="text-xs text-gray-700">{dashboardData.circularReciente.titulo}</p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {new Date(dashboardData.circularReciente.fecha).toLocaleDateString()}
+                <div className="flex items-center gap-2 mb-2">
+                  <Megaphone size={16} className="text-primary" />
+                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                    Última circular
+                  </p>
+                </div>
+                <p className="text-sm font-medium text-text">
+                  {dashboardData.circularReciente.titulo}
+                </p>
+                <p className="text-xs text-text-muted mt-1">
+                  {new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE")}
                 </p>
               </div>
             )}
@@ -258,7 +272,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Navegación inferior */}
       <BottomNav />
     </main>
   );

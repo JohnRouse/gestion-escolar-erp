@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import { LogOut } from "lucide-react";
 
 interface Evaluacion {
   tipo: string;
@@ -25,17 +26,22 @@ interface Curso {
 
 export default function CalificacionesPage() {
   const router = useRouter();
+  const [user, setUser] = useState<{ nombre: string } | null>(null);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [bimestre, setBimestre] = useState(1);
-  const [alumnoId, setAlumnoId] = useState(2); // Lucas García
+  const [alumnoId] = useState(2);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
+    const userData = localStorage.getItem("user");
+
+    if (!token || !userData) {
       router.push("/login");
       return;
     }
+
+    setUser(JSON.parse(userData));
     fetchNotas(token, alumnoId, bimestre);
   }, [router, alumnoId, bimestre]);
 
@@ -55,23 +61,48 @@ export default function CalificacionesPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
   return (
-    <main className="min-h-screen bg-gray-50 pb-16">
-      {/* Título y selector de bimestre */}
-      <div className="px-4 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-navy">Calificaciones</h1>
-        <div className="flex gap-2">
+    <main className="min-h-screen bg-slate-100 pb-20">
+      {/* Header */}
+      <header className="bg-white border-b border-border px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary">
+            {user?.nombre?.charAt(0) || "U"}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-text">{user?.nombre}</p>
+            <p className="text-[10px] text-text-secondary">Calificaciones</p>
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="text-text-muted hover:text-danger transition-colors p-2"
+          title="Cerrar sesión"
+        >
+          <LogOut size={18} />
+        </button>
+      </header>
+
+      {/* Selector de bimestre */}
+      <div className="px-4 py-3 bg-white border-b border-border">
+        <div className="flex gap-2 overflow-x-auto">
           {[1, 2, 3, 4].map((b) => (
             <button
               key={b}
               onClick={() => setBimestre(b)}
-              className={`px-3 py-1 text-xs rounded-full ${
+              className={`px-4 py-2 text-xs font-semibold rounded-full whitespace-nowrap transition-all ${
                 bimestre === b
-                  ? "bg-navy text-white"
-                  : "bg-gray-100 text-gray-500"
+                  ? "bg-primary text-white shadow-md"
+                  : "bg-surface-secondary text-text-secondary hover:bg-gray-200"
               }`}
             >
-              {b}° Bim
+              {b}° Bimestre
             </button>
           ))}
         </div>
@@ -80,25 +111,35 @@ export default function CalificacionesPage() {
       {/* Contenido */}
       <div className="px-4 py-4">
         {loading ? (
-          <p className="text-center text-gray-400 text-sm">Cargando...</p>
+          <div className="space-y-4 animate-pulse">
+            {[1, 2].map((i) => (
+              <div key={i} className="card h-40 bg-gray-200" />
+            ))}
+          </div>
         ) : cursos.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm">No hay calificaciones disponibles.</p>
+          <div className="card p-8 text-center">
+            <p className="text-text-secondary">No hay calificaciones para este bimestre.</p>
+          </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="space-y-4">
             {cursos.map((curso, idx) => (
               <div key={idx} className="card overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                  <h2 className="text-sm font-semibold text-navy">{curso.curso}</h2>
+                <div className="bg-surface-secondary px-5 py-3 border-b border-border">
+                  <h2 className="text-sm font-semibold text-text">{curso.curso}</h2>
                 </div>
-                <div className="p-4">
+                <div className="p-5">
                   {curso.unidades.map((unidad, uIdx) => (
                     <div key={uIdx} className="mb-4 last:mb-0">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-xs font-medium text-gray-500">
+                      <div className="flex justify-between items-center mb-3">
+                        <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
                           Unidad {unidad.unidad}
                         </p>
                         {unidad.promedioUnidad !== null && (
-                          <span className={`badge ${unidad.promedioUnidad >= 11 ? "badge-green" : "badge-red"}`}>
+                          <span
+                            className={`badge text-xs font-bold ${
+                              unidad.promedioUnidad >= 11 ? "badge-success" : "badge-danger"
+                            }`}
+                          >
                             {unidad.promedioUnidad.toFixed(1)}
                           </span>
                         )}
@@ -106,16 +147,20 @@ export default function CalificacionesPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-gray-100">
-                              <th className="text-left py-1 text-gray-400 font-medium">Evaluación</th>
-                              <th className="text-right py-1 text-gray-400 font-medium">Nota</th>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 text-text-secondary font-medium">Evaluación</th>
+                              <th className="text-right py-2 text-text-secondary font-medium">Nota</th>
                             </tr>
                           </thead>
                           <tbody>
                             {unidad.evaluaciones.map((eva, eIdx) => (
-                              <tr key={eIdx} className="border-b border-gray-50">
-                                <td className="py-1 text-gray-700">{eva.descripcion}</td>
-                                <td className={`py-1 text-right font-medium ${eva.valor >= 11 ? "text-green" : "text-red"}`}>
+                              <tr key={eIdx} className="border-b border-border/50 last:border-0">
+                                <td className="py-2 text-text">{eva.descripcion}</td>
+                                <td
+                                  className={`py-2 text-right font-semibold ${
+                                    eva.valor >= 11 ? "text-success" : "text-danger"
+                                  }`}
+                                >
                                   {eva.valor}
                                 </td>
                               </tr>
@@ -126,15 +171,17 @@ export default function CalificacionesPage() {
                     </div>
                   ))}
                   {curso.promedioBimestre !== null && (
-  <div className="flex items-center gap-2 mt-2">
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-      curso.promedioBimestre >= 11 ? "bg-success" : "bg-danger"
-    }`}>
-      {curso.promedioBimestre.toFixed(1)}
-    </div>
-    <span className="text-xs text-text-secondary">Promedio Bimestre</span>
-  </div>
-)}
+                    <div className="mt-5 pt-4 border-t border-border flex items-center gap-3">
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                          curso.promedioBimestre >= 11 ? "bg-success" : "bg-danger"
+                        }`}
+                      >
+                        {curso.promedioBimestre.toFixed(1)}
+                      </div>
+                      <span className="text-sm font-medium text-text">Promedio Bimestre</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -37,6 +37,11 @@ export class AcademicosController {
     return this.academicosService.getSecciones(Number(gradoId), Number(anioId));
   }
 
+  @Get('anios')
+async getAnios() {
+  return this.academicosService.getAnios();
+}
+
   @Get('alumnos/buscar')
   buscarAlumno(@Query('dni') dni: string) {
     return this.academicosService.buscarAlumno(dni);
