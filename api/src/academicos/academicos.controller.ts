@@ -121,4 +121,18 @@ async getHorarioAlumno(@Query('alumno_id') alumnoId: string) {
   return this.academicosService.getHorarioAlumno(Number(alumnoId));
 }
 
+@Get('matriculas/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalMatriculados(@Query('anio_id') anioId: string) {
+  return this.academicosService.getTotalMatriculados(Number(anioId));
+}
+
+@Get('docentes/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalDocentes() {
+  return this.academicosService.getTotalDocentes();
+}
+
 }

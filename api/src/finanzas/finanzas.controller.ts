@@ -38,4 +38,11 @@ export class FinanzasController {
   async getEstadoCuentaPadre(@Query('alumno_id') alumnoId: string) {
     return this.finanzasService.getEstadoCuentaPadre(Number(alumnoId));
   }
+
+  @Get('pagos/pendientes/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getPagosPendientesCount() {
+  return this.finanzasService.getPagosPendientesCount();
+}
 }

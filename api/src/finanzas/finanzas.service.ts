@@ -162,4 +162,10 @@ export class FinanzasService {
 
     return this.getEstadoCuenta(matriculaActiva.id_matricula);
   }
+
+  async getPagosPendientesCount() {
+  return this.prisma.cronogramaPagos.count({
+    where: { estado_pago: { in: ['Pendiente', 'Vencido'] } },
+  });
+}
 }

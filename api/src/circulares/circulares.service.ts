@@ -179,4 +179,8 @@ export class CircularesService {
 
     return circulares;
   }
+
+  async getTotalCirculares() {
+  return this.prisma.circular.count();
+}
 }

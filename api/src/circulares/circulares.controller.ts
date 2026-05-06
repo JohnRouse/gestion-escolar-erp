@@ -40,8 +40,16 @@ export class CircularesController {
     return this.circularesService.findForApoderado(apoderado.id_persona);
   }
 
+  @Get('count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalCirculares() {
+  return this.circularesService.getTotalCirculares();
+}
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.circularesService.findOne(Number(id));
   }
+
 }

@@ -375,4 +375,14 @@ async getHorarioAlumno(alumnoId: number) {
   return resultado;
 }
 
+async getTotalMatriculados(anioId: number) {
+  return this.prisma.matricula.count({
+    where: { id_anio: anioId, estado_matricula: 'Activo' },
+  });
+}
+
+async getTotalDocentes() {
+  return this.prisma.docente.count();
+}
+
 }
