@@ -17,8 +17,8 @@ export default function LoginPage() {
   setLoading(true);
 
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-    const response = await axios.post(`${apiUrl}/auth/login`, {
+    // Usamos la ruta relativa que el proxy redirige al backend
+    const response = await axios.post("/api/auth/login", {
       username,
       password,
     });

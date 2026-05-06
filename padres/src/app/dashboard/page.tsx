@@ -42,10 +42,10 @@ export default function DashboardPage() {
 
   // Obtener hijos del apoderado (ajusta el endpoint según tu API)
   const fetchHijos = async (token: string) => {
-  // Simulación con datos de prueba (más adelante conectaremos al endpoint real)
+  // Datos de prueba basados en el estudiante real (Lucas García, id_estudiante=2)
   const mockHijos = [
     { id_estudiante: 2, nombre: "Lucas García", grado: "5° Primaria" },
-    { id_estudiante: 5, nombre: "Sofía García", grado: "3° Inicial" },
+    // Eliminamos a Sofía (id 5) porque no existe en la BD
   ];
   setHijos(mockHijos);
   setSelectedHijo(mockHijos[0]);
@@ -54,13 +54,13 @@ export default function DashboardPage() {
 
   // Obtener datos del dashboard (usando endpoints existentes)
   const fetchDashboardData = async (token: string, alumnoId: number) => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  
   try {
     // Asistencia del bimestre actual
     const asistenciaRes = await axios.get(
-      `${apiUrl}/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  `/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
     const asistencias = asistenciaRes.data;
     const total = asistencias.length;
     const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
@@ -68,9 +68,9 @@ export default function DashboardPage() {
 
     // Calificaciones del bimestre 1
     const notasRes = await axios.get(
-      `${apiUrl}/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=1`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  `/api/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=1`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
     const notasData = notasRes.data;
     const promedios = notasData.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
     const promedioGeneral =
@@ -80,16 +80,16 @@ export default function DashboardPage() {
 
     // Estado de pagos
     const pagosRes = await axios.get(
-      `${apiUrl}/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  `/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
     const totalPendiente = pagosRes.data.total_pendiente || 0;
     const estadoPagos = totalPendiente === 0 ? "Al día" : `${totalPendiente} pendiente`;
 
     // Circulares recientes
-    const circularesRes = await axios.get(`${apiUrl}/circulares/padres`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const circularesRes = await axios.get("/api/circulares/padres", {
+  headers: { Authorization: `Bearer ${token}` },
+});
     const circulares = circularesRes.data;
     const circularReciente =
       circulares.length > 0
@@ -102,15 +102,19 @@ export default function DashboardPage() {
       estadoPagos,
       circularReciente,
     });
-  } catch (err) {
+  }  catch (err) {
+  if (axios.isAxiosError(err) && err.response?.status === 404) {
+    // No mostrar error, simplemente usar datos mockeados
+  } else {
     console.error("Error al cargar datos del dashboard:", err);
-    setDashboardData({
-      asistencia: 92,
-      promedio: 15.4,
-      estadoPagos: "1 pendiente",
-      circularReciente: { titulo: "Reunión de padres - Primaria", fecha: "2025-05-09" },
-    });
-  } finally {
+  }
+  setDashboardData({
+    asistencia: 92,
+    promedio: 15.4,
+    estadoPagos: "1 pendiente",
+    circularReciente: { titulo: "Reunión de padres - Primaria", fecha: "2025-05-09" },
+  });
+} finally {
     setLoading(false);
   }
 };
@@ -176,6 +180,13 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Asistencia */}
+            {selectedHijo && (
+  <div className="px-4 py-2 bg-purple-lt border-b border-purple-100">
+    <p className="text-xs text-indigo font-medium">
+      Viendo datos de: <strong>{selectedHijo.nombre}</strong> — {selectedHijo.grado}
+    </p>
+  </div>
+)}
             <div className="card p-4 flex justify-between items-center">
               <div>
                 <p className="text-[10px] text-gray-400 mb-1">Asistencia — Bimestre I</p>
