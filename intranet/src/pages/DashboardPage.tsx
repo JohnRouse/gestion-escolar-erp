@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import { School, CreditCard, Megaphone, Users, UserPlus, HandCoins, Send, BarChart3 } from 'lucide-react';
+import { School, CreditCard, Megaphone, Users } from 'lucide-react';
 
 export default function DashboardPage() {
   const { token } = useAuth();
@@ -39,18 +39,18 @@ export default function DashboardPage() {
     }
   };
 
-  const metricCards = [
-    { label: 'Matriculados', value: metricas.matriculados, icon: School, color: 'text-violet-600', bg: 'bg-violet-50' },
-    { label: 'Pagos pendientes', value: metricas.pagosPendientes, icon: CreditCard, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'Circulares', value: metricas.circulares, icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Docentes activos', value: metricas.docentes, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  const cards = [
+    { label: 'Matriculados', value: metricas.matriculados, icon: School, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { label: 'Pagos pendientes', value: metricas.pagosPendientes, icon: CreditCard, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Circulares', value: metricas.circulares, icon: Megaphone, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Docentes activos', value: metricas.docentes, icon: Users, color: 'text-green-600', bg: 'bg-green-50' },
   ];
 
   const quickActions = [
-    { label: 'Matrícula', icon: UserPlus, path: '/matricula', color: 'bg-violet-100 text-violet-700' },
-    { label: 'Registrar pago', icon: HandCoins, path: '/tesoreria', color: 'bg-rose-100 text-rose-700' },
-    { label: 'Nueva circular', icon: Send, path: '/circulares', color: 'bg-amber-100 text-amber-700' },
-    { label: 'Reportes', icon: BarChart3, path: '/reportes', color: 'bg-emerald-100 text-emerald-700' },
+    { label: 'Matrícula', icon: '👤', path: '/matricula' },
+    { label: 'Registrar pago', icon: '💰', path: '/tesoreria' },
+    { label: 'Nueva circular', icon: '✉', path: '/circulares' },
+    { label: 'Docentes', icon: '👩‍🏫', path: '/docentes' },
   ];
 
   return (
@@ -58,39 +58,36 @@ export default function DashboardPage() {
       <h2 className="section-title mb-6">Panel de control</h2>
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="card h-28 bg-slate-200" />
+            <div key={i} className="skeleton h-28" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {metricCards.map((card, idx) => (
-            <div key={idx} className="card hover:shadow-md transition-shadow p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center`}>
-                  <card.icon size={20} className={card.color} />
-                </div>
+          {cards.map((card, idx) => (
+            <div key={idx} className="card p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {card.label}
+                </p>
+                <card.icon size={20} className={card.color} />
               </div>
-              <p className="text-2xl font-bold text-slate-900">{card.value}</p>
-              <p className="text-xs text-slate-500 mt-1 font-medium">{card.label}</p>
+              <p className="text-3xl font-bold text-gray-900">{card.value}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Accesos rápidos */}
       <h3 className="subsection-title mb-4">Accesos rápidos</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {quickActions.map((action, idx) => (
+        {quickActions.map((action) => (
           <button
-            key={idx}
-            className="card p-4 text-center hover:shadow-md hover:-translate-y-1 transition-all duration-200 group"
+            key={action.path}
+            className="card p-4 text-center hover:shadow-md hover:-translate-y-1 transition-all duration-200"
           >
-            <div className={`w-12 h-12 mx-auto rounded-xl ${action.color} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
-              <action.icon size={20} />
-            </div>
-            <span className="text-xs font-medium text-slate-700">{action.label}</span>
+            <span className="text-2xl mb-2 block">{action.icon}</span>
+            <span className="text-xs font-medium text-gray-700">{action.label}</span>
           </button>
         ))}
       </div>

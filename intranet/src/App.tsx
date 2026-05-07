@@ -10,6 +10,7 @@ import CircularesPage from './pages/CircularesPage';
 import ConfiguracionPage from './pages/ConfiguracionPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import IntranetLayout from './components/IntranetLayout';
+import DocentesPage from './pages/DocentesPage';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/notas" element={<NotasPage />} />
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
+        <Route path="/docentes" element={<DocentesPage />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>

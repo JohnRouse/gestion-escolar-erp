@@ -12,6 +12,10 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Estados para los modales
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -34,65 +38,43 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #0A0F2E 0%, #1A2766 50%, #2336A8 100%)" }}>
-      {/* Top decoration */}
-      <div className="flex-1 flex flex-col justify-end px-6 pb-8 pt-16 relative overflow-hidden">
-        {/* Decorative circles */}
-        <div className="absolute top-[-60px] right-[-40px] w-56 h-56 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7C5CFC, transparent)" }} />
-        <div className="absolute top-[80px] left-[-60px] w-40 h-40 rounded-full opacity-8" style={{ background: "radial-gradient(circle, #6179E8, transparent)" }} />
-
-        {/* Logo area */}
-        <div className="mb-10 relative z-10">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-            style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)" }}
-          >
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 24L16 6l12 18H4z" fill="white" opacity="0.9"/>
-              <path d="M10 24V16h12v8" fill="white" opacity="0.5"/>
-              <rect x="13" y="16" width="6" height="8" fill="white" opacity="0.8"/>
-            </svg>
+    <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm">
+        {/* Logo y nombre del colegio */}
+        <div className="flex flex-col items-center mb-10">
+          {/* Logo – reemplaza este div por tu imagen cuando la tengas */}
+          <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mb-4 shadow-lg shadow-red-500/20">
+            <span className="text-2xl font-bold text-white">SMV</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Colegio XYZ</h1>
-          <p className="text-white/50 mt-1.5 text-sm font-medium">Portal para apoderados</p>
+          <h1 className="text-2xl font-bold text-gray-900 text-center">Santa María Victoria</h1>
+          <p className="text-sm text-gray-500 mt-1">Portal para apoderados</p>
         </div>
 
-        {/* Card */}
-        <div
-          className="relative z-10 rounded-3xl p-6"
-          style={{ background: "rgba(255,255,255,0.97)", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Inicia sesión</h2>
+        {/* Tarjeta de login */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-5">Inicia sesión</h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label htmlFor="username" className="label">Correo o usuario</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 6 10-6"/></svg>
-                </span>
-                <input
-                  id="username"
-                  type="text"
-                  className="input pl-10"
-                  placeholder="usuario@colegio.edu.pe"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
+              <label htmlFor="username" className="block text-xs font-medium text-gray-500 mb-1">Usuario o email</label>
+              <input
+                id="username"
+                type="text"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-100 transition-all"
+                placeholder="usuario@smv.edu.pe"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
             </div>
 
             <div>
-              <label htmlFor="password" className="label">Contraseña</label>
+              <label htmlFor="password" className="block text-xs font-medium text-gray-500 mb-1">Contraseña</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                </span>
                 <input
                   id="password"
                   type={showPw ? "text" : "password"}
-                  className="input pl-10 pr-11"
+                  className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl text-sm outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-100 transition-all"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -101,24 +83,30 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPw ? (
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                   ) : (
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="flex justify-end -mt-1">
-              <a href="#" className="text-xs font-semibold" style={{ color: "#2336A8" }}>¿Olvidaste tu contraseña?</a>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="text-xs font-medium text-yellow-600 hover:text-yellow-700"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
             </div>
 
             {error && (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3">
-                <svg className="flex-shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3">
+                <span>⚠️</span>
                 {error}
               </div>
             )}
@@ -126,29 +114,74 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary w-full mt-1 py-3.5 text-base"
+              className="w-full py-3 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                  Ingresando...
-                </span>
-              ) : "Ingresar"}
+              {loading ? "Ingresando..." : "Ingresar"}
             </button>
           </form>
 
-          <div className="mt-5 pt-5 border-t border-gray-100 text-center">
+          <div className="mt-5 pt-4 border-t border-gray-100 text-center">
             <p className="text-sm text-gray-500">
               ¿Primera vez?{" "}
-              <a href="#" className="font-semibold" style={{ color: "#2336A8" }}>Solicitar acceso</a>
+              <button
+                type="button"
+                onClick={() => setShowRequestModal(true)}
+                className="font-medium text-yellow-600 hover:text-yellow-700"
+              >
+                Solicitar acceso
+              </button>
             </p>
           </div>
         </div>
 
-        <p className="text-center text-white/30 text-[11px] mt-6 relative z-10">
-          © 2025 Colegio XYZ · Todos los derechos reservados
+        <p className="text-center text-gray-400 text-xs mt-6">
+          © 2025 Santa María Victoria · Todos los derechos reservados
         </p>
       </div>
+
+      {/* Modal "Olvidé mi contraseña" */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Recuperar contraseña</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Por favor, contacta a la administración del colegio para restablecer tu contraseña.
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              📧 admin@smv.edu.pe<br />
+              📞 (01) 555-0123
+            </p>
+            <button
+              onClick={() => setShowForgotModal(false)}
+              className="w-full py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal "Solicitar acceso" */}
+      {showRequestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Solicitar acceso</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Para solicitar una cuenta de apoderado, por favor acércate a la oficina de administración del colegio o envía un correo a:
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              📧 registro@smv.edu.pe<br />
+              📞 (01) 555-0123
+            </p>
+            <button
+              onClick={() => setShowRequestModal(false)}
+              className="w-full py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

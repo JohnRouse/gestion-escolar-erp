@@ -33,36 +33,21 @@ export default function CircularesPage() {
     } catch { setCirculares([]); } finally { setLoading(false); }
   };
 
-  // Detail view
   if (selected) {
-    const fecha = new Date(selected.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" });
     return (
-      <main className="min-h-screen" style={{ background: "#F6F7FF" }}>
-        <header className="px-5 pt-10 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(145deg, #0A0F2E 0%, #1A2766 60%, #2336A8 100%)" }}>
-          <div className="absolute top-[-20px] right-[-20px] w-36 h-36 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7C5CFC, transparent)" }} />
-          <button onClick={() => setSelected(null)} className="relative z-10 flex items-center gap-2 text-white/60 text-sm mb-5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            Circulares
+      <main className="min-h-screen bg-slate-50 pb-20">
+        <header className="bg-white border-b border-gray-100 px-5 py-4 flex items-center gap-3">
+          <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           </button>
-          <div className="relative z-10">
-            <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-2">Circular</p>
-            <h1 className="text-lg font-extrabold text-white leading-snug">{selected.titulo}</h1>
-          </div>
+          <h1 className="text-lg font-bold text-gray-900">Detalle</h1>
         </header>
-        <div className="px-4 py-5 pb-28">
-          <div className="card p-4 mb-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold" style={{ background: "#E8EBFD", color: "#2336A8" }}>
-              {selected.remitente.persona.nombres[0]}
-            </div>
-            <div>
-              <p className="text-sm font-bold" style={{ color: "#0A0F2E" }}>
-                {selected.remitente.persona.nombres} {selected.remitente.persona.apellido_paterno}
-              </p>
-              <p className="text-[10px]" style={{ color: "#9499C0" }}>{fecha}</p>
-            </div>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#4A5080" }}>{selected.contenido}</p>
+        <div className="px-4 py-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <p className="text-sm text-gray-500 mb-1">{new Date(selected.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" })}</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">{selected.titulo}</h2>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{selected.contenido}</p>
+            <p className="text-xs text-gray-400 mt-4">Por {selected.remitente.persona.nombres} {selected.remitente.persona.apellido_paterno}</p>
           </div>
         </div>
         <BottomNav />
@@ -70,66 +55,25 @@ export default function CircularesPage() {
     );
   }
 
-  // List view
   return (
-    <main className="min-h-screen" style={{ background: "#F6F7FF" }}>
-      <header className="px-5 pt-10 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(145deg, #0A0F2E 0%, #1A2766 60%, #2336A8 100%)" }}>
-        <div className="absolute top-[-20px] right-[-20px] w-36 h-36 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7C5CFC, transparent)" }} />
-        <button onClick={() => router.back()} className="relative z-10 flex items-center gap-2 text-white/60 text-sm mb-5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          Volver
-        </button>
-        <div className="relative z-10 flex items-end justify-between">
-          <div>
-            <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Avisos</p>
-            <h1 className="text-2xl font-extrabold text-white">Circulares</h1>
-          </div>
-          {circulares.length > 0 && (
-            <span className="text-white/60 text-sm font-medium">{circulares.length} recibidas</span>
-          )}
-        </div>
+    <main className="min-h-screen bg-slate-50 pb-20">
+      <header className="bg-white border-b border-gray-100 px-5 py-4">
+        <h1 className="text-lg font-bold text-gray-900">Circulares</h1>
       </header>
-
-      <div className="px-4 py-5 pb-28 flex flex-col gap-3">
+      <div className="px-4 py-4 flex flex-col gap-3">
         {loading ? (
-          [...Array(4)].map((_, i) => <div key={i} className="skeleton h-24" />)
+          [...Array(3)].map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 h-20 animate-pulse" />)
         ) : circulares.length === 0 ? (
-          <div className="text-center py-16">
-            <span className="text-5xl mb-4 block">📭</span>
-            <p className="font-semibold text-gray-500">Sin circulares</p>
-            <p className="text-sm text-gray-400 mt-1">No hay avisos disponibles</p>
-          </div>
+          <p className="text-center text-gray-500 py-10">No hay circulares disponibles.</p>
         ) : (
-          circulares.map((circ, idx) => {
-            const fecha = new Date(circ.fecha_creacion);
-            const isRecent = (Date.now() - fecha.getTime()) < 7 * 24 * 60 * 60 * 1000;
-            return (
-              <button
-                key={circ.id_circular}
-                onClick={() => setSelected(circ)}
-                className="card p-4 text-left active:scale-[0.99] transition-transform w-full"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: "#E8EBFD" }}>
-                    📨
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-bold leading-snug" style={{ color: "#0A0F2E" }}>{circ.titulo}</p>
-                      {isRecent && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#EDE9FF", color: "#7C5CFC" }}>NUEVO</span>
-                      )}
-                    </div>
-                    <p className="text-xs line-clamp-2 mb-2" style={{ color: "#9499C0" }}>{circ.contenido}</p>
-                    <p className="text-[10px] font-semibold" style={{ color: "#9499C0" }}>
-                      {fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <svg className="flex-shrink-0 mt-1" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8CEED" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-                </div>
-              </button>
-            );
-          })
+          circulares.map((circ) => (
+            <button key={circ.id_circular} onClick={() => setSelected(circ)}
+              className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
+              <p className="text-sm font-semibold text-gray-900 mb-1">{circ.titulo}</p>
+              <p className="text-xs text-gray-500 mb-2">{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}</p>
+              <p className="text-xs text-gray-500 line-clamp-2">{circ.contenido}</p>
+            </button>
+          ))
         )}
       </div>
       <BottomNav />

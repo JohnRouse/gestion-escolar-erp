@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface Evaluacion { tipo: string; descripcion: string; valor: number; }
 interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
@@ -14,7 +15,8 @@ export default function CalificacionesPage() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [bimestre, setBimestre] = useState(1);
-  const [alumnoId] = useState(2);
+  const { selectedChild } = useSelectedChild();
+  const alumnoId = selectedChild?.id_estudiante ?? 2;
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,109 +38,78 @@ export default function CalificacionesPage() {
     : null;
 
   return (
-    <main className="min-h-screen" style={{ background: "#F6F7FF" }}>
-      {/* Header */}
-      <header className="px-5 pt-10 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(145deg, #0A0F2E 0%, #1A2766 60%, #2336A8 100%)" }}>
-        <div className="absolute top-[-20px] right-[-20px] w-36 h-36 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7C5CFC, transparent)" }} />
-        <button onClick={() => router.back()} className="relative z-10 flex items-center gap-2 text-white/60 text-sm mb-5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          Volver
-        </button>
-        <div className="relative z-10 flex items-end justify-between">
-          <div>
-            <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-1">Calificaciones</p>
-            <h1 className="text-2xl font-extrabold text-white">
-              {promedioGeneral !== null ? promedioGeneral.toFixed(1) : "—"}
-            </h1>
-            <p className="text-white/50 text-xs mt-0.5">Promedio Bimestre {bimestre}</p>
-          </div>
-          {/* Bimestre selector */}
-          <div className="flex gap-1.5">
-            {[1,2,3,4].map((b) => (
-              <button key={b} onClick={() => setBimestre(b)}
-                className="w-9 h-9 rounded-xl text-xs font-bold transition-all"
-                style={{ background: bimestre === b ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.10)", color: bimestre === b ? "#0A0F2E" : "rgba(255,255,255,0.6)" }}>
-                {b}°
-              </button>
-            ))}
-          </div>
+    <main className="min-h-screen bg-slate-50 pb-20">
+      <header className={`px-5 py-6 ${(promedioGeneral ?? 0) >= 11 ? "bg-green-500" : "bg-red-500"}`}>
+        <h1 className="text-lg font-bold text-white mb-1">Calificaciones</h1>
+        <div className="flex items-baseline gap-2">
+          <span className="text-5xl font-extrabold text-white">{promedioGeneral?.toFixed(1) ?? "—"}</span>
+          <span className="text-sm text-white/80">promedio</span>
+        </div>
+        <div className="flex gap-1 mt-4 bg-white/20 p-1 rounded-lg">
+          {[1,2,3,4].map((b) => (
+            <button key={b} onClick={() => { setBimestre(b); setExpanded(null); }}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                bimestre === b ? "bg-white text-gray-900 shadow-sm" : "text-white/80 hover:text-white"
+              }`}>
+              {b}° Bim
+            </button>
+          ))}
         </div>
       </header>
-
-      <div className="px-4 py-5 pb-28 flex flex-col gap-3">
+      <div className="px-4 py-4 flex flex-col gap-3">
         {loading ? (
-          [...Array(3)].map((_, i) => <div key={i} className="skeleton h-24" />)
+          [...Array(3)].map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 h-24 animate-pulse" />)
         ) : cursos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <span className="text-5xl mb-4">📭</span>
-            <p className="font-semibold text-gray-500">Sin calificaciones</p>
-            <p className="text-sm text-gray-400 mt-1">No hay notas para el Bimestre {bimestre}</p>
-          </div>
+          <p className="text-center text-gray-500 py-10">Sin calificaciones para este bimestre.</p>
         ) : (
-          cursos.map((curso, idx) => {
+          cursos.map((curso) => {
             const isOpen = expanded === curso.curso;
             const prom = curso.promedioBimestre;
             const aprobado = prom !== null && prom >= 11;
             return (
-              <div key={idx} className="card overflow-hidden">
-                <button
-                  className="w-full flex items-center justify-between px-4 py-3.5 text-left"
-                  onClick={() => setExpanded(isOpen ? null : curso.curso)}
-                >
+              <div key={curso.curso} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <button className="w-full flex items-center justify-between px-5 py-4 text-left" onClick={() => setExpanded(isOpen ? null : curso.curso)}>
                   <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-                      style={{ background: aprobado ? "#D1FAE5" : prom === null ? "#ECEFFE" : "#FEE2E2", color: aprobado ? "#059669" : prom === null ? "#2336A8" : "#DC2626" }}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                      prom !== null
+                        ? (aprobado ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")
+                        : "bg-gray-100 text-gray-500"
+                    }`}>
                       {prom !== null ? prom.toFixed(1) : "—"}
-                    </span>
+                    </div>
                     <div>
-                      <p className="text-sm font-bold" style={{ color: "#0A0F2E" }}>{curso.curso}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "#9499C0" }}>{curso.unidades.length} unidad{curso.unidades.length !== 1 ? "es" : ""}</p>
+                      <span className="text-sm font-semibold text-gray-900">{curso.curso}</span>
+                      {prom !== null && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-xs text-gray-500">{aprobado ? "↑ Aprobado" : "↓ En riesgo"}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {prom !== null && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: aprobado ? "#D1FAE5" : "#FEE2E2", color: aprobado ? "#059669" : "#DC2626" }}>
-                        {aprobado ? "Aprobado" : "Desaprobado"}
-                      </span>
-                    )}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9499C0" strokeWidth="2" strokeLinecap="round"
-                      style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-                      <path d="M6 9l6 6 6-6"/>
-                    </svg>
-                  </div>
+                  <svg className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
-
                 {isOpen && (
-                  <div className="border-t border-gray-100 px-4 pb-4 pt-3">
-                    {curso.unidades.map((unidad, uIdx) => (
-                      <div key={uIdx} className="mb-4 last:mb-0">
+                  <div className="border-t border-gray-100 px-5 pb-4 pt-3">
+                    {curso.unidades.map((unidad) => (
+                      <div key={unidad.unidad} className="mb-3 last:mb-0">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9499C0" }}>Unidad {unidad.unidad}</p>
+                          <p className="text-xs font-semibold text-gray-500 uppercase">Unidad {unidad.unidad}</p>
                           {unidad.promedioUnidad !== null && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                              style={{ background: unidad.promedioUnidad >= 11 ? "#D1FAE5" : "#FEE2E2", color: unidad.promedioUnidad >= 11 ? "#059669" : "#DC2626" }}>
-                              Prom. {unidad.promedioUnidad.toFixed(1)}
-                            </span>
+                            <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">{unidad.promedioUnidad.toFixed(1)}</span>
                           )}
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                          {unidad.evaluaciones.map((eva, eIdx) => (
-                            <div key={eIdx} className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: "#F6F7FF" }}>
-                              <p className="text-xs" style={{ color: "#4A5080" }}>{eva.descripcion}</p>
-                              <span className="text-sm font-extrabold font-mono" style={{ color: eva.valor >= 11 ? "#059669" : "#DC2626" }}>
-                                {eva.valor}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                        {unidad.evaluaciones.map((eva) => (
+                          <div key={eva.descripcion} className="flex justify-between py-1.5 text-sm">
+                            <span className="text-gray-600">{eva.descripcion}</span>
+                            <span className={`font-semibold ${eva.valor >= 11 ? "text-green-600" : "text-red-500"}`}>{eva.valor}</span>
+                          </div>
+                        ))}
                       </div>
                     ))}
-                    {curso.promedioBimestre !== null && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-xs font-bold" style={{ color: "#0A0F2E" }}>Promedio del Bimestre</span>
-                        <span className="text-lg font-extrabold font-mono" style={{ color: aprobado ? "#059669" : "#DC2626" }}>
-                          {curso.promedioBimestre.toFixed(1)}
-                        </span>
+                    {prom !== null && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+                        <span className="text-sm font-semibold text-gray-900">Promedio Bimestre</span>
+                        <span className={`text-lg font-bold ${aprobado ? "text-green-600" : "text-red-500"}`}>{prom.toFixed(1)}</span>
                       </div>
                     )}
                   </div>

@@ -54,6 +54,15 @@ async getAnios() {
     return this.academicosService.createAlumno(dto);
   }
 
+  @Get('docentes')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getDocentes() {
+  return this.prisma.docente.findMany({
+    include: { persona: true },
+  });
+}
+
   @Post('apoderados')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria')

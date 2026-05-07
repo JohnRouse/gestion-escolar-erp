@@ -2,37 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-@import './components.css';
-
 body {
-  @apply bg-slate-50 text-slate-900 font-sans;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f8fafc;
+  color: #111827;
 }
 
 @layer components {
+  /* Botones */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-transparent transition-all duration-150 select-none;
+    -webkit-tap-highlight-color: transparent;
   }
+  .btn:active { transform: scale(0.97); }
   .btn-primary {
-    @apply bg-navy text-white border-navy hover:bg-indigo hover:border-indigo;
+    background-color: #ef4444;
+    color: white;
   }
-  .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+  .btn-primary:hover { background-color: #dc2626; }
+  .btn-secondary {
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
   }
+  .btn-secondary:hover { background-color: #f9fafb; }
+  .btn-ghost {
+    color: #6b7280;
+    background-color: transparent;
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background-color: #f3f4f6; }
+  .btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+
+  /* Inputs y selects */
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo focus:ring-2 focus:ring-purple-lt;
+    @apply w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none;
+    transition: all 0.15s ease;
+  }
+  .input:focus {
+    border-color: #eab308;
+    box-shadow: 0 0 0 4px #fef9c3;
   }
   .label {
-    @apply block text-xs font-medium text-gray-600 mb-1;
+    @apply block text-xs font-semibold text-gray-500 mb-1.5;
   }
+
+  /* Cards */
   .card {
-    @apply bg-white border border-gray-200 rounded-xl shadow-sm;
+    background-color: white;
+    border: 1px solid #f3f4f6;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
+
+  /* Badges */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
-  .badge-green  { @apply bg-green-lt text-green; }
-  .badge-red    { @apply bg-red-lt text-red; }
-  .badge-amber  { @apply bg-amber-lt text-amber; }
-  .badge-blue   { @apply bg-blue-lt text-blue; }
-  .badge-purple { @apply bg-purple-lt text-indigo; }
+  .badge-success { background-color: #dcfce7; color: #15803d; }
+  .badge-warning { background-color: #fef3c7; color: #a16207; }
+  .badge-danger  { background-color: #fee2e2; color: #b91c1c; }
+  .badge-info    { background-color: #dbeafe; color: #1d4ed8; }
+
+  /* Títulos */
+  .section-title {
+    @apply text-2xl font-bold text-gray-900 tracking-tight;
+  }
+  .subsection-title {
+    @apply text-lg font-semibold text-gray-800;
+  }
+
+  /* Skeleton */
+  .skeleton {
+    background-color: #e5e7eb;
+    border-radius: 1rem;
+    animation: pulse 2s infinite;
+  }
 }
