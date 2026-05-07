@@ -4,191 +4,150 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
-import { LogOut } from "lucide-react";
 
-interface Evaluacion {
-  tipo: string;
-  descripcion: string;
-  valor: number;
-}
-
-interface Unidad {
-  unidad: number;
-  evaluaciones: Evaluacion[];
-  promedioUnidad: number | null;
-}
-
-interface Curso {
-  curso: string;
-  unidades: Unidad[];
-  promedioBimestre: number | null;
-}
+interface Evaluacion { tipo: string; descripcion: string; valor: number; }
+interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
+interface Curso { curso: string; unidades: Unidad[]; promedioBimestre: number | null; }
 
 export default function CalificacionesPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ nombre: string } | null>(null);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [bimestre, setBimestre] = useState(1);
   const [alumnoId] = useState(2);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-
-    if (!token || !userData) {
-      router.push("/login");
-      return;
-    }
-
-    setUser(JSON.parse(userData));
+    if (!token) { router.push("/login"); return; }
     fetchNotas(token, alumnoId, bimestre);
   }, [router, alumnoId, bimestre]);
 
-  const fetchNotas = async (token: string, alumnoId: number, bimestreId: number) => {
+  const fetchNotas = async (token: string, id: number, bim: number) => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `/api/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=${bimestreId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCursos(response.data);
-    } catch (err) {
-      console.error("Error al cargar calificaciones:", err);
-      setCursos([]);
-    } finally {
-      setLoading(false);
-    }
+      const res = await axios.get(`/api/calificaciones/padres/notas?alumno_id=${id}&bimestre_id=${bim}`, { headers: { Authorization: `Bearer ${token}` } });
+      setCursos(res.data);
+    } catch { setCursos([]); } finally { setLoading(false); }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
+  const promedioGeneral = cursos.length > 0
+    ? (cursos.filter(c => c.promedioBimestre !== null).reduce((s, c) => s + (c.promedioBimestre ?? 0), 0) / cursos.filter(c => c.promedioBimestre !== null).length)
+    : null;
 
   return (
-    <main className="min-h-screen bg-slate-100 pb-20">
+    <main className="min-h-screen" style={{ background: "#F6F7FF" }}>
       {/* Header */}
-      <header className="bg-white border-b border-border px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary">
-            {user?.nombre?.charAt(0) || "U"}
-          </div>
+      <header className="px-5 pt-10 pb-5 relative overflow-hidden" style={{ background: "linear-gradient(145deg, #0A0F2E 0%, #1A2766 60%, #2336A8 100%)" }}>
+        <div className="absolute top-[-20px] right-[-20px] w-36 h-36 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7C5CFC, transparent)" }} />
+        <button onClick={() => router.back()} className="relative z-10 flex items-center gap-2 text-white/60 text-sm mb-5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Volver
+        </button>
+        <div className="relative z-10 flex items-end justify-between">
           <div>
-            <p className="text-xs font-semibold text-text">{user?.nombre}</p>
-            <p className="text-[10px] text-text-secondary">Calificaciones</p>
+            <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-1">Calificaciones</p>
+            <h1 className="text-2xl font-extrabold text-white">
+              {promedioGeneral !== null ? promedioGeneral.toFixed(1) : "—"}
+            </h1>
+            <p className="text-white/50 text-xs mt-0.5">Promedio Bimestre {bimestre}</p>
+          </div>
+          {/* Bimestre selector */}
+          <div className="flex gap-1.5">
+            {[1,2,3,4].map((b) => (
+              <button key={b} onClick={() => setBimestre(b)}
+                className="w-9 h-9 rounded-xl text-xs font-bold transition-all"
+                style={{ background: bimestre === b ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.10)", color: bimestre === b ? "#0A0F2E" : "rgba(255,255,255,0.6)" }}>
+                {b}°
+              </button>
+            ))}
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-text-muted hover:text-danger transition-colors p-2"
-          title="Cerrar sesión"
-        >
-          <LogOut size={18} />
-        </button>
       </header>
 
-      {/* Selector de bimestre */}
-      <div className="px-4 py-3 bg-white border-b border-border">
-        <div className="flex gap-2 overflow-x-auto">
-          {[1, 2, 3, 4].map((b) => (
-            <button
-              key={b}
-              onClick={() => setBimestre(b)}
-              className={`px-4 py-2 text-xs font-semibold rounded-full whitespace-nowrap transition-all ${
-                bimestre === b
-                  ? "bg-primary text-white shadow-md"
-                  : "bg-surface-secondary text-text-secondary hover:bg-gray-200"
-              }`}
-            >
-              {b}° Bimestre
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Contenido */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-5 pb-28 flex flex-col gap-3">
         {loading ? (
-          <div className="space-y-4 animate-pulse">
-            {[1, 2].map((i) => (
-              <div key={i} className="card h-40 bg-gray-200" />
-            ))}
-          </div>
+          [...Array(3)].map((_, i) => <div key={i} className="skeleton h-24" />)
         ) : cursos.length === 0 ? (
-          <div className="card p-8 text-center">
-            <p className="text-text-secondary">No hay calificaciones para este bimestre.</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="text-5xl mb-4">📭</span>
+            <p className="font-semibold text-gray-500">Sin calificaciones</p>
+            <p className="text-sm text-gray-400 mt-1">No hay notas para el Bimestre {bimestre}</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {cursos.map((curso, idx) => (
+          cursos.map((curso, idx) => {
+            const isOpen = expanded === curso.curso;
+            const prom = curso.promedioBimestre;
+            const aprobado = prom !== null && prom >= 11;
+            return (
               <div key={idx} className="card overflow-hidden">
-                <div className="bg-surface-secondary px-5 py-3 border-b border-border">
-                  <h2 className="text-sm font-semibold text-text">{curso.curso}</h2>
-                </div>
-                <div className="p-5">
-                  {curso.unidades.map((unidad, uIdx) => (
-                    <div key={uIdx} className="mb-4 last:mb-0">
-                      <div className="flex justify-between items-center mb-3">
-                        <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                          Unidad {unidad.unidad}
-                        </p>
-                        {unidad.promedioUnidad !== null && (
-                          <span
-                            className={`badge text-xs font-bold ${
-                              unidad.promedioUnidad >= 11 ? "badge-success" : "badge-danger"
-                            }`}
-                          >
-                            {unidad.promedioUnidad.toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left py-2 text-text-secondary font-medium">Evaluación</th>
-                              <th className="text-right py-2 text-text-secondary font-medium">Nota</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {unidad.evaluaciones.map((eva, eIdx) => (
-                              <tr key={eIdx} className="border-b border-border/50 last:border-0">
-                                <td className="py-2 text-text">{eva.descripcion}</td>
-                                <td
-                                  className={`py-2 text-right font-semibold ${
-                                    eva.valor >= 11 ? "text-success" : "text-danger"
-                                  }`}
-                                >
-                                  {eva.valor}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                <button
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+                  onClick={() => setExpanded(isOpen ? null : curso.curso)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                      style={{ background: aprobado ? "#D1FAE5" : prom === null ? "#ECEFFE" : "#FEE2E2", color: aprobado ? "#059669" : prom === null ? "#2336A8" : "#DC2626" }}>
+                      {prom !== null ? prom.toFixed(1) : "—"}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: "#0A0F2E" }}>{curso.curso}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: "#9499C0" }}>{curso.unidades.length} unidad{curso.unidades.length !== 1 ? "es" : ""}</p>
                     </div>
-                  ))}
-                  {curso.promedioBimestre !== null && (
-                    <div className="mt-5 pt-4 border-t border-border flex items-center gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-                          curso.promedioBimestre >= 11 ? "bg-success" : "bg-danger"
-                        }`}
-                      >
-                        {curso.promedioBimestre.toFixed(1)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {prom !== null && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: aprobado ? "#D1FAE5" : "#FEE2E2", color: aprobado ? "#059669" : "#DC2626" }}>
+                        {aprobado ? "Aprobado" : "Desaprobado"}
+                      </span>
+                    )}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9499C0" strokeWidth="2" strokeLinecap="round"
+                      style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                    {curso.unidades.map((unidad, uIdx) => (
+                      <div key={uIdx} className="mb-4 last:mb-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9499C0" }}>Unidad {unidad.unidad}</p>
+                          {unidad.promedioUnidad !== null && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: unidad.promedioUnidad >= 11 ? "#D1FAE5" : "#FEE2E2", color: unidad.promedioUnidad >= 11 ? "#059669" : "#DC2626" }}>
+                              Prom. {unidad.promedioUnidad.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          {unidad.evaluaciones.map((eva, eIdx) => (
+                            <div key={eIdx} className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: "#F6F7FF" }}>
+                              <p className="text-xs" style={{ color: "#4A5080" }}>{eva.descripcion}</p>
+                              <span className="text-sm font-extrabold font-mono" style={{ color: eva.valor >= 11 ? "#059669" : "#DC2626" }}>
+                                {eva.valor}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <span className="text-sm font-medium text-text">Promedio Bimestre</span>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                    {curso.promedioBimestre !== null && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-xs font-bold" style={{ color: "#0A0F2E" }}>Promedio del Bimestre</span>
+                        <span className="text-lg font-extrabold font-mono" style={{ color: aprobado ? "#059669" : "#DC2626" }}>
+                          {curso.promedioBimestre.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
       </div>
-
       <BottomNav />
     </main>
   );

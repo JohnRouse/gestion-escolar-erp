@@ -4,184 +4,138 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
-import { LogOut } from "lucide-react";
 
-interface AsistenciaItem {
-  fecha: string;
-  estado: string;
-}
+interface AsistenciaItem { fecha: string; estado: string; }
 
 export default function AsistenciaPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ nombre: string } | null>(null);
   const [asistencias, setAsistencias] = useState<AsistenciaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [alumnoId] = useState(2);
-  const [bimestre, setBimestre] = useState(1);
+  const [filtro, setFiltro] = useState("Todos");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
+    if (!token) { router.push("/login"); return; }
+    fetchAsistencia(token, alumnoId);
+  }, [router, alumnoId]);
 
-    if (!token || !userData) {
-      router.push("/login");
-      return;
-    }
-
-    setUser(JSON.parse(userData));
-    fetchAsistencia(token, alumnoId, bimestre);
-  }, [router, alumnoId, bimestre]);
-
-  const fetchAsistencia = async (token: string, alumnoId: number, bimestreId: number) => {
+  const fetchAsistencia = async (token: string, id: number) => {
     setLoading(true);
-    const desde = "2025-01-01";
-    const hasta = "2025-12-31";
     try {
-      const response = await axios.get(
-        `/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=${desde}&hasta=${hasta}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setAsistencias(response.data);
-    } catch (err) {
-      console.error("Error al cargar asistencia:", err);
-      setAsistencias([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
+      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=2025-01-01&hasta=2025-12-31`, { headers: { Authorization: `Bearer ${token}` } });
+      setAsistencias(res.data);
+    } catch { setAsistencias([]); } finally { setLoading(false); }
   };
 
   const total = asistencias.length;
-  const presentes = asistencias.filter((a) => a.estado === "Presente").length;
-  const ausentes = asistencias.filter((a) => a.estado === "Ausente").length;
-  const tardanzas = asistencias.filter((a) => a.estado === "Tardanza").length;
-  const justificados = asistencias.filter((a) => a.estado === "Justificado").length;
+  const presentes = asistencias.filter(a => a.estado === "Presente").length;
+  const ausentes = asistencias.filter(a => a.estado === "Ausente").length;
+  const tardanzas = asistencias.filter(a => a.estado === "Tardanza").length;
+  const justificados = asistencias.filter(a => a.estado === "Justificado").length;
   const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
 
-  const getBadgeClass = (estado: string) => {
-    switch (estado) {
-      case "Presente": return "badge-success";
-      case "Ausente": return "badge-danger";
-      case "Tardanza": return "badge-warning";
-      case "Justificado": return "badge-info";
-      default: return "";
-    }
+  const filtros = ["Todos", "Presente", "Ausente", "Tardanza", "Justificado"];
+  const listaFiltrada = filtro === "Todos" ? asistencias : asistencias.filter(a => a.estado === filtro);
+
+  const estadoConfig: Record<string, { bg: string; color: string; dot: string }> = {
+    Presente:    { bg: "#D1FAE5", color: "#059669", dot: "#10B981" },
+    Ausente:     { bg: "#FEE2E2", color: "#DC2626", dot: "#EF4444" },
+    Tardanza:    { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B" },
+    Justificado: { bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
   };
 
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (porcentaje / 100) * circumference;
+
   return (
-    <main className="min-h-screen bg-slate-100 pb-20">
+    <main className="min-h-screen" style={{ background: "#F6F7FF" }}>
       {/* Header */}
-      <header className="bg-white border-b border-border px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary">
-            {user?.nombre?.charAt(0) || "U"}
+      <header className="px-5 pt-10 pb-6 relative overflow-hidden" style={{ background: "linear-gradient(145deg, #059669 0%, #10B981 60%, #34D399 100%)" }}>
+        <div className="absolute top-[-20px] right-[-20px] w-36 h-36 rounded-full opacity-10" style={{ background: "radial-gradient(circle, white, transparent)" }} />
+        <button onClick={() => router.back()} className="relative z-10 flex items-center gap-2 text-white/60 text-sm mb-5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Volver
+        </button>
+        <div className="relative z-10 flex items-center gap-5">
+          {/* Donut */}
+          <div className="relative w-24 h-24 flex-shrink-0">
+            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+              <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10"/>
+              <circle cx="50" cy="50" r={radius} fill="none" stroke="white" strokeWidth="10"
+                strokeDasharray={circumference} strokeDashoffset={dashOffset} strokeLinecap="round"/>
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xl font-extrabold text-white">{porcentaje}%</span>
           </div>
           <div>
-            <p className="text-xs font-semibold text-text">{user?.nombre}</p>
-            <p className="text-[10px] text-text-secondary">Asistencia</p>
+            <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Asistencia</p>
+            <p className="text-white text-2xl font-extrabold">{presentes}/{total}</p>
+            <p className="text-white/60 text-xs mt-0.5">días presentes</p>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-text-muted hover:text-danger transition-colors p-2"
-          title="Cerrar sesión"
-        >
-          <LogOut size={18} />
-        </button>
+
+        {/* Mini stats */}
+        <div className="relative z-10 grid grid-cols-3 gap-2 mt-5">
+          {[
+            { label: "Ausencias", val: ausentes, color: "rgba(239,68,68,0.3)" },
+            { label: "Tardanzas", val: tardanzas, color: "rgba(245,158,11,0.3)" },
+            { label: "Justific.", val: justificados, color: "rgba(59,130,246,0.3)" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl px-3 py-2 text-center" style={{ background: s.color }}>
+              <p className="text-white font-extrabold text-lg">{s.val}</p>
+              <p className="text-white/70 text-[10px] font-medium">{s.label}</p>
+            </div>
+          ))}
+        </div>
       </header>
 
-      {/* Contenido */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 pb-28">
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mb-4">
+          {filtros.map((f) => (
+            <button key={f} onClick={() => setFiltro(f)}
+              className={`chip flex-shrink-0 ${filtro === f ? "chip-active" : "chip-inactive"}`}>
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* List */}
         {loading ? (
-          <div className="space-y-4 animate-pulse">
-            <div className="card h-32 bg-gray-200" />
-            <div className="card h-40 bg-gray-200" />
+          [...Array(6)].map((_, i) => <div key={i} className="skeleton h-14 mb-2" />)
+        ) : listaFiltrada.length === 0 ? (
+          <div className="text-center py-12">
+            <span className="text-4xl mb-3 block">📭</span>
+            <p className="text-gray-500 font-semibold text-sm">Sin registros</p>
           </div>
         ) : (
-          <>
-            {/* Gráfico de dona */}
-            <div className="card p-5 mb-4">
-              <h2 className="text-sm font-semibold text-text-secondary mb-4 uppercase tracking-wide">
-                Resumen — Bimestre I
-              </h2>
-              <div className="flex items-center gap-6">
-                <div className="relative w-28 h-28 flex-shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#E2E8F0" strokeWidth="4" />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="15.9"
-                      fill="none"
-                      stroke="#10B981"
-                      strokeWidth="4"
-                      strokeDasharray={`${porcentaje} 100`}
-                      strokeLinecap="round"
-                      className="transition-all duration-700 ease-out"
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-text">{porcentaje}%</span>
-                    <span className="text-[10px] text-text-muted">Asistencia</span>
+          <div className="flex flex-col gap-2">
+            {listaFiltrada.map((item, idx) => {
+              const cfg = estadoConfig[item.estado] || { bg: "#F6F7FF", color: "#4A5080", dot: "#9499C0" };
+              const fecha = new Date(item.fecha + "T00:00:00");
+              return (
+                <div key={idx} className="card flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
+                    <div>
+                      <p className="text-sm font-semibold capitalize" style={{ color: "#0A0F2E" }}>
+                        {fecha.toLocaleDateString("es-PE", { weekday: "long" })}
+                      </p>
+                      <p className="text-[10px]" style={{ color: "#9499C0" }}>
+                        {fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: cfg.bg, color: cfg.color }}>
+                    {item.estado}
                   </span>
                 </div>
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-success"></span>
-                    <span className="text-text-secondary">Presente <b className="text-text">{presentes}</b></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-danger"></span>
-                    <span className="text-text-secondary">Ausente <b className="text-text">{ausentes}</b></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-warning"></span>
-                    <span className="text-text-secondary">Tardanza <b className="text-text">{tardanzas}</b></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-primary"></span>
-                    <span className="text-text-secondary">Justificado <b className="text-text">{justificados}</b></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Historial */}
-            <h2 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wide">Historial</h2>
-            {asistencias.length === 0 ? (
-              <div className="card p-8 text-center">
-                <p className="text-text-secondary">No hay registros de asistencia.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {asistencias.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center py-3 px-4 bg-white rounded-2xl border border-border/50"
-                  >
-                    <span className="text-sm text-text">
-                      {new Date(item.fecha + "T00:00:00").toLocaleDateString("es-PE", {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "short",
-                      })}
-                    </span>
-                    <span className={`badge text-xs font-bold ${getBadgeClass(item.estado)}`}>
-                      {item.estado}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
+              );
+            })}
+          </div>
         )}
       </div>
-
       <BottomNav />
     </main>
   );

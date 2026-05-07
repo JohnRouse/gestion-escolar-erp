@@ -13,8 +13,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
-        <div className="max-w-[430px] mx-auto min-h-screen bg-surface shadow-2xl relative overflow-hidden">
+        <div className="max-w-[430px] mx-auto min-h-screen shadow-2xl relative overflow-hidden">
           {children}
         </div>
       </body>
