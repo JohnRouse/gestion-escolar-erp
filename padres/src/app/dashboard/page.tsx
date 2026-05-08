@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import { ChevronDown, Bell, LogOut, TrendingUp, AlertCircle, Search, MessageSquare } from "lucide-react";
 import { useSelectedChild, Child } from "@/contexts/SelectedChildContext";
 
 interface Hijo extends Child {}
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const { selectedChild, setSelectedChild } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -99,145 +101,141 @@ export default function DashboardPage() {
   const tienePendientes = dashboardData && dashboardData.totalPendiente > 0;
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20">
+    <main className="min-h-screen bg-slate-50 pb-32">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center text-sm font-bold text-white">{initials}</div>
-          <div>
-            <p className="text-xs font-medium text-gray-500">{greeting},</p>
-            <p className="text-sm font-semibold text-gray-900">{user.nombre.split(" ")[0]}</p>
-          </div>
-        </div>
+      <header className="px-6 pt-12 pb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">{greeting}, {user.nombre.split(" ")[0]}</h1>
         <div className="flex items-center gap-2">
-          <button className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
-            </svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-400 border border-white" />
+          <button className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-600 relative active:scale-95 transition-transform">
+            <Bell size={20} />
+            <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-brand-red rounded-full border-2 border-white" />
           </button>
-          <button onClick={handleLogout} className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-400 hover:text-red-500">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-            </svg>
+          <button onClick={handleLogout} className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 active:scale-95 transition-transform">
+            <LogOut size={20} />
           </button>
         </div>
       </header>
 
-      {/* Barra con nombre del hijo */}
-      {selectedChild && (
-        <div className="bg-white border-b border-gray-100 px-5 py-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-sm font-bold text-yellow-700">
-              {selectedChild.nombre.charAt(0)}
+      {/* Selector de Hijo (Estilo Botón Nativo) */}
+      <div className="px-6 mb-8">
+        <button 
+          onClick={() => setIsSheetOpen(true)}
+          className="w-full bg-white p-5 rounded-[2rem] shadow-sm flex items-center justify-between active:scale-[0.98] transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-yellow/20 flex items-center justify-center text-xl font-bold text-slate-800">
+              {selectedChild?.nombre.charAt(0)}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{selectedChild.nombre}</p>
-              <p className="text-xs text-gray-500">{selectedChild.grado}</p>
+            <div className="text-left">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiante</p>
+              <p className="text-lg font-bold text-slate-800 leading-tight">{selectedChild?.nombre}</p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Selector de hijos */}
-      {hijos.length > 1 && (
-        <div className="bg-white border-b border-gray-100 px-5 py-2">
-          <select
-            className="w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-yellow-500"
-            value={selectedChild?.id_estudiante ?? ""}
-            onChange={(e) => {
-              const hijo = hijos.find((h) => h.id_estudiante === Number(e.target.value));
-              if (hijo) {
-                setSelectedChild(hijo);
-                const token = localStorage.getItem("token") ?? "";
-                fetchDashboardData(token, hijo.id_estudiante);
-              }
-            }}
-          >
-            {hijos.map((h) => (
-              <option key={h.id_estudiante} value={h.id_estudiante}>{h.nombre} — {h.grado}</option>
-            ))}
-          </select>
-        </div>
-      )}
+          <ChevronDown className="text-slate-300" />
+        </button>
+      </div>
 
       {/* Contenido */}
-      <div className="px-4 py-5 flex flex-col gap-4">
+      <div className="px-6 space-y-6">
         {loading ? (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 h-32 animate-pulse" />
+            <div className="bg-white rounded-[2rem] h-40 animate-pulse" />
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl border border-gray-100 h-28 animate-pulse" />
-              <div className="bg-white rounded-2xl border border-gray-100 h-28 animate-pulse" />
+              <div className="bg-white rounded-[2rem] h-32 animate-pulse" />
+              <div className="bg-white rounded-[2rem] h-32 animate-pulse" />
             </div>
           </div>
         ) : (
           <>
-            {/* Hero card: Promedio General */}
-            <div className={`rounded-2xl p-6 text-white ${promedioAprobado ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-red-400 to-red-600"}`}>
-              <p className="text-sm font-medium opacity-90">Promedio General</p>
-              <p className="text-5xl font-extrabold mt-1">{dashboardData?.promedio ?? "—"}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="bg-white/20 text-xs font-semibold px-2.5 py-0.5 rounded-full">1er Bimestre</span>
-                <span className="bg-white/20 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  {promedioAprobado ? "Aprobado" : "En riesgo"}
-                </span>
+            {/* Tarjeta de Calificación Compacta */}
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Promedio Bimestral</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl font-black text-slate-800">{dashboardData?.promedio ?? "—"}</span>
+                  <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tighter ${
+                    (dashboardData?.promedio ?? 0) >= 15 
+                      ? "bg-green-100 text-green-700" 
+                      : "bg-brand-yellow text-slate-900"
+                  }`}>
+                    {(dashboardData?.promedio ?? 0) >= 11 ? "Aprobado" : "En riesgo"}
+                  </span>
+                </div>
               </div>
+              <TrendingUp size={40} className="text-slate-100" />
             </div>
 
-            {/* Grid 2x2 */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Asistencia */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Asistencia</p>
-                <div className="flex items-center gap-3">
-                  <div className="relative w-16 h-16">
-                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke={asistenciaAlta ? "#10B981" : "#EF4444"} strokeWidth="4"
-                        strokeDasharray={`${dashboardData?.asistencia ?? 0} 100`} strokeLinecap="round" />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">
-                      {dashboardData?.asistencia ?? "—"}%
-                    </span>
+            {/* Grid de Estado */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Asistencia</p>
+                <div className="flex flex-col gap-2">
+                  <span className="text-2xl font-black text-slate-800">{dashboardData?.asistencia ?? "—"}%</span>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-green-500 h-full rounded-full" style={{ width: `${dashboardData?.asistencia}%` }} />
                   </div>
-                  <p className="text-xs text-gray-500">Bimestre I</p>
                 </div>
               </div>
 
-              {/* Pagos */}
-              <div className={`bg-white rounded-2xl border p-5 shadow-sm ${tienePendientes ? "border-red-200" : "border-gray-100"}`}>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pagos</p>
-                <p className="text-xl font-bold text-gray-900">
+              <div className={`p-6 rounded-[2.5rem] shadow-sm ${tienePendientes ? "bg-red-50 border border-red-100" : "bg-white"}`}>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Pendiente</p>
+                <p className={`text-2xl font-black ${tienePendientes ? "text-brand-red" : "text-slate-800"}`}>
                   S/ {dashboardData?.totalPendiente?.toLocaleString("es-PE", { minimumFractionDigits: 2 }) ?? "0.00"}
                 </p>
-                <span className={`inline-block mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                  dashboardData?.estadoPagos === "Al día" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                }`}>
-                  {dashboardData?.estadoPagos ?? "Pendiente"}
-                </span>
-                {tienePendientes && (
-                  <button className="mt-3 w-full py-2 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all active:scale-[0.98]">
-                    Pagar ahora
-                  </button>
-                )}
               </div>
             </div>
 
-            {/* Último aviso */}
+            {/* Avisos Importantes */}
             {dashboardData?.circularReciente && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Último aviso</p>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2 px-2">
+                  <AlertCircle size={14} className="text-brand-red" />
+                  Comunicado Urgente
+                </p>
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-4 border-brand-red">
+                  <p className="text-lg font-bold text-slate-800 leading-tight mb-2">{dashboardData.circularReciente.titulo}</p>
+                  <p className="text-sm text-slate-500">{new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "long" })}</p>
                 </div>
-                <p className="text-sm font-medium text-gray-900 mt-1">{dashboardData.circularReciente.titulo}</p>
-                <p className="text-xs text-gray-400 mt-1">{new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}</p>
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Floating Action Button (FAB) - Estilo MD3 */}
+      <button className="fixed bottom-28 right-6 w-16 h-16 bg-brand-600 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40">
+        <MessageSquare size={28} />
+      </button>
+
+      {/* Modal Sheet de Selección de Hijo */}
+      {isSheetOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsSheetOpen(false)} />
+          <div className="relative w-full max-w-[430px] bg-white rounded-t-[3rem] p-8 pb-12 animate-slideUpSheet shadow-2xl">
+            <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8" />
+            <h3 className="text-2xl font-bold text-slate-800 mb-6 px-2">Mis Hijos</h3>
+            <div className="space-y-3">
+              {hijos.map((h) => (
+                <button 
+                  key={h.id_estudiante}
+                  onClick={() => { setSelectedChild(h); setIsSheetOpen(false); }}
+                  className={`w-full p-5 rounded-[2rem] text-left flex items-center gap-4 transition-all ${
+                    selectedChild?.id_estudiante === h.id_estudiante ? "bg-brand-yellow/10 ring-2 ring-brand-yellow" : "bg-slate-50 border-2 border-transparent"
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center font-bold text-slate-800">
+                    {h.nombre.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800">{h.nombre}</p>
+                    <p className="text-xs text-slate-500 font-medium">{h.grado}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </main>

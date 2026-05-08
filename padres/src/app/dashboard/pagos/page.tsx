@@ -112,9 +112,9 @@ export default function PagosPage() {
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
       {/* Header con tarjeta superior */}
-      <div className="bg-white border-b border-gray-100 px-5 pt-5 pb-4">
-        <h1 className="text-lg font-bold text-gray-900 mb-4">Estado de Cuenta</h1>
-        <div className="bg-gradient-to-r from-red-500 to-red-400 rounded-2xl p-5 text-white shadow-sm">
+      <div className="px-5 pt-8 pb-4">
+        <h1 className="text-2xl font-medium text-gray-900 mb-6">Estado de Cuenta</h1>
+        <div className="bg-brand-600 rounded-3xl p-6 text-white shadow-lg">
           <p className="text-sm font-medium opacity-90">Total pendiente</p>
           <p className="text-4xl font-extrabold mt-1">
             S/ {estadoCuenta?.total_pendiente?.toFixed(2) ?? "0.00"}
@@ -126,15 +126,15 @@ export default function PagosPage() {
       </div>
 
       {/* Filtros con chips (primera fila) */}
-      <div className="px-4 pt-3 flex gap-2 overflow-x-auto">
+      <div className="px-4 pt-3 flex gap-2 overflow-x-auto scrollbar-none">
         {["Todos", "Pendiente", "Pagado", "Vencido"].map((f) => (
           <button
             key={f}
             onClick={() => setFiltro(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
               filtro === f
-                ? "bg-red-500 text-white shadow-sm"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-brand-900 text-white shadow-md"
+                : "bg-white text-gray-500 shadow-sm"
             }`}
           >
             {f}
@@ -186,8 +186,8 @@ export default function PagosPage() {
             return (
               <div
                 key={deuda.id_cronograma}
-                className={`bg-white rounded-2xl border px-4 py-3 flex items-center gap-3 shadow-sm transition-all ${
-                  isSelected ? "border-red-300 bg-red-50/30" : "border-gray-100"
+                className={`bg-white rounded-3xl border-0 px-5 py-4 flex items-center gap-4 shadow-sm transition-all ${
+                  isSelected ? "ring-2 ring-brand-500 bg-brand-50/50" : ""
                 } ${seleccionable ? "cursor-pointer" : ""}`}
                 onClick={() => seleccionable && toggleSeleccion(deuda.id_cronograma)}
               >

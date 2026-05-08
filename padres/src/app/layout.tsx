@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SelectedChildProvider } from "@/contexts/SelectedChildContext";
+import SplashScreen from "@/components/SplashScreen";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,8 +16,9 @@ export default function RootLayout({
   return (
     <html lang="es" data-scroll-behavior="smooth">
       <body>
+        <SplashScreen />
         <SelectedChildProvider>
-          <div className="max-w-[430px] mx-auto min-h-screen shadow-2xl relative overflow-hidden">
+          <div className="max-w-[430px] mx-auto min-h-screen relative overflow-x-hidden bg-slate-50 text-slate-800">
             {children}
           </div>
         </SelectedChildProvider>
