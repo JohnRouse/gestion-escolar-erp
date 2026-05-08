@@ -391,4 +391,25 @@ async getAnios() {
   });
 }
 
+async getUltimasMatriculas() {
+  const hoy = new Date();
+  const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const finHoy = new Date(inicioHoy.getTime() + 24 * 60 * 60 * 1000);
+
+  return this.prisma.matricula.findMany({
+    where: {
+      fecha_matricula: {
+        gte: inicioHoy,
+        lt: finHoy,
+      },
+    },
+    include: {
+      estudiante: { include: { persona: true } },
+      seccion: { include: { grado: true } },
+    },
+    orderBy: { fecha_matricula: 'desc' },
+    take: 10,
+  });
+}
+
 }

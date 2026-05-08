@@ -5,6 +5,7 @@ import { FinanzasModule } from './finanzas/finanzas.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CalificacionesModule } from './calificaciones/calificaciones.module';
 import { CircularesModule } from './circulares/circulares.module';
+import { AnaliticasModule } from './analiticas/analiticas.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CircularesModule } from './circulares/circulares.module';
     FinanzasModule,
     CalificacionesModule,
     CircularesModule,
+    AnaliticasModule,
   ],
   controllers: [],
   providers: [],

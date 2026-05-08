@@ -115,6 +115,13 @@ async getAsistenciaAlumno(
   return this.academicosService.getAsistenciaAlumno(Number(alumnoId), desde, hasta);
 }
 
+@Get('matriculas/ultimas')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria')
+async getUltimasMatriculas() {
+  return this.academicosService.getUltimasMatriculas();
+}
+
 @Get('padres/hijos')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Apoderado', 'Admin')
