@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "aos": "^2.3.4",
     "axios": "^1.16.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/aos": "^3.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

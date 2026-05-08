@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['3000-w-tiansky1993-morghlxn.cluster-o6xgj6spb5bw6q2doeigm2qy6c.cloudworkstations.dev'],
+  turbopack: {
+    // Desactivar HMR para evitar errores de WebSocket en Cloud Workstations
+    hmr: false,
+  },
 };
 
 export default nextConfig;
