@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface AsistenciaItem { fecha: string; estado: string; }
@@ -34,90 +35,89 @@ export default function AsistenciaPage() {
   const presentes = asistencias.filter(a => a.estado === "Presente").length;
   const ausentes = asistencias.filter(a => a.estado === "Ausente").length;
   const tardanzas = asistencias.filter(a => a.estado === "Tardanza").length;
+  const justificados = asistencias.filter(a => a.estado === "Justificado").length;
   const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
-  const asistenciaAlta = porcentaje >= 80;
 
   const filtros = ["Todos", "Presente", "Ausente", "Tardanza", "Justificado"];
   const listaFiltrada = filtro === "Todos" ? asistencias : asistencias.filter(a => a.estado === filtro);
 
-  const getBadgeStyle = (estado: string) => {
+  const getEstadoStyle = (estado: string) => {
     switch (estado) {
-      case "Presente": return "bg-green-100 text-green-700";
-      case "Ausente": return "bg-red-100 text-red-700";
-      case "Tardanza": return "bg-amber-100 text-amber-700";
-      case "Justificado": return "bg-blue-100 text-blue-700";
-      default: return "bg-gray-100 text-gray-600";
-    }
-  };
-
-  const getDotColor = (estado: string) => {
-    switch (estado) {
-      case "Presente": return "bg-green-500";
-      case "Ausente": return "bg-red-500";
-      case "Tardanza": return "bg-amber-500";
-      case "Justificado": return "bg-blue-500";
-      default: return "bg-gray-300";
+      case "Presente": return { bg: "bg-success-soft", text: "text-success", dot: "bg-success" };
+      case "Ausente": return { bg: "bg-danger-soft", text: "text-danger", dot: "bg-danger" };
+      case "Tardanza": return { bg: "bg-warning-soft", text: "text-warning", dot: "bg-warning" };
+      case "Justificado": return { bg: "bg-info-soft", text: "text-info", dot: "bg-info" };
+      default: return { bg: "bg-border", text: "text-text-muted", dot: "bg-text-muted" };
     }
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20">
-      <header className="bg-white border-b border-gray-100 px-5 py-5">
-        <h1 className="text-lg font-bold text-gray-900 mb-4">Asistencia</h1>
-        <div className="flex items-center gap-5">
+    <main className="min-h-screen bg-surface-alt pb-20">
+      <ScreenHeader title="Asistencia" />
+      <div className="px-5 pt-4">
+        <div className="flex items-center gap-5 mb-5">
           <div className="relative w-24 h-24">
-            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke={asistenciaAlta ? "#10B981" : "#EF4444"} strokeWidth="4"
-                strokeDasharray={`${porcentaje} 100`} strokeLinecap="round" />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-900">{porcentaje}%</span>
+            <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: `conic-gradient(#10B981 ${porcentaje}%, #E2E8F0 0)` }}>
+              <div className="absolute inset-[10px] rounded-full bg-white" />
+            </div>
+            <span className="absolute inset-0 grid place-items-center text-text font-extrabold">{porcentaje}%</span>
           </div>
           <div>
-            <p className="text-sm text-gray-500">{presentes} de {total} días presente</p>
-            <div className="flex gap-3 mt-2">
-              <span className="text-xs text-red-500 font-medium">Aus: {ausentes}</span>
-              <span className="text-xs text-amber-500 font-medium">Tar: {tardanzas}</span>
-            </div>
+            <p className="text-4xl font-extrabold text-text">{presentes}<span className="text-2xl text-text-secondary">/{total}</span></p>
+            <p className="text-text-secondary text-sm mt-1">días presentes</p>
           </div>
         </div>
-      </header>
-
-      <div className="px-4 py-4">
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="m-card p-3 text-center">
+            <p className="text-2xl font-extrabold text-text">{ausentes}</p>
+            <p className="text-[11px] text-text-secondary">Ausencias</p>
+          </div>
+          <div className="m-card p-3 text-center">
+            <p className="text-2xl font-extrabold text-text">{tardanzas}</p>
+            <p className="text-[11px] text-text-secondary">Tardanzas</p>
+          </div>
+          <div className="m-card p-3 text-center">
+            <p className="text-2xl font-extrabold text-text">{justificados}</p>
+            <p className="text-[11px] text-text-secondary">Justificadas</p>
+          </div>
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-2">
           {filtros.map((f) => (
-            <button key={f} onClick={() => setFiltro(f)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                filtro === f ? "bg-red-500 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}>
+            <button key={f} onClick={() => setFiltro(f)} className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filtro === f ? "bg-accent text-white shadow-lg shadow-accent/20" : "bg-white text-text-secondary border border-border hover:bg-surface-alt"}`}>
               {f}
             </button>
           ))}
         </div>
-
+      </div>
+      <div className="px-5 mt-3 pb-28 space-y-2">
         {loading ? (
-          [...Array(5)].map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 h-14 mb-2 animate-pulse" />)
+          [1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 flex items-center gap-3">
+              <div className="skel w-3 h-3 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-4 w-1/3" />
+                <div className="skel h-3 w-1/4" />
+              </div>
+              <div className="skel h-6 w-20 rounded-full" />
+            </div>
+          ))
         ) : listaFiltrada.length === 0 ? (
-          <p className="text-center text-gray-500 py-10">Sin registros</p>
+          <p className="text-center text-text-secondary py-10">Sin registros</p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {listaFiltrada.map((item, idx) => {
-              const fecha = new Date(item.fecha + "T00:00:00");
-              return (
-                <div key={idx} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full ${getDotColor(item.estado)}`} />
-                    <span className="text-sm text-gray-700">
-                      {fecha.toLocaleDateString("es-PE", { weekday: "short", day: "2-digit", month: "short" })}
-                    </span>
-                  </div>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${getBadgeStyle(item.estado)}`}>
-                    {item.estado}
-                  </span>
+          listaFiltrada.map((item, idx) => {
+            const est = getEstadoStyle(item.estado);
+            const fecha = new Date(item.fecha + "T00:00:00");
+            return (
+              <div key={idx} className="m-card p-4 flex items-center gap-3">
+                <span className={`dot ${est.dot}`} />
+                <div className="flex-1">
+                  <p className="font-extrabold text-text">{fecha.toLocaleDateString("es-PE", { weekday: "long" })}</p>
+                  <p className="text-xs text-text-secondary">{fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</p>
                 </div>
-              );
-            })}
-          </div>
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${est.bg} ${est.text}`}>{item.estado}</span>
+              </div>
+            );
+          })
         )}
       </div>
       <BottomNav />

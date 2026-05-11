@@ -1,15 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Home, FileText, Calendar, Wallet, Bell, Clock } from "lucide-react";
 
 const navItems = [
-  { label: "Inicio", path: "/dashboard", icon: Home },
-  { label: "Notas", path: "/dashboard/calificaciones", icon: FileText },
-  { label: "Asistencia", path: "/dashboard/asistencia", icon: Calendar },
-  { label: "Pagos", path: "/dashboard/pagos", icon: Wallet },
-  { label: "Avisos", path: "/dashboard/circulares", icon: Bell },
-  { label: "Horario", path: "/dashboard/horario", icon: Clock },
+  { label: "Inicio", icon: "home", path: "/dashboard" },
+  { label: "Notas", icon: "description", path: "/dashboard/calificaciones" },
+  { label: "Asistencia", icon: "event_available", path: "/dashboard/asistencia" },
+  { label: "Pagos", icon: "credit_card", path: "/dashboard/pagos" },
+  { label: "Avisos", icon: "notifications", path: "/dashboard/circulares" },
 ];
 
 export default function BottomNav() {
@@ -18,34 +16,41 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-6 h-24 bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-t border-border"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      {navItems.map((item) => {
-        const isActive = pathname === item.path;
-        const Icon = item.icon;
-        return (
-          <button
-            key={item.path}
-            onClick={() => router.push(item.path)}
-            className="flex flex-col items-center gap-1.5 transition-all duration-300 min-w-0 flex-1"
-          >
-            <span
-              className={`flex items-center justify-center w-16 h-10 rounded-full transition-all duration-300 ${
-                isActive ? "bg-brand-yellow/20 text-slate-900" : "bg-transparent text-slate-400"
-              }`}
+      <div className="grid grid-cols-5 px-2 pt-2 pb-2 max-w-[420px] mx-auto">
+        {navItems.map((item) => {
+          const isActive = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className="press relative py-2 flex flex-col items-center gap-0.5"
             >
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-            </span>
-            <span
-              className={`text-[11px] font-bold truncate transition-colors ${
-                isActive ? "text-slate-900" : "text-slate-400"
-              }`}
-            >
-              {item.label}
-            </span>
-          </button>
-        );
-      })}
+              <span
+                className={`absolute inset-x-2 bottom-1.5 h-8 rounded-full transition-all duration-300 ${
+                  isActive ? "bg-accent-soft scale-100 opacity-100" : "scale-85 opacity-0"
+                }`}
+              />
+              <span
+                className={`material-symbols-rounded text-2xl relative z-10 ${
+                  isActive ? "text-accent" : "text-text-muted"
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`text-[10px] font-bold relative z-10 ${
+                  isActive ? "text-primary" : "text-text-muted"
+                }`}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }

@@ -31,4 +31,25 @@ export class AnaliticasController {
   async getOperativas() {
     return this.analiticasService.getOperativas();
   }
+
+  @Get('tesoreria/kpis')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTesoreriaKpis() {
+  return this.analiticasService.getTesoreriaKpis();
+}
+
+@Get('matricula-tendencia')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getMatriculaTendencia() {
+  return this.analiticasService.getMatriculaTendencia();
+}
+
+@Get('distribucion-nivel')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getDistribucionPorNivel() {
+  return this.analiticasService.getDistribucionPorNivel();
+}
 }

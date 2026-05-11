@@ -4,10 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
-import { ChevronDown, Bell, LogOut, TrendingUp, AlertCircle, Search, MessageSquare } from "lucide-react";
-import { useSelectedChild, Child } from "@/contexts/SelectedChildContext";
+import DashboardHeader from "@/components/DashboardHeader";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
-interface Hijo extends Child {}
+interface Hijo {
+  id_estudiante: number;
+  nombre: string;
+  grado: string;
+}
 
 interface DashboardData {
   asistencia: number | null;
@@ -19,28 +23,26 @@ interface DashboardData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ nombre: string; rol: string } | null>(null);
   const [hijos, setHijos] = useState<Hijo[]>([]);
   const { selectedChild, setSelectedChild } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    if (!token || !userData) { router.push("/login"); return; }
-    setUser(JSON.parse(userData));
+    if (!token) { router.push("/login"); return; }
     fetchHijos(token);
   }, [router]);
 
   const fetchHijos = async (token: string) => {
     try {
-      const res = await axios.get("/api/academicos/padres/hijos", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get("/api/academicos/padres/hijos", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const hijos = res.data;
       setHijos(hijos);
       if (hijos.length > 0) {
-        // Si hay un hijo guardado en el contexto y está en la lista, usarlo
         if (selectedChild && hijos.find((h: Hijo) => h.id_estudiante === selectedChild.id_estudiante)) {
           fetchDashboardData(token, selectedChild.id_estudiante);
         } else {
@@ -49,7 +51,7 @@ export default function DashboardPage() {
         }
       }
     } catch {
-      const mock = [{ id_estudiante: 2, nombre: "Lucas García", grado: "5° Primaria" }];
+      const mock = [{ id_estudiante: 2, nombre: "Lucas García López", grado: "1.er Grado · Sección A" }];
       setHijos(mock);
       if (!selectedChild) setSelectedChild(mock[0]);
       fetchDashboardData(token, mock[0].id_estudiante);
@@ -66,177 +68,147 @@ export default function DashboardPage() {
       ]);
       const asistencias = asistRes.status === "fulfilled" ? asistRes.value.data : [];
       const total = asistencias.length;
-      const presentes = asistencias.filter((a: { estado: string }) => a.estado === "Presente").length;
+      const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
       const pct = total > 0 ? Math.round((presentes / total) * 100) : null;
       const notas = notasRes.status === "fulfilled" ? notasRes.value.data : [];
-      const promedios = notas.map((c: { promedioBimestre: number }) => c.promedioBimestre).filter((p: number) => p !== null);
+      const promedios = notas.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
       const prom = promedios.length > 0 ? Math.round((promedios.reduce((a: number, b: number) => a + b, 0) / promedios.length) * 10) / 10 : null;
       const pendiente = pagosRes.status === "fulfilled" ? (pagosRes.value.data.total_pendiente || 0) : 0;
-      const estado = pendiente === 0 ? "Al día" : "Pendiente";
+      const estado = pendiente === 0 ? "Al día" : "Por pagar";
       const circulares = circRes.status === "fulfilled" ? circRes.value.data : [];
       const circ = circulares.length > 0 ? { titulo: circulares[0].titulo, fecha: circulares[0].fecha_creacion } : null;
       setDashboardData({ asistencia: pct, promedio: prom, estadoPagos: estado, totalPendiente: pendiente, circularReciente: circ });
     } catch {
-      setDashboardData({ asistencia: 92, promedio: 15.4, estadoPagos: "Pendiente", totalPendiente: 3150, circularReciente: null });
+      setDashboardData({ asistencia: 92, promedio: 15.4, estadoPagos: "Por pagar", totalPendiente: 3150, circularReciente: { titulo: "Aviso – Primaria", fecha: "2025-05-06" } });
     } finally {
       setLoading(false);
+      setTimeout(() => setShowActivity(true), 600);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
-
-  const initials = user ? user.nombre.split(" ").map((n) => n[0]).join("").slice(0, 2) : "";
-  const now = new Date();
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
-
-  if (!user) return null;
-
-  const promedioAprobado = (dashboardData?.promedio ?? 0) >= 11;
-  const asistenciaAlta = (dashboardData?.asistencia ?? 0) >= 80;
-  const tienePendientes = dashboardData && dashboardData.totalPendiente > 0;
-
   return (
-    <main className="min-h-screen bg-slate-50 pb-32">
-      {/* Header */}
-      <header className="px-6 pt-12 pb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">{greeting}, {user.nombre.split(" ")[0]}</h1>
-        <div className="flex items-center gap-2">
-          <button className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-600 relative active:scale-95 transition-transform">
-            <Bell size={20} />
-            <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-brand-red rounded-full border-2 border-white" />
-          </button>
-          <button onClick={handleLogout} className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 active:scale-95 transition-transform">
-            <LogOut size={20} />
-          </button>
-        </div>
-      </header>
-
-      {/* Selector de Hijo (Estilo Botón Nativo) */}
-      <div className="px-6 mb-8">
-        <button 
-          onClick={() => setIsSheetOpen(true)}
-          className="w-full bg-white p-5 rounded-[2rem] shadow-sm flex items-center justify-between active:scale-[0.98] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-yellow/20 flex items-center justify-center text-xl font-bold text-slate-800">
-              {selectedChild?.nombre.charAt(0)}
-            </div>
-            <div className="text-left">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiante</p>
-              <p className="text-lg font-bold text-slate-800 leading-tight">{selectedChild?.nombre}</p>
-            </div>
-          </div>
-          <ChevronDown className="text-slate-300" />
-        </button>
-      </div>
-
-      {/* Contenido */}
-      <div className="px-6 space-y-6">
+    <main className="min-h-screen bg-surface-alt pb-20">
+      <DashboardHeader />
+      <div className="-mt-4 px-5 pb-6 relative z-20">
         {loading ? (
-          <div className="space-y-4">
-            <div className="bg-white rounded-[2rem] h-40 animate-pulse" />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-[2rem] h-32 animate-pulse" />
-              <div className="bg-white rounded-[2rem] h-32 animate-pulse" />
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="m-card p-4 space-y-3">
+                <div className="skel h-3 w-16" />
+                <div className="skel h-8 w-20" />
+                <div className="skel h-2 w-full" />
+              </div>
+            ))}
           </div>
         ) : (
-          <>
-            {/* Tarjeta de Calificación Compacta */}
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Promedio Bimestral</p>
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl font-black text-slate-800">{dashboardData?.promedio ?? "—"}</span>
-                  <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tighter ${
-                    (dashboardData?.promedio ?? 0) >= 15 
-                      ? "bg-green-100 text-green-700" 
-                      : "bg-brand-yellow text-slate-900"
-                  }`}>
-                    {(dashboardData?.promedio ?? 0) >= 11 ? "Aprobado" : "En riesgo"}
-                  </span>
-                </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => router.push("/dashboard/asistencia")} className="press m-card p-4 text-left">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary uppercase">ASISTENCIA</p>
+                <span className="w-7 h-7 rounded-full bg-success-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-success text-lg">check</span>
+                </span>
               </div>
-              <TrendingUp size={40} className="text-slate-100" />
-            </div>
-
-            {/* Grid de Estado */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Asistencia</p>
-                <div className="flex flex-col gap-2">
-                  <span className="text-2xl font-black text-slate-800">{dashboardData?.asistencia ?? "—"}%</span>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: `${dashboardData?.asistencia}%` }} />
-                  </div>
-                </div>
+              <p className="text-3xl font-extrabold text-text mt-2">{dashboardData?.asistencia ?? "—"}<span className="text-xl">%</span></p>
+              <p className="text-xs text-text-secondary">Bimestre I</p>
+              <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
+                <div className="h-full bg-success transition-all duration-700" style={{ width: `${dashboardData?.asistencia ?? 0}%` }} />
               </div>
-
-              <div className={`p-6 rounded-[2.5rem] shadow-sm ${tienePendientes ? "bg-red-50 border border-red-100" : "bg-white"}`}>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Pendiente</p>
-                <p className={`text-2xl font-black ${tienePendientes ? "text-brand-red" : "text-slate-800"}`}>
-                  S/ {dashboardData?.totalPendiente?.toLocaleString("es-PE", { minimumFractionDigits: 2 }) ?? "0.00"}
+            </button>
+            <button onClick={() => router.push("/dashboard/calificaciones")} className="press m-card p-4 text-left">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary uppercase">PROMEDIO</p>
+                <span className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-accent text-lg">trending_up</span>
+                </span>
+              </div>
+              <p className="text-3xl font-extrabold text-text mt-2">{dashboardData?.promedio ?? "—"}<span className="text-base text-text-secondary">.0</span></p>
+              <p className="text-xs text-text-secondary">General</p>
+              <span className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] font-bold ${(dashboardData?.promedio ?? 0) >= 11 ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
+                {(dashboardData?.promedio ?? 0) >= 11 ? "Aprobado" : "En riesgo"}
+              </span>
+            </button>
+            <button onClick={() => router.push("/dashboard/pagos")} className="press m-card p-4 text-left">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary uppercase">PAGOS</p>
+                <span className="w-7 h-7 rounded-full bg-danger-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-danger text-lg">credit_card</span>
+                </span>
+              </div>
+              <p className="text-xl font-extrabold text-text mt-2">S/ {dashboardData?.totalPendiente?.toLocaleString("es-PE", { minimumFractionDigits: 2 }) ?? "0.00"}</p>
+              <p className="text-xs text-text-secondary">{dashboardData?.estadoPagos}</p>
+              <span className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] font-bold ${dashboardData?.estadoPagos === "Al día" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>
+                {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Por pagar"}
+              </span>
+            </button>
+            <button onClick={() => router.push("/dashboard/circulares")} className="press m-card p-4 text-left">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary uppercase">ÚLTIMO AVISO</p>
+                <span className="w-7 h-7 rounded-full bg-info-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-info text-lg">campaign</span>
+                </span>
+              </div>
+              <p className="text-base font-extrabold text-text mt-2 line-clamp-1">{dashboardData?.circularReciente?.titulo ?? "Sin avisos"}</p>
+              <p className="text-xs text-text-secondary truncate">{dashboardData?.circularReciente ? "Nuevo comunicado" : "No hay circulares"}</p>
+              {dashboardData?.circularReciente && (
+                <p className="text-[11px] text-text-secondary mt-2">
+                  {new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
                 </p>
-              </div>
-            </div>
-
-            {/* Avisos Importantes */}
-            {dashboardData?.circularReciente && (
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2 px-2">
-                  <AlertCircle size={14} className="text-brand-red" />
-                  Comunicado Urgente
-                </p>
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-4 border-brand-red">
-                  <p className="text-lg font-bold text-slate-800 leading-tight mb-2">{dashboardData.circularReciente.titulo}</p>
-                  <p className="text-sm text-slate-500">{new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "long" })}</p>
-                </div>
-              </div>
-            )}
-          </>
+              )}
+            </button>
+          </div>
         )}
-      </div>
-
-      {/* Floating Action Button (FAB) - Estilo MD3 */}
-      <button className="fixed bottom-28 right-6 w-16 h-16 bg-brand-600 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40">
-        <MessageSquare size={28} />
-      </button>
-
-      {/* Modal Sheet de Selección de Hijo */}
-      {isSheetOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsSheetOpen(false)} />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-[3rem] p-8 pb-12 animate-slideUpSheet shadow-2xl">
-            <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8" />
-            <h3 className="text-2xl font-bold text-slate-800 mb-6 px-2">Mis Hijos</h3>
-            <div className="space-y-3">
-              {hijos.map((h) => (
-                <button 
-                  key={h.id_estudiante}
-                  onClick={() => { setSelectedChild(h); setIsSheetOpen(false); }}
-                  className={`w-full p-5 rounded-[2rem] text-left flex items-center gap-4 transition-all ${
-                    selectedChild?.id_estudiante === h.id_estudiante ? "bg-brand-yellow/10 ring-2 ring-brand-yellow" : "bg-slate-50 border-2 border-transparent"
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center font-bold text-slate-800">
-                    {h.nombre.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">{h.nombre}</p>
-                    <p className="text-xs text-slate-500 font-medium">{h.grado}</p>
-                  </div>
-                </button>
-              ))}
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-[10px] tracking-[.22em] font-extrabold text-text-secondary uppercase">ACTIVIDAD RECIENTE</p>
+          <button className="text-xs font-bold text-accent">Ver todo</button>
+        </div>
+        {!showActivity ? (
+          <div className="mt-3 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="m-card p-3 flex items-center gap-3">
+                <div className="skel w-10 h-10 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <div className="skel h-3 w-3/4" />
+                  <div className="skel h-2.5 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div className="m-card p-3 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-success-soft flex items-center justify-center">
+                <span className="material-symbols-rounded text-success text-xl">description</span>
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-text">Nota de Matemáticas registrada</p>
+                <p className="text-xs text-text-secondary">Hace 2 días</p>
+              </div>
+              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
+            </div>
+            <div className="m-card p-3 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-info-soft flex items-center justify-center">
+                <span className="material-symbols-rounded text-info text-xl">check_circle</span>
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-text">Asistencia del lunes confirmada</p>
+                <p className="text-xs text-text-secondary">Hace 3 días</p>
+              </div>
+              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
+            </div>
+            <div className="m-card p-3 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center">
+                <span className="material-symbols-rounded text-accent text-xl">campaign</span>
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-text">Nueva circular publicada</p>
+                <p className="text-xs text-text-secondary">Hace 4 días</p>
+              </div>
+              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
             </div>
           </div>
-        </div>
-      )}
-
+        )}
+      </div>
       <BottomNav />
     </main>
   );

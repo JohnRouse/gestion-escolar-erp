@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface Child {
   id_estudiante: number;
@@ -16,21 +16,28 @@ interface SelectedChildContextType {
 const SelectedChildContext = createContext<SelectedChildContextType | undefined>(undefined);
 
 export function SelectedChildProvider({ children }: { children: ReactNode }) {
-  const [selectedChild, setSelectedChild] = useState<Child | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('selectedChild');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
-  });
+  // Inicializamos siempre con null para que el primer render coincida en servidor y cliente
+  const [selectedChild, setSelectedChildState] = useState<Child | null>(null);
 
-  const updateChild = (child: Child) => {
-    setSelectedChild(child);
+  // Al montar en el cliente, recuperamos el valor guardado en localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('selectedChild');
+    if (saved) {
+      try {
+        setSelectedChildState(JSON.parse(saved));
+      } catch {
+        // Si falla el JSON, ignora
+      }
+    }
+  }, []);
+
+  const setSelectedChild = (child: Child) => {
+    setSelectedChildState(child);
     localStorage.setItem('selectedChild', JSON.stringify(child));
   };
 
   return (
-    <SelectedChildContext.Provider value={{ selectedChild, setSelectedChild: updateChild }}>
+    <SelectedChildContext.Provider value={{ selectedChild, setSelectedChild }}>
       {children}
     </SelectedChildContext.Provider>
   );
@@ -38,6 +45,6 @@ export function SelectedChildProvider({ children }: { children: ReactNode }) {
 
 export function useSelectedChild() {
   const context = useContext(SelectedChildContext);
-  if (!context) throw new Error('useSelectedChild must be used within SelectedChildProvider');
+  if (!context) throw new Error('useSelectedChild debe usarse dentro de SelectedChildProvider');
   return context;
 }

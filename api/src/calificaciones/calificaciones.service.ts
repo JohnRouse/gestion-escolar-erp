@@ -238,18 +238,20 @@ export class CalificacionesService {
     const cursos: any = {};
     for (const mat of matriculas) {
       for (const nota of mat.notas) {
-        const cursoNombre = nota.evaluacion.asignacion.curso.nombre_curso;
-        if (!cursos[cursoNombre]) cursos[cursoNombre] = { curso: cursoNombre, unidades: {} };
-        const unidadId = nota.evaluacion.id_unidad;
-        if (!cursos[cursoNombre].unidades[unidadId]) {
-          cursos[cursoNombre].unidades[unidadId] = { unidad: nota.evaluacion.unidad.numero, evaluaciones: [] };
-        }
-        cursos[cursoNombre].unidades[unidadId].evaluaciones.push({
-          tipo: nota.evaluacion.tipo.nombre_tipo,
-          descripcion: nota.evaluacion.descripcion_actividad,
-          valor: Number(nota.valor_nota),
-        });
-      }
+  const cursoNombre = nota.evaluacion.asignacion.curso.nombre_curso;
+  if (!cursos[cursoNombre]) cursos[cursoNombre] = { curso: cursoNombre, unidades: {} };
+  const unidadId = nota.evaluacion.id_unidad;
+  if (!cursos[cursoNombre].unidades[unidadId]) {
+    cursos[cursoNombre].unidades[unidadId] = { unidad: nota.evaluacion.unidad.numero, evaluaciones: [] };
+  }
+  // Agregar el id_evaluacion_det junto con los demás datos
+  cursos[cursoNombre].unidades[unidadId].evaluaciones.push({
+    id: nota.id_evaluacion_det, // ← Agregar esta línea
+    tipo: nota.evaluacion.tipo.nombre_tipo,
+    descripcion: nota.evaluacion.descripcion_actividad,
+    valor: Number(nota.valor_nota),
+  });
+}
     }
 
     // Calcular promedios por unidad y bimestre

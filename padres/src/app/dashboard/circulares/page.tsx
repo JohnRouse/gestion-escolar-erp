@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import ScreenHeader from "@/components/ScreenHeader";
 
 interface Circular {
   id_circular: number;
@@ -35,19 +36,14 @@ export default function CircularesPage() {
 
   if (selected) {
     return (
-      <main className="min-h-screen bg-slate-50 pb-20">
-        <header className="bg-white border-b border-gray-100 px-5 py-4 flex items-center gap-3">
-          <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          </button>
-          <h1 className="text-lg font-bold text-gray-900">Detalle</h1>
-        </header>
-        <div className="px-4 py-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <p className="text-sm text-gray-500 mb-1">{new Date(selected.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" })}</p>
-            <h2 className="text-lg font-bold text-gray-900 mb-3">{selected.titulo}</h2>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{selected.contenido}</p>
-            <p className="text-xs text-gray-400 mt-4">Por {selected.remitente.persona.nombres} {selected.remitente.persona.apellido_paterno}</p>
+      <main className="min-h-screen bg-surface-alt pb-20">
+        <ScreenHeader title="Aviso" />
+        <div className="px-5 py-5">
+          <div className="m-card p-5">
+            <h2 className="text-2xl font-extrabold text-text mb-3">{selected.titulo}</h2>
+            <p className="text-sm text-text-secondary mb-4">{new Date(selected.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" })}</p>
+            <p className="text-text leading-relaxed whitespace-pre-line">{selected.contenido}</p>
+            <p className="text-xs text-text-secondary mt-4">Por {selected.remitente.persona.nombres} {selected.remitente.persona.apellido_paterno}</p>
           </div>
         </div>
         <BottomNav />
@@ -56,24 +52,42 @@ export default function CircularesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20">
-      <header className="bg-white border-b border-gray-100 px-5 py-4">
-        <h1 className="text-lg font-bold text-gray-900">Circulares</h1>
-      </header>
-      <div className="px-4 py-4 flex flex-col gap-3">
+    <main className="min-h-screen bg-surface-alt pb-20">
+      <ScreenHeader title="Avisos" />
+      <div className="px-5 pt-5 pb-28 space-y-3">
         {loading ? (
-          [...Array(3)].map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 h-20 animate-pulse" />)
-        ) : circulares.length === 0 ? (
-          <p className="text-center text-gray-500 py-10">No hay circulares disponibles.</p>
-        ) : (
-          circulares.map((circ) => (
-            <button key={circ.id_circular} onClick={() => setSelected(circ)}
-              className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm text-left hover:shadow-md transition-shadow">
-              <p className="text-sm font-semibold text-gray-900 mb-1">{circ.titulo}</p>
-              <p className="text-xs text-gray-500 mb-2">{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}</p>
-              <p className="text-xs text-gray-500 line-clamp-2">{circ.contenido}</p>
-            </button>
+          [1, 2].map((i) => (
+            <div key={i} className="m-card p-4 flex items-start gap-3">
+              <div className="skel w-11 h-11 rounded-2xl" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-4 w-3/4" />
+                <div className="skel h-3 w-full" />
+                <div className="skel h-3 w-1/4" />
+              </div>
+            </div>
           ))
+        ) : circulares.length === 0 ? (
+          <p className="text-center text-text-secondary py-10">No hay circulares disponibles.</p>
+        ) : (
+          circulares.map((circ) => {
+            const isNew = new Date(circ.fecha_creacion).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000;
+            return (
+              <button key={circ.id_circular} onClick={() => setSelected(circ)} className="m-card p-4 flex items-start gap-3 press w-full text-left">
+                <span className="w-11 h-11 rounded-2xl bg-accent-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-accent text-2xl">campaign</span>
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-extrabold text-text truncate">{circ.titulo}</p>
+                    {isNew && <span className="px-2 py-0.5 rounded-full bg-accent text-white text-[10px] font-extrabold">NUEVO</span>}
+                  </div>
+                  <p className="text-sm text-text-secondary line-clamp-2">{circ.contenido}</p>
+                  <p className="text-[11px] text-text-muted mt-1">{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                </div>
+                <span className="material-symbols-rounded text-text-muted mt-2">chevron_right</span>
+              </button>
+            );
+          })
         )}
       </div>
       <BottomNav />

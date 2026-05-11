@@ -4,14 +4,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
+import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
-interface Pago {
-  monto: string;
-  fecha: string;
-  metodo: string;
-}
-
+interface Pago { monto: string; fecha: string; metodo: string; }
 interface Deuda {
   id_cronograma: number;
   concepto: string;
@@ -20,13 +16,7 @@ interface Deuda {
   estado: string;
   pagos: Pago[];
 }
-
-interface EstadoCuenta {
-  id_matricula: number;
-  estado_matricula: string;
-  deudas: Deuda[];
-  total_pendiente: number;
-}
+interface EstadoCuenta { id_matricula: number; estado_matricula: string; deudas: Deuda[]; total_pendiente: number; }
 
 export default function PagosPage() {
   const router = useRouter();
@@ -34,9 +24,10 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true);
   const { selectedChild } = useSelectedChild();
   const alumnoId = selectedChild?.id_estudiante ?? 2;
-  const [filtro, setFiltro] = useState("Todos");
-  const [seleccionados, setSeleccionados] = useState<number[]>([]);
-  const [mostrarPagados, setMostrarPagados] = useState(false);
+  const [filtro, setFiltro] = useState("Pendientes");
+  const [verTodas, setVerTodas] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pagoSeleccionado, setPagoSeleccionado] = useState<Deuda | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -53,240 +44,131 @@ export default function PagosPage() {
   };
 
   const deudas = estadoCuenta?.deudas ?? [];
-  const pendientesOVencidas = deudas.filter(d => d.estado === "Pendiente" || d.estado === "Vencido");
+  const hoy = new Date();
+  const dentroDe10Dias = new Date(); dentroDe10Dias.setDate(hoy.getDate() + 10);
 
-  // Filtrar según el chip activo
+  const deudasProximasOVencidas = useMemo(() => deudas.filter(d => {
+    if (d.estado === "Pagado") return false;
+    const venc = new Date(d.fecha_vencimiento);
+    return venc <= hoy || venc <= dentroDe10Dias;
+  }), [deudas]);
+
+  const totalCabecera = useMemo(() => deudasProximasOVencidas.reduce((sum, d) => sum + Number(d.monto_base), 0), [deudasProximasOVencidas]);
+
   const filtradas = useMemo(() => {
+    if (filtro === "Pendientes") return verTodas ? deudas : deudasProximasOVencidas;
     if (filtro === "Todos") return deudas;
     return deudas.filter(d => d.estado === filtro);
-  }, [deudas, filtro]);
+  }, [deudas, filtro, deudasProximasOVencidas, verTodas]);
 
-  // Calcular total seleccionado
-  const totalSeleccionado = useMemo(() => {
-    return seleccionados.reduce((total, id) => {
-      const deuda = deudas.find(d => d.id_cronograma === id);
-      if (deuda) {
-        return total + Number(deuda.monto_base);
-      }
-      return total;
-    }, 0);
-  }, [seleccionados, deudas]);
-
-  const toggleSeleccion = (id: number) => {
-    setSeleccionados(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const seleccionarTodoPendiente = () => {
-    if (seleccionados.length === pendientesOVencidas.length) {
-      setSeleccionados([]);
-    } else {
-      setSeleccionados(pendientesOVencidas.map(d => d.id_cronograma));
-    }
-  };
-
-  const getEstadoColor = (estado: string) => {
+  const getBadgeStyle = (estado: string) => {
     switch (estado) {
-      case "Pagado": return "bg-green-500";
-      case "Pendiente": return "bg-amber-500";
-      case "Vencido": return "bg-red-500";
-      default: return "bg-gray-300";
+      case "Pagado": return "bg-success-soft text-success";
+      case "Pendiente": return "bg-warning-soft text-warning";
+      case "Vencido": return "bg-danger-soft text-danger";
+      default: return "bg-border text-text-muted";
     }
   };
 
-  const getFechaColor = (deuda: Deuda) => {
-    if (deuda.estado === "Pagado") return "text-gray-400";
-    const vence = new Date(deuda.fecha_vencimiento);
-    return vence < new Date() ? "text-red-600 font-medium" : "text-blue-600";
+  const getFechaClase = (deuda: Deuda) => {
+    if (deuda.estado === "Pagado") return "text-text-secondary";
+    const venc = new Date(deuda.fecha_vencimiento);
+    return venc < hoy ? "text-danger font-bold" : "text-text-secondary";
   };
 
   const getFechaTexto = (deuda: Deuda) => {
     if (deuda.estado === "Pagado") return "";
-    const vence = new Date(deuda.fecha_vencimiento);
-    return vence < new Date() ? "Vencida: " : "Vence: ";
+    const venc = new Date(deuda.fecha_vencimiento);
+    return venc < hoy ? "Vencida el " : "Vence el ";
   };
 
-  const esPension = (concepto: string) => !concepto.toLowerCase().includes("matrícula");
-
   return (
-    <main className="min-h-screen bg-slate-50 pb-24">
-      {/* Header con tarjeta superior */}
-      <div className="px-5 pt-8 pb-4">
-        <h1 className="text-2xl font-medium text-gray-900 mb-6">Estado de Cuenta</h1>
-        <div className="bg-brand-600 rounded-3xl p-6 text-white shadow-lg">
-          <p className="text-sm font-medium opacity-90">Total pendiente</p>
-          <p className="text-4xl font-extrabold mt-1">
-            S/ {estadoCuenta?.total_pendiente?.toFixed(2) ?? "0.00"}
-          </p>
-          {estadoCuenta && estadoCuenta.total_pendiente === 0 && (
-            <p className="text-sm text-white/80 mt-2">¡Sin deudas pendientes!</p>
-          )}
+    <main className="min-h-screen bg-surface-alt pb-20">
+      <ScreenHeader title="Estado de Cuenta" />
+      <div className="px-5 pt-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+          {["Pendientes", "Todos", "Pagado", "Vencido"].map((f) => (
+            <button key={f} onClick={() => { setFiltro(f); setVerTodas(false); }} className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filtro === f ? "bg-accent text-white shadow-lg shadow-accent/20" : "bg-white text-text-secondary border border-border hover:bg-surface-alt"}`}>
+              {f}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* Filtros con chips (primera fila) */}
-      <div className="px-4 pt-3 flex gap-2 overflow-x-auto scrollbar-none">
-        {["Todos", "Pendiente", "Pagado", "Vencido"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
-              filtro === f
-                ? "bg-brand-900 text-white shadow-md"
-                : "bg-white text-gray-500 shadow-sm"
-            }`}
-          >
-            {f}
-            {f !== "Todos" && (
-              <span className="ml-1 text-[10px] opacity-80">
-                ({deudas.filter(d => d.estado === f).length})
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Opción "Seleccionar todo" (segunda fila, solo visible si hay pendientes y el filtro no es Pagado) */}
-      {pendientesOVencidas.length > 0 && (filtro === "Todos" || filtro === "Pendiente" || filtro === "Vencido") && (
-        <div className="px-4 pt-2 flex items-center justify-end">
-          <button
-            onClick={seleccionarTodoPendiente}
-            className="text-xs text-gray-500 hover:text-red-500 font-medium flex items-center gap-1"
-          >
-            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-              seleccionados.length === pendientesOVencidas.length && pendientesOVencidas.length > 0
-                ? "bg-red-500 border-red-500"
-                : "border-gray-300"
-            }`}>
-              {seleccionados.length === pendientesOVencidas.length && pendientesOVencidas.length > 0 && (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-              )}
-            </span>
-            {seleccionados.length === pendientesOVencidas.length ? "Deseleccionar todos" : "Seleccionar todos"}
-          </button>
+        <div className="m-card p-4 mb-4 bg-accent">
+          <p className="text-[10px] tracking-[.22em] font-bold text-white/80 uppercase">DEUDA PENDIENTE</p>
+          <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
+          <p className="text-white/60 text-sm mt-1">{totalCabecera === 0 ? "¡Sin deudas próximas!" : "Vencida + próximos 10 días"}</p>
         </div>
-      )}
-
-      {/* Listado de deudas */}
-      <div className="px-4 pt-3 flex flex-col gap-2">
+        {filtro === "Pendientes" && !verTodas && deudas.length > deudasProximasOVencidas.length && (
+          <button onClick={() => setVerTodas(true)} className="text-xs text-accent font-semibold hover:underline mb-2">
+            Ver todas ({deudas.length - deudasProximasOVencidas.length} ocultas)
+          </button>
+        )}
+        {filtro === "Pendientes" && verTodas && (
+          <button onClick={() => setVerTodas(false)} className="text-xs text-accent font-semibold hover:underline mb-2">
+            Ocultar lejanas
+          </button>
+        )}
+      </div>
+      <div className="px-5 mt-3 pb-28 space-y-3">
         {loading ? (
-          [...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 h-16 animate-pulse" />
+          [1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 space-y-3">
+              <div className="flex justify-between">
+                <div className="skel h-4 w-32" />
+                <div className="skel h-6 w-20 rounded-full" />
+              </div>
+              <div className="skel h-6 w-24" />
+            </div>
           ))
         ) : filtradas.length === 0 ? (
-          <p className="text-center text-gray-500 py-10">No hay conceptos</p>
+          <p className="text-center text-text-secondary py-10">No hay conceptos</p>
         ) : (
-          filtradas.map((deuda) => {
-            const seleccionable = deuda.estado === "Pendiente" || deuda.estado === "Vencido";
-            const isSelected = seleccionados.includes(deuda.id_cronograma);
-            const isPension = esPension(deuda.concepto);
-            const mes = isPension ? deuda.concepto.replace("Pensión ", "") : deuda.concepto;
-
-            return (
-              <div
-                key={deuda.id_cronograma}
-                className={`bg-white rounded-3xl border-0 px-5 py-4 flex items-center gap-4 shadow-sm transition-all ${
-                  isSelected ? "ring-2 ring-brand-500 bg-brand-50/50" : ""
-                } ${seleccionable ? "cursor-pointer" : ""}`}
-                onClick={() => seleccionable && toggleSeleccion(deuda.id_cronograma)}
-              >
-                {/* Checkbox o indicador de estado */}
-                {seleccionable ? (
-                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                    isSelected
-                      ? "bg-red-500 border-red-500"
-                      : "border-gray-300 hover:border-red-400"
-                  }`}>
-                    {isSelected && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                    )}
-                  </div>
-                ) : (
-                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${getEstadoColor(deuda.estado)}`} />
-                )}
-
-                {/* Información de la deuda */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-sm font-bold text-gray-900 truncate">
-                      {isPension ? mes : deuda.concepto}
-                    </span>
-                    <span className="text-base font-bold text-gray-900 ml-2">
-                      S/ {Number(deuda.monto_base).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <p className={`text-xs ${getFechaColor(deuda)}`}>
-                      {getFechaTexto(deuda)}
-                      {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
-                    </p>
-                    {deuda.estado === "Pagado" && deuda.pagos.length > 0 && (
-                      <p className="text-xs text-green-600">
-                        Pagado {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
-                      </p>
-                    )}
-                  </div>
+          filtradas.map((deuda) => (
+            <div key={deuda.id_cronograma} className="m-card p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-extrabold text-text">{deuda.concepto}</p>
+                  <p className={`text-xs ${getFechaClase(deuda)}`}>
+                    {getFechaTexto(deuda)}
+                    {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                  </p>
                 </div>
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${getBadgeStyle(deuda.estado)}`}>{deuda.estado}</span>
               </div>
-            );
-          })
-        )}
-
-        {/* Sección de pagadas (colapsable) */}
-        {deudas.filter(d => d.estado === "Pagado").length > 0 && (
-          <div className="mt-4">
-            <button
-              onClick={() => setMostrarPagados(!mostrarPagados)}
-              className="w-full flex items-center justify-between py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
-            >
-              <span>Pagadas ({deudas.filter(d => d.estado === "Pagado").length})</span>
-              <svg className={`w-4 h-4 transition-transform ${mostrarPagados ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            {mostrarPagados && (
-              <div className="space-y-2 mt-2">
-                {deudas.filter(d => d.estado === "Pagado").map((deuda) => (
-                  <div key={deuda.id_cronograma} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center gap-3 opacity-75">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-sm font-semibold text-gray-500">
-                          {esPension(deuda.concepto) ? deuda.concepto.replace("Pensión ", "") : deuda.concepto}
-                        </span>
-                        <span className="text-sm font-bold text-gray-500">S/ {Number(deuda.monto_base).toFixed(2)}</span>
-                      </div>
-                      {deuda.pagos.length > 0 && (
-                        <p className="text-xs text-green-600 mt-1">
-                          Pagado {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-3 flex items-center justify-between">
+                <p className="font-mono text-lg font-bold text-text">S/ {Number(deuda.monto_base).toFixed(2)}</p>
+                {deuda.estado !== "Pagado" && (
+                  <button onClick={() => { setPagoSeleccionado(deuda); setSheetOpen(true); }} className="press px-5 py-2 rounded-xl bg-accent text-white font-bold text-sm shadow-md hover:bg-accent/90">
+                    Pagar
+                  </button>
+                )}
+                {deuda.estado === "Pagado" && deuda.pagos.length > 0 && (
+                  <p className="text-xs text-success font-bold flex items-center gap-1">
+                    <span className="material-symbols-rounded text-sm">check_circle</span>
+                    Pagado el {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          ))
         )}
       </div>
-
-      {/* Botón flotante "Pagar seleccionados" */}
-      {seleccionados.length > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 px-4 z-40">
-          <div className="max-w-[430px] mx-auto">
-            <button
-              className="w-full py-3 px-6 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-2xl shadow-xl shadow-red-500/30 transition-all active:scale-[0.98] flex items-center justify-between"
-              onClick={() => {
-                alert(`Procesando pago por S/ ${totalSeleccionado.toFixed(2)} de ${seleccionados.length} conceptos`);
-                setSeleccionados([]);
-              }}
-            >
-              <span>Pagar seleccionados ({seleccionados.length})</span>
-              <span className="text-lg font-bold">S/ {totalSeleccionado.toFixed(2)}</span>
+      {sheetOpen && pagoSeleccionado && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setSheetOpen(false)} />
+          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] p-6 animate-slide-up">
+            <div className="mx-auto w-12 h-1.5 rounded-full bg-border mb-4" />
+            <h3 className="text-xl font-extrabold text-text">Confirmar pago</h3>
+            <p className="text-sm text-text-secondary">{pagoSeleccionado.concepto} · S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}</p>
+            <button onClick={() => { setSheetOpen(false); alert("Pago procesado (simulación)"); }} className="press mt-5 w-full py-4 rounded-2xl bg-accent text-white font-extrabold shadow-md">
+              Pagar S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}
+            </button>
+            <button onClick={() => setSheetOpen(false)} className="w-full py-3 mt-2 rounded-2xl text-text-secondary font-bold">
+              Cancelar
             </button>
           </div>
         </div>
       )}
-
       <BottomNav />
     </main>
   );
