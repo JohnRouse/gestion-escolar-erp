@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CalificacionesModule } from './calificaciones/calificaciones.module';
 import { CircularesModule } from './circulares/circulares.module';
 import { AnaliticasModule } from './analiticas/analiticas.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AnaliticasModule } from './analiticas/analiticas.module';
     CalificacionesModule,
     CircularesModule,
     AnaliticasModule,
+    NotificacionesModule,
   ],
   controllers: [],
   providers: [],

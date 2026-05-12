@@ -33,16 +33,17 @@ model Persona {
 }
 
 model Usuario {
-  id_usuario    Int               @id @default(autoincrement())
-  username      String            @unique @db.VarChar(50)
-  password_hash String            @db.VarChar(255)
+  id_usuario    Int      @id @default(autoincrement())
+  username      String   @unique @db.VarChar(50)
+  password_hash String   @db.VarChar(255)
   id_persona    Int
   id_rol        Int
-  estado        Boolean           @default(true)
-  persona       Persona           @relation(fields: [id_persona], references: [id_persona])
-  rol           Rol               @relation(fields: [id_rol], references: [id_rol])
+  estado        Boolean  @default(true)
+  persona       Persona  @relation(fields: [id_persona], references: [id_persona])
+  rol           Rol      @relation(fields: [id_rol], references: [id_rol])
   pagos_cajero  PagoTransaccion[]
   circulares    Circular[]
+  notificaciones Notificacion[]   // 👈 agrega esta línea
 }
 
 // ── MÓDULO ACADÉMICO ──
@@ -304,29 +305,41 @@ model PagoTransaccion {
   @@index([id_cronograma])
 }
 
-// ── CIRCULARES ──
+// ── MEJORAS EN CIRCULARES ──
 model Circular {
   id_circular          Int                    @id @default(autoincrement())
   titulo               String                 @db.VarChar(150)
   contenido            String                 @db.Text
   fecha_creacion       DateTime               @default(now())
   remitente_id_usuario Int
+  categoria            String?                // 'Academico', 'Evento', 'Urgente', 'General'
+  urgente              Boolean                @default(false)
+  requiere_autorizacion Boolean               @default(false)
   remitente            Usuario                @relation(fields: [remitente_id_usuario], references: [id_usuario])
   destinatarios        CircularDestinatario[]
-
-  @@index([fecha_creacion])
+  adjuntos             Adjunto[]
 }
 
 model CircularDestinatario {
-  id          Int      @id @default(autoincrement())
-  id_circular Int
-  id_nivel    Int?
-  id_seccion  Int?
-  circular    Circular @relation(fields: [id_circular], references: [id_circular])
-  nivel       Nivel?   @relation(fields: [id_nivel], references: [id_nivel])
-  seccion     Seccion? @relation(fields: [id_seccion], references: [id_seccion])
+  id                 Int       @id @default(autoincrement())
+  id_circular        Int
+  id_nivel           Int?
+  id_seccion         Int?
+  leida              Boolean   @default(false)
+  fecha_lectura      DateTime?
+  confirmada         Boolean   @default(false)
+  fecha_confirmacion DateTime?
+  circular           Circular  @relation(fields: [id_circular], references: [id_circular])
+  nivel              Nivel?    @relation(fields: [id_nivel], references: [id_nivel])
+  seccion            Seccion?  @relation(fields: [id_seccion], references: [id_seccion])
+}
 
-  @@unique([id_circular, id_nivel, id_seccion])
+model Adjunto {
+  id_adjunto   Int      @id @default(autoincrement())
+  id_circular  Int
+  nombre_archivo String
+  url          String
+  circular     Circular @relation(fields: [id_circular], references: [id_circular])
 }
 
 model Horario {
@@ -341,3 +354,18 @@ model Horario {
   curso       Curso   @relation(fields: [id_curso], references: [id_curso])
   docente     Docente @relation(fields: [id_docente], references: [id_persona])
 }
+
+// ── NOTIFICACIONES ──
+model Notificacion {
+  id_notif       Int      @id @default(autoincrement())
+  id_usuario     Int
+  tipo           String   // 'academica', 'administrativa', 'informativa'
+  titulo         String
+  mensaje        String
+  leida          Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+  url            String?  // ruta a la que redirige al hacer clic
+  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+}
+
+

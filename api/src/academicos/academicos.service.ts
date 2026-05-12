@@ -320,30 +320,42 @@ async getHijosApoderado(apoderadoId: number) {
   const relaciones = await this.prisma.apoderadoEstudiante.findMany({
     where: { id_apoderado: apoderadoId },
     include: {
-      estudiante: {
+  estudiante: {
+    include: {
+      persona: true,
+      matriculas: {
+        where: { estado_matricula: 'Activo' },
         include: {
-          persona: true,
-          matriculas: {
-            where: { estado_matricula: 'Activo' },
-            include: { seccion: { include: { grado: true } } },
-            take: 1,
+          seccion: {
+            include: {
+              grado: {
+                include: {
+                  nivel: true,  // 👈 agregar esta línea
+                },
+              },
+            },
           },
         },
+        take: 1,
       },
     },
+  },
+},
   });
 
   return relaciones.map((r) => {
-    const matricula = r.estudiante.matriculas[0];
-    const seccion = matricula?.seccion;
-    return {
-      id_estudiante: r.id_estudiante,
-      nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
-      grado: seccion
-        ? `${seccion.grado.nombre_grado} ${seccion.letra}`
-        : 'Sin matrícula activa',
-    };
-  });
+  const matricula = r.estudiante.matriculas[0];
+  const seccion = matricula?.seccion;
+  const gradoNombre = seccion?.grado?.nombre_grado || '';
+  const nivelNombre = seccion?.grado?.nivel?.nombre_nivel || '';
+  return {
+    id_estudiante: r.id_estudiante,
+    nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
+    grado: seccion
+      ? `${gradoNombre} ${seccion.letra} · ${nivelNombre}`
+      : 'Sin matrícula activa',
+  };
+});
 }
 
 async getHorarioAlumno(alumnoId: number) {

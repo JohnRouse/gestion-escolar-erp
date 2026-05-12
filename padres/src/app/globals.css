@@ -65,3 +65,12 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.45s cubic-bezier(.2,.9,.25,1) both;
 }
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(.2,.9,.25,1) both;
+}

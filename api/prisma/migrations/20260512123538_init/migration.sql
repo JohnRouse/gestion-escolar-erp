@@ -296,8 +296,10 @@ CREATE TABLE `Circular` (
     `contenido` TEXT NOT NULL,
     `fecha_creacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `remitente_id_usuario` INTEGER NOT NULL,
+    `categoria` VARCHAR(191) NULL,
+    `urgente` BOOLEAN NOT NULL DEFAULT false,
+    `requiere_autorizacion` BOOLEAN NOT NULL DEFAULT false,
 
-    INDEX `Circular_fecha_creacion_idx`(`fecha_creacion`),
     PRIMARY KEY (`id_circular`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -307,9 +309,49 @@ CREATE TABLE `CircularDestinatario` (
     `id_circular` INTEGER NOT NULL,
     `id_nivel` INTEGER NULL,
     `id_seccion` INTEGER NULL,
+    `leida` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_lectura` DATETIME(3) NULL,
+    `confirmada` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_confirmacion` DATETIME(3) NULL,
 
-    UNIQUE INDEX `CircularDestinatario_id_circular_id_nivel_id_seccion_key`(`id_circular`, `id_nivel`, `id_seccion`),
     PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Adjunto` (
+    `id_adjunto` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_circular` INTEGER NOT NULL,
+    `nombre_archivo` VARCHAR(191) NOT NULL,
+    `url` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`id_adjunto`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Horario` (
+    `id_horario` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_seccion` INTEGER NOT NULL,
+    `id_curso` INTEGER NOT NULL,
+    `id_docente` INTEGER NOT NULL,
+    `dia_semana` INTEGER NOT NULL,
+    `hora_inicio` VARCHAR(5) NOT NULL,
+    `hora_fin` VARCHAR(5) NOT NULL,
+
+    PRIMARY KEY (`id_horario`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Notificacion` (
+    `id_notif` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_usuario` INTEGER NOT NULL,
+    `tipo` VARCHAR(191) NOT NULL,
+    `titulo` VARCHAR(191) NOT NULL,
+    `mensaje` VARCHAR(191) NOT NULL,
+    `leida` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_creacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `url` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id_notif`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
@@ -425,3 +467,18 @@ ALTER TABLE `CircularDestinatario` ADD CONSTRAINT `CircularDestinatario_id_nivel
 
 -- AddForeignKey
 ALTER TABLE `CircularDestinatario` ADD CONSTRAINT `CircularDestinatario_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Adjunto` ADD CONSTRAINT `Adjunto_id_circular_fkey` FOREIGN KEY (`id_circular`) REFERENCES `Circular`(`id_circular`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_curso_fkey` FOREIGN KEY (`id_curso`) REFERENCES `Curso`(`id_curso`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_docente_fkey` FOREIGN KEY (`id_docente`) REFERENCES `Docente`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Notificacion` ADD CONSTRAINT `Notificacion_id_usuario_fkey` FOREIGN KEY (`id_usuario`) REFERENCES `Usuario`(`id_usuario`) ON DELETE RESTRICT ON UPDATE CASCADE;

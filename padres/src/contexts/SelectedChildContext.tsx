@@ -6,28 +6,29 @@ export interface Child {
   id_estudiante: number;
   nombre: string;
   grado: string;
+  color?: string;
 }
 
 interface SelectedChildContextType {
   selectedChild: Child | null;
   setSelectedChild: (child: Child) => void;
+  hijos: Child[];
+  setHijos: (hijos: Child[]) => void;
 }
 
 const SelectedChildContext = createContext<SelectedChildContextType | undefined>(undefined);
 
 export function SelectedChildProvider({ children }: { children: ReactNode }) {
-  // Inicializamos siempre con null para que el primer render coincida en servidor y cliente
   const [selectedChild, setSelectedChildState] = useState<Child | null>(null);
+  const [hijos, setHijos] = useState<Child[]>([]);
 
-  // Al montar en el cliente, recuperamos el valor guardado en localStorage
+  // Cargar el hijo guardado al montar el componente en cliente
   useEffect(() => {
     const saved = localStorage.getItem('selectedChild');
     if (saved) {
       try {
         setSelectedChildState(JSON.parse(saved));
-      } catch {
-        // Si falla el JSON, ignora
-      }
+      } catch {}
     }
   }, []);
 
@@ -36,8 +37,22 @@ export function SelectedChildProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selectedChild', JSON.stringify(child));
   };
 
+  // Sincronizar: cuando se cargan los hijos, si no hay hijo seleccionado o el
+  // hijo guardado no está en la lista, seleccionar el primero.
+  useEffect(() => {
+    if (hijos.length === 0) return;
+    if (!selectedChild) {
+      setSelectedChild(hijos[0]);
+    } else {
+      const existe = hijos.find(h => h.id_estudiante === selectedChild.id_estudiante);
+      if (!existe) {
+        setSelectedChild(hijos[0]);
+      }
+    }
+  }, [hijos]);
+
   return (
-    <SelectedChildContext.Provider value={{ selectedChild, setSelectedChild }}>
+    <SelectedChildContext.Provider value={{ selectedChild, setSelectedChild, hijos, setHijos }}>
       {children}
     </SelectedChildContext.Provider>
   );

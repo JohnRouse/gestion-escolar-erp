@@ -7,12 +7,6 @@ import BottomNav from "@/components/BottomNav";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
-interface Hijo {
-  id_estudiante: number;
-  nombre: string;
-  grado: string;
-}
-
 interface DashboardData {
   asistencia: number | null;
   promedio: number | null;
@@ -23,11 +17,11 @@ interface DashboardData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [hijos, setHijos] = useState<Hijo[]>([]);
-  const { selectedChild, setSelectedChild } = useSelectedChild();
+  const { selectedChild, setSelectedChild, hijos, setHijos } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showActivity, setShowActivity] = useState(false);
+  const [fadeIn, setFadeIn] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -40,15 +34,19 @@ export default function DashboardPage() {
       const res = await axios.get("/api/academicos/padres/hijos", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const hijos = res.data;
-      setHijos(hijos);
-      if (hijos.length > 0) {
-        if (selectedChild && hijos.find((h: Hijo) => h.id_estudiante === selectedChild.id_estudiante)) {
-          fetchDashboardData(token, selectedChild.id_estudiante);
-        } else {
-          setSelectedChild(hijos[0]);
-          fetchDashboardData(token, hijos[0].id_estudiante);
-        }
+      const hijosData = res.data.map((h: any, idx: number) => ({
+        ...h,
+        color: undefined, // el contexto asigna colores
+      }));
+      setHijos(hijosData);
+      if (!selectedChild && hijosData.length > 0) {
+        setSelectedChild(hijosData[0]);
+      }
+      if (selectedChild) {
+        fetchDashboardData(token, selectedChild.id_estudiante);
+      } else if (hijosData.length > 0) {
+        setSelectedChild(hijosData[0]);
+        fetchDashboardData(token, hijosData[0].id_estudiante);
       }
     } catch {
       const mock = [{ id_estudiante: 2, nombre: "Lucas García López", grado: "1.er Grado · Sección A" }];
@@ -59,6 +57,13 @@ export default function DashboardPage() {
   };
 
   const fetchDashboardData = async (token: string, alumnoId: number) => {
+    // Activar animación de fade
+    setFadeIn(false);
+    setTimeout(() => {
+      setFadeIn(true);
+    }, 50);
+
+    setLoading(true);
     try {
       const [asistRes, notasRes, pagosRes, circRes] = await Promise.allSettled([
         axios.get(`/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -86,10 +91,23 @@ export default function DashboardPage() {
     }
   };
 
+  // Escuchar cambios de selectedChild para recargar datos
+  useEffect(() => {
+    if (selectedChild) {
+      const token = localStorage.getItem("token");
+      if (token) fetchDashboardData(token, selectedChild.id_estudiante);
+    }
+  }, [selectedChild?.id_estudiante]);
+
   return (
-    <main className="min-h-screen bg-surface-alt pb-20">
+    <main className="min-h-screen bg-surface-alt pb-24">
       <DashboardHeader />
-      <div className="-mt-4 px-5 pb-6 relative z-20">
+      <div
+        key={selectedChild?.id_estudiante}
+        className={`-mt-4 px-5 pb-6 relative z-20 transition-opacity duration-300 ${
+          fadeIn ? "opacity-100" : "opacity-0"
+        }`}
+      >
         {loading ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, i) => (

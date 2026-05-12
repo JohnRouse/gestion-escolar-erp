@@ -40,6 +40,7 @@ export class AuthService {
         username: user.username,
         nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`,
         rol: user.rol.nombre_rol,
+        genero: user.persona.genero,
       },
     };
   }

@@ -47,14 +47,21 @@ export default function PagosPage() {
   const hoy = new Date();
   const dentroDe10Dias = new Date(); dentroDe10Dias.setDate(hoy.getDate() + 10);
 
+  // Total real de la cabecera (TODAS las deudas no pagadas)
+  const totalCabecera = useMemo(() => {
+    return deudas
+      .filter((d) => d.estado !== "Pagado")
+      .reduce((sum, d) => sum + Number(d.monto_base), 0);
+  }, [deudas]);
+
+  // Deudas mostradas por defecto (próximas o vencidas)
   const deudasProximasOVencidas = useMemo(() => deudas.filter(d => {
     if (d.estado === "Pagado") return false;
     const venc = new Date(d.fecha_vencimiento);
     return venc <= hoy || venc <= dentroDe10Dias;
   }), [deudas]);
 
-  const totalCabecera = useMemo(() => deudasProximasOVencidas.reduce((sum, d) => sum + Number(d.monto_base), 0), [deudasProximasOVencidas]);
-
+  // Filtrado según el chip activo
   const filtradas = useMemo(() => {
     if (filtro === "Pendientes") return verTodas ? deudas : deudasProximasOVencidas;
     if (filtro === "Todos") return deudas;
@@ -83,33 +90,57 @@ export default function PagosPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-20">
+    <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Estado de Cuenta" />
+
+      {/* Cabecera con deuda total REAL */}
       <div className="px-5 pt-4">
+        <div className="bg-primary border border-accent/30 rounded-2xl p-5 mb-4 shadow-lg shadow-primary/20">
+  <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
+  <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
+  <p className="text-white/70 text-sm mt-1">
+    {totalCabecera === 0 ? "¡Sin deudas!" : "Pendientes y vencidas"}
+  </p>
+</div>
+
+        {/* Chips de filtro */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {["Pendientes", "Todos", "Pagado", "Vencido"].map((f) => (
-            <button key={f} onClick={() => { setFiltro(f); setVerTodas(false); }} className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filtro === f ? "bg-accent text-white shadow-lg shadow-accent/20" : "bg-white text-text-secondary border border-border hover:bg-surface-alt"}`}>
+            <button
+              key={f}
+              onClick={() => { setFiltro(f); setVerTodas(false); }}
+              className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                filtro === f
+                  ? "bg-accent text-white shadow-lg shadow-accent/20"
+                  : "bg-white text-text-secondary border border-border hover:bg-surface-alt"
+              }`}
+            >
               {f}
             </button>
           ))}
         </div>
-        <div className="m-card p-4 mb-4 bg-accent">
-          <p className="text-[10px] tracking-[.22em] font-bold text-white/80 uppercase">DEUDA PENDIENTE</p>
-          <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
-          <p className="text-white/60 text-sm mt-1">{totalCabecera === 0 ? "¡Sin deudas próximas!" : "Vencida + próximos 10 días"}</p>
-        </div>
+
+        {/* Botón "Ver todas" */}
         {filtro === "Pendientes" && !verTodas && deudas.length > deudasProximasOVencidas.length && (
-          <button onClick={() => setVerTodas(true)} className="text-xs text-accent font-semibold hover:underline mb-2">
+          <button
+            onClick={() => setVerTodas(true)}
+            className="text-xs text-accent font-semibold hover:underline mb-2"
+          >
             Ver todas ({deudas.length - deudasProximasOVencidas.length} ocultas)
           </button>
         )}
         {filtro === "Pendientes" && verTodas && (
-          <button onClick={() => setVerTodas(false)} className="text-xs text-accent font-semibold hover:underline mb-2">
+          <button
+            onClick={() => setVerTodas(false)}
+            className="text-xs text-accent font-semibold hover:underline mb-2"
+          >
             Ocultar lejanas
           </button>
         )}
       </div>
-      <div className="px-5 mt-3 pb-28 space-y-3">
+
+      {/* Lista de deudas */}
+      <div className="px-5 pb-28 space-y-3">
         {loading ? (
           [1, 2, 3].map((i) => (
             <div key={i} className="m-card p-4 space-y-3">
@@ -130,22 +161,36 @@ export default function PagosPage() {
                   <p className="font-extrabold text-text">{deuda.concepto}</p>
                   <p className={`text-xs ${getFechaClase(deuda)}`}>
                     {getFechaTexto(deuda)}
-                    {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${getBadgeStyle(deuda.estado)}`}>{deuda.estado}</span>
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${getBadgeStyle(deuda.estado)}`}>
+                  {deuda.estado}
+                </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <p className="font-mono text-lg font-bold text-text">S/ {Number(deuda.monto_base).toFixed(2)}</p>
+                <p className="font-mono text-lg font-bold text-text">
+                  S/ {Number(deuda.monto_base).toFixed(2)}
+                </p>
                 {deuda.estado !== "Pagado" && (
-                  <button onClick={() => { setPagoSeleccionado(deuda); setSheetOpen(true); }} className="press px-5 py-2 rounded-xl bg-accent text-white font-bold text-sm shadow-md hover:bg-accent/90">
+                  <button
+                    onClick={() => { setPagoSeleccionado(deuda); setSheetOpen(true); }}
+                    className="press px-5 py-2 rounded-xl bg-accent text-white font-bold text-sm shadow-md hover:bg-accent/90"
+                  >
                     Pagar
                   </button>
                 )}
                 {deuda.estado === "Pagado" && deuda.pagos.length > 0 && (
                   <p className="text-xs text-success font-bold flex items-center gap-1">
                     <span className="material-symbols-rounded text-sm">check_circle</span>
-                    Pagado el {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
+                    Pagado el {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
                   </p>
                 )}
               </div>
@@ -153,22 +198,33 @@ export default function PagosPage() {
           ))
         )}
       </div>
+
+      {/* Bottom Sheet de pago */}
       {sheetOpen && pagoSeleccionado && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setSheetOpen(false)} />
-          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] p-6 animate-slide-up">
+          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] p-6 animate-slide-up max-w-[420px] mx-auto">
             <div className="mx-auto w-12 h-1.5 rounded-full bg-border mb-4" />
             <h3 className="text-xl font-extrabold text-text">Confirmar pago</h3>
-            <p className="text-sm text-text-secondary">{pagoSeleccionado.concepto} · S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}</p>
-            <button onClick={() => { setSheetOpen(false); alert("Pago procesado (simulación)"); }} className="press mt-5 w-full py-4 rounded-2xl bg-accent text-white font-extrabold shadow-md">
+            <p className="text-sm text-text-secondary">
+              {pagoSeleccionado.concepto} · S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}
+            </p>
+            <button
+              onClick={() => { setSheetOpen(false); alert("Pago procesado (simulación)"); }}
+              className="press mt-5 w-full py-4 rounded-2xl bg-accent text-white font-extrabold shadow-md"
+            >
               Pagar S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}
             </button>
-            <button onClick={() => setSheetOpen(false)} className="w-full py-3 mt-2 rounded-2xl text-text-secondary font-bold">
+            <button
+              onClick={() => setSheetOpen(false)}
+              className="w-full py-3 mt-2 rounded-2xl text-text-secondary font-bold"
+            >
               Cancelar
             </button>
           </div>
         </div>
       )}
+
       <BottomNav />
     </main>
   );
