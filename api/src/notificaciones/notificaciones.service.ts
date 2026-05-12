@@ -70,4 +70,47 @@ export class NotificacionesService {
       }
     }
   }
+
+  async notificarApoderadosDeNivel(
+  nivelId: number,
+  tipo: string,
+  titulo: string,
+  mensaje: string,
+  url?: string,
+) {
+  // Buscar apoderados con hijos en ese nivel
+  const apoderados = await this.prisma.apoderadoEstudiante.findMany({
+    where: {
+      estudiante: {
+        matriculas: {
+          some: {
+            estado_matricula: 'Activo',
+            seccion: { grado: { id_nivel: nivelId } },
+          },
+        },
+      },
+    },
+    include: {
+      apoderado: { include: { persona: { include: { usuarios: true } } } },
+    },
+  });
+
+  // Usar un Set para evitar duplicados de usuario
+  const usuariosNotificados = new Set<number>();
+
+  for (const rel of apoderados) {
+    for (const usuario of rel.apoderado.persona.usuarios) {
+      if (!usuariosNotificados.has(usuario.id_usuario)) {
+        usuariosNotificados.add(usuario.id_usuario);
+        await this.crearNotificacion({
+          id_usuario: usuario.id_usuario,
+          tipo,
+          titulo,
+          mensaje,
+          url,
+        });
+      }
+    }
+  }
+}
 }

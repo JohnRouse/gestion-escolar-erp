@@ -76,20 +76,24 @@ export default function NotificationBell() {
   };
 
   const handleClick = async (notif: Notif) => {
-    if (!notif.leida) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.put(`/api/notificaciones/${notif.id_notif}/leida`, {}, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCount((prev) => Math.max(0, prev - 1));
-      } catch {}
-    }
-    if (notif.url) {
-      router.push(notif.url);
-    }
-    setOpen(false);
-  };
+  if (!notif.leida) {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`/api/notificaciones/${notif.id_notif}/leida`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCount((prev) => Math.max(0, prev - 1));
+    } catch {}
+  }
+  if (notif.url) {
+    router.push(notif.url);
+    // Fallback por si el router no navega
+    setTimeout(() => {
+      window.location.href = notif.url || '/dashboard/circulares';
+    }, 300);
+  }
+  setOpen(false);
+};
 
   // Cerrar al hacer clic fuera
   useEffect(() => {

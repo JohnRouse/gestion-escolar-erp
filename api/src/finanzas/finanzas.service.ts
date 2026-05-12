@@ -1,33 +1,27 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrarPagoDto } from './dto/registrar-pago.dto';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 @Injectable()
 export class FinanzasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificacionesService: NotificacionesService,
+  ) {}
 
-  /**
-   * Obtiene el estado de cuenta de una matrícula:
-   * - Deudas (cronograma de pagos) con su estado y concepto.
-   * - Pagos realizados (transacciones).
-   */
   async getEstadoCuenta(matriculaId: number) {
     const matricula = await this.prisma.matricula.findUnique({
       where: { id_matricula: matriculaId },
       include: {
         cronogramas: {
-          include: {
-            concepto: true,
-            pagos: true,
-          },
+          include: { concepto: true, pagos: true },
           orderBy: { fecha_vencimiento: 'asc' },
         },
       },
     });
 
-    if (!matricula) {
-      throw new NotFoundException('Matrícula no encontrada');
-    }
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada');
 
     const deudas = matricula.cronogramas.map((cron) => ({
       id_cronograma: cron.id_cronograma,
@@ -54,119 +48,92 @@ export class FinanzasService {
     };
   }
 
-  /**
-   * Registra uno o varios pagos para deudas de una matrícula.
-   * Valida que las deudas existan, estén pendientes/vencidas y que el monto pagado no exceda el pendiente.
-   */
   async registrarPago(dto: RegistrarPagoDto, cajeroId: number) {
-    return this.prisma.$transaction(async (tx) => {
-      // Validar que la matrícula exista
-      const matricula = await tx.matricula.findUnique({
-        where: { id_matricula: dto.id_matricula },
+    const matricula = await this.prisma.matricula.findUnique({
+      where: { id_matricula: dto.id_matricula },
+    });
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada');
+
+    const apoderado = await this.prisma.apoderado.findUnique({
+      where: { id_persona: dto.id_apoderado },
+    });
+    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+
+    const resultados: {
+      id_transaccion: number;
+      concepto: string;
+      monto_pagado: number;
+      nuevo_estado: string;
+    }[] = [];
+
+    for (const pagoItem of dto.pagos) {
+      const cronograma = await this.prisma.cronogramaPagos.findUnique({
+        where: { id_cronograma: pagoItem.id_cronograma },
+        include: { concepto: true },
       });
-      if (!matricula) {
-        throw new NotFoundException('Matrícula no encontrada');
-      }
 
-      // Validar que el apoderado exista
-      const apoderado = await tx.apoderado.findUnique({
-        where: { id_persona: dto.id_apoderado },
-      });
-      if (!apoderado) {
-        throw new NotFoundException('Apoderado no encontrado');
-      }
+      if (!cronograma) throw new NotFoundException(`Cronograma con id ${pagoItem.id_cronograma} no encontrado`);
+      if (cronograma.estado_pago === 'Pagado') throw new BadRequestException('La deuda ya está pagada');
 
-      const resultados: Array<{
-        id_transaccion: number;
-        concepto: string;
-        monto_pagado: number;
-        nuevo_estado: string;
-      }> = [];
+      const montoAPagar = pagoItem.monto_pagado ?? Number(cronograma.concepto.monto_base);
+      if (montoAPagar <= 0) throw new BadRequestException('Monto debe ser mayor a 0');
+      if (montoAPagar > Number(cronograma.concepto.monto_base)) throw new BadRequestException('Monto excede el valor de la deuda');
 
-      for (const pagoItem of dto.pagos) {
-        const cronograma = await tx.cronogramaPagos.findUnique({
-          where: { id_cronograma: pagoItem.id_cronograma },
-          include: { concepto: true },
-        });
-
-        if (!cronograma) {
-          throw new NotFoundException(`Cronograma con id ${pagoItem.id_cronograma} no encontrado`);
-        }
-
-        if (cronograma.estado_pago === 'Pagado') {
-          throw new BadRequestException(`La deuda '${cronograma.concepto.nombre_concepto}' ya está pagada`);
-        }
-
-        const montoAPagar = pagoItem.monto_pagado ?? Number(cronograma.concepto.monto_base);
-
-        if (montoAPagar <= 0) {
-          throw new BadRequestException('El monto a pagar debe ser mayor a 0');
-        }
-
-        if (montoAPagar > Number(cronograma.concepto.monto_base)) {
-          throw new BadRequestException(
-            `El monto pagado (${montoAPagar}) excede el monto base (${cronograma.concepto.monto_base})`,
-          );
-        }
-
-        // Crear la transacción de pago
-        const transaccion = await tx.pagoTransaccion.create({
-          data: {
-            id_cronograma: pagoItem.id_cronograma,
-            id_apoderado: dto.id_apoderado,
-            id_usuario_cajero: cajeroId,
-            monto_pagado: montoAPagar,
-            metodo_pago: dto.metodo_pago,
-            nro_operacion: dto.nro_operacion,
-            fecha_pago: dto.fecha_pago ? new Date(dto.fecha_pago) : new Date(),
-          },
-        });
-
-        const nuevoEstado = montoAPagar >= Number(cronograma.concepto.monto_base) ? 'Pagado' : cronograma.estado_pago;
-        await tx.cronogramaPagos.update({
-          where: { id_cronograma: pagoItem.id_cronograma },
-          data: { estado_pago: nuevoEstado },
-        });
-
-        resultados.push({
-          id_transaccion: transaccion.id_transaccion,
-          concepto: cronograma.concepto.nombre_concepto,
+      const transaccion = await this.prisma.pagoTransaccion.create({
+        data: {
+          id_cronograma: pagoItem.id_cronograma,
+          id_apoderado: dto.id_apoderado,
+          id_usuario_cajero: cajeroId,
           monto_pagado: montoAPagar,
-          nuevo_estado: nuevoEstado,
+          metodo_pago: dto.metodo_pago,
+          nro_operacion: dto.nro_operacion,
+          fecha_pago: dto.fecha_pago ? new Date(dto.fecha_pago) : new Date(),
+        },
+      });
+
+      const nuevoEstado = montoAPagar >= Number(cronograma.concepto.monto_base) ? 'Pagado' : cronograma.estado_pago;
+      await this.prisma.cronogramaPagos.update({
+        where: { id_cronograma: pagoItem.id_cronograma },
+        data: { estado_pago: nuevoEstado },
+      });
+
+      resultados.push({
+        id_transaccion: transaccion.id_transaccion,
+        concepto: cronograma.concepto.nombre_concepto,
+        monto_pagado: montoAPagar,
+        nuevo_estado: nuevoEstado,
+      });
+
+      // Notificar al apoderado que realizó el pago
+      const usuarioApoderado = await this.prisma.usuario.findFirst({
+        where: { persona: { id_persona: dto.id_apoderado } },
+      });
+      if (usuarioApoderado) {
+        await this.notificacionesService.crearNotificacion({
+          id_usuario: usuarioApoderado.id_usuario,
+          tipo: 'administrativa',
+          titulo: 'Pago registrado',
+          mensaje: `Se ha registrado un pago por S/ ${montoAPagar.toFixed(2)} para "${cronograma.concepto.nombre_concepto}".`,
+          url: '/dashboard/pagos',
         });
       }
-
-      return {
-        message: 'Pagos registrados correctamente',
-        pagos: resultados,
-      };
-    });
-  }
-
-  /**
-   * Endpoint para el padre: estado de cuenta de un alumno.
-   * Como un alumno puede tener múltiples matrículas (años diferentes), usualmente se filtra por la matrícula activa.
-   * Aquí simplificamos recibiendo el id del estudiante y buscando su matrícula activa.
-   */
-  async getEstadoCuentaPadre(estudianteId: number) {
-    const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: {
-        id_estudiante: estudianteId,
-        estado_matricula: 'Activo',
-      },
-      orderBy: { id_matricula: 'desc' },
-    });
-
-    if (!matriculaActiva) {
-      throw new NotFoundException('No se encontró matrícula activa para este estudiante');
     }
 
+    return { message: 'Pagos registrados correctamente', pagos: resultados };
+  }
+
+  async getEstadoCuentaPadre(estudianteId: number) {
+    const matriculaActiva = await this.prisma.matricula.findFirst({
+      where: { id_estudiante: estudianteId, estado_matricula: 'Activo' },
+      orderBy: { id_matricula: 'desc' },
+    });
+    if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
     return this.getEstadoCuenta(matriculaActiva.id_matricula);
   }
 
   async getPagosPendientesCount() {
-  return this.prisma.cronogramaPagos.count({
-    where: { estado_pago: { in: ['Pendiente', 'Vencido'] } },
-  });
-}
+    return this.prisma.cronogramaPagos.count({
+      where: { estado_pago: { in: ['Pendiente', 'Vencido'] } },
+    });
+  }
 }

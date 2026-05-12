@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsInt, IsBoolean } from 'class-validator';
 
 export class CreateCircularDto {
   @IsString()
@@ -16,4 +16,17 @@ export class CreateCircularDto {
   @IsArray()
   @IsInt({ each: true })
   secciones?: number[];
+
+  // 👇 Nuevos campos
+  @IsOptional()
+  @IsString()
+  categoria?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  urgente?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  requiere_autorizacion?: boolean;
 }

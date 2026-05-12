@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Query, Body,
+  Controller, Get, Post, Put, Param, Query, Body,
   UseGuards, Request, NotFoundException,
 } from '@nestjs/common';
 import { CircularesService } from './circulares.service';
@@ -51,5 +51,11 @@ async getTotalCirculares() {
   async findOne(@Param('id') id: string) {
     return this.circularesService.findOne(Number(id));
   }
+
+  @Put(':id/leida')
+@Roles('Apoderado', 'Admin')
+async marcarLeida(@Param('id') id: string, @Request() req) {
+  return this.circularesService.marcarLeida(Number(id), req.user.userId);
+}
 
 }

@@ -15,12 +15,19 @@ interface DashboardData {
   circularReciente: { titulo: string; fecha: string } | null;
 }
 
+interface CircularReciente {
+  id_circular: number;
+  titulo: string;
+  contenido: string;
+  fecha_creacion: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedChild, setSelectedChild, hijos, setHijos } = useSelectedChild();
+  const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showActivity, setShowActivity] = useState(false);
+  const [circularesRecientes, setCircularesRecientes] = useState<CircularReciente[]>([]);
   const [fadeIn, setFadeIn] = useState(true);
 
   useEffect(() => {
@@ -36,7 +43,7 @@ export default function DashboardPage() {
       });
       const hijosData = res.data.map((h: any, idx: number) => ({
         ...h,
-        color: undefined, // el contexto asigna colores
+        color: undefined,
       }));
       setHijos(hijosData);
       if (!selectedChild && hijosData.length > 0) {
@@ -57,11 +64,8 @@ export default function DashboardPage() {
   };
 
   const fetchDashboardData = async (token: string, alumnoId: number) => {
-    // Activar animación de fade
     setFadeIn(false);
-    setTimeout(() => {
-      setFadeIn(true);
-    }, 50);
+    setTimeout(() => setFadeIn(true), 50);
 
     setLoading(true);
     try {
@@ -71,27 +75,34 @@ export default function DashboardPage() {
         axios.get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get("/api/circulares/padres", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
+
       const asistencias = asistRes.status === "fulfilled" ? asistRes.value.data : [];
       const total = asistencias.length;
       const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
       const pct = total > 0 ? Math.round((presentes / total) * 100) : null;
+
       const notas = notasRes.status === "fulfilled" ? notasRes.value.data : [];
       const promedios = notas.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
       const prom = promedios.length > 0 ? Math.round((promedios.reduce((a: number, b: number) => a + b, 0) / promedios.length) * 10) / 10 : null;
+
       const pendiente = pagosRes.status === "fulfilled" ? (pagosRes.value.data.total_pendiente || 0) : 0;
       const estado = pendiente === 0 ? "Al día" : "Por pagar";
+
       const circulares = circRes.status === "fulfilled" ? circRes.value.data : [];
-      const circ = circulares.length > 0 ? { titulo: circulares[0].titulo, fecha: circulares[0].fecha_creacion } : null;
+      setCircularesRecientes(circulares.slice(0, 3));
+      const circ = circulares.length > 0
+        ? { titulo: circulares[0].titulo, fecha: circulares[0].fecha_creacion }
+        : null;
+
       setDashboardData({ asistencia: pct, promedio: prom, estadoPagos: estado, totalPendiente: pendiente, circularReciente: circ });
     } catch {
       setDashboardData({ asistencia: 92, promedio: 15.4, estadoPagos: "Por pagar", totalPendiente: 3150, circularReciente: { titulo: "Aviso – Primaria", fecha: "2025-05-06" } });
+      setCircularesRecientes([]);
     } finally {
       setLoading(false);
-      setTimeout(() => setShowActivity(true), 600);
     }
   };
 
-  // Escuchar cambios de selectedChild para recargar datos
   useEffect(() => {
     if (selectedChild) {
       const token = localStorage.getItem("token");
@@ -176,11 +187,11 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
+
         <div className="flex items-center justify-between mt-6">
-          <p className="text-[10px] tracking-[.22em] font-extrabold text-text-secondary uppercase">ACTIVIDAD RECIENTE</p>
-          <button className="text-xs font-bold text-accent">Ver todo</button>
+          <p className="text-[10px] tracking-[.22em] font-extrabold text-text-secondary uppercase">ÚLTIMAS CIRCULARES</p>
         </div>
-        {!showActivity ? (
+        {loading ? (
           <div className="mt-3 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="m-card p-3 flex items-center gap-3">
@@ -192,39 +203,30 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : circularesRecientes.length > 0 ? (
           <div className="mt-3 space-y-3">
-            <div className="m-card p-3 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-success-soft flex items-center justify-center">
-                <span className="material-symbols-rounded text-success text-xl">description</span>
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-text">Nota de Matemáticas registrada</p>
-                <p className="text-xs text-text-secondary">Hace 2 días</p>
-              </div>
-              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
-            </div>
-            <div className="m-card p-3 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-info-soft flex items-center justify-center">
-                <span className="material-symbols-rounded text-info text-xl">check_circle</span>
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-text">Asistencia del lunes confirmada</p>
-                <p className="text-xs text-text-secondary">Hace 3 días</p>
-              </div>
-              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
-            </div>
-            <div className="m-card p-3 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center">
-                <span className="material-symbols-rounded text-accent text-xl">campaign</span>
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-text">Nueva circular publicada</p>
-                <p className="text-xs text-text-secondary">Hace 4 días</p>
-              </div>
-              <span className="material-symbols-rounded text-text-muted">chevron_right</span>
-            </div>
+            {circularesRecientes.map((circ) => (
+              <button
+                key={circ.id_circular}
+                onClick={() => router.push("/dashboard/circulares")}
+                className="m-card p-3 flex items-center gap-3 press w-full text-left"
+              >
+                <span className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center">
+                  <span className="material-symbols-rounded text-accent text-xl">campaign</span>
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-text truncate">{circ.titulo}</p>
+                  <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">{circ.contenido}</p>
+                  <p className="text-[10px] text-text-muted mt-1">
+                    {new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short" })}
+                  </p>
+                </div>
+                <span className="material-symbols-rounded text-text-muted">chevron_right</span>
+              </button>
+            ))}
           </div>
+        ) : (
+          <p className="text-center text-text-muted text-sm mt-6">No hay circulares recientes.</p>
         )}
       </div>
       <BottomNav />

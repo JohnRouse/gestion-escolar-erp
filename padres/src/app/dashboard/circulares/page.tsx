@@ -22,10 +22,7 @@ interface Circular {
   requiere_autorizacion: boolean;
   remitente: { persona: { nombres: string; apellido_paterno: string } };
   adjuntos: Adjunto[];
-  destinatarios: {
-    leida: boolean;
-    confirmada: boolean;
-  }[];
+  leida?: boolean;
 }
 
 export default function CircularesPage() {
@@ -56,8 +53,13 @@ export default function CircularesPage() {
       await axios.put(`/api/circulares/${id}/leida`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, destinatarios: [{ ...c.destinatarios[0], leida: true }] } : c));
-    } catch {}
+      setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, leida: true } : c));
+      if (selected?.id_circular === id) {
+        setSelected(prev => prev ? { ...prev, leida: true } : null);
+      }
+    } catch (err) {
+      console.error("Error al marcar como leída:", err);
+    }
   };
 
   const confirmarAutorizacion = async (id: number) => {
@@ -66,17 +68,17 @@ export default function CircularesPage() {
       await axios.put(`/api/circulares/${id}/confirmar`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, destinatarios: [{ ...c.destinatarios[0], confirmada: true }] } : c));
+      setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, requiere_autorizacion: false } : c));
       alert("Autorización confirmada correctamente.");
     } catch {
       alert("Error al confirmar la autorización.");
     }
   };
 
-  // Vista de detalle
   if (selected) {
-    const esLeida = selected.destinatarios?.[0]?.leida;
-    if (!esLeida) marcarLeida(selected.id_circular);
+    if (!selected.leida) {
+      marcarLeida(selected.id_circular);
+    }
 
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
@@ -120,14 +122,14 @@ export default function CircularesPage() {
               <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-sm font-bold text-text mb-2">Adjuntos</p>
                 {selected.adjuntos.map((adj) => (
-                  <a key={adj.id_adjunto} href={adj.url} target="_blank" className="flex items-center gap-2 text-accent text-sm hover:underline">
+                  <a key={adj.id_adjunto} href={adj.url} target="_blank" className="flex items-center gap-2 text-accent text-sm hover:underline" rel="noopener noreferrer">
                     <span className="material-symbols-rounded">attach_file</span> {adj.nombre_archivo}
                   </a>
                 ))}
               </div>
             )}
 
-            {selected.requiere_autorizacion && !selected.destinatarios?.[0]?.confirmada && (
+            {selected.requiere_autorizacion && (
               <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-sm font-bold text-text mb-2">Acción requerida</p>
                 <p className="text-xs text-text-secondary mb-3">Esta circular requiere tu autorización.</p>
@@ -146,8 +148,7 @@ export default function CircularesPage() {
     );
   }
 
-  // Listado de circulares
-  const noLeidas = circulares.filter(c => !c.destinatarios?.[0]?.leida).length;
+  const noLeidas = circulares.filter(c => !c.leida).length;
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
@@ -171,51 +172,48 @@ export default function CircularesPage() {
         ) : circulares.length === 0 ? (
           <p className="text-center text-text-secondary py-10">No hay circulares</p>
         ) : (
-          circulares.map((circ) => {
-            const leida = circ.destinatarios?.[0]?.leida;
-            return (
-              <button
-                key={circ.id_circular}
-                onClick={() => setSelected(circ)}
-                className={`w-full text-left m-card p-4 mb-3 press ${
-                  !leida ? "border-l-4 border-l-accent" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between mb-1">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {!leida && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />}
-                    <p className={`font-extrabold truncate ${!leida ? "text-text" : "text-text-secondary"}`}>
-                      {circ.titulo}
-                    </p>
-                  </div>
-                  {circ.urgente && (
-                    <span className="px-2 py-0.5 rounded-full bg-danger-soft text-danger text-[10px] font-bold flex-shrink-0 ml-2">
-                      !
-                    </span>
-                  )}
+          circulares.map((circ) => (
+            <button
+              key={circ.id_circular}
+              onClick={() => setSelected(circ)}
+              className={`w-full text-left m-card p-4 mb-3 press ${
+                !circ.leida ? "border-l-4 border-l-accent" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between mb-1">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {!circ.leida && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />}
+                  <p className={`font-extrabold truncate ${!circ.leida ? "text-text" : "text-text-secondary"}`}>
+                    {circ.titulo}
+                  </p>
                 </div>
-                <p className="text-xs text-text-secondary truncate mb-1">
-                  {circ.remitente.persona.nombres} {circ.remitente.persona.apellido_paterno}
-                </p>
-                <p className="text-xs text-text-muted line-clamp-2 mb-2">{circ.contenido}</p>
-                <div className="flex items-center gap-2 text-[10px] text-text-muted">
-                  <span>{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                  {circ.categoria && (
-                    <>
-                      <span>·</span>
-                      <span className="px-2 py-0.5 rounded-full bg-surface-alt text-text-secondary">{circ.categoria}</span>
-                    </>
-                  )}
-                  {circ.adjuntos && circ.adjuntos.length > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className="material-symbols-rounded text-sm">attach_file</span>
-                    </>
-                  )}
-                </div>
-              </button>
-            );
-          })
+                {circ.urgente && (
+                  <span className="px-2 py-0.5 rounded-full bg-danger-soft text-danger text-[10px] font-bold flex-shrink-0 ml-2">
+                    !
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-text-secondary truncate mb-1">
+                {circ.remitente.persona.nombres} {circ.remitente.persona.apellido_paterno}
+              </p>
+              <p className="text-xs text-text-muted line-clamp-2 mb-2">{circ.contenido}</p>
+              <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                <span>{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                {circ.categoria && (
+                  <>
+                    <span>·</span>
+                    <span className="px-2 py-0.5 rounded-full bg-surface-alt text-text-secondary">{circ.categoria}</span>
+                  </>
+                )}
+                {circ.adjuntos && circ.adjuntos.length > 0 && (
+                  <>
+                    <span>·</span>
+                    <span className="material-symbols-rounded text-sm">attach_file</span>
+                  </>
+                )}
+              </div>
+            </button>
+          ))
         )}
       </div>
       <BottomNav />
