@@ -85,13 +85,11 @@ export default function NotificationBell() {
       setCount((prev) => Math.max(0, prev - 1));
     } catch {}
   }
-  if (notif.url) {
-    router.push(notif.url);
-    // Fallback por si el router no navega
-    setTimeout(() => {
-      window.location.href = notif.url || '/dashboard/circulares';
-    }, 300);
-  }
+  const targetUrl = notif.url || '/dashboard/circulares';
+  router.push(targetUrl);
+  setTimeout(() => {
+    window.location.href = targetUrl;
+  }, 300);
   setOpen(false);
 };
 

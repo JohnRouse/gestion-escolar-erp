@@ -128,71 +128,85 @@ export class CircularesService {
 
   // ── LISTAR PARA APODERADO (APP) ─────────────────────
   async findForApoderado(apoderadoId: number) {
-    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
-      where: { id_apoderado: apoderadoId },
-      select: { id_estudiante: true },
-    });
-    const estudianteIds = relaciones.map((r) => r.id_estudiante);
+  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+    where: { id_apoderado: apoderadoId },
+    select: { id_estudiante: true },
+  });
+  const estudianteIds = relaciones.map((r) => r.id_estudiante);
 
-    const matriculas = await this.prisma.matricula.findMany({
-      where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
-      include: { seccion: { include: { grado: { include: { nivel: true } } } } },
-    });
+  const matriculas = await this.prisma.matricula.findMany({
+    where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
+    include: { seccion: { include: { grado: { include: { nivel: true } } } } },
+  });
 
-    const destinos = new Map<string, { id_nivel: number; id_seccion: number | null }>();
-    for (const mat of matriculas) {
-      const id_nivel = mat.seccion.grado.id_nivel;
-      const id_seccion = mat.id_seccion;
-      const key = `${id_nivel}_${id_seccion}`;
-      if (!destinos.has(key)) {
-        destinos.set(key, { id_nivel, id_seccion });
-      }
+  const destinos = new Map<string, { id_nivel: number; id_seccion: number | null }>();
+  for (const mat of matriculas) {
+    const id_nivel = mat.seccion.grado.id_nivel;
+    const id_seccion = mat.id_seccion;
+    const key = `${id_nivel}_${id_seccion}`;
+    if (!destinos.has(key)) {
+      destinos.set(key, { id_nivel, id_seccion });
     }
+  }
 
-    const niveles = new Set<number>();
-    const seccionesHijos = new Set<number>();
-    for (const d of destinos.values()) {
-      niveles.add(d.id_nivel);
-      if (d.id_seccion) seccionesHijos.add(d.id_seccion);
-    }
+  const niveles = new Set<number>();
+  const seccionesHijos = new Set<number>();
+  for (const d of destinos.values()) {
+    niveles.add(d.id_nivel);
+    if (d.id_seccion) seccionesHijos.add(d.id_seccion);
+  }
 
-    const circulares = await this.prisma.circular.findMany({
-      where: {
-        destinatarios: {
-          some: {
-            OR: [
-              { id_nivel: null, id_seccion: null },
-              { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
-              { id_nivel: { in: Array.from(niveles) }, id_seccion: { in: Array.from(seccionesHijos) } },
-            ],
-          },
+  const circulares = await this.prisma.circular.findMany({
+    where: {
+      destinatarios: {
+        some: {
+          OR: [
+            { id_nivel: null, id_seccion: null },
+            { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
+            { id_nivel: { in: Array.from(niveles) }, id_seccion: { in: Array.from(seccionesHijos) } },
+          ],
         },
       },
-      orderBy: { fecha_creacion: 'desc' },
-      include: {
-        remitente: { include: { persona: true } },
-        adjuntos: true,
-        destinatarios: true,
-      },
-      distinct: ['id_circular'],
+    },
+    orderBy: { fecha_creacion: 'desc' },
+    include: {
+      remitente: { include: { persona: true } },
+      adjuntos: true,
+      destinatarios: { include: { nivel: true, seccion: true } },
+    },
+    distinct: ['id_circular'],
+  });
+
+  const circularesConLectura = circulares.map((c) => {
+    const destinatario = c.destinatarios.find((d) => {
+      if (!d.id_nivel && !d.id_seccion) return true;
+      if (d.id_seccion && seccionesHijos.has(d.id_seccion)) return true;
+      if (d.id_nivel && niveles.has(d.id_nivel) && !d.id_seccion) return true;
+      return false;
     });
 
-    // Enriquecer con el estado de lectura para este apoderado
-    const circularesConLectura = circulares.map((c) => {
-      const destinatario = c.destinatarios.find((d) => {
-        if (!d.id_nivel && !d.id_seccion) return true;
-        if (d.id_seccion && seccionesHijos.has(d.id_seccion)) return true;
-        if (d.id_nivel && niveles.has(d.id_nivel) && !d.id_seccion) return true;
-        return false;
-      });
-      return {
-        ...c,
-        leida: destinatario?.leida ?? false,
-      };
-    });
+    // Construir el texto "Dirigido a"
+    const dirigido_a = c.destinatarios
+      .map((d) => {
+        if (!d.id_nivel && !d.id_seccion) return 'Todos';
+        if (d.id_nivel && d.id_seccion) {
+          return `${d.nivel?.nombre_nivel || ''} ${d.seccion?.letra || ''}`.trim();
+        }
+        if (d.id_nivel) return d.nivel?.nombre_nivel || '';
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
 
-    return circularesConLectura;
-  }
+    return {
+      ...c,
+      leida: destinatario?.leida ?? false,
+      dirigido_a: dirigido_a || 'General',
+    };
+  });
+
+  return circularesConLectura;
+}
 
   // ── TOTAL DE CIRCULARES ────────────────────────────
   async getTotalCirculares() {

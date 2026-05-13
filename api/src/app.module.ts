@@ -7,6 +7,7 @@ import { CalificacionesModule } from './calificaciones/calificaciones.module';
 import { CircularesModule } from './circulares/circulares.module';
 import { AnaliticasModule } from './analiticas/analiticas.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { ActividadModule } from './actividad/actividad.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotificacionesModule } from './notificaciones/notificaciones.module';
     CircularesModule,
     AnaliticasModule,
     NotificacionesModule,
+    ActividadModule,
   ],
   controllers: [],
   providers: [],

@@ -29,14 +29,15 @@ export default function BottomNav() {
   const colorBorde = selectedChild?.color || "#D97706";
 
   const handleChildToggle = () => {
-    if (hijos.length === 1) return;
-    if (hijos.length === 2) {
-      const otro = hijos.find((h) => h.id_estudiante !== selectedChild?.id_estudiante);
-      if (otro) setSelectedChild(otro);
-    } else {
-      setShowChildSheet(!showChildSheet);
-    }
-  };
+  if (hijos.length === 1) {
+    setShowChildSheet(true);
+  } else if (hijos.length === 2) {
+    const otro = hijos.find((h) => h.id_estudiante !== selectedChild?.id_estudiante);
+    if (otro) setSelectedChild(otro);
+  } else {
+    setShowChildSheet(!showChildSheet);
+  }
+};
 
   return (
     <>
@@ -85,7 +86,7 @@ export default function BottomNav() {
       </nav>
 
       {/* Bottom Sheet para 3+ hijos */}
-      {showChildSheet && hijos.length >= 3 && (
+      {showChildSheet && hijos.length >= 1 && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setShowChildSheet(false)} />
           <div className="absolute left-0 right-0 bottom-0 bg-surface rounded-t-[28px] p-6 animate-slide-up max-w-[420px] mx-auto">

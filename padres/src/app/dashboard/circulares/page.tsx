@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
@@ -23,6 +23,7 @@ interface Circular {
   remitente: { persona: { nombres: string; apellido_paterno: string } };
   adjuntos: Adjunto[];
   leida?: boolean;
+  dirigido_a?: string;
 }
 
 export default function CircularesPage() {
@@ -30,6 +31,9 @@ export default function CircularesPage() {
   const [circulares, setCirculares] = useState<Circular[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Circular | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroUrgente, setFiltroUrgente] = useState(false);
+  const [filtroAdjuntos, setFiltroAdjuntos] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -54,9 +58,7 @@ export default function CircularesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, leida: true } : c));
-      if (selected?.id_circular === id) {
-        setSelected(prev => prev ? { ...prev, leida: true } : null);
-      }
+      if (selected?.id_circular === id) setSelected(prev => prev ? { ...prev, leida: true } : null);
     } catch (err) {
       console.error("Error al marcar como leída:", err);
     }
@@ -75,10 +77,24 @@ export default function CircularesPage() {
     }
   };
 
-  if (selected) {
-    if (!selected.leida) {
-      marcarLeida(selected.id_circular);
+  const circularesFiltradas = useMemo(() => {
+    let resultado = circulares;
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase();
+      resultado = resultado.filter(
+        c =>
+          c.titulo.toLowerCase().includes(q) ||
+          c.contenido.toLowerCase().includes(q) ||
+          (c.remitente.persona.nombres + " " + c.remitente.persona.apellido_paterno).toLowerCase().includes(q)
+      );
     }
+    if (filtroUrgente) resultado = resultado.filter(c => c.urgente);
+    if (filtroAdjuntos) resultado = resultado.filter(c => c.adjuntos && c.adjuntos.length > 0);
+    return resultado;
+  }, [circulares, busqueda, filtroUrgente, filtroAdjuntos]);
+
+  if (selected) {
+    if (!selected.leida) marcarLeida(selected.id_circular);
 
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
@@ -98,9 +114,7 @@ export default function CircularesPage() {
                 {selected.categoria || "General"}
               </span>
               {selected.urgente && (
-                <span className="px-2.5 py-0.5 rounded-full bg-danger-soft text-danger text-[11px] font-bold">
-                  URGENTE
-                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-danger-soft text-danger text-[11px] font-bold">URGENTE</span>
               )}
             </div>
 
@@ -108,6 +122,9 @@ export default function CircularesPage() {
             <p className="text-sm text-text-secondary mb-1">
               De: {selected.remitente.persona.nombres} {selected.remitente.persona.apellido_paterno}
             </p>
+            {selected.dirigido_a && (
+              <p className="text-xs text-text-muted mb-1">Dirigido a: {selected.dirigido_a}</p>
+            )}
             <p className="text-xs text-text-muted mb-4">
               {new Date(selected.fecha_creacion).toLocaleDateString("es-PE", {
                 day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
@@ -155,10 +172,30 @@ export default function CircularesPage() {
       <ScreenHeader title="Avisos" />
       <div className="px-5 pt-4 pb-28">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-text-secondary">
-            {noLeidas > 0 ? `${noLeidas} sin leer` : "Todas leídas"}
-          </p>
+          <p className="text-sm text-text-secondary">{noLeidas > 0 ? `${noLeidas} sin leer` : "Todas leídas"}</p>
           <p className="text-xs text-text-muted">{circulares.length} circulares</p>
+        </div>
+
+        {/* Buscador */}
+        <div className="relative mb-3">
+          <span className="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">search</span>
+          <input
+            type="text"
+            placeholder="Buscar circulares..."
+            className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+
+        {/* Filtros rápidos */}
+        <div className="flex gap-2 mb-4 overflow-x-auto">
+          <button onClick={() => setFiltroUrgente(!filtroUrgente)} className={`press px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${filtroUrgente ? "bg-danger text-white shadow-md" : "bg-white text-text-secondary border border-border"}`}>
+            Urgentes
+          </button>
+          <button onClick={() => setFiltroAdjuntos(!filtroAdjuntos)} className={`press px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${filtroAdjuntos ? "bg-info text-white shadow-md" : "bg-white text-text-secondary border border-border"}`}>
+            Con adjuntos
+          </button>
         </div>
 
         {loading ? (
@@ -169,48 +206,29 @@ export default function CircularesPage() {
               <div className="skel h-3 w-1/4" />
             </div>
           ))
-        ) : circulares.length === 0 ? (
-          <p className="text-center text-text-secondary py-10">No hay circulares</p>
+        ) : circularesFiltradas.length === 0 ? (
+          <p className="text-center text-text-secondary py-10">No se encontraron circulares.</p>
         ) : (
-          circulares.map((circ) => (
+          circularesFiltradas.map((circular) => (
             <button
-              key={circ.id_circular}
-              onClick={() => setSelected(circ)}
-              className={`w-full text-left m-card p-4 mb-3 press ${
-                !circ.leida ? "border-l-4 border-l-accent" : ""
-              }`}
+              key={circular.id_circular}
+              onClick={() => setSelected(circular)}
+              className={`w-full text-left m-card p-4 mb-3 press ${!circular.leida ? "border-l-4 border-l-accent" : ""}`}
             >
               <div className="flex items-start justify-between mb-1">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {!circ.leida && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />}
-                  <p className={`font-extrabold truncate ${!circ.leida ? "text-text" : "text-text-secondary"}`}>
-                    {circ.titulo}
-                  </p>
+                  {!circular.leida && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1" />}
+                  <p className={`font-extrabold truncate ${!circular.leida ? "text-text" : "text-text-secondary"}`}>{circular.titulo}</p>
                 </div>
-                {circ.urgente && (
-                  <span className="px-2 py-0.5 rounded-full bg-danger-soft text-danger text-[10px] font-bold flex-shrink-0 ml-2">
-                    !
-                  </span>
-                )}
+                {circular.urgente && <span className="px-2 py-0.5 rounded-full bg-danger-soft text-danger text-[10px] font-bold flex-shrink-0 ml-2">!</span>}
               </div>
-              <p className="text-xs text-text-secondary truncate mb-1">
-                {circ.remitente.persona.nombres} {circ.remitente.persona.apellido_paterno}
-              </p>
-              <p className="text-xs text-text-muted line-clamp-2 mb-2">{circ.contenido}</p>
+              <p className="text-xs text-text-secondary truncate mb-1">{circular.remitente.persona.nombres} {circular.remitente.persona.apellido_paterno}</p>
+              {circular.dirigido_a && <p className="text-[10px] text-text-muted mb-1">Dirigido a: {circular.dirigido_a}</p>}
+              <p className="text-xs text-text-muted line-clamp-2 mb-2">{circular.contenido}</p>
               <div className="flex items-center gap-2 text-[10px] text-text-muted">
-                <span>{new Date(circ.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                {circ.categoria && (
-                  <>
-                    <span>·</span>
-                    <span className="px-2 py-0.5 rounded-full bg-surface-alt text-text-secondary">{circ.categoria}</span>
-                  </>
-                )}
-                {circ.adjuntos && circ.adjuntos.length > 0 && (
-                  <>
-                    <span>·</span>
-                    <span className="material-symbols-rounded text-sm">attach_file</span>
-                  </>
-                )}
+                <span>{new Date(circular.fecha_creacion).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                {circular.categoria && <><span>·</span><span className="px-2 py-0.5 rounded-full bg-surface-alt text-text-secondary">{circular.categoria}</span></>}
+                {circular.adjuntos && circular.adjuntos.length > 0 && <><span>·</span><span className="material-symbols-rounded text-sm">attach_file</span></>}
               </div>
             </button>
           ))
