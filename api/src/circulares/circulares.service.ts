@@ -81,12 +81,12 @@ export class CircularesService {
     if (dto.niveles && dto.niveles.length > 0) {
       for (const nivelId of dto.niveles) {
         await this.notificacionesService.notificarApoderadosDeNivel(
-          nivelId,
-          'informativa',
-          'Nueva circular',
-          `Se ha publicado una nueva circular: "${circular.titulo}"`,
-          '/dashboard/circulares',
-        );
+  nivelId,
+  'informativa',
+  'Nueva circular',
+  `Se ha publicado una nueva circular: "${circular.titulo}"`,
+  `/dashboard/circulares?id_circular=${circular.id_circular}`,
+);
       }
     }
 

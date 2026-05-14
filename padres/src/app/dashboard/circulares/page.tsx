@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
@@ -35,21 +36,38 @@ export default function CircularesPage() {
   const [filtroUrgente, setFiltroUrgente] = useState(false);
   const [filtroAdjuntos, setFiltroAdjuntos] = useState(false);
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { router.push("/login"); return; }
-    fetchCirculares(token);
-  }, [router]);
+  const token = localStorage.getItem("token");
+  if (!token) { router.push("/login"); return; }
+  fetchCirculares(token).then((data) => {
+    const idParam = searchParams.get("id_circular");
+    if (idParam) {
+      const id = Number(idParam);
+      if (!isNaN(id)) {
+        const encontrada = data.find((c: Circular) => c.id_circular === id);
+        if (encontrada) setSelected(encontrada);
+      }
+    }
+  });
+}, [router, searchParams]);
 
   const fetchCirculares = async (token: string) => {
-    setLoading(true);
-    try {
-      const res = await axios.get("/api/circulares/padres", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCirculares(res.data);
-    } catch { setCirculares([]); } finally { setLoading(false); }
-  };
+  setLoading(true);
+  try {
+    const res = await axios.get("/api/circulares/padres", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setCirculares(res.data);
+    return res.data; // <-- añadir este return
+  } catch {
+    setCirculares([]);
+    return []; // <-- y este
+  } finally {
+    setLoading(false);
+  }
+};
 
   const marcarLeida = async (id: number) => {
     try {

@@ -22,6 +22,7 @@ export default function NotificationBell() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null); // 🆕 Ref para el dropdown
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
@@ -76,30 +77,56 @@ export default function NotificationBell() {
   };
 
   const handleClick = async (notif: Notif) => {
-  if (!notif.leida) {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(`/api/notificaciones/${notif.id_notif}/leida`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCount((prev) => Math.max(0, prev - 1));
-    } catch {}
-  }
-  const targetUrl = notif.url || '/dashboard/circulares';
-  router.push(targetUrl);
-  setTimeout(() => {
-    window.location.href = targetUrl;
-  }, 300);
-  setOpen(false);
-};
+    // Marcar como leída si aún no lo estaba
+    if (!notif.leida) {
+      try {
+        const token = localStorage.getItem("token");
+        await axios.put(`/api/notificaciones/${notif.id_notif}/leida`, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCount((prev) => Math.max(0, prev - 1));
+      } catch {}
+    }
 
-  // Cerrar al hacer clic fuera
+    // Determinar la ruta de destino
+    let targetUrl = notif.url;
+    if (!targetUrl) {
+      // Fallback según tipo (usa los valores reales de tu proyecto)
+      switch (notif.tipo) {
+        case "informativa":   // Circulares
+          targetUrl = "/dashboard/circulares";
+          break;
+        case "administrativa": // Pagos, matrículas
+          targetUrl = "/dashboard/pagos";
+          break;
+        case "academica":     // Notas, calificaciones
+          targetUrl = "/dashboard/calificaciones";
+          break;
+        default:
+          targetUrl = "/dashboard/actividad";
+      }
+    }
+
+    // Cerrar el dropdown
+    setOpen(false);
+
+    // Navegación robusta (window.location.href funciona incluso si el componente se desmonta)
+    window.location.href = targetUrl;
+  };
+
+  // Cerrar al hacer clic fuera del botón Y fuera del dropdown
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      const target = e.target as Node;
+      // Si el clic es dentro del botón o dentro del dropdown, no cerrar
+      if (
+        (buttonRef.current && buttonRef.current.contains(target)) ||
+        (dropdownRef.current && dropdownRef.current.contains(target))
+      ) {
+        return;
       }
+      setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -125,6 +152,7 @@ export default function NotificationBell() {
 
       {open && mounted && createPortal(
         <div
+          ref={dropdownRef}
           className="bg-white rounded-2xl shadow-2xl border border-border overflow-hidden animate-fade-in"
           style={dropdownStyle}
           onClick={(e) => e.stopPropagation()}

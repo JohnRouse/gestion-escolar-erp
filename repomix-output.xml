@@ -1,0 +1,5158 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+prisma/
+  migrations/
+    20260512123538_init/
+      migration.sql
+    migration_lock.toml
+  schema.prisma
+  seed.ts
+src/
+  academicos/
+    dto/
+      create-alumno.dto.ts
+      create-apoderado.dto.ts
+      create-matricula.dto.ts
+      save-asistencia.dto.ts
+    academicos.controller.ts
+    academicos.module.ts
+    academicos.service.ts
+  actividad/
+    actividad.controller.ts
+    actividad.module.ts
+    actividad.service.ts
+  analiticas/
+    analiticas.controller.ts
+    analiticas.module.ts
+    analiticas.service.ts
+  auth/
+    auth.controller.ts
+    auth.module.ts
+    auth.service.ts
+    jwt.strategy.ts
+    roles.guard.ts
+  calificaciones/
+    dto/
+      create-evaluacion.dto.ts
+      save-notas-masivo.dto.ts
+      save-notas.dto.ts
+    calificaciones.controller.ts
+    calificaciones.module.ts
+    calificaciones.service.ts
+  circulares/
+    dto/
+      create-circular.dto.ts
+    circulares.controller.ts
+    circulares.module.ts
+    circulares.service.ts
+  finanzas/
+    dto/
+      registrar-pago.dto.ts
+    finanzas.controller.ts
+    finanzas.module.ts
+    finanzas.service.ts
+  notificaciones/
+    notificaciones.controller.ts
+    notificaciones.module.ts
+    notificaciones.service.ts
+  prisma/
+    prisma.module.ts
+    prisma.service.ts
+  app.controller.spec.ts
+  app.controller.ts
+  app.module.ts
+  app.service.ts
+  main.ts
+test/
+  app.e2e-spec.ts
+  jest-e2e.json
+.gitignore
+.prettierrc
+=
+eslint.config.mjs
+get-docker.sh
+nest-cli.json
+package.json
+README.md
+tsconfig.build.json
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="prisma/migrations/20260512123538_init/migration.sql">
+-- CreateTable
+CREATE TABLE `Rol` (
+    `id_rol` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_rol` VARCHAR(50) NOT NULL,
+
+    UNIQUE INDEX `Rol_nombre_rol_key`(`nombre_rol`),
+    PRIMARY KEY (`id_rol`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Persona` (
+    `id_persona` INTEGER NOT NULL AUTO_INCREMENT,
+    `dni` CHAR(8) NOT NULL,
+    `nombres` VARCHAR(100) NOT NULL,
+    `apellido_paterno` VARCHAR(100) NOT NULL,
+    `apellido_materno` VARCHAR(100) NOT NULL,
+    `fecha_nacimiento` DATE NOT NULL,
+    `genero` VARCHAR(1) NULL,
+    `direccion` VARCHAR(255) NULL,
+    `telefono` VARCHAR(20) NULL,
+    `correo` VARCHAR(150) NULL,
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+
+    UNIQUE INDEX `Persona_dni_key`(`dni`),
+    UNIQUE INDEX `Persona_correo_key`(`correo`),
+    PRIMARY KEY (`id_persona`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Usuario` (
+    `id_usuario` INTEGER NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(50) NOT NULL,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `id_persona` INTEGER NOT NULL,
+    `id_rol` INTEGER NOT NULL,
+    `estado` BOOLEAN NOT NULL DEFAULT true,
+
+    UNIQUE INDEX `Usuario_username_key`(`username`),
+    PRIMARY KEY (`id_usuario`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Nivel` (
+    `id_nivel` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_nivel` VARCHAR(50) NOT NULL,
+
+    PRIMARY KEY (`id_nivel`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Grado` (
+    `id_grado` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_grado` VARCHAR(50) NOT NULL,
+    `id_nivel` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id_grado`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Aula` (
+    `id_aula` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_aula` VARCHAR(50) NOT NULL,
+    `capacidad` TINYINT NOT NULL,
+
+    PRIMARY KEY (`id_aula`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Seccion` (
+    `id_seccion` INTEGER NOT NULL AUTO_INCREMENT,
+    `letra` CHAR(1) NOT NULL,
+    `id_grado` INTEGER NOT NULL,
+    `id_aula` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id_seccion`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `AreaCurricular` (
+    `id_area` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_area` VARCHAR(100) NOT NULL,
+
+    PRIMARY KEY (`id_area`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Curso` (
+    `id_curso` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_curso` VARCHAR(100) NOT NULL,
+    `id_area` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id_curso`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `AnioLectivo` (
+    `id_anio` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_anio` VARCHAR(50) NOT NULL,
+    `fecha_inicio` DATE NOT NULL,
+    `fecha_fin` DATE NOT NULL,
+    `estado` VARCHAR(20) NOT NULL DEFAULT 'Planificación',
+
+    PRIMARY KEY (`id_anio`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Bimestre` (
+    `id_bimestre` INTEGER NOT NULL AUTO_INCREMENT,
+    `numero` TINYINT NOT NULL,
+    `fecha_inicio` DATE NOT NULL,
+    `fecha_fin` DATE NOT NULL,
+    `id_anio` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id_bimestre`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Unidad` (
+    `id_unidad` INTEGER NOT NULL AUTO_INCREMENT,
+    `numero` TINYINT NOT NULL,
+    `fecha_inicio` DATE NOT NULL,
+    `fecha_fin` DATE NOT NULL,
+    `id_bimestre` INTEGER NOT NULL,
+    `estado_abierto` BOOLEAN NOT NULL DEFAULT false,
+
+    PRIMARY KEY (`id_unidad`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Apoderado` (
+    `id_persona` INTEGER NOT NULL,
+    `ocupacion` VARCHAR(100) NULL,
+
+    PRIMARY KEY (`id_persona`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Docente` (
+    `id_persona` INTEGER NOT NULL,
+    `fecha_ingreso` DATE NULL,
+
+    PRIMARY KEY (`id_persona`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Estudiante` (
+    `id_persona` INTEGER NOT NULL,
+    `codigo_estudiante` VARCHAR(20) NOT NULL,
+
+    UNIQUE INDEX `Estudiante_codigo_estudiante_key`(`codigo_estudiante`),
+    PRIMARY KEY (`id_persona`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ApoderadoEstudiante` (
+    `id_apoderado` INTEGER NOT NULL,
+    `id_estudiante` INTEGER NOT NULL,
+    `parentesco` VARCHAR(30) NOT NULL,
+
+    INDEX `ApoderadoEstudiante_id_estudiante_idx`(`id_estudiante`),
+    PRIMARY KEY (`id_apoderado`, `id_estudiante`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `DocenteEspecialidad` (
+    `id_docente` INTEGER NOT NULL,
+    `id_area` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id_docente`, `id_area`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Matricula` (
+    `id_matricula` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_estudiante` INTEGER NOT NULL,
+    `id_seccion` INTEGER NOT NULL,
+    `id_anio` INTEGER NOT NULL,
+    `fecha_matricula` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `estado_matricula` VARCHAR(20) NOT NULL DEFAULT 'Activo',
+
+    INDEX `Matricula_id_estudiante_id_anio_idx`(`id_estudiante`, `id_anio`),
+    INDEX `Matricula_id_seccion_idx`(`id_seccion`),
+    PRIMARY KEY (`id_matricula`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `AsignacionDocente` (
+    `id_asignacion` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_docente` INTEGER NOT NULL,
+    `id_curso` INTEGER NOT NULL,
+    `id_seccion` INTEGER NOT NULL,
+    `id_anio` INTEGER NOT NULL,
+
+    INDEX `AsignacionDocente_id_docente_id_anio_idx`(`id_docente`, `id_anio`),
+    PRIMARY KEY (`id_asignacion`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `TipoEvaluacion` (
+    `id_tipo_eval` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_tipo` VARCHAR(50) NOT NULL,
+
+    PRIMARY KEY (`id_tipo_eval`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `EvaluacionDetalle` (
+    `id_evaluacion_det` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_asignacion` INTEGER NOT NULL,
+    `id_unidad` INTEGER NOT NULL,
+    `id_tipo_eval` INTEGER NOT NULL,
+    `descripcion_actividad` VARCHAR(100) NULL,
+    `fecha_evaluacion` DATE NULL,
+
+    PRIMARY KEY (`id_evaluacion_det`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `EscalaCalificacion` (
+    `id_escala` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_escala` VARCHAR(50) NOT NULL,
+    `nota_minima` DECIMAL(4, 2) NOT NULL,
+    `nota_maxima` DECIMAL(4, 2) NOT NULL,
+    `nota_aprobatoria` DECIMAL(4, 2) NOT NULL,
+    `tipo_calificacion` VARCHAR(20) NOT NULL DEFAULT 'Numérica',
+
+    PRIMARY KEY (`id_escala`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `NotaAlumno` (
+    `id_nota` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_matricula` INTEGER NOT NULL,
+    `id_evaluacion_det` INTEGER NOT NULL,
+    `valor_nota` DECIMAL(4, 2) NOT NULL,
+    `comentario` TEXT NULL,
+
+    INDEX `NotaAlumno_id_matricula_idx`(`id_matricula`),
+    PRIMARY KEY (`id_nota`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Asistencia` (
+    `id_asistencia` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_matricula` INTEGER NOT NULL,
+    `fecha` DATE NOT NULL,
+    `estado` VARCHAR(20) NOT NULL,
+
+    INDEX `Asistencia_fecha_idx`(`fecha`),
+    UNIQUE INDEX `Asistencia_id_matricula_fecha_key`(`id_matricula`, `fecha`),
+    PRIMARY KEY (`id_asistencia`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ConceptoPago` (
+    `id_concepto` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre_concepto` VARCHAR(100) NOT NULL,
+    `monto_base` DECIMAL(10, 2) NOT NULL,
+    `id_anio` INTEGER NOT NULL,
+    `es_pension` BOOLEAN NOT NULL DEFAULT true,
+
+    PRIMARY KEY (`id_concepto`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CronogramaPagos` (
+    `id_cronograma` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_matricula` INTEGER NOT NULL,
+    `id_concepto` INTEGER NOT NULL,
+    `fecha_vencimiento` DATE NOT NULL,
+    `estado_pago` VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+
+    INDEX `CronogramaPagos_fecha_vencimiento_estado_pago_idx`(`fecha_vencimiento`, `estado_pago`),
+    PRIMARY KEY (`id_cronograma`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PagoTransaccion` (
+    `id_transaccion` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_cronograma` INTEGER NOT NULL,
+    `id_apoderado` INTEGER NOT NULL,
+    `id_usuario_cajero` INTEGER NOT NULL,
+    `monto_pagado` DECIMAL(10, 2) NOT NULL,
+    `fecha_pago` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `metodo_pago` VARCHAR(20) NULL,
+    `nro_operacion` VARCHAR(50) NULL,
+
+    INDEX `PagoTransaccion_id_cronograma_idx`(`id_cronograma`),
+    PRIMARY KEY (`id_transaccion`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Circular` (
+    `id_circular` INTEGER NOT NULL AUTO_INCREMENT,
+    `titulo` VARCHAR(150) NOT NULL,
+    `contenido` TEXT NOT NULL,
+    `fecha_creacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `remitente_id_usuario` INTEGER NOT NULL,
+    `categoria` VARCHAR(191) NULL,
+    `urgente` BOOLEAN NOT NULL DEFAULT false,
+    `requiere_autorizacion` BOOLEAN NOT NULL DEFAULT false,
+
+    PRIMARY KEY (`id_circular`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CircularDestinatario` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_circular` INTEGER NOT NULL,
+    `id_nivel` INTEGER NULL,
+    `id_seccion` INTEGER NULL,
+    `leida` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_lectura` DATETIME(3) NULL,
+    `confirmada` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_confirmacion` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Adjunto` (
+    `id_adjunto` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_circular` INTEGER NOT NULL,
+    `nombre_archivo` VARCHAR(191) NOT NULL,
+    `url` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`id_adjunto`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Horario` (
+    `id_horario` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_seccion` INTEGER NOT NULL,
+    `id_curso` INTEGER NOT NULL,
+    `id_docente` INTEGER NOT NULL,
+    `dia_semana` INTEGER NOT NULL,
+    `hora_inicio` VARCHAR(5) NOT NULL,
+    `hora_fin` VARCHAR(5) NOT NULL,
+
+    PRIMARY KEY (`id_horario`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Notificacion` (
+    `id_notif` INTEGER NOT NULL AUTO_INCREMENT,
+    `id_usuario` INTEGER NOT NULL,
+    `tipo` VARCHAR(191) NOT NULL,
+    `titulo` VARCHAR(191) NOT NULL,
+    `mensaje` VARCHAR(191) NOT NULL,
+    `leida` BOOLEAN NOT NULL DEFAULT false,
+    `fecha_creacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `url` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id_notif`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `Usuario` ADD CONSTRAINT `Usuario_id_persona_fkey` FOREIGN KEY (`id_persona`) REFERENCES `Persona`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Usuario` ADD CONSTRAINT `Usuario_id_rol_fkey` FOREIGN KEY (`id_rol`) REFERENCES `Rol`(`id_rol`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Grado` ADD CONSTRAINT `Grado_id_nivel_fkey` FOREIGN KEY (`id_nivel`) REFERENCES `Nivel`(`id_nivel`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Seccion` ADD CONSTRAINT `Seccion_id_grado_fkey` FOREIGN KEY (`id_grado`) REFERENCES `Grado`(`id_grado`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Seccion` ADD CONSTRAINT `Seccion_id_aula_fkey` FOREIGN KEY (`id_aula`) REFERENCES `Aula`(`id_aula`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Curso` ADD CONSTRAINT `Curso_id_area_fkey` FOREIGN KEY (`id_area`) REFERENCES `AreaCurricular`(`id_area`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Bimestre` ADD CONSTRAINT `Bimestre_id_anio_fkey` FOREIGN KEY (`id_anio`) REFERENCES `AnioLectivo`(`id_anio`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Unidad` ADD CONSTRAINT `Unidad_id_bimestre_fkey` FOREIGN KEY (`id_bimestre`) REFERENCES `Bimestre`(`id_bimestre`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Apoderado` ADD CONSTRAINT `Apoderado_id_persona_fkey` FOREIGN KEY (`id_persona`) REFERENCES `Persona`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Docente` ADD CONSTRAINT `Docente_id_persona_fkey` FOREIGN KEY (`id_persona`) REFERENCES `Persona`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Estudiante` ADD CONSTRAINT `Estudiante_id_persona_fkey` FOREIGN KEY (`id_persona`) REFERENCES `Persona`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ApoderadoEstudiante` ADD CONSTRAINT `ApoderadoEstudiante_id_apoderado_fkey` FOREIGN KEY (`id_apoderado`) REFERENCES `Apoderado`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ApoderadoEstudiante` ADD CONSTRAINT `ApoderadoEstudiante_id_estudiante_fkey` FOREIGN KEY (`id_estudiante`) REFERENCES `Estudiante`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DocenteEspecialidad` ADD CONSTRAINT `DocenteEspecialidad_id_docente_fkey` FOREIGN KEY (`id_docente`) REFERENCES `Docente`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DocenteEspecialidad` ADD CONSTRAINT `DocenteEspecialidad_id_area_fkey` FOREIGN KEY (`id_area`) REFERENCES `AreaCurricular`(`id_area`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Matricula` ADD CONSTRAINT `Matricula_id_estudiante_fkey` FOREIGN KEY (`id_estudiante`) REFERENCES `Estudiante`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Matricula` ADD CONSTRAINT `Matricula_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Matricula` ADD CONSTRAINT `Matricula_id_anio_fkey` FOREIGN KEY (`id_anio`) REFERENCES `AnioLectivo`(`id_anio`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `AsignacionDocente` ADD CONSTRAINT `AsignacionDocente_id_docente_fkey` FOREIGN KEY (`id_docente`) REFERENCES `Docente`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `AsignacionDocente` ADD CONSTRAINT `AsignacionDocente_id_curso_fkey` FOREIGN KEY (`id_curso`) REFERENCES `Curso`(`id_curso`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `AsignacionDocente` ADD CONSTRAINT `AsignacionDocente_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `AsignacionDocente` ADD CONSTRAINT `AsignacionDocente_id_anio_fkey` FOREIGN KEY (`id_anio`) REFERENCES `AnioLectivo`(`id_anio`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `EvaluacionDetalle` ADD CONSTRAINT `EvaluacionDetalle_id_asignacion_fkey` FOREIGN KEY (`id_asignacion`) REFERENCES `AsignacionDocente`(`id_asignacion`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `EvaluacionDetalle` ADD CONSTRAINT `EvaluacionDetalle_id_unidad_fkey` FOREIGN KEY (`id_unidad`) REFERENCES `Unidad`(`id_unidad`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `EvaluacionDetalle` ADD CONSTRAINT `EvaluacionDetalle_id_tipo_eval_fkey` FOREIGN KEY (`id_tipo_eval`) REFERENCES `TipoEvaluacion`(`id_tipo_eval`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `NotaAlumno` ADD CONSTRAINT `NotaAlumno_id_matricula_fkey` FOREIGN KEY (`id_matricula`) REFERENCES `Matricula`(`id_matricula`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `NotaAlumno` ADD CONSTRAINT `NotaAlumno_id_evaluacion_det_fkey` FOREIGN KEY (`id_evaluacion_det`) REFERENCES `EvaluacionDetalle`(`id_evaluacion_det`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Asistencia` ADD CONSTRAINT `Asistencia_id_matricula_fkey` FOREIGN KEY (`id_matricula`) REFERENCES `Matricula`(`id_matricula`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ConceptoPago` ADD CONSTRAINT `ConceptoPago_id_anio_fkey` FOREIGN KEY (`id_anio`) REFERENCES `AnioLectivo`(`id_anio`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CronogramaPagos` ADD CONSTRAINT `CronogramaPagos_id_matricula_fkey` FOREIGN KEY (`id_matricula`) REFERENCES `Matricula`(`id_matricula`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CronogramaPagos` ADD CONSTRAINT `CronogramaPagos_id_concepto_fkey` FOREIGN KEY (`id_concepto`) REFERENCES `ConceptoPago`(`id_concepto`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PagoTransaccion` ADD CONSTRAINT `PagoTransaccion_id_cronograma_fkey` FOREIGN KEY (`id_cronograma`) REFERENCES `CronogramaPagos`(`id_cronograma`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PagoTransaccion` ADD CONSTRAINT `PagoTransaccion_id_apoderado_fkey` FOREIGN KEY (`id_apoderado`) REFERENCES `Apoderado`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PagoTransaccion` ADD CONSTRAINT `PagoTransaccion_id_usuario_cajero_fkey` FOREIGN KEY (`id_usuario_cajero`) REFERENCES `Usuario`(`id_usuario`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Circular` ADD CONSTRAINT `Circular_remitente_id_usuario_fkey` FOREIGN KEY (`remitente_id_usuario`) REFERENCES `Usuario`(`id_usuario`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CircularDestinatario` ADD CONSTRAINT `CircularDestinatario_id_circular_fkey` FOREIGN KEY (`id_circular`) REFERENCES `Circular`(`id_circular`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CircularDestinatario` ADD CONSTRAINT `CircularDestinatario_id_nivel_fkey` FOREIGN KEY (`id_nivel`) REFERENCES `Nivel`(`id_nivel`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CircularDestinatario` ADD CONSTRAINT `CircularDestinatario_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Adjunto` ADD CONSTRAINT `Adjunto_id_circular_fkey` FOREIGN KEY (`id_circular`) REFERENCES `Circular`(`id_circular`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_seccion_fkey` FOREIGN KEY (`id_seccion`) REFERENCES `Seccion`(`id_seccion`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_curso_fkey` FOREIGN KEY (`id_curso`) REFERENCES `Curso`(`id_curso`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Horario` ADD CONSTRAINT `Horario_id_docente_fkey` FOREIGN KEY (`id_docente`) REFERENCES `Docente`(`id_persona`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Notificacion` ADD CONSTRAINT `Notificacion_id_usuario_fkey` FOREIGN KEY (`id_usuario`) REFERENCES `Usuario`(`id_usuario`) ON DELETE RESTRICT ON UPDATE CASCADE;
+</file>
+
+<file path="prisma/migrations/migration_lock.toml">
+# Please do not edit this file manually
+# It should be added in your version-control system (e.g., Git)
+provider = "mysql"
+</file>
+
+<file path="prisma/schema.prisma">
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ── MÓDULO DE IDENTIDAD Y ACCESO ──
+model Rol {
+  id_rol     Int       @id @default(autoincrement())
+  nombre_rol String    @unique @db.VarChar(50)
+  usuarios   Usuario[]
+}
+
+model Persona {
+  id_persona       Int          @id @default(autoincrement())
+  dni              String       @unique @db.Char(8)
+  nombres          String       @db.VarChar(100)
+  apellido_paterno String       @db.VarChar(100)
+  apellido_materno String       @db.VarChar(100)
+  fecha_nacimiento DateTime     @db.Date
+  genero           String?      @db.VarChar(1)
+  direccion        String?      @db.VarChar(255)
+  telefono         String?      @db.VarChar(20)
+  correo           String?      @unique @db.VarChar(150)
+  created_at       DateTime     @default(now()) @db.Timestamp(0)
+  usuarios         Usuario[]
+  apoderados       Apoderado[]
+  docentes         Docente[]
+  estudiantes      Estudiante[]
+}
+
+model Usuario {
+  id_usuario    Int      @id @default(autoincrement())
+  username      String   @unique @db.VarChar(50)
+  password_hash String   @db.VarChar(255)
+  id_persona    Int
+  id_rol        Int
+  estado        Boolean  @default(true)
+  persona       Persona  @relation(fields: [id_persona], references: [id_persona])
+  rol           Rol      @relation(fields: [id_rol], references: [id_rol])
+  pagos_cajero  PagoTransaccion[]
+  circulares    Circular[]
+  notificaciones Notificacion[]   // 👈 agrega esta línea
+}
+
+// ── MÓDULO ACADÉMICO ──
+model Nivel {
+  id_nivel     Int                    @id @default(autoincrement())
+  nombre_nivel String                 @db.VarChar(50)
+  grados       Grado[]
+  circulares   CircularDestinatario[]
+}
+
+model Grado {
+  id_grado     Int       @id @default(autoincrement())
+  nombre_grado String    @db.VarChar(50)
+  id_nivel     Int
+  nivel        Nivel     @relation(fields: [id_nivel], references: [id_nivel])
+  secciones    Seccion[]
+}
+
+model Aula {
+  id_aula     Int       @id @default(autoincrement())
+  nombre_aula String    @db.VarChar(50)
+  capacidad   Int       @db.TinyInt
+  secciones   Seccion[]
+}
+
+model Seccion {
+  id_seccion   Int                    @id @default(autoincrement())
+  letra        String                 @db.Char(1)
+  id_grado     Int
+  id_aula      Int
+  grado        Grado                  @relation(fields: [id_grado], references: [id_grado])
+  aula         Aula                   @relation(fields: [id_aula], references: [id_aula])
+  matriculas   Matricula[]
+  asignaciones AsignacionDocente[]
+  circulares   CircularDestinatario[]
+  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
+}
+
+model AreaCurricular {
+  id_area        Int                   @id @default(autoincrement())
+  nombre_area    String                @db.VarChar(100)
+  cursos         Curso[]
+  especialidades DocenteEspecialidad[]
+}
+
+model Curso {
+  id_curso     Int                 @id @default(autoincrement())
+  nombre_curso String              @db.VarChar(100)
+  id_area      Int
+  area         AreaCurricular      @relation(fields: [id_area], references: [id_area])
+  asignaciones AsignacionDocente[]
+  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
+}
+
+// ── MÓDULO DE TIEMPO ──
+model AnioLectivo {
+  id_anio      Int                 @id @default(autoincrement())
+  nombre_anio  String              @db.VarChar(50)
+  fecha_inicio DateTime            @db.Date
+  fecha_fin    DateTime            @db.Date
+  estado       String              @default("Planificación") @db.VarChar(20)
+  bimestres    Bimestre[]
+  matriculas   Matricula[]
+  conceptos    ConceptoPago[]
+  asignaciones AsignacionDocente[]
+}
+
+model Bimestre {
+  id_bimestre  Int         @id @default(autoincrement())
+  numero       Int         @db.TinyInt
+  fecha_inicio DateTime    @db.Date
+  fecha_fin    DateTime    @db.Date
+  id_anio      Int
+  anio         AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+  unidades     Unidad[]
+}
+
+model Unidad {
+  id_unidad      Int                 @id @default(autoincrement())
+  numero         Int                 @db.TinyInt
+  fecha_inicio   DateTime            @db.Date
+  fecha_fin      DateTime            @db.Date
+  id_bimestre    Int
+  estado_abierto Boolean             @default(false)
+  bimestre       Bimestre            @relation(fields: [id_bimestre], references: [id_bimestre])
+  evaluaciones   EvaluacionDetalle[]
+}
+
+// ── ACTORES ──
+model Apoderado {
+  id_persona  Int                   @id
+  ocupacion   String?               @db.VarChar(100)
+  persona     Persona               @relation(fields: [id_persona], references: [id_persona])
+  estudiantes ApoderadoEstudiante[]
+  pagos       PagoTransaccion[]
+}
+
+model Docente {
+  id_persona     Int                   @id
+  fecha_ingreso  DateTime?             @db.Date
+  persona        Persona               @relation(fields: [id_persona], references: [id_persona])
+  especialidades DocenteEspecialidad[]
+  asignaciones   AsignacionDocente[]
+  horarios       Horario[] // <-- AGREGAR ESTA LÍNEA
+}
+
+model Estudiante {
+  id_persona        Int                   @id
+  codigo_estudiante String                @unique @db.VarChar(20)
+  persona           Persona               @relation(fields: [id_persona], references: [id_persona])
+  apoderados        ApoderadoEstudiante[]
+  matriculas        Matricula[]
+}
+
+model ApoderadoEstudiante {
+  id_apoderado  Int
+  id_estudiante Int
+  parentesco    String     @db.VarChar(30)
+  apoderado     Apoderado  @relation(fields: [id_apoderado], references: [id_persona])
+  estudiante    Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+
+  @@id([id_apoderado, id_estudiante])
+  @@index([id_estudiante])
+}
+
+model DocenteEspecialidad {
+  id_docente Int
+  id_area    Int
+  docente    Docente        @relation(fields: [id_docente], references: [id_persona])
+  area       AreaCurricular @relation(fields: [id_area], references: [id_area])
+
+  @@id([id_docente, id_area])
+}
+
+// ── MATRÍCULA ──
+model Matricula {
+  id_matricula     Int               @id @default(autoincrement())
+  id_estudiante    Int
+  id_seccion       Int
+  id_anio          Int
+  fecha_matricula  DateTime          @default(now())
+  estado_matricula String            @default("Activo") @db.VarChar(20)
+  estudiante       Estudiante        @relation(fields: [id_estudiante], references: [id_persona])
+  seccion          Seccion           @relation(fields: [id_seccion], references: [id_seccion])
+  anio             AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
+  notas            NotaAlumno[]
+  asistencias      Asistencia[]
+  cronogramas      CronogramaPagos[]
+
+  @@index([id_estudiante, id_anio])
+  @@index([id_seccion])
+}
+
+// ── ASIGNACIÓN DOCENTE Y EVALUACIONES ──
+model AsignacionDocente {
+  id_asignacion Int                 @id @default(autoincrement())
+  id_docente    Int
+  id_curso      Int
+  id_seccion    Int
+  id_anio       Int
+  docente       Docente             @relation(fields: [id_docente], references: [id_persona])
+  curso         Curso               @relation(fields: [id_curso], references: [id_curso])
+  seccion       Seccion             @relation(fields: [id_seccion], references: [id_seccion])
+  anio          AnioLectivo         @relation(fields: [id_anio], references: [id_anio])
+  evaluaciones  EvaluacionDetalle[]
+
+  @@index([id_docente, id_anio])
+}
+
+model TipoEvaluacion {
+  id_tipo_eval Int                 @id @default(autoincrement())
+  nombre_tipo  String              @db.VarChar(50)
+  evaluaciones EvaluacionDetalle[]
+}
+
+model EvaluacionDetalle {
+  id_evaluacion_det     Int               @id @default(autoincrement())
+  id_asignacion         Int
+  id_unidad             Int
+  id_tipo_eval          Int
+  descripcion_actividad String?           @db.VarChar(100)
+  fecha_evaluacion      DateTime?         @db.Date
+  asignacion            AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
+  unidad                Unidad            @relation(fields: [id_unidad], references: [id_unidad])
+  tipo                  TipoEvaluacion    @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
+  notas                 NotaAlumno[]
+}
+
+model EscalaCalificacion {
+  id_escala         Int     @id @default(autoincrement())
+  nombre_escala     String  @db.VarChar(50)
+  nota_minima       Decimal @db.Decimal(4, 2)
+  nota_maxima       Decimal @db.Decimal(4, 2)
+  nota_aprobatoria  Decimal @db.Decimal(4, 2)
+  tipo_calificacion String  @default("Numérica") @db.VarChar(20)
+}
+
+model NotaAlumno {
+  id_nota           Int               @id @default(autoincrement())
+  id_matricula      Int
+  id_evaluacion_det Int
+  valor_nota        Decimal           @db.Decimal(4, 2)
+  comentario        String?           @db.Text
+  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
+  evaluacion        EvaluacionDetalle @relation(fields: [id_evaluacion_det], references: [id_evaluacion_det])
+
+  @@index([id_matricula])
+}
+
+// ── ASISTENCIA ──
+model Asistencia {
+  id_asistencia Int       @id @default(autoincrement())
+  id_matricula  Int
+  fecha         DateTime  @db.Date
+  estado        String    @db.VarChar(20)
+  matricula     Matricula @relation(fields: [id_matricula], references: [id_matricula])
+
+  @@unique([id_matricula, fecha])
+  @@index([fecha])
+}
+
+// ── MÓDULO DE PAGOS ──
+model ConceptoPago {
+  id_concepto     Int               @id @default(autoincrement())
+  nombre_concepto String            @db.VarChar(100)
+  monto_base      Decimal           @db.Decimal(10, 2)
+  id_anio         Int
+  es_pension      Boolean           @default(true)
+  anio            AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
+  cronogramas     CronogramaPagos[]
+}
+
+model CronogramaPagos {
+  id_cronograma     Int               @id @default(autoincrement())
+  id_matricula      Int
+  id_concepto       Int
+  fecha_vencimiento DateTime          @db.Date
+  estado_pago       String            @default("Pendiente") @db.VarChar(20)
+  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
+  concepto          ConceptoPago      @relation(fields: [id_concepto], references: [id_concepto])
+  pagos             PagoTransaccion[]
+
+  @@index([fecha_vencimiento, estado_pago])
+}
+
+model PagoTransaccion {
+  id_transaccion    Int             @id @default(autoincrement())
+  id_cronograma     Int
+  id_apoderado      Int
+  id_usuario_cajero Int
+  monto_pagado      Decimal         @db.Decimal(10, 2)
+  fecha_pago        DateTime        @default(now())
+  metodo_pago       String?         @db.VarChar(20)
+  nro_operacion     String?         @db.VarChar(50)
+  cronograma        CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
+  apoderado         Apoderado       @relation(fields: [id_apoderado], references: [id_persona])
+  cajero            Usuario         @relation(fields: [id_usuario_cajero], references: [id_usuario])
+
+  @@index([id_cronograma])
+}
+
+// ── MEJORAS EN CIRCULARES ──
+model Circular {
+  id_circular          Int                    @id @default(autoincrement())
+  titulo               String                 @db.VarChar(150)
+  contenido            String                 @db.Text
+  fecha_creacion       DateTime               @default(now())
+  remitente_id_usuario Int
+  categoria            String?                // 'Academico', 'Evento', 'Urgente', 'General'
+  urgente              Boolean                @default(false)
+  requiere_autorizacion Boolean               @default(false)
+  remitente            Usuario                @relation(fields: [remitente_id_usuario], references: [id_usuario])
+  destinatarios        CircularDestinatario[]
+  adjuntos             Adjunto[]
+}
+
+model CircularDestinatario {
+  id                 Int       @id @default(autoincrement())
+  id_circular        Int
+  id_nivel           Int?
+  id_seccion         Int?
+  leida              Boolean   @default(false)
+  fecha_lectura      DateTime?
+  confirmada         Boolean   @default(false)
+  fecha_confirmacion DateTime?
+  circular           Circular  @relation(fields: [id_circular], references: [id_circular])
+  nivel              Nivel?    @relation(fields: [id_nivel], references: [id_nivel])
+  seccion            Seccion?  @relation(fields: [id_seccion], references: [id_seccion])
+}
+
+model Adjunto {
+  id_adjunto   Int      @id @default(autoincrement())
+  id_circular  Int
+  nombre_archivo String
+  url          String
+  circular     Circular @relation(fields: [id_circular], references: [id_circular])
+}
+
+model Horario {
+  id_horario  Int     @id @default(autoincrement())
+  id_seccion  Int
+  id_curso    Int
+  id_docente  Int
+  dia_semana  Int // 1 = Lunes ... 5 = Viernes
+  hora_inicio String  @db.VarChar(5) // HH:mm
+  hora_fin    String  @db.VarChar(5)
+  seccion     Seccion @relation(fields: [id_seccion], references: [id_seccion])
+  curso       Curso   @relation(fields: [id_curso], references: [id_curso])
+  docente     Docente @relation(fields: [id_docente], references: [id_persona])
+}
+
+// ── NOTIFICACIONES ──
+model Notificacion {
+  id_notif       Int      @id @default(autoincrement())
+  id_usuario     Int
+  tipo           String   // 'academica', 'administrativa', 'informativa'
+  titulo         String
+  mensaje        String
+  leida          Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+  url            String?  // ruta a la que redirige al hacer clic
+  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+}
+</file>
+
+<file path="prisma/seed.ts">
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Creando datos institucionales...');
+
+  // ── ROLES ──
+  const rolAdmin = await prisma.rol.upsert({ where: { nombre_rol: 'Admin' }, update: {}, create: { nombre_rol: 'Admin' } });
+  const rolProfesor = await prisma.rol.upsert({ where: { nombre_rol: 'Profesor' }, update: {}, create: { nombre_rol: 'Profesor' } });
+  const rolApoderado = await prisma.rol.upsert({ where: { nombre_rol: 'Apoderado' }, update: {}, create: { nombre_rol: 'Apoderado' } });
+  const rolAlumno = await prisma.rol.upsert({ where: { nombre_rol: 'Alumno' }, update: {}, create: { nombre_rol: 'Alumno' } });
+  const rolDirector = await prisma.rol.upsert({ where: { nombre_rol: 'Director' }, update: {}, create: { nombre_rol: 'Director' } });
+  const rolSecretaria = await prisma.rol.upsert({ where: { nombre_rol: 'Secretaria' }, update: {}, create: { nombre_rol: 'Secretaria' } });
+
+  // ── USUARIO ADMIN ──
+  const personaAdmin = await prisma.persona.upsert({
+    where: { dni: '00000000' },
+    update: {},
+    create: {
+      dni: '00000000', nombres: 'Admin', apellido_paterno: 'Sistema', apellido_materno: 'Principal',
+      fecha_nacimiento: new Date('2000-01-01'), genero: 'M', correo: 'admin@colegio.edu.pe',
+    },
+  });
+  const hashedAdmin = await bcrypt.hash('admin123', 10);
+  await prisma.usuario.upsert({
+    where: { username: 'admin' },
+    update: {},
+    create: { username: 'admin', password_hash: hashedAdmin, id_persona: personaAdmin.id_persona, id_rol: rolAdmin.id_rol, estado: true },
+  });
+
+  // ── NIVELES ──
+  const nivelInicial = await prisma.nivel.upsert({ where: { id_nivel: 1 }, update: {}, create: { id_nivel: 1, nombre_nivel: 'Inicial' } });
+  const nivelPrimaria = await prisma.nivel.upsert({ where: { id_nivel: 2 }, update: {}, create: { id_nivel: 2, nombre_nivel: 'Primaria' } });
+  const nivelSecundaria = await prisma.nivel.upsert({ where: { id_nivel: 3 }, update: {}, create: { id_nivel: 3, nombre_nivel: 'Secundaria' } });
+
+  // ── GRADOS ── (Inicial: 3-4-5 años, Primaria: 1ero-6to, Secundaria: 1ero-5to)
+  const gradosData = [
+    { nombre: '3 años', nivel: 1 }, { nombre: '4 años', nivel: 1 }, { nombre: '5 años', nivel: 1 },
+    { nombre: '1er Grado', nivel: 2 }, { nombre: '2do Grado', nivel: 2 }, { nombre: '3er Grado', nivel: 2 },
+    { nombre: '4to Grado', nivel: 2 }, { nombre: '5to Grado', nivel: 2 }, { nombre: '6to Grado', nivel: 2 },
+    { nombre: '1er Grado', nivel: 3 }, { nombre: '2do Grado', nivel: 3 }, { nombre: '3er Grado', nivel: 3 },
+    { nombre: '4to Grado', nivel: 3 }, { nombre: '5to Grado', nivel: 3 },
+  ];
+  for (const g of gradosData) {
+    await prisma.grado.upsert({
+      where: { id_grado: gradosData.indexOf(g) + 1 },
+      update: {},
+      create: { id_grado: gradosData.indexOf(g) + 1, nombre_grado: g.nombre, id_nivel: g.nivel },
+    });
+  }
+
+  // ── AULAS ── (creamos dos por grado)
+  for (let i = 1; i <= 28; i++) {
+    const letra = i % 2 === 1 ? 'A' : 'B';
+    await prisma.aula.upsert({
+      where: { id_aula: i },
+      update: {},
+      create: { id_aula: i, nombre_aula: `Aula ${Math.ceil(i / 2)}${letra}`, capacidad: 30 },
+    });
+  }
+
+  // ── SECCIONES ── (dos secciones por grado: A y B)
+  let seccionId = 1;
+  for (let gradoId = 1; gradoId <= 14; gradoId++) {
+    for (const letra of ['A', 'B']) {
+      await prisma.seccion.upsert({
+        where: { id_seccion: seccionId },
+        update: {},
+        create: { id_seccion: seccionId, letra: letra, id_grado: gradoId, id_aula: seccionId },
+      });
+      seccionId++;
+    }
+  }
+
+  // ── AÑO LECTIVO ──
+  const anioActual = await prisma.anioLectivo.upsert({
+    where: { id_anio: 1 },
+    update: {},
+    create: {
+      id_anio: 1, nombre_anio: 'Año Escolar 2025',
+      fecha_inicio: new Date('2025-03-01'), fecha_fin: new Date('2025-12-20'),
+      estado: 'Abierto',
+    },
+  });
+
+  // ── BIMESTRES Y UNIDADES ── (opcional pero útil para pruebas)
+  for (let b = 1; b <= 4; b++) {
+    const bim = await prisma.bimestre.upsert({
+      where: { id_bimestre: b },
+      update: {},
+      create: { id_bimestre: b, numero: b, fecha_inicio: new Date(2025, (b - 1) * 3, 1), fecha_fin: new Date(2025, b * 3, 1), id_anio: 1 },
+    });
+    // dos unidades por bimestre
+    for (let u = 1; u <= 2; u++) {
+      await prisma.unidad.upsert({
+        where: { id_unidad: (b - 1) * 2 + u },
+        update: {},
+        create: { id_unidad: (b - 1) * 2 + u, numero: u, fecha_inicio: new Date(2025, (b - 1) * 3, 1), fecha_fin: new Date(2025, (b - 1) * 3 + 1, 1), id_bimestre: bim.id_bimestre, estado_abierto: true },
+      });
+    }
+  }
+
+  // ── ÁREAS CURRICULARES Y CURSOS ──
+  const areas = ['Comunicación', 'Matemática', 'Ciencia y Tecnología', 'Personal Social', 'Inglés', 'Educación Física', 'Arte'];
+  for (let i = 0; i < areas.length; i++) {
+    const area = await prisma.areaCurricular.upsert({
+      where: { id_area: i + 1 },
+      update: {},
+      create: { id_area: i + 1, nombre_area: areas[i] },
+    });
+    // Por simplicidad, creamos un curso por área con el mismo nombre
+    await prisma.curso.upsert({
+      where: { id_curso: i + 1 },
+      update: {},
+      create: { id_curso: i + 1, nombre_curso: areas[i], id_area: area.id_area },
+    });
+  }
+
+  // ── CONCEPTOS DE PAGO ──
+  const conceptosPago = [
+    { nombre: 'Matrícula 2025', monto: 500.00, esPension: false },
+    { nombre: 'Pensión Marzo', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Abril', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Mayo', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Junio', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Julio', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Agosto', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Setiembre', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Octubre', monto: 350.00, esPension: true },
+    { nombre: 'Pensión Noviembre', monto: 350.00, esPension: true },
+  ];
+  for (const cp of conceptosPago) {
+    await prisma.conceptoPago.create({
+      data: {
+        nombre_concepto: cp.nombre,
+        monto_base: cp.monto,
+        id_anio: 1,
+        es_pension: cp.esPension,
+      },
+    });
+  }
+
+  // ── TIPOS DE EVALUACIÓN ──
+  const tiposEval = ['Participación', 'Cuaderno', 'Práctica', 'Examen', 'Exposición'];
+  for (const tipo of tiposEval) {
+    await prisma.tipoEvaluacion.upsert({
+      where: { id_tipo_eval: tiposEval.indexOf(tipo) + 1 },
+      update: {},
+      create: { nombre_tipo: tipo },
+    });
+  }
+
+  // ── ESCALA DE CALIFICACIÓN ──
+  await prisma.escalaCalificacion.upsert({
+    where: { id_escala: 1 },
+    update: {},
+    create: {
+      id_escala: 1,
+      nombre_escala: 'Escala Numérica (0-20)',
+      nota_minima: 0,
+      nota_maxima: 20,
+      nota_aprobatoria: 11,
+      tipo_calificacion: 'Numérica',
+    },
+  });
+
+  // ── DOCENTE DE PRUEBA ──
+const personaDocente = await prisma.persona.upsert({
+  where: { dni: '11111111' },
+  update: {},
+  create: {
+    dni: '11111111',
+    nombres: 'Juan',
+    apellido_paterno: 'Ríos',
+    apellido_materno: 'Mendoza',
+    fecha_nacimiento: new Date('1985-05-10'),
+    genero: 'M',
+    correo: 'juan.rios@colegio.edu.pe',
+  },
+});
+const docente = await prisma.docente.upsert({
+  where: { id_persona: personaDocente.id_persona },
+  update: {},
+  create: {
+    id_persona: personaDocente.id_persona,
+    fecha_ingreso: new Date('2020-03-01'),
+  },
+});
+// Crear usuario para el docente
+const hashedDocente = await bcrypt.hash('docente123', 10);
+await prisma.usuario.upsert({
+  where: { username: 'juan.rios' },
+  update: {},
+  create: {
+    username: 'juan.rios',
+    password_hash: hashedDocente,
+    id_persona: personaDocente.id_persona,
+    id_rol: rolProfesor.id_rol,
+    estado: true,
+  },
+});
+
+await prisma.evaluacionDetalle.createMany({
+  data: [
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 1', fecha_evaluacion: new Date('2025-03-10') },
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 2', fecha_evaluacion: new Date('2025-03-17') },
+    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 4, descripcion_actividad: 'Examen', fecha_evaluacion: new Date('2025-03-24') },
+  ],
+  skipDuplicates: true,
+});
+
+// Asignar al docente a la sección 1 (Inicial 3 años A) en el año 1, curso Matemática (id_curso=2)
+await prisma.asignacionDocente.upsert({
+  where: { id_asignacion: 1 },
+  update: {},
+  create: {
+    id_docente: docente.id_persona,
+    id_curso: 2, // Matemática
+    id_seccion: 1,
+    id_anio: 1,
+  },
+});
+const horarios = [
+  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 1, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '09:30', hora_fin: '10:15' },
+  { id_seccion: 7, id_curso: 3, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '09:30', hora_fin: '10:15' },
+  { id_seccion: 7, id_curso: 4, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '08:30', hora_fin: '09:15' },
+  { id_seccion: 7, id_curso: 5, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '09:30', hora_fin: '10:15' },
+];
+
+for (const h of horarios) {
+  await prisma.horario.create({ data: h });
+}
+
+  console.log('✅ Seed completado: roles, admin, niveles, grados, secciones, año lectivo, conceptos de pago, tipos de evaluación, escala.');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+</file>
+
+<file path="src/academicos/dto/create-alumno.dto.ts">
+import { IsString, IsDateString, IsOptional, MaxLength } from 'class-validator';
+
+export class CreateAlumnoDto {
+  @IsString()
+  @MaxLength(8)
+  dni: string;
+
+  @IsString()
+  nombres: string;
+
+  @IsString()
+  apellido_paterno: string;
+
+  @IsString()
+  apellido_materno: string;
+
+  @IsDateString()
+  fecha_nacimiento: string;
+
+  @IsOptional()
+  @IsString()
+  genero?: string;
+
+  @IsOptional()
+  @IsString()
+  direccion?: string;
+
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @IsOptional()
+  @IsString()
+  correo?: string;
+}
+</file>
+
+<file path="src/academicos/dto/create-apoderado.dto.ts">
+import { IsString, IsOptional, MaxLength } from 'class-validator';
+
+export class CreateApoderadoDto {
+  @IsString()
+  @MaxLength(8)
+  dni: string;
+
+  @IsString()
+  nombres: string;
+
+  @IsString()
+  apellido_paterno: string;
+
+  @IsString()
+  apellido_materno: string;
+
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @IsOptional()
+  @IsString()
+  correo?: string;
+
+  @IsOptional()
+  @IsString()
+  ocupacion?: string;
+
+  @IsOptional()
+  @IsString()
+  parentesco?: string;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
+}
+</file>
+
+<file path="src/academicos/dto/create-matricula.dto.ts">
+import { IsInt, IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class ApoderadoMatriculaDto {
+  @IsInt()
+  id_apoderado: number;
+
+  @IsString()
+  parentesco: string;
+}
+
+export class CreateMatriculaDto {
+  @IsInt()
+  id_estudiante: number;
+
+  @IsInt()
+  id_seccion: number;
+
+  @IsInt()
+  id_anio: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ApoderadoMatriculaDto)
+  apoderados?: ApoderadoMatriculaDto[];
+}
+</file>
+
+<file path="src/academicos/dto/save-asistencia.dto.ts">
+import {
+  IsInt,
+  IsString,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsIn,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class AsistenciaItemDto {
+  @IsInt()
+  id_matricula: number;
+
+  @IsString()
+  @IsIn(['Presente', 'Ausente', 'Tardanza', 'Justificado'])
+  estado: string;
+}
+
+export class SaveAsistenciaDto {
+  @IsInt()
+  id_seccion: number;
+
+  @IsDateString()
+  fecha: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AsistenciaItemDto)
+  asistencias: AsistenciaItemDto[];
+}
+</file>
+
+<file path="src/academicos/academicos.controller.ts">
+import {
+  Controller, Get, Post, Param, Query, Body,
+  UseGuards, Request,
+} from '@nestjs/common';
+import { AcademicosService } from './academicos.service';
+import { CreateAlumnoDto } from './dto/create-alumno.dto';
+import { CreateApoderadoDto } from './dto/create-apoderado.dto';
+import { CreateMatriculaDto } from './dto/create-matricula.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+import { NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { SaveAsistenciaDto } from './dto/save-asistencia.dto';
+
+@Controller('academicos')
+export class AcademicosController {
+  constructor(
+  private readonly academicosService: AcademicosService,
+  private prisma: PrismaService,  // <--- agregar esta línea
+) {}
+
+  @Get('niveles')
+  getNiveles() {
+    return this.academicosService.getNiveles();
+  }
+
+  @Get('grados')
+  getGrados(@Query('nivel_id') nivelId: string) {
+    return this.academicosService.getGrados(Number(nivelId));
+  }
+
+  @Get('secciones')
+  getSecciones(
+    @Query('grado_id') gradoId: string,
+    @Query('anio_id') anioId: string,
+  ) {
+    return this.academicosService.getSecciones(Number(gradoId), Number(anioId));
+  }
+
+  @Get('anios')
+async getAnios() {
+  return this.academicosService.getAnios();
+}
+
+  @Get('alumnos/buscar')
+  buscarAlumno(@Query('dni') dni: string) {
+    return this.academicosService.buscarAlumno(dni);
+  }
+
+  @Post('alumnos')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  createAlumno(@Body() dto: CreateAlumnoDto) {
+    return this.academicosService.createAlumno(dto);
+  }
+
+  @Get('docentes')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getDocentes() {
+  return this.prisma.docente.findMany({
+    include: { persona: true },
+  });
+}
+
+  @Post('apoderados')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  createApoderado(@Body() dto: CreateApoderadoDto) {
+    return this.academicosService.createApoderado(dto);
+  }
+
+  @Post('matriculas')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  createMatricula(@Body() dto: CreateMatriculaDto) {
+    return this.academicosService.createMatricula(dto);
+  }
+
+  @Get('docente/secciones')
+@UseGuards(AuthGuard('jwt'))
+async getSeccionesDocente(@Request() req) {
+  // El token JWT tiene 'userId' que es id_usuario; pero docente usa id_persona.
+  // Debemos obtener el id_persona del docente a partir del usuario.
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: req.user.userId },
+    include: { persona: { include: { docentes: true } } },
+  });
+  const docente = usuario?.persona?.docentes?.[0];
+  if (!docente) throw new NotFoundException('No se encontró docente');
+  return this.academicosService.getSeccionesDocente(docente.id_persona, /* anio activo */ 1);
+}
+
+@Get('asistencia')
+@UseGuards(AuthGuard('jwt'))
+async getAsistencia(@Query('seccion_id') seccionId: string, @Query('fecha') fecha: string) {
+  return this.academicosService.getAsistencia(Number(seccionId), fecha);
+}
+
+@Post('asistencia')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Profesor', 'Director')
+async saveAsistencia(@Body() dto: SaveAsistenciaDto) {
+  return this.academicosService.saveAsistencia(dto.id_seccion, dto.fecha, dto.asistencias);
+}
+
+@Get('padres/asistencia')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Apoderado', 'Admin')
+async getAsistenciaAlumno(
+  @Query('alumno_id') alumnoId: string,
+  @Query('desde') desde: string,
+  @Query('hasta') hasta: string,
+) {
+  return this.academicosService.getAsistenciaAlumno(Number(alumnoId), desde, hasta);
+}
+
+@Get('matriculas/ultimas')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria')
+async getUltimasMatriculas() {
+  return this.academicosService.getUltimasMatriculas();
+}
+
+@Get('padres/hijos')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Apoderado', 'Admin')
+async getHijosApoderado(@Request() req) {
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: req.user.userId },
+    include: { persona: { include: { apoderados: true } } },
+  });
+  const apoderado = usuario?.persona?.apoderados?.[0];
+  if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+  return this.academicosService.getHijosApoderado(apoderado.id_persona);
+}
+
+@Get('padres/horario')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Apoderado', 'Admin')
+async getHorarioAlumno(@Query('alumno_id') alumnoId: string) {
+  return this.academicosService.getHorarioAlumno(Number(alumnoId));
+}
+
+@Get('matriculas/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalMatriculados(@Query('anio_id') anioId: string) {
+  return this.academicosService.getTotalMatriculados(Number(anioId));
+}
+
+@Get('docentes/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalDocentes() {
+  return this.academicosService.getTotalDocentes();
+}
+
+}
+</file>
+
+<file path="src/academicos/academicos.module.ts">
+import { Module } from '@nestjs/common';
+import { AcademicosController } from './academicos.controller';
+import { AcademicosService } from './academicos.service';
+
+@Module({
+  controllers: [AcademicosController],
+  providers: [AcademicosService]
+})
+export class AcademicosModule {}
+</file>
+
+<file path="src/academicos/academicos.service.ts">
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateAlumnoDto } from './dto/create-alumno.dto';
+import { CreateApoderadoDto } from './dto/create-apoderado.dto';
+import { CreateMatriculaDto } from './dto/create-matricula.dto';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AcademicosService {
+  constructor(private prisma: PrismaService) {}
+
+  // ── CONSULTAS ──────────────────────────────────────────
+
+  async getNiveles() {
+    return this.prisma.nivel.findMany();
+  }
+
+  async getGrados(nivelId: number) {
+    return this.prisma.grado.findMany({
+      where: { id_nivel: nivelId },
+    });
+  }
+
+  async getSecciones(gradoId: number, anioId: number) {
+    // Secciones del grado con conteo de matriculados activos en ese año
+    const secciones = await this.prisma.seccion.findMany({
+      where: { id_grado: gradoId },
+      include: {
+        aula: true,
+        matriculas: {
+          where: {
+            id_anio: anioId,
+            estado_matricula: 'Activo',
+          },
+        },
+      },
+    });
+    return secciones.map((sec) => ({
+      id_seccion: sec.id_seccion,
+      letra: sec.letra,
+      capacidad: sec.aula.capacidad,
+      matriculados: sec.matriculas.length,
+      disponibles: sec.aula.capacidad - sec.matriculas.length,
+    }));
+  }
+
+  async buscarAlumno(dni: string) {
+    return this.prisma.persona.findFirst({
+      where: { dni },
+      include: { estudiantes: { include: { matriculas: true } } },
+    });
+  }
+
+  // ── CREAR ALUMNO (PERSONA + ESTUDIANTE) ─────────────
+
+  async createAlumno(dto: CreateAlumnoDto) {
+    const existente = await this.prisma.persona.findUnique({
+      where: { dni: dto.dni },
+    });
+    if (existente) throw new BadRequestException('El DNI ya está registrado');
+
+    const persona = await this.prisma.persona.create({
+      data: {
+        dni: dto.dni,
+        nombres: dto.nombres,
+        apellido_paterno: dto.apellido_paterno,
+        apellido_materno: dto.apellido_materno,
+        fecha_nacimiento: new Date(dto.fecha_nacimiento),
+        genero: dto.genero,
+        direccion: dto.direccion,
+        telefono: dto.telefono,
+        correo: dto.correo,
+      },
+    });
+
+    // Generar código de estudiante automático
+    const codigo = `ALU${String(persona.id_persona).padStart(6, '0')}`;
+    const estudiante = await this.prisma.estudiante.create({
+      data: {
+        id_persona: persona.id_persona,
+        codigo_estudiante: codigo,
+      },
+    });
+
+    return { persona, estudiante };
+  }
+
+  // ── CREAR APODERADO (PERSONA + APODERADO + USUARIO) ──
+
+  async createApoderado(dto: CreateApoderadoDto) {
+    const existente = await this.prisma.persona.findUnique({
+      where: { dni: dto.dni },
+    });
+    if (existente) throw new BadRequestException('El DNI ya está registrado');
+
+    const persona = await this.prisma.persona.create({
+      data: {
+        dni: dto.dni,
+        nombres: dto.nombres,
+        apellido_paterno: dto.apellido_paterno,
+        apellido_materno: dto.apellido_materno,
+        fecha_nacimiento: new Date('1980-01-01'), // fecha genérica
+        telefono: dto.telefono,
+        correo: dto.correo,
+      },
+    });
+
+    const apoderado = await this.prisma.apoderado.create({
+      data: {
+        id_persona: persona.id_persona,
+        ocupacion: dto.ocupacion,
+      },
+    });
+
+    // Crear usuario para el apoderado si se proporcionan credenciales
+    if (dto.username && dto.password) {
+      const rolApoderado = await this.prisma.rol.findUnique({
+        where: { nombre_rol: 'Apoderado' },
+      });
+      if (rolApoderado) {
+        const hashed = await bcrypt.hash(dto.password, 10);
+        await this.prisma.usuario.create({
+          data: {
+            username: dto.username,
+            password_hash: hashed,
+            id_persona: persona.id_persona,
+            id_rol: rolApoderado.id_rol,
+            estado: true,
+          },
+        });
+      }
+    }
+
+    return { persona, apoderado };
+  }
+
+  // ── CREAR MATRÍCULA (TRANSACCIÓN COMPLETA) ──────────
+
+  async createMatricula(dto: CreateMatriculaDto) {
+    // Validar que el estudiante exista
+    const estudiante = await this.prisma.estudiante.findUnique({
+      where: { id_persona: dto.id_estudiante },
+    });
+    if (!estudiante) throw new NotFoundException('Estudiante no encontrado');
+
+    // Validar que no tenga matrícula activa en el mismo año
+    const existente = await this.prisma.matricula.findFirst({
+      where: {
+        id_estudiante: dto.id_estudiante,
+        id_anio: dto.id_anio,
+        estado_matricula: 'Activo',
+      },
+    });
+    if (existente) throw new BadRequestException('El alumno ya está matriculado en este año lectivo');
+
+    // Validar cupo
+    const seccion = await this.prisma.seccion.findUnique({
+      where: { id_seccion: dto.id_seccion },
+      include: { aula: true },
+    });
+    if (!seccion) throw new NotFoundException('Sección no encontrada');
+
+    const matriculados = await this.prisma.matricula.count({
+      where: {
+        id_seccion: dto.id_seccion,
+        id_anio: dto.id_anio,
+        estado_matricula: 'Activo',
+      },
+    });
+    if (matriculados >= seccion.aula.capacidad) {
+      throw new BadRequestException('La sección está llena');
+    }
+
+    // Transacción: crear matrícula, generar deudas, asociar apoderados
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Matrícula
+      const matricula = await tx.matricula.create({
+        data: {
+          id_estudiante: dto.id_estudiante,
+          id_seccion: dto.id_seccion,
+          id_anio: dto.id_anio,
+          estado_matricula: 'Activo',
+        },
+      });
+
+      // 2. Asociar apoderados (si se enviaron)
+      if (dto.apoderados) {
+        for (const ap of dto.apoderados) {
+          await tx.apoderadoEstudiante.upsert({
+            where: {
+              id_apoderado_id_estudiante: {
+                id_apoderado: ap.id_apoderado,
+                id_estudiante: dto.id_estudiante,
+              },
+            },
+            update: { parentesco: ap.parentesco },
+            create: {
+              id_apoderado: ap.id_apoderado,
+              id_estudiante: dto.id_estudiante,
+              parentesco: ap.parentesco,
+            },
+          });
+        }
+      }
+
+      // 3. Generar deudas automáticas
+const conceptos = await tx.conceptoPago.findMany({
+  where: { id_anio: dto.id_anio },
+});
+const fechaBase = new Date(); // fecha actual
+for (let i = 0; i < conceptos.length; i++) {
+  const concepto = conceptos[i];
+  let fechaVenc = new Date(fechaBase);
+  if (concepto.es_pension) {
+    // La primera pensión vence el día 5 del mes siguiente; las sucesivas, el día 5 de los meses subsiguientes
+    fechaVenc.setMonth(fechaVenc.getMonth() + 1 + i, 5);
+  } else {
+    // Conceptos no pensión (ej. matrícula) vencen al día siguiente
+    fechaVenc.setDate(fechaVenc.getDate() + 1);
+  }
+  await tx.cronogramaPagos.create({
+    data: {
+      id_matricula: matricula.id_matricula,
+      id_concepto: concepto.id_concepto,
+      fecha_vencimiento: fechaVenc,
+      estado_pago: 'Pendiente',
+    },
+  });
+}
+
+      return matricula;
+    });
+    
+  }
+
+  // ── ASISTENCIA ─────────────────────────────────────────
+
+async getSeccionesDocente(docenteId: number, anioId: number) {
+  const asignaciones = await this.prisma.asignacionDocente.findMany({
+    where: { id_docente: docenteId, id_anio: anioId },
+    distinct: ['id_seccion'],
+    select: { seccion: true },
+  });
+  return asignaciones.map((a) => a.seccion);
+}
+
+async getAsistencia(seccionId: number, fecha: string) {
+  // Obtener matriculados activos en esa sección y año
+  const matriculas = await this.prisma.matricula.findMany({
+    where: { id_seccion: seccionId, estado_matricula: 'Activo' },
+    include: {
+      estudiante: { include: { persona: true } },
+      asistencias: { where: { fecha: new Date(fecha) } },
+    },
+  });
+
+  return matriculas.map((m) => ({
+    id_matricula: m.id_matricula,
+    alumno: `${m.estudiante.persona.nombres} ${m.estudiante.persona.apellido_paterno}`,
+    estado:
+      m.asistencias.length > 0 ? m.asistencias[0].estado : 'Presente', // por defecto
+  }));
+}
+
+async saveAsistencia(seccionId: number, fecha: string, asistencias: { id_matricula: number; estado: string }[]) {
+
+  const fechaAsistencia = new Date(fecha);
+if (fechaAsistencia.getDay() === 0 || fechaAsistencia.getDay() === 6) {
+  throw new BadRequestException('No se puede registrar asistencia en fines de semana');
+}
+  const data = asistencias.map((a) => ({
+    id_matricula: a.id_matricula,
+    fecha: new Date(fecha),
+    estado: a.estado,
+  }));
+
+  // Usar upsert: si ya existe para esa (matrícula, fecha), se actualiza
+  for (const item of data) {
+    await this.prisma.asistencia.upsert({
+      where: {
+        id_matricula_fecha: { id_matricula: item.id_matricula, fecha: item.fecha },
+      },
+      update: { estado: item.estado },
+      create: item,
+    });
+  }
+
+  return { message: 'Asistencia guardada correctamente', total: data.length };
+}
+
+async getAsistenciaAlumno(estudianteId: number, desde: string, hasta: string) {
+  const matriculas = await this.prisma.matricula.findMany({
+    where: {
+      id_estudiante: estudianteId,
+      estado_matricula: 'Activo',
+    },
+    include: {
+      asistencias: {
+        where: {
+          fecha: {
+            gte: new Date(desde),
+            lte: new Date(hasta),
+          },
+        },
+        orderBy: { fecha: 'asc' },
+      },
+    },
+  });
+
+  // Usamos flatMap para obtener una lista plana de asistencias formateadas
+  return matriculas.flatMap((mat) =>
+    mat.asistencias.map((asist) => ({
+      fecha: asist.fecha.toISOString().split('T')[0],
+      estado: asist.estado,
+    }))
+  );
+}
+
+async getHijosApoderado(apoderadoId: number) {
+  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+    where: { id_apoderado: apoderadoId },
+    include: {
+  estudiante: {
+    include: {
+      persona: true,
+      matriculas: {
+        where: { estado_matricula: 'Activo' },
+        include: {
+          seccion: {
+            include: {
+              grado: {
+                include: {
+                  nivel: true,  // 👈 agregar esta línea
+                },
+              },
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  },
+},
+  });
+
+  return relaciones.map((r) => {
+  const matricula = r.estudiante.matriculas[0];
+  const seccion = matricula?.seccion;
+  const gradoNombre = seccion?.grado?.nombre_grado || '';
+  const nivelNombre = seccion?.grado?.nivel?.nombre_nivel || '';
+  return {
+    id_estudiante: r.id_estudiante,
+    nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
+    grado: seccion
+      ? `${gradoNombre} ${seccion.letra} · ${nivelNombre}`
+      : 'Sin matrícula activa',
+  };
+});
+}
+
+async getHorarioAlumno(alumnoId: number) {
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    include: { seccion: true },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const horarios = await this.prisma.horario.findMany({
+    where: { id_seccion: matriculaActiva.id_seccion },
+    orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+    include: { curso: true, docente: { include: { persona: true } } },
+  });
+
+  // Agrupar por día
+  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  const resultado: any = {};
+  for (const h of horarios) {
+    const diaNombre = dias[h.dia_semana - 1];
+    if (!resultado[diaNombre]) resultado[diaNombre] = [];
+    resultado[diaNombre].push({
+      hora_inicio: h.hora_inicio,
+      hora_fin: h.hora_fin,
+      curso: h.curso.nombre_curso,
+      docente: `${h.docente.persona.nombres} ${h.docente.persona.apellido_paterno}`,
+    });
+  }
+  return resultado;
+}
+
+async getTotalMatriculados(anioId: number) {
+  return this.prisma.matricula.count({
+    where: { id_anio: anioId, estado_matricula: 'Activo' },
+  });
+}
+
+async getTotalDocentes() {
+  return this.prisma.docente.count();
+}
+
+async getAnios() {
+  return this.prisma.anioLectivo.findMany({
+    orderBy: { fecha_inicio: 'desc' },
+  });
+}
+
+async getUltimasMatriculas() {
+  const hoy = new Date();
+  const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const finHoy = new Date(inicioHoy.getTime() + 24 * 60 * 60 * 1000);
+
+  return this.prisma.matricula.findMany({
+    where: {
+      fecha_matricula: {
+        gte: inicioHoy,
+        lt: finHoy,
+      },
+    },
+    include: {
+      estudiante: { include: { persona: true } },
+      seccion: { include: { grado: true } },
+    },
+    orderBy: { fecha_matricula: 'desc' },
+    take: 10,
+  });
+}
+
+}
+</file>
+
+<file path="src/actividad/actividad.controller.ts">
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ActividadService } from './actividad.service';
+import { AuthGuard } from '@nestjs/passport';
+
+@Controller('actividad')
+@UseGuards(AuthGuard('jwt'))
+export class ActividadController {
+  constructor(private readonly actividadService: ActividadService) {}
+
+  @Get()
+  async getActividad(
+    @Query('alumno_id') alumnoId: string,
+    @Query('limite') limite: string,
+  ) {
+    return this.actividadService.getActividad(
+      Number(alumnoId),
+      Number(limite) || 5,
+    );
+  }
+}
+</file>
+
+<file path="src/actividad/actividad.module.ts">
+import { Module } from '@nestjs/common';
+import { ActividadService } from './actividad.service';
+import { ActividadController } from './actividad.controller';
+
+@Module({
+  providers: [ActividadService],
+  controllers: [ActividadController],
+})
+export class ActividadModule {}
+</file>
+
+<file path="src/actividad/actividad.service.ts">
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class ActividadService {
+  constructor(private prisma: PrismaService) {}
+
+  async getActividad(alumnoId: number, limite: number = 5) {
+    const matricula = await this.prisma.matricula.findFirst({
+      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      include: { seccion: { include: { grado: { include: { nivel: true } } } } },
+    });
+    if (!matricula) return [];
+
+    const idMatricula = matricula.id_matricula;
+    const idNivel = matricula.seccion.grado.id_nivel;
+    const idSeccion = matricula.seccion.id_seccion;
+
+    const [circulares, notas, pagos, asistencias] = await Promise.all([
+      this.prisma.circular.findMany({
+        where: {
+          destinatarios: {
+            some: {
+              OR: [
+                { id_nivel: null, id_seccion: null },
+                { id_nivel: idNivel, id_seccion: null },
+                { id_nivel: idNivel, id_seccion: idSeccion },
+              ],
+            },
+          },
+        },
+        orderBy: { fecha_creacion: 'desc' },
+        take: limite,
+      }),
+      this.prisma.notaAlumno.findMany({
+        where: { id_matricula: idMatricula },
+        orderBy: { id_nota: 'desc' },
+        take: limite,
+        include: {
+          evaluacion: { select: { descripcion_actividad: true } },
+        },
+      }),
+      this.prisma.pagoTransaccion.findMany({
+        where: { cronograma: { id_matricula: idMatricula } },
+        orderBy: { fecha_pago: 'desc' },
+        take: limite,
+      }),
+      this.prisma.asistencia.findMany({
+        where: { id_matricula: idMatricula },
+        orderBy: { fecha: 'desc' },
+        take: limite,
+      }),
+    ]);
+
+    const eventos = [
+      ...circulares.map((c) => ({
+        tipo: 'circular',
+        icono: '📢',
+        mensaje: `Circular: ${c.titulo}`,
+        fecha: c.fecha_creacion.toISOString(),
+        url: '/dashboard/circulares',
+      })),
+      ...notas.map((n) => ({
+        tipo: 'nota',
+        icono: '📝',
+        mensaje: `Nota de ${n.evaluacion.descripcion_actividad}: ${n.valor_nota}`,
+        fecha: new Date().toISOString(),
+        url: '/dashboard/calificaciones',
+      })),
+      ...pagos.map((p) => ({
+        tipo: 'pago',
+        icono: '💳',
+        mensaje: `Pago registrado de S/ ${Number(p.monto_pagado).toFixed(2)}`,
+        fecha: p.fecha_pago.toISOString(),
+        url: '/dashboard/pagos',
+      })),
+      ...asistencias.map((a) => ({
+        tipo: 'asistencia',
+        icono: a.estado === 'Presente' ? '✅' : a.estado === 'Ausente' ? '❌' : a.estado === 'Tardanza' ? '⏱️' : '📝',
+        mensaje: `Asistencia: ${a.estado}`,
+        fecha: a.fecha.toISOString(),
+        url: '/dashboard/asistencia',
+      })),
+    ];
+
+    return eventos
+      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      .slice(0, limite);
+  }
+}
+</file>
+
+<file path="src/analiticas/analiticas.controller.ts">
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { AnaliticasService } from './analiticas.service';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+
+@Controller('analiticas')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+export class AnaliticasController {
+  constructor(private readonly analiticasService: AnaliticasService) {}
+
+  @Get('financieras')
+  @Roles('Admin', 'Director')
+  async getFinancieras() {
+    return this.analiticasService.getFinancieras();
+  }
+
+  @Get('academicas')
+  @Roles('Admin', 'Director')
+  async getAcademicas() {
+    return this.analiticasService.getAcademicas();
+  }
+
+  @Get('alertas')
+  @Roles('Admin', 'Director')
+  async getAlertas() {
+    return this.analiticasService.getAlertas();
+  }
+
+  @Get('operativas')
+  @Roles('Admin', 'Director')
+  async getOperativas() {
+    return this.analiticasService.getOperativas();
+  }
+
+  @Get('tesoreria/kpis')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTesoreriaKpis() {
+  return this.analiticasService.getTesoreriaKpis();
+}
+
+@Get('matricula-tendencia')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getMatriculaTendencia() {
+  return this.analiticasService.getMatriculaTendencia();
+}
+
+@Get('distribucion-nivel')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getDistribucionPorNivel() {
+  return this.analiticasService.getDistribucionPorNivel();
+}
+}
+</file>
+
+<file path="src/analiticas/analiticas.module.ts">
+import { Module } from '@nestjs/common';
+import { AnaliticasController } from './analiticas.controller';
+import { AnaliticasService } from './analiticas.service';
+
+@Module({
+  controllers: [AnaliticasController],
+  providers: [AnaliticasService]
+})
+export class AnaliticasModule {}
+</file>
+
+<file path="src/analiticas/analiticas.service.ts">
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+
+@Injectable()
+export class AnaliticasService {
+  constructor(private prisma: PrismaService) {}
+
+  // ── FINANCIERAS ──
+  async getFinancieras() {
+    // Morosidad vencida
+    const morosidad = await this.prisma.$queryRaw<{ total_vencido: string }[]>(
+      Prisma.sql`
+        SELECT COALESCE(SUM(con.monto_base), 0) as total_vencido
+        FROM CronogramaPagos cp
+        JOIN ConceptoPago con ON cp.id_concepto = con.id_concepto
+        WHERE cp.estado_pago IN ('Pendiente','Vencido') AND cp.fecha_vencimiento < NOW()
+      `
+    );
+    const totalVencido = Number(morosidad[0]?.total_vencido ?? 0);
+
+    // Ingresos del mes actual
+    const ingresosMes = await this.prisma.$queryRaw<{ total_ingresado: string }[]>(
+      Prisma.sql`
+        SELECT COALESCE(SUM(pt.monto_pagado), 0) as total_ingresado
+        FROM PagoTransaccion pt
+        WHERE MONTH(pt.fecha_pago) = MONTH(CURRENT_DATE()) AND YEAR(pt.fecha_pago) = YEAR(CURRENT_DATE())
+      `
+    );
+    const totalIngresado = Number(ingresosMes[0]?.total_ingresado ?? 0);
+
+    // Tasa de cumplimiento (porcentaje de cronogramas pagados)
+    const tasa = await this.prisma.$queryRaw<{ porcentaje: number }[]>(
+  Prisma.sql`
+    SELECT ROUND(
+      (SUM(CASE WHEN cp.estado_pago = 'Pagado' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 1
+    ) as porcentaje
+    FROM CronogramaPagos cp
+    JOIN Matricula m ON cp.id_matricula = m.id_matricula
+    WHERE m.estado_matricula = 'Activo'
+  `
+);
+    const tasaCumplimiento = Number(tasa[0]?.porcentaje ?? 0);
+
+    // Ingresos por nivel
+    const ingresosPorNivel = await this.prisma.$queryRaw<{ nivel: string; total: string }[]>(
+      Prisma.sql`
+        SELECT n.nombre_nivel as nivel, COALESCE(SUM(pt.monto_pagado), 0) as total
+        FROM PagoTransaccion pt
+        JOIN CronogramaPagos cp ON pt.id_cronograma = cp.id_cronograma
+        JOIN Matricula m ON cp.id_matricula = m.id_matricula
+        JOIN Seccion s ON m.id_seccion = s.id_seccion
+        JOIN Grado g ON s.id_grado = g.id_grado
+        JOIN Nivel n ON g.id_nivel = n.id_nivel
+        GROUP BY n.id_nivel
+      `
+    );
+
+    // Próximos 5 días
+    const proximos = await this.prisma.cronogramaPagos.count({
+      where: {
+        estado_pago: 'Pendiente',
+        fecha_vencimiento: {
+          gte: new Date(),
+          lt: new Date(new Date().setDate(new Date().getDate() + 5)),
+        },
+      },
+    });
+
+    return {
+      morosidadVencida: totalVencido,
+      ingresosMes: totalIngresado,
+      tasaCumplimiento,
+      ingresosPorNivel: ingresosPorNivel.map((i) => ({
+        nivel: i.nivel,
+        total: Number(i.total),
+      })),
+      proximosAVencer: proximos,
+    };
+  }
+
+  async getTesoreriaKpis() {
+  // Recaudado hoy (basado en la fecha de la base de datos)
+  const recaudadoHoyRaw = await this.prisma.$queryRaw<{ total: string }[]>(
+    Prisma.sql`
+      SELECT COALESCE(SUM(pt.monto_pagado), 0) as total
+      FROM PagoTransaccion pt
+      WHERE DATE(pt.fecha_pago) = CURDATE()
+    `
+  );
+  const recaudadoHoy = Number(recaudadoHoyRaw[0]?.total ?? 0);
+
+  // Todos los vencidos pendientes (sin límite de mes, para mostrar datos reales)
+  const vencidosRaw = await this.prisma.$queryRaw<{ total: string }[]>(
+    Prisma.sql`
+      SELECT COALESCE(SUM(con.monto_base), 0) as total
+      FROM CronogramaPagos cp
+      JOIN ConceptoPago con ON cp.id_concepto = con.id_concepto
+      WHERE cp.estado_pago IN ('Pendiente', 'Vencido')
+        AND cp.fecha_vencimiento < CURDATE()
+    `
+  );
+  const vencidosDelMes = Number(vencidosRaw[0]?.total ?? 0);
+
+  // Próximos 48h
+  const proximos48h = await this.prisma.cronogramaPagos.count({
+    where: {
+      estado_pago: 'Pendiente',
+      fecha_vencimiento: {
+        gte: new Date(),
+        lt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      },
+    },
+  });
+
+  return {
+    recaudadoHoy,
+    vencidosDelMes,
+    proximos48h,
+  };
+}
+
+async getMatriculaTendencia() {
+  // Matrículas por mes del año activo (id_anio = 1)
+  const tendencia = await this.prisma.$queryRaw<{ mes: string; total: number }[]>(
+    Prisma.sql`
+      SELECT DATE_FORMAT(m.fecha_matricula, '%Y-%m') as mes, COUNT(*) as total
+      FROM Matricula m
+      WHERE m.id_anio = 1 AND m.estado_matricula = 'Activo'
+      GROUP BY mes
+      ORDER BY mes
+    `
+  );
+  return tendencia.map((t) => ({ mes: t.mes, total: Number(t.total) }));
+}
+
+async getDistribucionPorNivel() {
+  const distribucion = await this.prisma.$queryRaw<{ nivel: string; total: number }[]>(
+    Prisma.sql`
+      SELECT n.nombre_nivel as nivel, COUNT(DISTINCT m.id_matricula) as total
+      FROM Matricula m
+      JOIN Seccion s ON m.id_seccion = s.id_seccion
+      JOIN Grado g ON s.id_grado = g.id_grado
+      JOIN Nivel n ON g.id_nivel = n.id_nivel
+      WHERE m.estado_matricula = 'Activo' AND m.id_anio = 1
+      GROUP BY n.id_nivel
+    `
+  );
+  return distribucion.map((d) => ({ nivel: d.nivel, total: Number(d.total) }));
+}
+
+  // ── ACADÉMICAS ──
+  async getAcademicas() {
+  // Capacidad por nivel – usando agregación de Prisma, sin SQL crudo
+  const niveles = await this.prisma.nivel.findMany({
+    include: {
+      grados: {
+        include: {
+          secciones: {
+            include: {
+              aula: true,
+              matriculas: {
+                where: { estado_matricula: 'Activo', id_anio: 1 },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const capacidad = niveles.map((nivel) => {
+    let matriculados = 0;
+    const aulasSet = new Set<number>();
+    for (const grado of nivel.grados) {
+      for (const seccion of grado.secciones) {
+        matriculados += seccion.matriculas.length;
+        aulasSet.add(seccion.id_aula);
+      }
+    }
+    const capacidadTotal = Array.from(aulasSet).reduce((sum, idAula) => {
+      const aula = nivel.grados
+        .flatMap((g) => g.secciones)
+        .find((s) => s.id_aula === idAula)?.aula;
+      return sum + (aula?.capacidad ?? 0);
+    }, 0);
+    return {
+      nivel: nivel.nombre_nivel,
+      matriculados,
+      capacidad: capacidadTotal,
+    };
+  });
+
+  // Promedio general – obtener todas las notas de la unidad 1
+  const notas = await this.prisma.notaAlumno.findMany({
+    where: { evaluacion: { id_unidad: 1 } },
+    select: { valor_nota: true },
+  });
+  const promedioGeneral =
+    notas.length > 0
+      ? Math.round((notas.reduce((a, b) => a + Number(b.valor_nota), 0) / notas.length) * 10) / 10
+      : 0;
+
+  // Asistencia por semana – con Prisma, agrupando con JS
+  const asistencias = await this.prisma.asistencia.findMany({
+    select: { fecha: true, estado: true },
+    orderBy: { fecha: 'asc' },
+  });
+
+  // Agrupar manualmente por semana
+  const semanasMap = new Map<string, { presentes: number; total: number }>();
+  for (const a of asistencias) {
+    const d = new Date(a.fecha);
+    const year = d.getFullYear();
+    const week = Math.ceil(
+      ((d.getTime() - new Date(year, 0, 1).getTime()) / 86400000 + new Date(year, 0, 1).getDay() + 1) / 7
+    );
+    const key = `${year}-${week.toString().padStart(2, '0')}`;
+    const entry = semanasMap.get(key) || { presentes: 0, total: 0 };
+    entry.total++;
+    if (a.estado === 'Presente') entry.presentes++;
+    semanasMap.set(key, entry);
+  }
+
+  const asistenciaPorSemana = Array.from(semanasMap.entries())
+    .map(([semana, data]) => ({
+      semana,
+      porcentaje: Math.round((data.presentes / data.total) * 1000) / 10,
+    }))
+    .sort((a, b) => a.semana.localeCompare(b.semana))
+    .slice(-8);
+
+  return {
+    capacidad,
+    promedioGeneral,
+    asistenciaPorSemana,
+  };
+}
+
+  // ── ALERTAS ──
+  async getAlertas() {
+  // Alumnos en riesgo académico (promedio general < 11 considerando todas las unidades del año activo)
+  const alumnosRiesgoRaw = await this.prisma.$queryRaw<{ nombre: string; promedio: number }[]>(
+    Prisma.sql`
+      SELECT CONCAT(p.nombres, ' ', p.apellido_paterno) as nombre,
+             ROUND(AVG(na.valor_nota), 1) as promedio
+      FROM NotaAlumno na
+      JOIN Matricula m ON na.id_matricula = m.id_matricula
+      JOIN Estudiante e ON m.id_estudiante = e.id_persona
+      JOIN Persona p ON e.id_persona = p.id_persona
+      WHERE m.estado_matricula = 'Activo' AND m.id_anio = 1
+      GROUP BY m.id_estudiante
+      HAVING AVG(na.valor_nota) < 11
+      LIMIT 5
+    `
+  );
+
+  const alumnosRiesgo = alumnosRiesgoRaw.map((a) => ({
+    nombre: a.nombre,
+    promedio: Number(a.promedio),
+  }));
+
+  // Riesgo de deserción (2+ pensiones vencidas o 5+ faltas)
+  const riesgoDesercionRaw = await this.prisma.$queryRaw<
+    { nombre: string; pensionesVencidas: bigint; faltas: bigint }[]
+  >(
+    Prisma.sql`
+      SELECT CONCAT(p.nombres, ' ', p.apellido_paterno) as nombre,
+             SUM(CASE WHEN cp.estado_pago = 'Vencido' THEN 1 ELSE 0 END) as pensionesVencidas,
+             (SELECT COUNT(*) FROM Asistencia a WHERE a.id_matricula = m.id_matricula AND a.estado = 'Ausente') as faltas
+      FROM Matricula m
+      JOIN Estudiante e ON m.id_estudiante = e.id_persona
+      JOIN Persona p ON e.id_persona = p.id_persona
+      LEFT JOIN CronogramaPagos cp ON cp.id_matricula = m.id_matricula
+      WHERE m.estado_matricula = 'Activo'
+      GROUP BY m.id_matricula
+      HAVING pensionesVencidas >= 2 OR faltas >= 5
+      LIMIT 5
+    `
+  );
+
+  const riesgoDesercion = riesgoDesercionRaw.map((r) => ({
+    nombre: r.nombre,
+    pensionesVencidas: Number(r.pensionesVencidas),
+    faltas: Number(r.faltas),
+  }));
+
+  return { alumnosRiesgo, riesgoDesercion };
+}
+
+  // ── OPERATIVAS ──
+  async getOperativas() {
+    // Carga de notas por docente (unidad 1)
+    const cargaDocentes = await this.prisma.$queryRaw<{ docente: string; porcentaje: number }[]>(
+      Prisma.sql`
+        SELECT CONCAT(p.nombres, ' ', p.apellido_paterno) as docente,
+               ROUND(
+                 COUNT(na.id_nota) * 100.0 / 
+                 (COUNT(DISTINCT ed.id_evaluacion_det) * 
+                  (SELECT COUNT(*) FROM Matricula m2 WHERE m2.id_seccion = a.id_seccion AND m2.estado_matricula = 'Activo')
+                 ), 1
+               ) as porcentaje
+        FROM AsignacionDocente a
+        JOIN Docente d ON a.id_docente = d.id_persona
+        JOIN Persona p ON d.id_persona = p.id_persona
+        LEFT JOIN EvaluacionDetalle ed ON ed.id_asignacion = a.id_asignacion AND ed.id_unidad = 1
+        LEFT JOIN NotaAlumno na ON na.id_evaluacion_det = ed.id_evaluacion_det
+        GROUP BY a.id_asignacion
+      `
+    );
+
+    // Comunicados recientes
+    const comunicados = await this.prisma.circular.findMany({
+  orderBy: { fecha_creacion: 'desc' },
+  take: 3,
+  select: {
+    id_circular: true,
+    titulo: true,
+    contenido: true,
+    fecha_creacion: true,
+    remitente: {
+      select: {
+        username: true,
+        persona: {
+          select: {
+            nombres: true,
+            apellido_paterno: true,
+            apellido_materno: true,
+          },
+        },
+      },
+    },
+    destinatarios: {
+      select: {
+        nivel: {
+          select: {
+            nombre_nivel: true,
+          },
+        },
+      },
+    },
+  },
+});
+
+    return { cargaDocentes, comunicados };
+  }
+}
+</file>
+
+<file path="src/auth/auth.controller.ts">
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { AuthService } from './auth.service';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() body: { username: string; password: string }) {
+    return this.authService.login(body.username, body.password);
+  }
+}
+</file>
+
+<file path="src/auth/auth.module.ts">
+import { Module } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt.strategy';
+import { RolesGuard } from './roles.guard';
+
+@Module({
+  imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'SECRETO_TEMPORAL_COLEGIO',
+      signOptions: { expiresIn: '8h' },
+    }),
+  ],
+  providers: [AuthService, JwtStrategy, RolesGuard],
+  controllers: [AuthController],
+  exports: [AuthService, JwtModule, RolesGuard],
+})
+export class AuthModule {}
+</file>
+
+<file path="src/auth/auth.service.ts">
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async login(username: string, password: string) {
+    const user = await this.prisma.usuario.findUnique({
+      where: { username },
+      include: { persona: true, rol: true },
+    });
+
+    if (!user || !user.estado) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const payload = {
+      sub: user.id_usuario,
+      username: user.username,
+      rol: user.rol.nombre_rol,
+      personaId: user.id_persona,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id_usuario,
+        username: user.username,
+        nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`,
+        rol: user.rol.nombre_rol,
+        genero: user.persona.genero,
+      },
+    };
+  }
+}
+</file>
+
+<file path="src/auth/jwt.strategy.ts">
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(private prisma: PrismaService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET || 'SECRETO_TEMPORAL_COLEGIO',
+    });
+  }
+
+  async validate(payload: { sub: number; username: string; rol: string }) {
+    const user = await this.prisma.usuario.findUnique({
+      where: { id_usuario: payload.sub },
+    });
+
+    if (!user || !user.estado) {
+      throw new UnauthorizedException();
+    }
+
+    return {
+      userId: payload.sub,
+      username: payload.username,
+      rol: payload.rol,
+    };
+  }
+}
+</file>
+
+<file path="src/auth/roles.guard.ts">
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+
+export const Roles = (...roles: string[]) => {
+  return (target: any, key?: string, descriptor?: any) => {
+    Reflect.defineMetadata('roles', roles, descriptor.value);
+    return descriptor;
+  };
+};
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.get<string[]>(
+      'roles',
+      context.getHandler(),
+    );
+    if (!requiredRoles) {
+      return true;
+    }
+    const { user } = context.switchToHttp().getRequest();
+    return requiredRoles.includes(user.rol);
+  }
+}
+</file>
+
+<file path="src/calificaciones/dto/create-evaluacion.dto.ts">
+import { IsInt, IsString, IsOptional, IsDateString } from 'class-validator';
+
+export class CreateEvaluacionDto {
+  @IsInt()
+  id_asignacion: number;
+
+  @IsInt()
+  id_unidad: number;
+
+  @IsInt()
+  id_tipo_eval: number;
+
+  @IsOptional()
+  @IsString()
+  descripcion_actividad?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fecha_evaluacion?: string;
+}
+</file>
+
+<file path="src/calificaciones/dto/save-notas-masivo.dto.ts">
+import { IsInt, IsArray, ValidateNested, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class NotaMasivaItemDto {
+  @IsInt()
+  id_matricula: number;
+
+  @IsInt()
+  id_evaluacion_det: number;
+
+  @IsNumber()
+  valor_nota: number;
+
+  @IsOptional()
+  @IsString()
+  comentario?: string;
+}
+
+export class SaveNotasMasivoDto {
+  @IsInt()
+  id_unidad: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => NotaMasivaItemDto)
+  notas: NotaMasivaItemDto[];
+}
+</file>
+
+<file path="src/calificaciones/dto/save-notas.dto.ts">
+import { IsInt, IsArray, ValidateNested, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class NotaItemDto {
+  @IsInt()
+  id_matricula: number;
+
+  @IsNumber()
+  valor_nota: number;
+
+  @IsOptional()
+  @IsString()
+  comentario?: string;
+}
+
+export class SaveNotasDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => NotaItemDto)
+  notas: NotaItemDto[];
+}
+</file>
+
+<file path="src/calificaciones/calificaciones.controller.ts">
+import {
+  Controller, Get, Post, Put, Param, Query, Body,
+  UseGuards, Request, NotFoundException, BadRequestException,
+} from '@nestjs/common';
+import { CalificacionesService } from './calificaciones.service';
+import { CreateEvaluacionDto } from './dto/create-evaluacion.dto';
+import { SaveNotasDto } from './dto/save-notas.dto';
+import { SaveNotasMasivoDto } from './dto/save-notas-masivo.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+import { PrismaService } from '../prisma/prisma.service';
+
+
+@Controller('calificaciones')
+@UseGuards(AuthGuard('jwt'))
+export class CalificacionesController {
+  constructor(
+    private readonly calificacionesService: CalificacionesService,
+    private prisma: PrismaService,
+  ) {}
+
+  // ── Evaluaciones ────────────────────────────────
+  @Post('evaluaciones')
+  @Roles('Admin', 'Profesor')
+  async createEvaluacion(@Body() dto: CreateEvaluacionDto) {
+    return this.calificacionesService.createEvaluacion(dto);
+  }
+
+  @Get('evaluaciones')
+  async getEvaluaciones(
+    @Query('asignacion_id') asignacionId: string,
+    @Query('unidad_id') unidadId: string,
+  ) {
+    return this.calificacionesService.getEvaluaciones(Number(asignacionId), Number(unidadId));
+  }
+
+  @Get('evaluaciones/:id/notas')
+  async getEvaluacionNotas(@Param('id') id: string) {
+    return this.calificacionesService.getEvaluacionNotas(Number(id));
+  }
+
+  @Post('evaluaciones/:id/notas')
+  @Roles('Admin', 'Profesor')
+  async saveNotasIndividual(
+    @Param('id') id: string,
+    @Body() dto: SaveNotasDto,
+  ) {
+    return this.calificacionesService.saveNotasIndividual(Number(id), dto);
+  }
+
+  // ── Modo Grilla ──────────────────────────────────
+  @Get('unidades/:id/grilla')
+  async getGrillaUnidad(
+    @Param('id') unidadId: string,
+    @Query('asignacion_id') asignacionId: string,
+  ) {
+    return this.calificacionesService.getGrillaUnidad(Number(unidadId), Number(asignacionId));
+  }
+
+  @Put('unidades/:id/notas')
+  @Roles('Admin', 'Profesor')
+  async saveNotasMasivo(
+    @Param('id') unidadId: string,
+    @Body() dto: SaveNotasMasivoDto,
+  ) {
+    // Asegurar que el id_unidad en el body coincida con el de la ruta
+    if (Number(unidadId) !== dto.id_unidad) {
+      throw new BadRequestException('El id_unidad no coincide');
+    }
+    return this.calificacionesService.saveNotasMasivo(dto, 0); // El docente se obtendrá del token, pero por ahora pasamos 0 (no se usa)
+  }
+
+  // ── Cierre de unidad ─────────────────────────────
+  @Put('unidades/:id/cerrar')
+  @Roles('Admin', 'Director')
+  async cerrarUnidad(@Param('id') id: string) {
+    return this.calificacionesService.cerrarUnidad(Number(id));
+  }
+
+  // ── Consulta para padres ─────────────────────────
+  @Get('padres/notas')
+  @Roles('Apoderado', 'Admin')
+  async getNotasAlumno(
+    @Query('alumno_id') alumnoId: string,
+    @Query('bimestre_id') bimestreId: string,
+  ) {
+    return this.calificacionesService.getNotasAlumno(Number(alumnoId), Number(bimestreId));
+  }
+}
+</file>
+
+<file path="src/calificaciones/calificaciones.module.ts">
+import { Module } from '@nestjs/common';
+import { CalificacionesController } from './calificaciones.controller';
+import { CalificacionesService } from './calificaciones.service';
+
+@Module({
+  controllers: [CalificacionesController],
+  providers: [CalificacionesService]
+})
+export class CalificacionesModule {}
+</file>
+
+<file path="src/calificaciones/calificaciones.service.ts">
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateEvaluacionDto } from './dto/create-evaluacion.dto';
+import { SaveNotasDto } from './dto/save-notas.dto';
+import { SaveNotasMasivoDto } from './dto/save-notas-masivo.dto';
+
+@Injectable()
+export class CalificacionesService {
+  constructor(private prisma: PrismaService) {}
+
+  // ── Evaluaciones ────────────────────────────────
+  async createEvaluacion(dto: CreateEvaluacionDto) {
+    return this.prisma.evaluacionDetalle.create({
+      data: {
+        id_asignacion: dto.id_asignacion,
+        id_unidad: dto.id_unidad,
+        id_tipo_eval: dto.id_tipo_eval,
+        descripcion_actividad: dto.descripcion_actividad,
+        fecha_evaluacion: dto.fecha_evaluacion ? new Date(dto.fecha_evaluacion) : undefined,
+      },
+    });
+  }
+
+  async getEvaluaciones(asignacionId: number, unidadId: number) {
+    return this.prisma.evaluacionDetalle.findMany({
+      where: { id_asignacion: asignacionId, id_unidad: unidadId },
+      include: { tipo: true },
+      orderBy: { fecha_evaluacion: 'asc' },
+    });
+  }
+
+  async getEvaluacionNotas(evaluacionId: number) {
+    const evaluacion = await this.prisma.evaluacionDetalle.findUnique({
+      where: { id_evaluacion_det: evaluacionId },
+      include: {
+        asignacion: { include: { seccion: true, curso: true } },
+        notas: {
+          include: { matricula: { include: { estudiante: { include: { persona: true } } } } },
+        },
+      },
+    });
+    if (!evaluacion) throw new NotFoundException('Evaluación no encontrada');
+    return evaluacion;
+  }
+
+  async saveNotasIndividual(evaluacionId: number, dto: SaveNotasDto) {
+    // Validar que la evaluación exista
+    const evaluacion = await this.prisma.evaluacionDetalle.findUnique({ where: { id_evaluacion_det: evaluacionId } });
+    if (!evaluacion) throw new NotFoundException('Evaluación no encontrada');
+
+    // Validar que la unidad esté abierta
+    const unidad = await this.prisma.unidad.findUnique({ where: { id_unidad: evaluacion.id_unidad } });
+    if (!unidad?.estado_abierto) throw new BadRequestException('La unidad no está abierta');
+
+    // Validar que todas las matrículas correspondan a la sección de la asignación y estén activas
+    const asignacion = await this.prisma.asignacionDocente.findUnique({ where: { id_asignacion: evaluacion.id_asignacion } });
+    if (!asignacion) throw new NotFoundException('Asignación no encontrada');
+
+    const matriculasValidas = await this.prisma.matricula.findMany({
+      where: { id_seccion: asignacion.id_seccion, id_anio: asignacion.id_anio, estado_matricula: 'Activo' },
+      select: { id_matricula: true },
+    });
+    const idsValidas = new Set(matriculasValidas.map(m => m.id_matricula));
+
+    for (const nota of dto.notas) {
+      if (!idsValidas.has(nota.id_matricula)) {
+        throw new BadRequestException(`Matrícula ${nota.id_matricula} no válida para esta sección`);
+      }
+    }
+
+    // Guardar notas (sin upsert compuesto)
+    for (const nota of dto.notas) {
+      const existente = await this.prisma.notaAlumno.findFirst({
+        where: {
+          id_matricula: nota.id_matricula,
+          id_evaluacion_det: evaluacionId,
+        },
+      });
+
+      if (existente) {
+        await this.prisma.notaAlumno.update({
+          where: { id_nota: existente.id_nota },
+          data: {
+            valor_nota: nota.valor_nota,
+            comentario: nota.comentario,
+          },
+        });
+      } else {
+        await this.prisma.notaAlumno.create({
+          data: {
+            id_matricula: nota.id_matricula,
+            id_evaluacion_det: evaluacionId,
+            valor_nota: nota.valor_nota,
+            comentario: nota.comentario,
+          },
+        });
+      }
+    }
+    return { message: 'Notas guardadas correctamente', total: dto.notas.length };
+  }
+
+  // ── Modo Grilla (Unidad completa) ─────────────────
+  async getGrillaUnidad(unidadId: number, asignacionId: number) {
+    const asignacion = await this.prisma.asignacionDocente.findUnique({
+      where: { id_asignacion: asignacionId },
+      include: { seccion: true, curso: true },
+    });
+    if (!asignacion) throw new NotFoundException('Asignación no encontrada');
+
+    const evaluaciones = await this.prisma.evaluacionDetalle.findMany({
+      where: { id_asignacion: asignacionId, id_unidad: unidadId },
+      orderBy: { fecha_evaluacion: 'asc' },
+    });
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: { id_seccion: asignacion.id_seccion, id_anio: asignacion.id_anio, estado_matricula: 'Activo' },
+      include: {
+        estudiante: { include: { persona: true } },
+        notas: {
+          where: { evaluacion: { id_unidad: unidadId } },
+          include: { evaluacion: true },
+        },
+      },
+    });
+
+    const grilla = matriculas.map(mat => {
+      const fila: any = {
+        id_matricula: mat.id_matricula,
+        alumno: `${mat.estudiante.persona.nombres} ${mat.estudiante.persona.apellido_paterno}`,
+      };
+      evaluaciones.forEach(ev => {
+        const nota = mat.notas.find(n => n.id_evaluacion_det === ev.id_evaluacion_det);
+        fila[ev.id_evaluacion_det] = nota ? Number(nota.valor_nota) : null;
+      });
+      // Calcular promedio de la unidad (solo evaluaciones con nota)
+      const notasValidas = evaluaciones
+        .map(ev => fila[ev.id_evaluacion_det])
+        .filter(v => v !== null) as number[];
+      fila.promedio = notasValidas.length > 0
+        ? notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length
+        : null;
+      return fila;
+    });
+
+    return {
+      asignacion: { seccion: asignacion.seccion.letra, curso: asignacion.curso.nombre_curso },
+      evaluaciones: evaluaciones.map(ev => ({ id: ev.id_evaluacion_det, descripcion: ev.descripcion_actividad })),
+      grilla,
+    };
+  }
+
+  async saveNotasMasivo(dto: SaveNotasMasivoDto, docenteId: number) {
+    // Validar que la unidad esté abierta y pertenezca a una asignación del docente
+    const unidad = await this.prisma.unidad.findUnique({ where: { id_unidad: dto.id_unidad } });
+    if (!unidad?.estado_abierto) throw new BadRequestException('Unidad cerrada o no encontrada');
+
+    // Obtener todas las asignaciones del docente para ese año y unidad
+    // Para simplificar, validaremos que cada evaluación corresponda a una asignación del docente.
+    // Pero podemos obtener las asignaciones del docente a partir del token.
+    // El controlador ya verificará que el docente esté asignado.
+
+    // Ejecutar las actualizaciones en una transacción
+    await this.prisma.$transaction(async (tx) => {
+      for (const item of dto.notas) {
+        // Verificar que la evaluación corresponda a la unidad
+        const evaluacion = await tx.evaluacionDetalle.findUnique({ where: { id_evaluacion_det: item.id_evaluacion_det } });
+        if (!evaluacion || evaluacion.id_unidad !== dto.id_unidad) {
+          throw new BadRequestException(`Evaluación ${item.id_evaluacion_det} no pertenece a la unidad`);
+        }
+        // Upsert de la nota
+         // En lugar de upsert, buscar primero
+        const existente = await tx.notaAlumno.findFirst({
+          where: {
+            id_matricula: item.id_matricula,
+            id_evaluacion_det: item.id_evaluacion_det,
+          },
+        });
+
+        if (existente) {
+          await tx.notaAlumno.update({
+            where: { id_nota: existente.id_nota },
+            data: {
+              valor_nota: item.valor_nota,
+              comentario: item.comentario,
+            },
+          });
+        } else {
+          await tx.notaAlumno.create({
+            data: {
+              id_matricula: item.id_matricula,
+              id_evaluacion_det: item.id_evaluacion_det,
+              valor_nota: item.valor_nota,
+              comentario: item.comentario,
+            },
+          });
+        }
+      }
+    });
+    return { message: 'Notas masivas guardadas correctamente', total: dto.notas.length };
+  }
+
+  // ── Cierre de unidad ──────────────────────────────
+  async cerrarUnidad(unidadId: number) {
+    const unidad = await this.prisma.unidad.findUnique({ where: { id_unidad: unidadId } });
+    if (!unidad) throw new NotFoundException('Unidad no encontrada');
+    if (!unidad.estado_abierto) throw new BadRequestException('La unidad ya está cerrada');
+
+    // Calcular promedios de unidad para cada alumno (esto se hace al cerrar, o se puede calcular bajo demanda)
+    // Por ahora, simplemente cerramos la unidad
+    await this.prisma.unidad.update({
+      where: { id_unidad: unidadId },
+      data: { estado_abierto: false },
+    });
+
+    // Opcionalmente, calcular y guardar los promedios de unidad en una tabla de resumen.
+    // Pero como no tenemos tabla de resumen, solo devolvemos éxito.
+    return { message: 'Unidad cerrada correctamente' };
+  }
+
+  // ── Consulta para padres ──────────────────────────
+  async getNotasAlumno(alumnoId: number, bimestreId: number) {
+    const matriculas = await this.prisma.matricula.findMany({
+      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      include: {
+        seccion: { include: { grado: true } },
+        notas: {
+          where: { evaluacion: { unidad: { id_bimestre: bimestreId } } },
+          include: {
+            evaluacion: {
+              include: { tipo: true, unidad: true, asignacion: { include: { curso: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    // Estructurar por curso y unidad
+    const cursos: any = {};
+    for (const mat of matriculas) {
+      for (const nota of mat.notas) {
+  const cursoNombre = nota.evaluacion.asignacion.curso.nombre_curso;
+  if (!cursos[cursoNombre]) cursos[cursoNombre] = { curso: cursoNombre, unidades: {} };
+  const unidadId = nota.evaluacion.id_unidad;
+  if (!cursos[cursoNombre].unidades[unidadId]) {
+    cursos[cursoNombre].unidades[unidadId] = { unidad: nota.evaluacion.unidad.numero, evaluaciones: [] };
+  }
+  // Agregar el id_evaluacion_det junto con los demás datos
+  cursos[cursoNombre].unidades[unidadId].evaluaciones.push({
+    id: nota.id_evaluacion_det, // ← Agregar esta línea
+    tipo: nota.evaluacion.tipo.nombre_tipo,
+    descripcion: nota.evaluacion.descripcion_actividad,
+    valor: Number(nota.valor_nota),
+  });
+}
+    }
+
+    // Calcular promedios por unidad y bimestre
+    const resultado = Object.values(cursos).map((curso: any) => {
+      const unidades = Object.values(curso.unidades).map((unidad: any) => {
+        const notasUnidad = unidad.evaluaciones.map((e: any) => e.valor);
+        const promedioUnidad = notasUnidad.length > 0 ? notasUnidad.reduce((a: number, b: number) => a + b, 0) / notasUnidad.length : null;
+        return { ...unidad, promedioUnidad };
+      });
+      const promediosUnidad = unidades.map((u: any) => u.promedioUnidad).filter((p: any) => p !== null);
+      const promedioBimestre = promediosUnidad.length > 0 ? promediosUnidad.reduce((a: number, b: number) => a + b, 0) / promediosUnidad.length : null;
+      return { curso: curso.curso, unidades, promedioBimestre };
+    });
+
+    return resultado;
+  }
+}
+</file>
+
+<file path="src/circulares/dto/create-circular.dto.ts">
+import { IsString, IsOptional, IsArray, IsInt, IsBoolean } from 'class-validator';
+
+export class CreateCircularDto {
+  @IsString()
+  titulo: string;
+
+  @IsString()
+  contenido: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  niveles?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  secciones?: number[];
+
+  // 👇 Nuevos campos
+  @IsOptional()
+  @IsString()
+  categoria?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  urgente?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  requiere_autorizacion?: boolean;
+}
+</file>
+
+<file path="src/circulares/circulares.controller.ts">
+import {
+  Controller, Get, Post, Put, Param, Query, Body,
+  UseGuards, Request, NotFoundException,
+} from '@nestjs/common';
+import { CircularesService } from './circulares.service';
+import { CreateCircularDto } from './dto/create-circular.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Controller('circulares')
+@UseGuards(AuthGuard('jwt'))
+export class CircularesController {
+  constructor(
+    private readonly circularesService: CircularesService,
+    private prisma: PrismaService,
+  ) {}
+
+  @Post()
+  @Roles('Admin', 'Secretaria', 'Director')
+  async create(@Body() dto: CreateCircularDto, @Request() req) {
+    return this.circularesService.create(dto, req.user.userId);
+  }
+
+  @Get()
+  @Roles('Admin', 'Secretaria', 'Director')
+  async findAll(@Query('page') page = '1', @Query('limit') limit = '10') {
+    return this.circularesService.findAll(Number(page), Number(limit));
+  }
+
+  @Get('padres')
+  @Roles('Apoderado', 'Admin')
+  async findForApoderado(@Request() req) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: req.user.userId },
+      include: { persona: { include: { apoderados: true } } },
+    });
+    const apoderado = usuario?.persona?.apoderados?.[0];
+    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+    return this.circularesService.findForApoderado(apoderado.id_persona);
+  }
+
+  @Get('count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getTotalCirculares() {
+  return this.circularesService.getTotalCirculares();
+}
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.circularesService.findOne(Number(id));
+  }
+
+  @Put(':id/leida')
+@Roles('Apoderado', 'Admin')
+async marcarLeida(@Param('id') id: string, @Request() req) {
+  return this.circularesService.marcarLeida(Number(id), req.user.userId);
+}
+
+}
+</file>
+
+<file path="src/circulares/circulares.module.ts">
+import { Module } from '@nestjs/common';
+import { CircularesService } from './circulares.service';
+import { CircularesController } from './circulares.controller';
+
+@Module({
+  providers: [CircularesService],
+  controllers: [CircularesController],
+})
+export class CircularesModule {}
+</file>
+
+<file path="src/circulares/circulares.service.ts">
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { CreateCircularDto } from './dto/create-circular.dto';
+
+@Injectable()
+export class CircularesService {
+  constructor(
+    private prisma: PrismaService,
+    private notificacionesService: NotificacionesService,
+  ) {}
+
+  // ── CREAR CIRCULAR ──────────────────────────────────
+  async create(dto: CreateCircularDto, remitenteId: number) {
+    const circular = await this.prisma.circular.create({
+      data: {
+        titulo: dto.titulo,
+        contenido: dto.contenido,
+        remitente_id_usuario: remitenteId,
+        categoria: dto.categoria || 'General',
+        urgente: dto.urgente || false,
+        requiere_autorizacion: dto.requiere_autorizacion || false,
+      },
+    });
+
+    const destinatarios: {
+      id_circular: number;
+      id_nivel?: number;
+      id_seccion?: number;
+    }[] = [];
+
+    if (dto.niveles && dto.niveles.length > 0) {
+      for (const nivelId of dto.niveles) {
+        if (!dto.secciones || dto.secciones.length === 0) {
+          destinatarios.push({ id_circular: circular.id_circular, id_nivel: nivelId });
+        } else {
+          for (const seccionId of dto.secciones) {
+            const seccion = await this.prisma.seccion.findUnique({
+              where: { id_seccion: seccionId },
+              include: { grado: { include: { nivel: true } } },
+            });
+            if (seccion) {
+              destinatarios.push({
+                id_circular: circular.id_circular,
+                id_nivel: seccion.grado.id_nivel,
+                id_seccion: seccionId,
+              });
+            }
+          }
+        }
+      }
+    } else if (dto.secciones && dto.secciones.length > 0) {
+      for (const seccionId of dto.secciones) {
+        const seccion = await this.prisma.seccion.findUnique({
+          where: { id_seccion: seccionId },
+          include: { grado: { include: { nivel: true } } },
+        });
+        if (seccion) {
+          destinatarios.push({
+            id_circular: circular.id_circular,
+            id_nivel: seccion.grado.id_nivel,
+            id_seccion: seccionId,
+          });
+        }
+      }
+    } else {
+      const todosNiveles = await this.prisma.nivel.findMany();
+      for (const nivel of todosNiveles) {
+        destinatarios.push({
+          id_circular: circular.id_circular,
+          id_nivel: nivel.id_nivel,
+        });
+      }
+    }
+
+    if (destinatarios.length > 0) {
+      await this.prisma.circularDestinatario.createMany({ data: destinatarios });
+    }
+
+    // Notificar a los apoderados de los niveles seleccionados
+    if (dto.niveles && dto.niveles.length > 0) {
+      for (const nivelId of dto.niveles) {
+        await this.notificacionesService.notificarApoderadosDeNivel(
+          nivelId,
+          'informativa',
+          'Nueva circular',
+          `Se ha publicado una nueva circular: "${circular.titulo}"`,
+          '/dashboard/circulares',
+        );
+      }
+    }
+
+    return circular;
+  }
+
+  // ── LISTAR PARA INTRANET ────────────────────────────
+  async findAll(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    const [circulares, total] = await Promise.all([
+      this.prisma.circular.findMany({
+        skip,
+        take: limit,
+        orderBy: { fecha_creacion: 'desc' },
+        include: {
+          remitente: { include: { persona: true } },
+          adjuntos: true,
+          destinatarios: true,
+        },
+      }),
+      this.prisma.circular.count(),
+    ]);
+    return { data: circulares, total, page, limit };
+  }
+
+  // ── VER DETALLE ─────────────────────────────────────
+  async findOne(id: number) {
+    const circular = await this.prisma.circular.findUnique({
+      where: { id_circular: id },
+      include: {
+        remitente: { include: { persona: true } },
+        destinatarios: { include: { nivel: true, seccion: true } },
+        adjuntos: true,
+      },
+    });
+    if (!circular) throw new NotFoundException('Circular no encontrada');
+    return circular;
+  }
+
+  // ── LISTAR PARA APODERADO (APP) ─────────────────────
+  async findForApoderado(apoderadoId: number) {
+  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+    where: { id_apoderado: apoderadoId },
+    select: { id_estudiante: true },
+  });
+  const estudianteIds = relaciones.map((r) => r.id_estudiante);
+
+  const matriculas = await this.prisma.matricula.findMany({
+    where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
+    include: { seccion: { include: { grado: { include: { nivel: true } } } } },
+  });
+
+  const destinos = new Map<string, { id_nivel: number; id_seccion: number | null }>();
+  for (const mat of matriculas) {
+    const id_nivel = mat.seccion.grado.id_nivel;
+    const id_seccion = mat.id_seccion;
+    const key = `${id_nivel}_${id_seccion}`;
+    if (!destinos.has(key)) {
+      destinos.set(key, { id_nivel, id_seccion });
+    }
+  }
+
+  const niveles = new Set<number>();
+  const seccionesHijos = new Set<number>();
+  for (const d of destinos.values()) {
+    niveles.add(d.id_nivel);
+    if (d.id_seccion) seccionesHijos.add(d.id_seccion);
+  }
+
+  const circulares = await this.prisma.circular.findMany({
+    where: {
+      destinatarios: {
+        some: {
+          OR: [
+            { id_nivel: null, id_seccion: null },
+            { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
+            { id_nivel: { in: Array.from(niveles) }, id_seccion: { in: Array.from(seccionesHijos) } },
+          ],
+        },
+      },
+    },
+    orderBy: { fecha_creacion: 'desc' },
+    include: {
+      remitente: { include: { persona: true } },
+      adjuntos: true,
+      destinatarios: { include: { nivel: true, seccion: true } },
+    },
+    distinct: ['id_circular'],
+  });
+
+  const circularesConLectura = circulares.map((c) => {
+    const destinatario = c.destinatarios.find((d) => {
+      if (!d.id_nivel && !d.id_seccion) return true;
+      if (d.id_seccion && seccionesHijos.has(d.id_seccion)) return true;
+      if (d.id_nivel && niveles.has(d.id_nivel) && !d.id_seccion) return true;
+      return false;
+    });
+
+    // Construir el texto "Dirigido a"
+    const dirigido_a = c.destinatarios
+      .map((d) => {
+        if (!d.id_nivel && !d.id_seccion) return 'Todos';
+        if (d.id_nivel && d.id_seccion) {
+          return `${d.nivel?.nombre_nivel || ''} ${d.seccion?.letra || ''}`.trim();
+        }
+        if (d.id_nivel) return d.nivel?.nombre_nivel || '';
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+
+    return {
+      ...c,
+      leida: destinatario?.leida ?? false,
+      dirigido_a: dirigido_a || 'General',
+    };
+  });
+
+  return circularesConLectura;
+}
+
+  // ── TOTAL DE CIRCULARES ────────────────────────────
+  async getTotalCirculares() {
+    return this.prisma.circular.count();
+  }
+
+  // ── MARCAR COMO LEÍDA ───────────────────────────────
+  async marcarLeida(circularId: number, usuarioId: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: usuarioId },
+      include: { persona: { include: { apoderados: true } } },
+    });
+    const apoderado = usuario?.persona?.apoderados?.[0];
+    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+
+    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+      where: { id_apoderado: apoderado.id_persona },
+      select: { id_estudiante: true },
+    });
+    const estudianteIds = relaciones.map((r) => r.id_estudiante);
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
+      select: {
+        id_seccion: true,
+        seccion: { select: { grado: { select: { id_nivel: true } } } },
+      },
+    });
+
+    const niveles = new Set<number>();
+    const secciones = new Set<number>();
+    for (const mat of matriculas) {
+      niveles.add(mat.seccion.grado.id_nivel);
+      secciones.add(mat.id_seccion);
+    }
+
+    await this.prisma.circularDestinatario.updateMany({
+      where: {
+        id_circular: circularId,
+        OR: [
+          { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
+          { id_seccion: { in: Array.from(secciones) } },
+          { id_nivel: null, id_seccion: null },
+        ],
+      },
+      data: { leida: true, fecha_lectura: new Date() },
+    });
+
+    return { message: 'Circular marcada como leída' };
+  }
+}
+</file>
+
+<file path="src/finanzas/dto/registrar-pago.dto.ts">
+import { IsInt, IsArray, ValidateNested, IsIn, IsOptional, IsString, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class PagoItemDto {
+  @IsInt()
+  id_cronograma: number;
+
+  @IsInt()
+  @IsOptional()
+  monto_pagado?: number;
+}
+
+export class RegistrarPagoDto {
+  @IsInt()
+  id_matricula: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PagoItemDto)
+  pagos: PagoItemDto[];
+
+  @IsInt()
+  id_apoderado: number;
+
+  @IsString()
+  @IsIn(['Efectivo', 'Transferencia', 'Tarjeta'])
+  metodo_pago: string;
+
+  @IsOptional()
+  @IsString()
+  nro_operacion?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fecha_pago?: string;
+}
+</file>
+
+<file path="src/finanzas/finanzas.controller.ts">
+import {
+  Controller, Get, Post, Param, Body, UseGuards, Request, Query,
+} from '@nestjs/common';
+import { FinanzasService } from './finanzas.service';
+import { RegistrarPagoDto } from './dto/registrar-pago.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+
+@Controller('tesoreria')
+@UseGuards(AuthGuard('jwt'))
+export class FinanzasController {
+  constructor(private readonly finanzasService: FinanzasService) {}
+
+  /**
+   * Obtiene estado de cuenta por matrícula (uso interno)
+   */
+  @Get('estado-cuenta/:matricula_id')
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getEstadoCuenta(@Param('matricula_id') matriculaId: string) {
+    return this.finanzasService.getEstadoCuenta(Number(matriculaId));
+  }
+
+  /**
+   * Registra uno o varios pagos (cajero/secretaria)
+   */
+  @Post('pagos')
+  @Roles('Admin', 'Secretaria')
+  async registrarPago(@Body() dto: RegistrarPagoDto, @Request() req) {
+    // El id del cajero viene del token JWT (req.user.userId)
+    return this.finanzasService.registrarPago(dto, req.user.userId);
+  }
+
+  /**
+   * Estado de cuenta para el padre (app móvil)
+   */
+  @Get('padres/estado-cuenta')
+  @Roles('Apoderado', 'Admin')
+  async getEstadoCuentaPadre(@Query('alumno_id') alumnoId: string) {
+    return this.finanzasService.getEstadoCuentaPadre(Number(alumnoId));
+  }
+
+  @Get('pagos/pendientes/count')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Secretaria', 'Director')
+async getPagosPendientesCount() {
+  return this.finanzasService.getPagosPendientesCount();
+}
+}
+</file>
+
+<file path="src/finanzas/finanzas.module.ts">
+import { Module } from '@nestjs/common';
+import { FinanzasService } from './finanzas.service';
+import { FinanzasController } from './finanzas.controller';
+
+@Module({
+  providers: [FinanzasService],
+  controllers: [FinanzasController],
+})
+export class FinanzasModule {}
+</file>
+
+<file path="src/finanzas/finanzas.service.ts">
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { RegistrarPagoDto } from './dto/registrar-pago.dto';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
+
+@Injectable()
+export class FinanzasService {
+  constructor(
+    private prisma: PrismaService,
+    private notificacionesService: NotificacionesService,
+  ) {}
+
+  async getEstadoCuenta(matriculaId: number) {
+    const matricula = await this.prisma.matricula.findUnique({
+      where: { id_matricula: matriculaId },
+      include: {
+        cronogramas: {
+          include: { concepto: true, pagos: true },
+          orderBy: { fecha_vencimiento: 'asc' },
+        },
+      },
+    });
+
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada');
+
+    const deudas = matricula.cronogramas.map((cron) => ({
+      id_cronograma: cron.id_cronograma,
+      concepto: cron.concepto.nombre_concepto,
+      fecha_vencimiento: cron.fecha_vencimiento,
+      monto_base: cron.concepto.monto_base,
+      estado: cron.estado_pago,
+      pagos: cron.pagos.map((p) => ({
+        monto: p.monto_pagado,
+        fecha: p.fecha_pago,
+        metodo: p.metodo_pago,
+      })),
+    }));
+
+    const totalPendiente = deudas
+      .filter((d) => d.estado === 'Pendiente' || d.estado === 'Vencido')
+      .reduce((sum, d) => sum + Number(d.monto_base), 0);
+
+    return {
+      id_matricula: matricula.id_matricula,
+      estado_matricula: matricula.estado_matricula,
+      deudas,
+      total_pendiente: totalPendiente,
+    };
+  }
+
+  async registrarPago(dto: RegistrarPagoDto, cajeroId: number) {
+    const matricula = await this.prisma.matricula.findUnique({
+      where: { id_matricula: dto.id_matricula },
+    });
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada');
+
+    const apoderado = await this.prisma.apoderado.findUnique({
+      where: { id_persona: dto.id_apoderado },
+    });
+    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+
+    const resultados: {
+      id_transaccion: number;
+      concepto: string;
+      monto_pagado: number;
+      nuevo_estado: string;
+    }[] = [];
+
+    for (const pagoItem of dto.pagos) {
+      const cronograma = await this.prisma.cronogramaPagos.findUnique({
+        where: { id_cronograma: pagoItem.id_cronograma },
+        include: { concepto: true },
+      });
+
+      if (!cronograma) throw new NotFoundException(`Cronograma con id ${pagoItem.id_cronograma} no encontrado`);
+      if (cronograma.estado_pago === 'Pagado') throw new BadRequestException('La deuda ya está pagada');
+
+      const montoAPagar = pagoItem.monto_pagado ?? Number(cronograma.concepto.monto_base);
+      if (montoAPagar <= 0) throw new BadRequestException('Monto debe ser mayor a 0');
+      if (montoAPagar > Number(cronograma.concepto.monto_base)) throw new BadRequestException('Monto excede el valor de la deuda');
+
+      const transaccion = await this.prisma.pagoTransaccion.create({
+        data: {
+          id_cronograma: pagoItem.id_cronograma,
+          id_apoderado: dto.id_apoderado,
+          id_usuario_cajero: cajeroId,
+          monto_pagado: montoAPagar,
+          metodo_pago: dto.metodo_pago,
+          nro_operacion: dto.nro_operacion,
+          fecha_pago: dto.fecha_pago ? new Date(dto.fecha_pago) : new Date(),
+        },
+      });
+
+      const nuevoEstado = montoAPagar >= Number(cronograma.concepto.monto_base) ? 'Pagado' : cronograma.estado_pago;
+      await this.prisma.cronogramaPagos.update({
+        where: { id_cronograma: pagoItem.id_cronograma },
+        data: { estado_pago: nuevoEstado },
+      });
+
+      resultados.push({
+        id_transaccion: transaccion.id_transaccion,
+        concepto: cronograma.concepto.nombre_concepto,
+        monto_pagado: montoAPagar,
+        nuevo_estado: nuevoEstado,
+      });
+
+      // Notificar al apoderado que realizó el pago
+      const usuarioApoderado = await this.prisma.usuario.findFirst({
+        where: { persona: { id_persona: dto.id_apoderado } },
+      });
+      if (usuarioApoderado) {
+        await this.notificacionesService.crearNotificacion({
+          id_usuario: usuarioApoderado.id_usuario,
+          tipo: 'administrativa',
+          titulo: 'Pago registrado',
+          mensaje: `Se ha registrado un pago por S/ ${montoAPagar.toFixed(2)} para "${cronograma.concepto.nombre_concepto}".`,
+          url: '/dashboard/pagos',
+        });
+      }
+    }
+
+    return { message: 'Pagos registrados correctamente', pagos: resultados };
+  }
+
+  async getEstadoCuentaPadre(estudianteId: number) {
+    const matriculaActiva = await this.prisma.matricula.findFirst({
+      where: { id_estudiante: estudianteId, estado_matricula: 'Activo' },
+      orderBy: { id_matricula: 'desc' },
+    });
+    if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+    return this.getEstadoCuenta(matriculaActiva.id_matricula);
+  }
+
+  async getPagosPendientesCount() {
+    return this.prisma.cronogramaPagos.count({
+      where: { estado_pago: { in: ['Pendiente', 'Vencido'] } },
+    });
+  }
+}
+</file>
+
+<file path="src/notificaciones/notificaciones.controller.ts">
+import { Controller, Get, Put, Param, UseGuards, Request } from '@nestjs/common';
+import { NotificacionesService } from './notificaciones.service';
+import { AuthGuard } from '@nestjs/passport';
+
+@Controller('notificaciones')
+@UseGuards(AuthGuard('jwt'))
+export class NotificacionesController {
+  constructor(private readonly notificacionesService: NotificacionesService) {}
+
+  @Get()
+  async getNotificaciones(@Request() req) {
+    return this.notificacionesService.getNotificaciones(req.user.userId);
+  }
+
+  @Get('count')
+  async getCountNoLeidas(@Request() req) {
+    const count = await this.notificacionesService.getCountNoLeidas(req.user.userId);
+    return { count };
+  }
+
+  @Put(':id/leida')
+  async marcarLeida(@Param('id') id: string) {
+    return this.notificacionesService.marcarLeida(Number(id));
+  }
+}
+</file>
+
+<file path="src/notificaciones/notificaciones.module.ts">
+import { Module, Global } from '@nestjs/common';  // 👈 Añadir Global
+import { NotificacionesService } from './notificaciones.service';
+import { NotificacionesController } from './notificaciones.controller';
+
+@Global()
+@Module({
+  providers: [NotificacionesService],
+  controllers: [NotificacionesController],
+  exports: [NotificacionesService],
+})
+export class NotificacionesModule {}
+</file>
+
+<file path="src/notificaciones/notificaciones.service.ts">
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class NotificacionesService {
+  constructor(private prisma: PrismaService) {}
+
+  async getNotificaciones(usuarioId: number) {
+    return this.prisma.notificacion.findMany({
+      where: { id_usuario: usuarioId },
+      orderBy: { fecha_creacion: 'desc' },
+      take: 20,
+    });
+  }
+
+  async getCountNoLeidas(usuarioId: number) {
+    return this.prisma.notificacion.count({
+      where: { id_usuario: usuarioId, leida: false },
+    });
+  }
+
+  async marcarLeida(id: number) {
+    return this.prisma.notificacion.update({
+      where: { id_notif: id },
+      data: { leida: true },
+    });
+  }
+
+  async crearNotificacion(data: {
+    id_usuario: number;
+    tipo: string;
+    titulo: string;
+    mensaje: string;
+    url?: string;
+  }) {
+    return this.prisma.notificacion.create({ data });
+  }
+
+  // Este método será llamado por otros servicios
+  async notificarApoderadosDeAlumno(
+    alumnoId: number,
+    tipo: string,
+    titulo: string,
+    mensaje: string,
+    url?: string,
+  ) {
+    // Buscar apoderados del alumno
+    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+      where: { id_estudiante: alumnoId },
+      include: {
+        apoderado: {
+          include: {
+            persona: {
+              include: { usuarios: true },
+            },
+          },
+        },
+      },
+    });
+
+    for (const rel of relaciones) {
+      for (const usuario of rel.apoderado.persona.usuarios) {
+        await this.crearNotificacion({
+          id_usuario: usuario.id_usuario,
+          tipo,
+          titulo,
+          mensaje,
+          url,
+        });
+      }
+    }
+  }
+
+  async notificarApoderadosDeNivel(
+  nivelId: number,
+  tipo: string,
+  titulo: string,
+  mensaje: string,
+  url?: string,
+) {
+  // Buscar apoderados con hijos en ese nivel
+  const apoderados = await this.prisma.apoderadoEstudiante.findMany({
+    where: {
+      estudiante: {
+        matriculas: {
+          some: {
+            estado_matricula: 'Activo',
+            seccion: { grado: { id_nivel: nivelId } },
+          },
+        },
+      },
+    },
+    include: {
+      apoderado: { include: { persona: { include: { usuarios: true } } } },
+    },
+  });
+
+  // Usar un Set para evitar duplicados de usuario
+  const usuariosNotificados = new Set<number>();
+
+  for (const rel of apoderados) {
+    for (const usuario of rel.apoderado.persona.usuarios) {
+      if (!usuariosNotificados.has(usuario.id_usuario)) {
+        usuariosNotificados.add(usuario.id_usuario);
+        await this.crearNotificacion({
+          id_usuario: usuario.id_usuario,
+          tipo,
+          titulo,
+          mensaje,
+          url,
+        });
+      }
+    }
+  }
+}
+}
+</file>
+
+<file path="src/prisma/prisma.module.ts">
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+
+@Global()
+@Module({
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class PrismaModule {}
+</file>
+
+<file path="src/prisma/prisma.service.ts">
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+@Injectable()
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  async onModuleInit() {
+    await this.$connect();
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
+}
+</file>
+
+<file path="src/app.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+</file>
+
+<file path="src/app.controller.ts">
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+</file>
+
+<file path="src/app.module.ts">
+import { Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
+import { AcademicosModule } from './academicos/academicos.module';
+import { FinanzasModule } from './finanzas/finanzas.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { CalificacionesModule } from './calificaciones/calificaciones.module';
+import { CircularesModule } from './circulares/circulares.module';
+import { AnaliticasModule } from './analiticas/analiticas.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { ActividadModule } from './actividad/actividad.module';
+
+@Module({
+  imports: [
+    PrismaModule,
+    AuthModule,
+    AcademicosModule,
+    FinanzasModule,
+    CalificacionesModule,
+    CircularesModule,
+    AnaliticasModule,
+    NotificacionesModule,
+    ActividadModule,
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+</file>
+
+<file path="src/app.service.ts">
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+</file>
+
+<file path="src/main.ts">
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Habilitar CORS para desarrollo
+  app.enableCors({
+    origin: true, // Permite cualquier origen en desarrollo. En producción, usar la URL real.
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  await app.listen(3000);
+}
+bootstrap();
+</file>
+
+<file path="test/app.e2e-spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { AppModule } from './../src/app.module';
+
+describe('AppController (e2e)', () => {
+  let app: INestApplication<App>;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  it('/ (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/')
+      .expect(200)
+      .expect('Hello World!');
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+});
+</file>
+
+<file path="test/jest-e2e.json">
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  }
+}
+</file>
+
+<file path=".prettierrc">
+{
+  "singleQuote": true,
+  "trailingComma": "all"
+}
+</file>
+
+<file path="=">
+
+</file>
+
+<file path="eslint.config.mjs">
+// @ts-check
+import eslint from '@eslint/js';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  {
+    ignores: ['eslint.config.mjs'],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  eslintPluginPrettierRecommended,
+  {
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+      sourceType: 'commonjs',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
+    },
+  },
+);
+</file>
+
+<file path="get-docker.sh">
+#!/bin/sh
+set -e
+# Docker Engine for Linux installation script.
+#
+# This script is intended as a convenient way to configure docker's package
+# repositories and to install Docker Engine, This script is not recommended
+# for production environments. Before running this script, make yourself familiar
+# with potential risks and limitations, and refer to the installation manual
+# at https://docs.docker.com/engine/install/ for alternative installation methods.
+#
+# The script:
+#
+# - Requires `root` or `sudo` privileges to run.
+# - Attempts to detect your Linux distribution and version and configure your
+#   package management system for you.
+# - Doesn't allow you to customize most installation parameters.
+# - Installs dependencies and recommendations without asking for confirmation.
+# - Installs the latest stable release (by default) of Docker CLI, Docker Engine,
+#   Docker Buildx, Docker Compose, containerd, and runc. When using this script
+#   to provision a machine, this may result in unexpected major version upgrades
+#   of these packages. Always test upgrades in a test environment before
+#   deploying to your production systems.
+# - Isn't designed to upgrade an existing Docker installation. When using the
+#   script to update an existing installation, dependencies may not be updated
+#   to the expected version, resulting in outdated versions.
+#
+# Source code is available at https://github.com/docker/docker-install/
+#
+# Usage
+# ==============================================================================
+#
+# To install the latest stable versions of Docker CLI, Docker Engine, and their
+# dependencies:
+#
+# 1. download the script
+#
+#   $ curl -fsSL https://get.docker.com -o install-docker.sh
+#
+# 2. verify the script's content
+#
+#   $ cat install-docker.sh
+#
+# 3. run the script with --dry-run to verify the steps it executes
+#
+#   $ sh install-docker.sh --dry-run
+#
+# 4. run the script either as root, or using sudo to perform the installation.
+#
+#   $ sudo sh install-docker.sh
+#
+# Command-line options
+# ==============================================================================
+#
+# --version <VERSION>
+# Use the --version option to install a specific version, for example:
+#
+#   $ sudo sh install-docker.sh --version 23.0
+#
+# --channel <stable|test>
+#
+# Use the --channel option to install from an alternative installation channel.
+# The following example installs the latest versions from the "test" channel,
+# which includes pre-releases (alpha, beta, rc):
+#
+#   $ sudo sh install-docker.sh --channel test
+#
+# Alternatively, use the script at https://test.docker.com, which uses the test
+# channel as default.
+#
+# --mirror <Aliyun|AzureChinaCloud>
+#
+# Use the --mirror option to install from a mirror supported by this script.
+# Available mirrors are "Aliyun" (https://mirrors.aliyun.com/docker-ce), and
+# "AzureChinaCloud" (https://mirror.azure.cn/docker-ce), for example:
+#
+#   $ sudo sh install-docker.sh --mirror AzureChinaCloud
+#
+# --setup-repo
+#
+# Use the --setup-repo option to configure Docker's package repositories without
+# installing Docker packages. This is useful when you want to add the repository
+# but install packages separately:
+#
+#   $ sudo sh install-docker.sh --setup-repo
+#
+# Automatic Service Start
+#
+# By default, this script automatically starts the Docker daemon and enables the docker
+# service after installation if systemd is used as init.
+#
+# If you prefer to start the service manually, use the --no-autostart option:
+#
+#   $ sudo sh install-docker.sh --no-autostart
+#
+# Note: Starting the service requires appropriate privileges to manage system services.
+#
+# ==============================================================================
+
+
+# Git commit from https://github.com/docker/docker-install when
+# the script was uploaded (Should only be modified by upload job):
+SCRIPT_COMMIT_SHA="2687d91ddeb3bd6aeae37a90947761efdee87030"
+
+# strip "v" prefix if present
+VERSION="${VERSION#v}"
+
+# The channel to install from:
+#   * stable
+#   * test
+DEFAULT_CHANNEL_VALUE="stable"
+if [ -z "$CHANNEL" ]; then
+	CHANNEL=$DEFAULT_CHANNEL_VALUE
+fi
+
+DEFAULT_DOWNLOAD_URL="https://download.docker.com"
+if [ -z "$DOWNLOAD_URL" ]; then
+	DOWNLOAD_URL=$DEFAULT_DOWNLOAD_URL
+fi
+
+DEFAULT_REPO_FILE="docker-ce.repo"
+if [ -z "$REPO_FILE" ]; then
+	REPO_FILE="$DEFAULT_REPO_FILE"
+	# Automatically default to a staging repo fora
+	# a staging download url (download-stage.docker.com)
+	case "$DOWNLOAD_URL" in
+		*-stage*) REPO_FILE="docker-ce-staging.repo";;
+	esac
+fi
+
+mirror=''
+DRY_RUN=${DRY_RUN:-}
+REPO_ONLY=${REPO_ONLY:-0}
+NO_AUTOSTART=${NO_AUTOSTART:-0}
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--channel)
+			CHANNEL="$2"
+			shift
+			;;
+		--dry-run)
+			DRY_RUN=1
+			;;
+		--mirror)
+			mirror="$2"
+			shift
+			;;
+		--version)
+			VERSION="${2#v}"
+			shift
+			;;
+		--setup-repo)
+			REPO_ONLY=1
+			shift
+			;;
+		--no-autostart)
+			NO_AUTOSTART=1
+			;;
+		--*)
+			echo "Illegal option $1"
+			;;
+	esac
+	shift $(( $# > 0 ? 1 : 0 ))
+done
+
+case "$mirror" in
+	Aliyun)
+		DOWNLOAD_URL="https://mirrors.aliyun.com/docker-ce"
+		;;
+	AzureChinaCloud)
+		DOWNLOAD_URL="https://mirror.azure.cn/docker-ce"
+		;;
+	"")
+		;;
+	*)
+		>&2 echo "unknown mirror '$mirror': use either 'Aliyun', or 'AzureChinaCloud'."
+		exit 1
+		;;
+esac
+
+case "$CHANNEL" in
+	stable|test)
+		;;
+	*)
+		>&2 echo "unknown CHANNEL '$CHANNEL': use either stable or test."
+		exit 1
+		;;
+esac
+
+command_exists() {
+	command -v "$@" > /dev/null 2>&1
+}
+
+# version_gte checks if the version specified in $VERSION is at least the given
+# SemVer (Maj.Minor[.Patch]), or CalVer (YY.MM) version.It returns 0 (success)
+# if $VERSION is either unset (=latest) or newer or equal than the specified
+# version, or returns 1 (fail) otherwise.
+#
+# examples:
+#
+# VERSION=23.0
+# version_gte 23.0  // 0 (success)
+# version_gte 20.10 // 0 (success)
+# version_gte 19.03 // 0 (success)
+# version_gte 26.1  // 1 (fail)
+version_gte() {
+	if [ -z "$VERSION" ]; then
+			return 0
+	fi
+	version_compare "$VERSION" "$1"
+}
+
+# version_compare compares two version strings (either SemVer (Major.Minor.Path),
+# or CalVer (YY.MM) version strings. It returns 0 (success) if version A is newer
+# or equal than version B, or 1 (fail) otherwise. Patch releases and pre-release
+# (-alpha/-beta) are not taken into account
+#
+# examples:
+#
+# version_compare 23.0.0 20.10 // 0 (success)
+# version_compare 23.0 20.10   // 0 (success)
+# version_compare 20.10 19.03  // 0 (success)
+# version_compare 20.10 20.10  // 0 (success)
+# version_compare 19.03 20.10  // 1 (fail)
+version_compare() (
+	set +x
+
+	yy_a="$(echo "$1" | cut -d'.' -f1)"
+	yy_b="$(echo "$2" | cut -d'.' -f1)"
+	if [ "$yy_a" -lt "$yy_b" ]; then
+		return 1
+	fi
+	if [ "$yy_a" -gt "$yy_b" ]; then
+		return 0
+	fi
+	mm_a="$(echo "$1" | cut -d'.' -f2)"
+	mm_b="$(echo "$2" | cut -d'.' -f2)"
+
+	# trim leading zeros to accommodate CalVer
+	mm_a="${mm_a#0}"
+	mm_b="${mm_b#0}"
+
+	if [ "${mm_a:-0}" -lt "${mm_b:-0}" ]; then
+		return 1
+	fi
+
+	return 0
+)
+
+is_dry_run() {
+	if [ -z "$DRY_RUN" ]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+is_wsl() {
+	case "$(uname -r)" in
+	*microsoft* ) true ;; # WSL 2
+	*Microsoft* ) true ;; # WSL 1
+	* ) false;;
+	esac
+}
+
+is_darwin() {
+	case "$(uname -s)" in
+	*darwin* ) true ;;
+	*Darwin* ) true ;;
+	* ) false;;
+	esac
+}
+
+deprecation_notice() {
+	distro=$1
+	distro_version=$2
+	echo
+	printf "\033[91;1mDEPRECATION WARNING\033[0m\n"
+	printf "    This Linux distribution (\033[1m%s %s\033[0m) reached end-of-life and is no longer supported by this script.\n" "$distro" "$distro_version"
+	echo   "    No updates or security fixes will be released for this distribution, and users are recommended"
+	echo   "    to upgrade to a currently maintained version of $distro."
+	echo
+	printf   "Press \033[1mCtrl+C\033[0m now to abort this script, or wait for the installation to continue."
+	echo
+	sleep 10
+}
+
+get_distribution() {
+	lsb_dist=""
+	# Every system that we officially support has /etc/os-release
+	if [ -r /etc/os-release ]; then
+		lsb_dist="$(. /etc/os-release && echo "$ID")"
+	fi
+	# Returning an empty string here should be alright since the
+	# case statements don't act unless you provide an actual value
+	echo "$lsb_dist"
+}
+
+start_docker_daemon() {
+	# Use systemctl if available (for systemd-based systems)
+	if command_exists systemctl; then
+		is_dry_run || >&2 echo "Using systemd to manage Docker service"
+		if (
+			is_dry_run || set -x
+			$sh_c "systemctl enable --now docker.service 2>/dev/null"
+		); then
+			is_dry_run || echo "INFO: Docker daemon enabled and started" >&2
+		else
+			is_dry_run || echo "WARNING: unable to enable the docker service" >&2
+		fi
+	else
+		# No service management available (container environment)
+		if ! is_dry_run; then
+			>&2 echo "Note: Running in a container environment without service management"
+			>&2 echo "Docker daemon cannot be started automatically in this environment"
+			>&2 echo "The Docker packages have been installed successfully"
+		fi
+	fi
+	>&2 echo
+}
+
+echo_docker_as_nonroot() {
+	if is_dry_run; then
+		return
+	fi
+	if command_exists docker && [ -e /var/run/docker.sock ]; then
+		(
+			set -x
+			$sh_c 'docker version'
+		) || true
+	fi
+
+	# intentionally mixed spaces and tabs here -- tabs are stripped by "<<-EOF", spaces are kept in the output
+	echo
+	echo "================================================================================"
+	echo
+	if version_gte "20.10"; then
+		echo "To run Docker as a non-privileged user, consider setting up the"
+		echo "Docker daemon in rootless mode for your user:"
+		echo
+		echo "    dockerd-rootless-setuptool.sh install"
+		echo
+		echo "Visit https://docs.docker.com/go/rootless/ to learn about rootless mode."
+		echo
+	fi
+	echo
+	echo "To run the Docker daemon as a fully privileged service, but granting non-root"
+	echo "users access, refer to https://docs.docker.com/go/daemon-access/"
+	echo
+	echo "WARNING: Access to the remote API on a privileged Docker daemon is equivalent"
+	echo "         to root access on the host. Refer to the 'Docker daemon attack surface'"
+	echo "         documentation for details: https://docs.docker.com/go/attack-surface/"
+	echo
+	echo "================================================================================"
+	echo
+}
+
+# Check if this is a forked Linux distro
+check_forked() {
+
+	# Check for lsb_release command existence, it usually exists in forked distros
+	if command_exists lsb_release; then
+		# Check if the `-u` option is supported
+		set +e
+		lsb_release -a -u > /dev/null 2>&1
+		lsb_release_exit_code=$?
+		set -e
+
+		# Check if the command has exited successfully, it means we're in a forked distro
+		if [ "$lsb_release_exit_code" = "0" ]; then
+			# Print info about current distro
+			cat <<-EOF
+			You're using '$lsb_dist' version '$dist_version'.
+			EOF
+
+			# Get the upstream release info
+			lsb_dist=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'id' | cut -d ':' -f 2 | tr -d '[:space:]')
+			dist_version=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'codename' | cut -d ':' -f 2 | tr -d '[:space:]')
+
+			# Print info about upstream distro
+			cat <<-EOF
+			Upstream release is '$lsb_dist' version '$dist_version'.
+			EOF
+		else
+			if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
+				if [ "$lsb_dist" = "osmc" ]; then
+					# OSMC runs Raspbian
+					lsb_dist=raspbian
+				else
+					# We're Debian and don't even know it!
+					lsb_dist=debian
+				fi
+				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
+				case "$dist_version" in
+					13|14|forky)
+						dist_version="trixie"
+					;;
+					12)
+						dist_version="bookworm"
+					;;
+					11)
+						dist_version="bullseye"
+					;;
+					10)
+						dist_version="buster"
+					;;
+					9)
+						dist_version="stretch"
+					;;
+					8)
+						dist_version="jessie"
+					;;
+				esac
+			fi
+		fi
+	fi
+}
+
+do_install() {
+	echo "# Executing docker install script, commit: $SCRIPT_COMMIT_SHA"
+
+	if [ "$REPO_ONLY" != "1" ] && command_exists docker; then
+		cat >&2 <<-'EOF'
+			Warning: the "docker" command appears to already exist on this system.
+
+			If you already have Docker installed, this script can cause trouble, which is
+			why we're displaying this warning and provide the opportunity to cancel the
+			installation.
+
+			If you installed the current Docker package using this script and are using it
+			again to update Docker, you can ignore this message, but be aware that the
+			script resets any custom changes in the deb and rpm repo configuration
+			files to match the parameters passed to the script.
+
+			You may press Ctrl+C now to abort this script.
+		EOF
+		( set -x; sleep 20 )
+	fi
+
+	user="$(id -un 2>/dev/null || true)"
+
+	sh_c='sh -c'
+	if [ "$user" != 'root' ]; then
+		if command_exists sudo; then
+			sh_c='sudo -E sh -c'
+		elif command_exists su; then
+			sh_c='su -c'
+		else
+			cat >&2 <<-'EOF'
+			Error: this installer needs the ability to run commands as root.
+			We are unable to find either "sudo" or "su" available to make this happen.
+			EOF
+			exit 1
+		fi
+	fi
+
+	if is_dry_run; then
+		sh_c="echo"
+	fi
+
+	# perform some very rudimentary platform detection
+	lsb_dist=$( get_distribution )
+	lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
+
+	if is_wsl; then
+		echo
+		echo "WSL DETECTED: We recommend using Docker Desktop for Windows."
+		echo "Please get Docker Desktop from https://www.docker.com/products/docker-desktop/"
+		echo
+		cat >&2 <<-'EOF'
+
+			You may press Ctrl+C now to abort this script.
+		EOF
+		( set -x; sleep 20 )
+	fi
+
+	case "$lsb_dist" in
+
+		ubuntu)
+			if command_exists lsb_release; then
+				dist_version="$(lsb_release --codename | cut -f2)"
+			fi
+			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
+				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
+			fi
+		;;
+
+		debian|raspbian)
+			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
+			case "$dist_version" in
+				13)
+					dist_version="trixie"
+				;;
+				12)
+					dist_version="bookworm"
+				;;
+				11)
+					dist_version="bullseye"
+				;;
+				10)
+					dist_version="buster"
+				;;
+				9)
+					dist_version="stretch"
+				;;
+				8)
+					dist_version="jessie"
+				;;
+			esac
+		;;
+
+		centos|rhel|rocky)
+			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+			fi
+		;;
+
+		*)
+			if command_exists lsb_release; then
+				dist_version="$(lsb_release --release | cut -f2)"
+			fi
+			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+			fi
+		;;
+
+	esac
+
+	# Check if this is a forked Linux distro
+	check_forked
+
+	# Print deprecation warnings for distro versions that recently reached EOL,
+	# but may still be commonly used (especially LTS versions).
+	case "$lsb_dist.$dist_version" in
+		centos.8|centos.7|rhel.7)
+			deprecation_notice "$lsb_dist" "$dist_version"
+			;;
+		debian.buster|debian.stretch|debian.jessie)
+			deprecation_notice "$lsb_dist" "$dist_version"
+			;;
+		raspbian.buster|raspbian.stretch|raspbian.jessie)
+			deprecation_notice "$lsb_dist" "$dist_version"
+			;;
+		ubuntu.focal|ubuntu.bionic|ubuntu.xenial|ubuntu.trusty)
+			deprecation_notice "$lsb_dist" "$dist_version"
+			;;
+		ubuntu.oracular|ubuntu.mantic|ubuntu.lunar|ubuntu.kinetic|ubuntu.impish|ubuntu.hirsute|ubuntu.groovy|ubuntu.eoan|ubuntu.disco|ubuntu.cosmic)
+			deprecation_notice "$lsb_dist" "$dist_version"
+			;;
+		fedora.*)
+			if [ "$dist_version" -lt 41 ]; then
+				deprecation_notice "$lsb_dist" "$dist_version"
+			fi
+			;;
+	esac
+
+	# Run setup for each distro accordingly
+	case "$lsb_dist" in
+		ubuntu|debian|raspbian)
+			pre_reqs="ca-certificates curl"
+			apt_repo="deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] $DOWNLOAD_URL/linux/$lsb_dist $dist_version $CHANNEL"
+			(
+				if ! is_dry_run; then
+					set -x
+				fi
+				$sh_c 'apt-get -qq update >/dev/null'
+				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
+				$sh_c 'install -m 0755 -d /etc/apt/keyrings'
+				$sh_c "curl -fsSL \"$DOWNLOAD_URL/linux/$lsb_dist/gpg\" -o /etc/apt/keyrings/docker.asc"
+				$sh_c "chmod a+r /etc/apt/keyrings/docker.asc"
+				$sh_c "echo \"$apt_repo\" > /etc/apt/sources.list.d/docker.list"
+				$sh_c 'apt-get -qq update >/dev/null'
+			)
+
+			if [ "$REPO_ONLY" = "1" ]; then
+				exit 0
+			fi
+
+			pkg_version=""
+			if [ -n "$VERSION" ]; then
+				if is_dry_run; then
+					echo "# WARNING: VERSION pinning is not supported in DRY_RUN"
+				else
+					# Will work for incomplete versions IE (17.12), but may not actually grab the "latest" if in the test channel
+					pkg_pattern="$(echo "$VERSION" | sed 's/-ce-/~ce~.*/g' | sed 's/-/.*/g')"
+					search_command="apt-cache madison docker-ce | grep '$pkg_pattern' | head -1 | awk '{\$1=\$1};1' | cut -d' ' -f 3"
+					pkg_version="$($sh_c "$search_command")"
+					echo "INFO: Searching repository for VERSION '$VERSION'"
+					echo "INFO: $search_command"
+					if [ -z "$pkg_version" ]; then
+						echo
+						echo "ERROR: '$VERSION' not found amongst apt-cache madison results"
+						echo
+						exit 1
+					fi
+					if version_gte "18.09"; then
+							search_command="apt-cache madison docker-ce-cli | grep '$pkg_pattern' | head -1 | awk '{\$1=\$1};1' | cut -d' ' -f 3"
+							echo "INFO: $search_command"
+							cli_pkg_version="=$($sh_c "$search_command")"
+					fi
+					pkg_version="=$pkg_version"
+				fi
+			fi
+			(
+				pkgs="docker-ce${pkg_version%=}"
+				if version_gte "18.09"; then
+						# older versions didn't ship the cli and containerd as separate packages
+						pkgs="$pkgs docker-ce-cli${cli_pkg_version%=} containerd.io"
+				fi
+				if version_gte "20.10"; then
+						pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
+				fi
+				if version_gte "23.0"; then
+						pkgs="$pkgs docker-buildx-plugin"
+				fi
+				if version_gte "28.2"; then
+						pkgs="$pkgs docker-model-plugin"
+				fi
+				if ! is_dry_run; then
+					set -x
+				fi
+				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pkgs >/dev/null"
+			)
+			if [ "$NO_AUTOSTART" != "1" ]; then
+				start_docker_daemon
+			fi
+			echo_docker_as_nonroot
+			exit 0
+			;;
+		centos|fedora|rhel|rocky)
+			if [ "$(uname -m)" = "s390x" ]; then
+				echo "Effective v27.5, please consult RHEL distro statement for s390x support."
+				exit 1
+			fi
+			repo_file_url="$DOWNLOAD_URL/linux/$lsb_dist/$REPO_FILE"
+			(
+				if ! is_dry_run; then
+					set -x
+				fi
+				if command_exists dnf5; then
+					$sh_c "dnf -y -q --setopt=install_weak_deps=False install dnf-plugins-core"
+					$sh_c "dnf5 config-manager addrepo --overwrite --save-filename=docker-ce.repo --from-repofile='$repo_file_url'"
+
+					if [ "$CHANNEL" != "stable" ]; then
+						$sh_c "dnf5 config-manager setopt \"docker-ce-*.enabled=0\""
+						$sh_c "dnf5 config-manager setopt \"docker-ce-$CHANNEL.enabled=1\""
+					fi
+					$sh_c "dnf makecache"
+				elif command_exists dnf; then
+					$sh_c "dnf -y -q --setopt=install_weak_deps=False install dnf-plugins-core"
+					$sh_c "rm -f /etc/yum.repos.d/docker-ce.repo  /etc/yum.repos.d/docker-ce-staging.repo"
+					$sh_c "dnf config-manager --add-repo $repo_file_url"
+
+					if [ "$CHANNEL" != "stable" ]; then
+						$sh_c "dnf config-manager --set-disabled \"docker-ce-*\""
+						$sh_c "dnf config-manager --set-enabled \"docker-ce-$CHANNEL\""
+					fi
+					$sh_c "dnf makecache"
+				else
+					$sh_c "yum -y -q install yum-utils"
+					$sh_c "rm -f /etc/yum.repos.d/docker-ce.repo  /etc/yum.repos.d/docker-ce-staging.repo"
+					$sh_c "yum-config-manager --add-repo $repo_file_url"
+
+					if [ "$CHANNEL" != "stable" ]; then
+						$sh_c "yum-config-manager --disable \"docker-ce-*\""
+						$sh_c "yum-config-manager --enable \"docker-ce-$CHANNEL\""
+					fi
+					$sh_c "yum makecache"
+				fi
+			)
+
+			if [ "$REPO_ONLY" = "1" ]; then
+				exit 0
+			fi
+
+			pkg_version=""
+			if command_exists dnf; then
+				pkg_manager="dnf"
+				pkg_manager_flags="-y -q --best"
+			else
+				pkg_manager="yum"
+				pkg_manager_flags="-y -q"
+			fi
+			if [ -n "$VERSION" ]; then
+				if is_dry_run; then
+					echo "# WARNING: VERSION pinning is not supported in DRY_RUN"
+				else
+					if [ "$lsb_dist" = "fedora" ]; then
+						pkg_suffix="fc$dist_version"
+					else
+						pkg_suffix="el"
+					fi
+					pkg_pattern="$(echo "$VERSION" | sed 's/-ce-/\\\\.ce.*/g' | sed 's/-/.*/g').*$pkg_suffix"
+					search_command="$pkg_manager list --showduplicates docker-ce | grep '$pkg_pattern' | tail -1 | awk '{print \$2}'"
+					pkg_version="$($sh_c "$search_command")"
+					echo "INFO: Searching repository for VERSION '$VERSION'"
+					echo "INFO: $search_command"
+					if [ -z "$pkg_version" ]; then
+						echo
+						echo "ERROR: '$VERSION' not found amongst $pkg_manager list results"
+						echo
+						exit 1
+					fi
+					if version_gte "18.09"; then
+						# older versions don't support a cli package
+						search_command="$pkg_manager list --showduplicates docker-ce-cli | grep '$pkg_pattern' | tail -1 | awk '{print \$2}'"
+						cli_pkg_version="$($sh_c "$search_command" | cut -d':' -f 2)"
+					fi
+					# Cut out the epoch and prefix with a '-'
+					pkg_version="-$(echo "$pkg_version" | cut -d':' -f 2)"
+				fi
+			fi
+			(
+				pkgs="docker-ce$pkg_version"
+				if version_gte "18.09"; then
+					# older versions didn't ship the cli and containerd as separate packages
+					if [ -n "$cli_pkg_version" ]; then
+						pkgs="$pkgs docker-ce-cli-$cli_pkg_version containerd.io"
+					else
+						pkgs="$pkgs docker-ce-cli containerd.io"
+					fi
+				fi
+				if version_gte "20.10"; then
+					pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
+				fi
+				if version_gte "23.0"; then
+						pkgs="$pkgs docker-buildx-plugin docker-model-plugin"
+				fi
+				if ! is_dry_run; then
+					set -x
+				fi
+				$sh_c "$pkg_manager $pkg_manager_flags install $pkgs"
+			)
+			if [ "$NO_AUTOSTART" != "1" ]; then
+				start_docker_daemon
+			fi
+			echo_docker_as_nonroot
+			exit 0
+			;;
+		sles)
+			echo "Effective v27.5, please consult SLES distro statement for s390x support."
+			exit 1
+			;;
+		*)
+			if [ -z "$lsb_dist" ]; then
+				if is_darwin; then
+					echo
+					echo "ERROR: Unsupported operating system 'macOS'"
+					echo "Please get Docker Desktop from https://www.docker.com/products/docker-desktop"
+					echo
+					exit 1
+				fi
+			fi
+			echo
+			echo "ERROR: Unsupported distribution '$lsb_dist'"
+			echo
+			exit 1
+			;;
+	esac
+	exit 1
+}
+
+# wrapped up in a function so that we have some protection against only getting
+# half the file during "curl | sh"
+do_install
+</file>
+
+<file path="nest-cli.json">
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+</file>
+
+<file path="tsconfig.build.json">
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+}
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
+</file>
+
+<file path=".gitignore">
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+</file>
+
+<file path="package.json">
+{
+  "name": "api",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/platform-express": "^11.0.1",
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "prisma": "^6.19.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/supertest": "^7.0.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^17.0.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.4.2",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+}
+</file>
+
+<file path="README.md">
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
+
+[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
+[circleci-url]: https://circleci.com/gh/nestjs/nest
+
+  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
+    <p align="center">
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
+<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
+<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
+<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
+<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
+  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
+    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
+  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
+</p>
+  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
+  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+
+## Description
+
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+
+## Project setup
+
+```bash
+$ npm install
+```
+
+## Compile and run the project
+
+```bash
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
+```
+
+## Run tests
+
+```bash
+# unit tests
+$ npm run test
+
+# e2e tests
+$ npm run test:e2e
+
+# test coverage
+$ npm run test:cov
+```
+
+## Deployment
+
+When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+
+If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+
+```bash
+$ npm install -g @nestjs/mau
+$ mau deploy
+```
+
+With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+
+## Resources
+
+Check out a few resources that may come in handy when working with NestJS:
+
+- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
+- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
+- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
+- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
+- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
+- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
+- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
+- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+
+## Support
+
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+
+## Stay in touch
+
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+</file>
+
+</files>
