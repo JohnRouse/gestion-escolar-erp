@@ -8,6 +8,7 @@ import { CircularesModule } from './circulares/circulares.module';
 import { AnaliticasModule } from './analiticas/analiticas.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { ActividadModule } from './actividad/actividad.module';
+import { ApoderadosModule } from './apoderados/apoderados.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ActividadModule } from './actividad/actividad.module';
     AnaliticasModule,
     NotificacionesModule,
     ActividadModule,
+    ApoderadosModule,
   ],
   controllers: [],
   providers: [],

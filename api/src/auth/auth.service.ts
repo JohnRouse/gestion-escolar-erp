@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -44,4 +46,27 @@ export class AuthService {
       },
     };
   }
+
+  async cambiarPassword(usuarioId: number, passwordActual: string, passwordNueva: string) {
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: usuarioId },
+  });
+
+  if (!usuario) {
+    throw new NotFoundException('Usuario no encontrado');
+  }
+
+  const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
+  if (!isPasswordValid) {
+    throw new BadRequestException('La contraseña actual no es correcta');
+  }
+
+  const hashed = await bcrypt.hash(passwordNueva, 10);
+  await this.prisma.usuario.update({
+    where: { id_usuario: usuarioId },
+    data: { password_hash: hashed },
+  });
+
+  return { message: 'Contraseña actualizada correctamente' };
+}
 }

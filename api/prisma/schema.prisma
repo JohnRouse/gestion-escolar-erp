@@ -33,17 +33,22 @@ model Persona {
 }
 
 model Usuario {
-  id_usuario    Int      @id @default(autoincrement())
-  username      String   @unique @db.VarChar(50)
-  password_hash String   @db.VarChar(255)
-  id_persona    Int
-  id_rol        Int
-  estado        Boolean  @default(true)
-  persona       Persona  @relation(fields: [id_persona], references: [id_persona])
-  rol           Rol      @relation(fields: [id_rol], references: [id_rol])
-  pagos_cajero  PagoTransaccion[]
-  circulares    Circular[]
-  notificaciones Notificacion[]   // 👈 agrega esta línea
+  id_usuario             Int       @id @default(autoincrement())
+  username               String    @unique @db.VarChar(50)
+  password_hash          String    @db.VarChar(255)
+  id_persona             Int
+  id_rol                 Int
+  estado                 Boolean   @default(true)
+  persona                Persona   @relation(fields: [id_persona], references: [id_persona])
+  rol                    Rol       @relation(fields: [id_rol], references: [id_rol])
+  pagos_cajero           PagoTransaccion[]
+  circulares             Circular[]
+  notificaciones         Notificacion[]
+  
+  // 🆕 Fase 3 – Perfil del Apoderado
+  tema                   String    @default("claro") @db.VarChar(10)   // "claro" | "oscuro"
+  notificaciones_activas Boolean   @default(true)
+  avatar_url             String?   @db.VarChar(255)                     // URL del avatar personalizado
 }
 
 // ── MÓDULO ACADÉMICO ──

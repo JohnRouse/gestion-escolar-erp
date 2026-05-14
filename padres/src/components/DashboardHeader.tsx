@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import axios from "axios";
 import NotificationBell from "@/components/NotificationBell";
+import ProfileDrawer from "@/components/ProfileDrawer";
 
 const COLORES_ESTUDIANTES = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'
@@ -16,6 +17,7 @@ export default function DashboardHeader() {
   const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
   const [user, setUser] = useState<{ nombre: string; genero?: string } | null>(null);
   const [greeting, setGreeting] = useState('');
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -59,9 +61,18 @@ export default function DashboardHeader() {
   } else {
     generoApoderado = nombreApoderado.endsWith("a") ? "female" : "male";
   }
-  const avatarApoderado = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
+  const [avatarApoderado, setAvatarApoderado] = useState(
+  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
     user?.nombre || "usuario"
-  )}&gender=${generoApoderado}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`;
+  )}&gender=${generoApoderado}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+);
+
+useEffect(() => {
+  const saved = localStorage.getItem('avatar_url');
+  if (saved) {
+    setAvatarApoderado(saved);
+  }
+}, []);
 
   const nombreEstudiante = selectedChild?.nombre?.split(" ")[0] || "";
   const generoEstudiante = nombreEstudiante.endsWith("a") ? "female" : "male";
@@ -70,6 +81,11 @@ export default function DashboardHeader() {
         selectedChild.nombre
       )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
     : "";
+
+    const updateAvatar = (newUrl: string) => {
+  setAvatarApoderado(newUrl);
+  localStorage.setItem('avatar_url', newUrl);
+};
 
   return (
     <header className="bg-primary pt-12 pb-6 px-5 relative">
@@ -80,7 +96,11 @@ export default function DashboardHeader() {
       </div>
 
       <div className="relative z-10 flex items-center gap-3">
-        <button className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-md">
+        {/* Botón de perfil (abre el drawer) */}
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-md"
+        >
           <img
             src={avatarApoderado}
             alt="Avatar"
@@ -133,6 +153,13 @@ export default function DashboardHeader() {
           </div>
         </div>
       )}
+
+      {/* Drawer de perfil */}
+      <ProfileDrawer
+  isOpen={profileOpen}
+  onClose={() => setProfileOpen(false)}
+  onAvatarChange={updateAvatar}
+/>
     </header>
   );
 }

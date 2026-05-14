@@ -11,6 +11,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <head>
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function() {
+            var tema = localStorage.getItem('tema');
+            if (tema === 'oscuro') {
+              document.documentElement.classList.add('dark');
+            }
+          })();
+        `,
+      }}
+    />
         <meta name="theme-color" content="#FCE7E9" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
