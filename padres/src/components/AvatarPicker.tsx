@@ -2,56 +2,58 @@
 
 import { useState, useMemo } from "react";
 
-const GENEROS = ["male", "female"];
-const ESTILOS = ["avataaars", "micah"];
+const ESTILOS = [
+  { id: "avataaars", nombre: "Clásico" },
+  { id: "micah", nombre: "Sobrio" },
+];
+
 const SEMILLAS_BASE = ["Felix", "Aneka", "Salem", "Mia", "Max", "Sassy", "Tinkerbell", "Bootsy"];
 
 interface AvatarPickerProps {
   valorActual: string;
   onSelect: (url: string) => void;
+  genero?: string | null;   // "M" | "F" | null
 }
 
-function generarUrl(estilo: string, semilla: string) {
+function generarUrl(estilo: string, semilla: string, genero: string) {
   return `https://api.dicebear.com/9.x/${estilo}/svg?seed=${encodeURIComponent(
     semilla
-  )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`;
+  )}&gender=${genero}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`;
 }
 
-export default function AvatarPicker({ valorActual, onSelect }: AvatarPickerProps) {
+export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPickerProps) {
   const [estiloSeleccionado, setEstiloSeleccionado] = useState("avataaars");
 
-  // Generar lista de avatares combinando géneros y semillas base
+  // Determinar qué géneros mostrar
+  const generosAMostrar = genero === "M" ? ["male"] : genero === "F" ? ["female"] : ["male", "female"];
+
   const opciones = useMemo(() => {
     const resultado: { url: string; semilla: string }[] = [];
-    for (const estilo of [estiloSeleccionado]) {
-      for (const semilla of SEMILLAS_BASE) {
+    for (const semilla of SEMILLAS_BASE) {
+      for (const gen of generosAMostrar) {
         resultado.push({
-          url: generarUrl(estilo, `${semilla}-${GENEROS[0]}`),
-          semilla: `${semilla} (M)`,
-        });
-        resultado.push({
-          url: generarUrl(estilo, `${semilla}-${GENEROS[1]}`),
-          semilla: `${semilla} (F)`,
+          url: generarUrl(estiloSeleccionado, semilla, gen),
+          semilla: `${semilla} (${gen === "male" ? "M" : "F"})`,
         });
       }
     }
     return resultado;
-  }, [estiloSeleccionado]);
+  }, [estiloSeleccionado, generosAMostrar]);
 
   return (
     <div className="space-y-3">
       <div className="flex justify-center gap-2">
         {ESTILOS.map((estilo) => (
           <button
-            key={estilo}
-            onClick={() => setEstiloSeleccionado(estilo)}
+            key={estilo.id}
+            onClick={() => setEstiloSeleccionado(estilo.id)}
             className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              estiloSeleccionado === estilo
+              estiloSeleccionado === estilo.id
                 ? "bg-accent text-white"
                 : "bg-surface-alt text-text-muted hover:bg-border"
             }`}
           >
-            {estilo === "avataaars" ? "Clásico" : "Sobrio"}
+            {estilo.nombre}
           </button>
         ))}
       </div>

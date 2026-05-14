@@ -76,7 +76,9 @@ useEffect(() => {
 
   const nombreEstudiante = selectedChild?.nombre?.split(" ")[0] || "";
   const generoEstudiante = nombreEstudiante.endsWith("a") ? "female" : "male";
-  const avatarEstudiante = selectedChild
+  const avatarEstudiante = selectedChild?.avatar_url
+  ? selectedChild.avatar_url
+  : selectedChild
     ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
         selectedChild.nombre
       )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`

@@ -7,6 +7,7 @@ import axios from "axios";
 import TabDatos from "./TabDatos";
 import TabSeguridad from "./TabSeguridad";
 import TabPreferencias from "./TabPreferencias";
+import TabHijos from "./TabHijos";
 
 interface ProfileDrawerProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface ProfileDrawerProps {
 }
 
 export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: ProfileDrawerProps) {
-  const [tab, setTab] = useState<"datos" | "seguridad" | "preferencias">("datos");
+  const [tab, setTab] = useState<"datos" | "seguridad" | "preferencias" | "hijos">("datos");
   const [tema, setTema] = useState("claro");
   const [notificaciones, setNotificaciones] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -47,6 +48,7 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
     { key: "datos", label: "Datos", icon: "person" },
     { key: "seguridad", label: "Seguridad", icon: "lock" },
     { key: "preferencias", label: "Preferencias", icon: "tune" },
+    { key: "hijos", label: "Hijos", icon: "child_care" },
   ];
 
   return createPortal(
@@ -92,6 +94,7 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
         <div className="p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
           {tab === "datos" && <TabDatos onAvatarChange={onAvatarChange} />}
           {tab === "seguridad" && <TabSeguridad />}
+          {tab === "hijos" && <TabHijos />}
           {tab === "preferencias" && (
             <TabPreferencias
               temaActual={tema}
@@ -99,6 +102,7 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
               onTemaChange={handleTemaChange}
             />
           )}
+          
         </div>
       </div>
     </div>,

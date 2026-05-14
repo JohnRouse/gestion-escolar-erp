@@ -24,18 +24,19 @@ export class ApoderadosService {
     const apoderado = usuario.persona.apoderados[0];
 
     return {
-      id_usuario: usuario.id_usuario,
-      username: usuario.username,
-      nombres: usuario.persona.nombres,
-      apellido_paterno: usuario.persona.apellido_paterno,
-      apellido_materno: usuario.persona.apellido_materno,
-      correo: usuario.persona.correo,
-      telefono: usuario.persona.telefono,
-      ocupacion: apoderado.ocupacion,
-      tema: usuario.tema,
-      notificaciones_activas: usuario.notificaciones_activas,
-      avatar_url: usuario.avatar_url,
-    };
+  id_usuario: usuario.id_usuario,
+  username: usuario.username,
+  nombres: usuario.persona.nombres,
+  apellido_paterno: usuario.persona.apellido_paterno,
+  apellido_materno: usuario.persona.apellido_materno,
+  genero: usuario.persona.genero,   // 🆕
+  correo: usuario.persona.correo,
+  telefono: usuario.persona.telefono,
+  ocupacion: apoderado.ocupacion,
+  tema: usuario.tema,
+  notificaciones_activas: usuario.notificaciones_activas,
+  avatar_url: usuario.avatar_url,
+};
   }
 
   async updatePerfil(usuarioId: number, data: {

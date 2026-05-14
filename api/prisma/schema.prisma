@@ -158,6 +158,7 @@ model Docente {
 model Estudiante {
   id_persona        Int                   @id
   codigo_estudiante String                @unique @db.VarChar(20)
+  avatar_url        String?               @db.VarChar(255)   // 🆕
   persona           Persona               @relation(fields: [id_persona], references: [id_persona])
   apoderados        ApoderadoEstudiante[]
   matriculas        Matricula[]

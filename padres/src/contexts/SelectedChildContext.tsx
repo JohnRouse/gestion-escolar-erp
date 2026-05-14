@@ -7,6 +7,7 @@ export interface Child {
   nombre: string;
   grado: string;
   color?: string;
+  avatar_url?: string;  // 🆕
 }
 
 interface SelectedChildContextType {

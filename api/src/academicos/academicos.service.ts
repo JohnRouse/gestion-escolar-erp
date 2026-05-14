@@ -354,6 +354,7 @@ async getHijosApoderado(apoderadoId: number) {
     grado: seccion
       ? `${gradoNombre} ${seccion.letra} · ${nivelNombre}`
       : 'Sin matrícula activa',
+    avatar_url: r.estudiante.avatar_url,  // 🆕
   };
 });
 }
