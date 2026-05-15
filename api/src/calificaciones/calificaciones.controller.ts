@@ -104,4 +104,13 @@ async getComentarios(
 ) {
   return this.calificacionesService.getComentarios(Number(alumnoId), Number(bimestreId));
 }
+
+@Get('padres/unidades')
+@Roles('Apoderado', 'Admin')
+async getUnidadesComparativa(
+  @Query('alumno_id') alumnoId: string,
+  @Query('bimestre_id') bimestreId: string,
+) {
+  return this.calificacionesService.getUnidadesComparativa(Number(alumnoId), Number(bimestreId));
+}
 }

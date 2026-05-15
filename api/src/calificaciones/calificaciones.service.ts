@@ -436,4 +436,66 @@ async getComentarios(alumnoId: number, bimestreId: number) {
     };
   });
 }
+
+async getUnidadesComparativa(alumnoId: number, bimestreId: number) {
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    include: { seccion: true },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const bimestre = await this.prisma.bimestre.findFirst({
+    where: { numero: bimestreId, id_anio: matriculaActiva.id_anio },
+    include: { unidades: { orderBy: { numero: 'asc' } } },
+  });
+  if (!bimestre) throw new NotFoundException('Bimestre no encontrado');
+
+  const cursos = await this.prisma.curso.findMany({
+    where: {
+      asignaciones: { some: { id_seccion: matriculaActiva.id_seccion, id_anio: matriculaActiva.id_anio } },
+    },
+    include: {
+      asignaciones: {
+        where: { id_seccion: matriculaActiva.id_seccion, id_anio: matriculaActiva.id_anio },
+        include: {
+          evaluaciones: {
+            where: { unidad: { id_bimestre: bimestre.id_bimestre } },
+            include: { notas: { where: { id_matricula: matriculaActiva.id_matricula } } },
+          },
+        },
+      },
+    },
+  });
+
+  const resultado: {
+    curso: string;
+    unidades: { unidad: number; promedio: number | null }[];
+  }[] = [];
+
+  for (const curso of cursos) {
+    const promediosPorUnidad: { unidad: number; promedio: number | null }[] = [];
+
+    for (const unidad of bimestre.unidades) {
+      const notas: number[] = [];
+      for (const asignacion of curso.asignaciones) {
+        for (const evalDet of asignacion.evaluaciones) {
+          if (evalDet.id_unidad === unidad.id_unidad) {
+            for (const nota of evalDet.notas) {
+              notas.push(Number(nota.valor_nota));
+            }
+          }
+        }
+      }
+      const promedio = notas.length > 0
+        ? Math.round((notas.reduce((s, v) => s + v, 0) / notas.length) * 10) / 10
+        : null;
+
+      promediosPorUnidad.push({ unidad: unidad.numero, promedio });
+    }
+
+    resultado.push({ curso: curso.nombre_curso, unidades: promediosPorUnidad });
+  }
+
+  return resultado;
+}
 }

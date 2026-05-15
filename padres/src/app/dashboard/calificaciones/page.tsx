@@ -7,8 +7,6 @@ import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import ComparativaNotas from "@/components/ComparativaNotas";
-import SemaforoNotas from "@/components/SemaforoNotas";
-import ComentarioDocente from "@/components/ComentarioDocente";
 
 interface Evaluacion { id: number; tipo: string; descripcion: string; valor: number; }
 interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
@@ -42,10 +40,12 @@ export default function CalificacionesPage() {
 
   const promedioGeneral =
     cursos.length > 0
-      ? cursos
-          .filter((c) => c.promedioBimestre !== null)
-          .reduce((s, c) => s + (c.promedioBimestre ?? 0), 0) /
-        cursos.filter((c) => c.promedioBimestre !== null).length
+      ? Math.round(
+          cursos
+            .filter((c) => c.promedioBimestre !== null)
+            .reduce((s, c) => s + (c.promedioBimestre ?? 0), 0) /
+          cursos.filter((c) => c.promedioBimestre !== null).length
+        )
       : null;
 
   return (
@@ -58,7 +58,7 @@ export default function CalificacionesPage() {
             {promedioGeneral !== null && (
               <>
                 <p className="text-4xl font-extrabold text-text dark:text-gray-100">
-                  {promedioGeneral.toFixed(1)}
+                  {promedioGeneral}
                 </p>
                 <p className="text-text-secondary dark:text-gray-400 text-sm mt-1">
                   Promedio del bimestre
@@ -76,7 +76,10 @@ export default function CalificacionesPage() {
             <select
               className="bg-white dark:bg-gray-800 border border-border dark:border-gray-600 rounded-full px-4 py-2 text-sm font-bold text-text dark:text-gray-200"
               value={bimestre}
-              onChange={(e) => setBimestre(Number(e.target.value))}
+              onChange={(e) => {
+                setBimestre(Number(e.target.value));
+                // No cerramos el análisis para que el usuario pueda comparar entre bimestres
+              }}
             >
               <option value={1}>Bimestre I</option>
               <option value={2}>Bimestre II</option>
@@ -89,12 +92,9 @@ export default function CalificacionesPage() {
         {/* Comparativa (colapsable) */}
         {mostrarComparativa && (
           <div className="m-card p-4 animate-fade-in">
-            <ComparativaNotas />
+            <ComparativaNotas bimestre={bimestre} />
           </div>
         )}
-
-        {/* Comentarios del docente */}
-        <ComentarioDocente />
 
         {/* Lista de cursos */}
         {loading ? (
@@ -132,7 +132,7 @@ export default function CalificacionesPage() {
                         : "bg-border text-text-muted"
                     }`}
                   >
-                    {prom !== null ? prom.toFixed(1) : "—"}
+                    {prom !== null ? Math.round(prom) : "—"}
                   </span>
                   <div className="flex-1 text-left">
                     <p className="font-extrabold text-text dark:text-gray-100">{curso.curso}</p>
@@ -157,7 +157,49 @@ export default function CalificacionesPage() {
                 </button>
                 {isOpen && (
                   <div className="border-t border-border dark:border-gray-700 bg-surface-alt dark:bg-gray-800 p-4 space-y-3 text-sm">
-                    <SemaforoNotas unidades={curso.unidades} />
+                    {curso.unidades.map((unidad) => (
+                      <div key={unidad.unidad}>
+                        <p className="text-xs font-bold text-text-secondary dark:text-gray-400 mb-2">
+                          Unidad {unidad.unidad}
+                          {unidad.promedioUnidad !== null && (
+                            <span className="ml-2 text-text dark:text-gray-200 font-bold">
+                              Promedio: {Math.round(unidad.promedioUnidad)}
+                            </span>
+                          )}
+                        </p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-border dark:border-gray-600">
+                                <th className="text-left py-1 text-text-muted font-medium">Evaluación</th>
+                                <th className="text-left py-1 text-text-muted font-medium">Tipo</th>
+                                <th className="text-right py-1 text-text-muted font-medium">Nota</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {unidad.evaluaciones.map((eva) => (
+                                <tr key={eva.id} className="border-b border-border/50 dark:border-gray-700">
+                                  <td className="py-1.5 text-text dark:text-gray-200">{eva.descripcion}</td>
+                                  <td className="py-1.5 text-text-secondary dark:text-gray-400">{eva.tipo}</td>
+                                  <td className="py-1.5 text-right">
+                                    <span className={`inline-flex items-center gap-1 justify-center min-w-[3rem] px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                      Math.round(eva.valor) >= 15 ? 'bg-success-soft text-success' :
+                                      Math.round(eva.valor) >= 11 ? 'bg-warning-soft text-warning' :
+                                      'bg-danger-soft text-danger'
+                                    }`}>
+                                      <span className={`w-2 h-2 rounded-full ${
+                                        Math.round(eva.valor) >= 15 ? 'bg-success' : Math.round(eva.valor) >= 11 ? 'bg-warning' : 'bg-danger'
+                                      }`} />
+                                      {Math.round(eva.valor)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

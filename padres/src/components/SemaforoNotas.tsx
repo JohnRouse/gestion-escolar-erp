@@ -39,18 +39,18 @@ export default function SemaforoNotas({ unidades }: SemaforoNotasProps) {
             {unidad.evaluaciones.map((eva) => (
               <div
                 key={eva.id}
-                className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all ${getColor(eva.valor)}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold transition-all ${getColor(Math.round(eva.valor))}`}
                 title={eva.tipo}
               >
-                <span>{getEmoji(eva.valor)}</span>
+                <span>{getEmoji(Math.round(eva.valor))}</span>
                 <span>{eva.descripcion}</span>
-                <span className="ml-1">{eva.valor}</span>
+                <span className="ml-1">{Math.round(eva.valor)}</span>
               </div>
             ))}
           </div>
           {unidad.promedioUnidad !== null && (
             <p className="text-[11px] text-text-muted mt-1">
-              Promedio unidad: <span className="font-bold text-text">{unidad.promedioUnidad.toFixed(1)}</span>
+              Promedio unidad: <span className="font-bold text-text">{Math.round(unidad.promedioUnidad)}</span>
             </p>
           )}
         </div>
