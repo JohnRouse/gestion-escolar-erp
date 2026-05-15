@@ -86,4 +86,22 @@ export class CalificacionesController {
   ) {
     return this.calificacionesService.getNotasAlumno(Number(alumnoId), Number(bimestreId));
   }
+
+  @Get('padres/comparativa')
+@Roles('Apoderado', 'Admin')
+async getComparativa(
+  @Query('alumno_id') alumnoId: string,
+  @Query('bimestre_id') bimestreId: string,
+) {
+  return this.calificacionesService.getComparativa(Number(alumnoId), Number(bimestreId));
+}
+
+@Get('padres/comentarios')
+@Roles('Apoderado', 'Admin')
+async getComentarios(
+  @Query('alumno_id') alumnoId: string,
+  @Query('bimestre_id') bimestreId: string,
+) {
+  return this.calificacionesService.getComentarios(Number(alumnoId), Number(bimestreId));
+}
 }

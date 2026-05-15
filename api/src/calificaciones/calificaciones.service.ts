@@ -268,4 +268,172 @@ export class CalificacionesService {
 
     return resultado;
   }
+
+  async getComparativa(alumnoId: number, bimestreId: number) {
+  // 1. Obtener la sección activa del alumno
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    include: { seccion: { include: { grado: true } } },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const idSeccion = matriculaActiva.id_seccion;
+  const idAnio = matriculaActiva.id_anio;
+
+  // 2. Evolución: promedio general por bimestre para este alumno
+  const bimestres = await this.prisma.bimestre.findMany({
+    where: { id_anio: idAnio },
+    orderBy: { numero: 'asc' },
+  });
+
+  const evolucion: { bimestre: number; promedio: number | null }[] = [];
+
+  for (const bim of bimestres) {
+    if (bim.numero > bimestreId) break; // solo hasta el bimestre actual
+
+    const notas = await this.prisma.notaAlumno.findMany({
+      where: {
+        matricula: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+        evaluacion: { unidad: { id_bimestre: bim.id_bimestre } },
+      },
+      select: { valor_nota: true },
+    });
+
+    const promedio =
+      notas.length > 0
+        ? Math.round(
+            (notas.reduce((s, n) => s + Number(n.valor_nota), 0) / notas.length) * 10
+          ) / 10
+        : null;
+
+    evolucion.push({ bimestre: bim.numero, promedio });
+  }
+
+  // 3. Radar: por curso en el bimestre actual, promedio del alumno vs sección
+  const bimestreActual = bimestres.find(b => b.numero === bimestreId);
+  if (!bimestreActual) throw new NotFoundException('Bimestre no encontrado');
+
+  const cursos = await this.prisma.curso.findMany({
+    where: {
+      asignaciones: {
+        some: {
+          id_seccion: idSeccion,
+          id_anio: idAnio,
+        },
+      },
+    },
+    include: {
+      asignaciones: {
+        where: { id_seccion: idSeccion, id_anio: idAnio },
+        include: {
+          evaluaciones: {
+            where: { unidad: { id_bimestre: bimestreActual.id_bimestre } },
+            include: { notas: true },
+          },
+        },
+      },
+    },
+  });
+
+  const radar: {
+    curso: string;
+    promedioAlumno: number | null;
+    promedioSeccion: number | null;
+  }[] = [];
+
+  for (const curso of cursos) {
+    // Notas del alumno en este curso y bimestre
+    const notasAlumno: number[] = [];
+    // Notas de toda la sección en este curso y bimestre
+    const notasSeccion: number[] = [];
+
+    for (const asignacion of curso.asignaciones) {
+      for (const evalDet of asignacion.evaluaciones) {
+        for (const nota of evalDet.notas) {
+          const valor = Number(nota.valor_nota);
+          // Si la nota pertenece al alumno
+          if (nota.id_matricula === matriculaActiva.id_matricula) {
+            notasAlumno.push(valor);
+          }
+          // Todas las notas de la sección
+          notasSeccion.push(valor);
+        }
+      }
+    }
+
+    const promedioAlumno =
+      notasAlumno.length > 0
+        ? Math.round((notasAlumno.reduce((s, v) => s + v, 0) / notasAlumno.length) * 10) / 10
+        : null;
+
+    const promedioSeccion =
+      notasSeccion.length > 0
+        ? Math.round((notasSeccion.reduce((s, v) => s + v, 0) / notasSeccion.length) * 10) / 10
+        : null;
+
+    radar.push({ curso: curso.nombre_curso, promedioAlumno, promedioSeccion });
+  }
+
+  // 4. Generar mensaje comparativo
+  const cursoDestacado = radar
+    .filter(c => c.promedioAlumno !== null && c.promedioSeccion !== null)
+    .sort((a, b) => (b.promedioAlumno! - b.promedioSeccion!) - (a.promedioAlumno! - a.promedioSeccion!))[0];
+
+  let mensaje = '';
+  if (cursoDestacado) {
+    const diff = cursoDestacado.promedioAlumno! - cursoDestacado.promedioSeccion!;
+    if (diff > 0) {
+      mensaje = `¡Muy bien! En ${cursoDestacado.curso} supera el promedio de su sección por ${diff.toFixed(1)} puntos.`;
+    } else if (diff < 0) {
+      mensaje = `En ${cursoDestacado.curso} está ${Math.abs(diff).toFixed(1)} puntos por debajo del promedio de su sección.`;
+    } else {
+      mensaje = `En ${cursoDestacado.curso} está igual que el promedio de su sección.`;
+    }
+  } else {
+    mensaje = 'Aún no hay suficientes datos comparativos.';
+  }
+
+  return { evolucion, radar, mensaje };
+}
+
+async getComentarios(alumnoId: number, bimestreId: number) {
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const notas = await this.prisma.notaAlumno.findMany({
+    where: {
+      id_matricula: matriculaActiva.id_matricula,
+      comentario: { not: null },
+      evaluacion: {
+        unidad: { id_bimestre: bimestreId },
+      },
+    },
+    include: {
+      evaluacion: {
+        include: {
+          tipo: true,
+          asignacion: { include: { curso: true } },
+        },
+      },
+    },
+    orderBy: { id_nota: 'desc' },
+  });
+
+  return notas.map((n) => {
+    const valor = Number(n.valor_nota);
+    let emocion = 'neutral';
+    if (valor >= 14) emocion = 'positiva';
+    else if (valor < 11) emocion = 'preocupante';
+
+    return {
+      curso: n.evaluacion.asignacion.curso.nombre_curso,
+      tipo: n.evaluacion.tipo.nombre_tipo,
+      comentario: n.comentario,
+      valor_nota: valor,
+      emocion,
+    };
+  });
+}
 }
