@@ -12,7 +12,7 @@ const SEMILLAS_BASE = ["Felix", "Aneka", "Salem", "Mia", "Max", "Sassy", "Tinker
 interface AvatarPickerProps {
   valorActual: string;
   onSelect: (url: string) => void;
-  genero?: string | null;   // "M" | "F" | null
+  genero?: string | null;
 }
 
 function generarUrl(estilo: string, semilla: string, genero: string) {
@@ -24,7 +24,6 @@ function generarUrl(estilo: string, semilla: string, genero: string) {
 export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPickerProps) {
   const [estiloSeleccionado, setEstiloSeleccionado] = useState("avataaars");
 
-  // Determinar qué géneros mostrar
   const generosAMostrar = genero === "M" ? ["male"] : genero === "F" ? ["female"] : ["male", "female"];
 
   const opciones = useMemo(() => {
@@ -50,7 +49,7 @@ export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPi
             className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
               estiloSeleccionado === estilo.id
                 ? "bg-accent text-white"
-                : "bg-surface-alt text-text-muted hover:bg-border"
+                : "bg-surface-alt text-text-muted hover:bg-border dark:bg-gray-700 dark:text-gray-300"
             }`}
           >
             {estilo.nombre}
@@ -58,15 +57,15 @@ export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPi
         ))}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
+      <div className="avatar-grid custom-scrollbar">
         {opciones.map((op, idx) => (
           <button
             key={idx}
             onClick={() => onSelect(op.url)}
             className={`p-1 rounded-xl border-2 transition-all ${
               valorActual === op.url
-                ? "border-accent bg-accent-soft"
-                : "border-transparent hover:border-border"
+                ? "border-accent bg-accent-soft dark:bg-accent/20"
+                : "border-transparent hover:border-border dark:hover:border-gray-600"
             }`}
             title={op.semilla}
           >

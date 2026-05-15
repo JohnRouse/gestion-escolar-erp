@@ -55,7 +55,7 @@ export default function TabSeguridad() {
         <div className="relative">
           <input
             type={mostrarActual ? "text" : "password"}
-            className="input pr-10"
+            className="input-underline pr-10"
             value={actual}
             onChange={(e) => setActual(e.target.value)}
             placeholder="••••••••"
@@ -79,7 +79,7 @@ export default function TabSeguridad() {
         <div className="relative">
           <input
             type={mostrarNueva ? "text" : "password"}
-            className="input pr-10"
+            className="input-underline pr-10"
             value={nueva}
             onChange={(e) => setNueva(e.target.value)}
             placeholder="Mínimo 6 caracteres"
@@ -94,6 +94,7 @@ export default function TabSeguridad() {
             </span>
           </button>
         </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Mínimo 6 caracteres</p>
       </div>
 
       <div>
@@ -102,7 +103,7 @@ export default function TabSeguridad() {
         </label>
         <input
           type="password"
-          className="input"
+          className="input-underline"
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}
           placeholder="Repite la nueva contraseña"
@@ -118,7 +119,7 @@ export default function TabSeguridad() {
       <button
         onClick={handleCambiar}
         disabled={guardando}
-        className="btn btn-primary w-full"
+        className="btn-contained"
       >
         {guardando ? "Cambiando..." : "Cambiar contraseña"}
       </button>

@@ -8,6 +8,7 @@
   --color-primary-light: #1E293B;
   --color-primary-dark: #020617;
   --color-accent: #D97706;
+  --color-accent-dark: #B45309;
   --color-accent-light: #FDE68A;
   --color-accent-soft: #FEF3C7;
   --color-surface: #FFFFFF;
@@ -84,7 +85,101 @@ body {
   animation: slideLeft 0.3s cubic-bezier(.2,.9,.25,1) both;
 }
 
-/* Modo oscuro */
+/* ── Drawer & Tabs ── */
+.profile-drawer {
+  @apply bg-white;
+}
+.dark .profile-drawer {
+  background-color: #0F172A;
+}
+
+.profile-tab {
+  @apply flex items-center justify-center gap-1.5 py-3 text-xs font-bold transition-all;
+}
+.profile-tab span {
+  @apply leading-none;
+}
+
+/* ── Inputs tipo "underline" ── */
+.input-underline {
+  @apply w-full bg-transparent border-0 border-b border-gray-300
+         px-0 py-2.5 text-sm text-text
+         placeholder:text-gray-400
+         focus:outline-none focus:border-accent focus:ring-0 transition-colors;
+}
+.dark .input-underline {
+  border-color: #475569;
+  color: #E2E8F0;
+}
+.dark .input-underline::placeholder {
+  color: #64748B;
+}
+
+/* ── Botones "contained" naranja ── */
+.btn-contained {
+  @apply w-full py-3 rounded-xl bg-accent text-white font-bold text-sm
+         shadow-md hover:bg-accent-dark active:scale-[0.98] transition-all;
+}
+
+/* ── Grid de avatares ── */
+.avatar-grid {
+  @apply grid grid-cols-4 gap-3 max-h-52 overflow-y-auto p-1;
+}
+
+/* ── Chips de selección ── */
+.chip-select {
+  @apply px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all;
+}
+.chip-active {
+  @apply bg-accent text-white;
+}
+.chip-inactive {
+  @apply bg-surface-alt text-text-muted hover:bg-border;
+}
+.dark .chip-inactive {
+  background-color: #374151;
+  color: #D1D5DB;
+}
+.dark .chip-inactive:hover {
+  background-color: #4B5563;
+}
+
+/* ── Scrollbar personalizada ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* ── Tarjetas de tema ── */
+.theme-card {
+  @apply flex-1 p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2;
+}
+.theme-card-selected {
+  @apply border-accent bg-accent-soft;
+}
+.dark .theme-card-selected {
+  background-color: rgba(217,119,6,0.2);
+}
+.theme-card-unselected {
+  @apply border-border hover:bg-surface-alt;
+}
+.dark .theme-card-unselected {
+  border-color: #4B5563;
+}
+.dark .theme-card-unselected:hover {
+  background-color: #374151;
+}
+
+/* ── Modo oscuro global ── */
 .dark body {
   background-color: #0F172A;
   color: #E2E8F0;
@@ -129,8 +224,9 @@ body {
   border-color: #334155;
 }
 
-.dark .btn-accent {
-  @apply bg-accent text-primary;
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B;
 }
 
 .dark .press {
@@ -139,52 +235,4 @@ body {
 
 .dark .skel {
   background: linear-gradient(90deg, #334155 0%, #1E293B 50%, #334155 100%);
-}
-
-.dark .bg-brand-paper {
-  background-color: #0F172A;
-}
-
-.dark .text-brand-ink {
-  color: #F1F5F9;
-}
-
-.dark .text-brand-inkSoft {
-  color: #94A3B8;
-}
-
-.dark .bg-brand-redSoft {
-  background-color: #1E293B;
-}
-
-.dark .border-brand-line {
-  border-color: #334155;
-}
-
-.dark .m-card {
-  background-color: #1E293B;
-  border-color: #334155;
-  color: #F1F5F9;
-}
-
-.dark .m-card .text-text {
-  color: #F1F5F9;
-}
-
-.dark .m-card .text-text-secondary {
-  color: #94A3B8;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #64748B;
-}
-
-.dark .btn-primary {
-  background-color: #D97706;
-  color: #0F172A;
-}
-
-.dark .btn-primary:hover {
-  background-color: #B45309;
 }

@@ -7,7 +7,7 @@ export interface Child {
   nombre: string;
   grado: string;
   color?: string;
-  avatar_url?: string;  // 🆕
+  avatar_url?: string;
 }
 
 interface SelectedChildContextType {
@@ -23,7 +23,6 @@ export function SelectedChildProvider({ children }: { children: ReactNode }) {
   const [selectedChild, setSelectedChildState] = useState<Child | null>(null);
   const [hijos, setHijos] = useState<Child[]>([]);
 
-  // Cargar el hijo guardado al montar el componente en cliente
   useEffect(() => {
     const saved = localStorage.getItem('selectedChild');
     if (saved) {
@@ -38,8 +37,6 @@ export function SelectedChildProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selectedChild', JSON.stringify(child));
   };
 
-  // Sincronizar: cuando se cargan los hijos, si no hay hijo seleccionado o el
-  // hijo guardado no está en la lista, seleccionar el primero.
   useEffect(() => {
     if (hijos.length === 0) return;
     if (!selectedChild) {

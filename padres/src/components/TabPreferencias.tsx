@@ -16,16 +16,16 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
   const [mensaje, setMensaje] = useState("");
 
   const handleTemaChange = async (nuevoTema: string) => {
-  setTema(nuevoTema);
-  localStorage.setItem('tema', nuevoTema);
-  if (nuevoTema === 'oscuro') {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-  onTemaChange(nuevoTema);
-  await guardarPreferencias(nuevoTema, notificaciones);
-};
+    setTema(nuevoTema);
+    localStorage.setItem("tema", nuevoTema);
+    if (nuevoTema === "oscuro") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    onTemaChange(nuevoTema);
+    await guardarPreferencias(nuevoTema, notificaciones);
+  };
 
   const handleNotificacionesChange = async (valor: boolean) => {
     setNotificaciones(valor);
@@ -55,13 +55,13 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
       {/* Toggle de notificaciones */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-text">Notificaciones</p>
+          <p className="text-sm font-bold text-text dark:text-gray-100">Notificaciones</p>
           <p className="text-xs text-text-muted">Recibir notificaciones del colegio</p>
         </div>
         <button
           onClick={() => handleNotificacionesChange(!notificaciones)}
           className={`w-12 h-7 rounded-full transition-colors relative ${
-            notificaciones ? "bg-accent" : "bg-border"
+            notificaciones ? "bg-accent" : "bg-border dark:bg-gray-600"
           }`}
         >
           <span
@@ -74,30 +74,26 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
 
       {/* Selector de tema */}
       <div>
-        <p className="text-sm font-bold text-text mb-2">Tema</p>
+        <p className="text-sm font-bold text-text dark:text-gray-100 mb-2">Tema</p>
         <p className="text-xs text-text-muted mb-3">Elige la apariencia de la aplicación</p>
         <div className="flex gap-2">
           <button
             onClick={() => handleTemaChange("claro")}
-            className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-              tema === "claro"
-                ? "border-accent bg-accent-soft"
-                : "border-border hover:bg-surface-alt"
-            }`}
+            className={`theme-card ${tema === "claro" ? "theme-card-selected" : "theme-card-unselected"}`}
           >
             <span className="text-2xl">☀️</span>
-            <p className="text-xs font-bold mt-1">Claro</p>
+            <span className={`text-xs font-bold ${tema === "claro" ? "text-text dark:text-gray-900" : "text-text-muted"}`}>
+              Claro
+            </span>
           </button>
           <button
             onClick={() => handleTemaChange("oscuro")}
-            className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-              tema === "oscuro"
-                ? "border-accent bg-accent-soft"
-                : "border-border hover:bg-surface-alt"
-            }`}
+            className={`theme-card ${tema === "oscuro" ? "theme-card-selected" : "theme-card-unselected"}`}
           >
             <span className="text-2xl">🌙</span>
-            <p className="text-xs font-bold mt-1">Oscuro</p>
+            <span className={`text-xs font-bold ${tema === "oscuro" ? "text-gray-900" : "text-text-muted"}`}>
+              Oscuro
+            </span>
           </button>
         </div>
       </div>

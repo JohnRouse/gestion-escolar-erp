@@ -8,6 +8,7 @@ interface Perfil {
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string;
+  genero: string;
   correo: string;
   telefono: string;
   ocupacion: string;
@@ -15,11 +16,10 @@ interface Perfil {
 }
 
 interface TabDatosProps {
-  onSave?: () => void;
   onAvatarChange?: (url: string) => void;
 }
 
-export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
+export default function TabDatos({ onAvatarChange }: TabDatosProps) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -64,10 +64,9 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMensaje("✅ Datos actualizados correctamente");
       localStorage.setItem('avatar_url', avatar);
-      onSave?.();
       onAvatarChange?.(avatar);
+      setMensaje("✅ Datos actualizados correctamente");
     } catch {
       setMensaje("❌ Error al guardar los cambios");
     } finally {
@@ -88,10 +87,16 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
 
   return (
     <div className="space-y-4">
-      <AvatarPicker valorActual={avatar} onSelect={setAvatar} />
+      <AvatarPicker
+        valorActual={avatar}
+        onSelect={setAvatar}
+        genero={perfil?.genero}
+      />
 
       <div>
-        <p className="text-sm font-bold text-text">{perfil?.nombres} {perfil?.apellido_paterno} {perfil?.apellido_materno}</p>
+        <p className="text-sm font-bold text-text dark:text-gray-100">
+          {perfil?.nombres} {perfil?.apellido_paterno} {perfil?.apellido_materno}
+        </p>
         <p className="text-xs text-text-muted">Apoderado</p>
       </div>
 
@@ -99,7 +104,7 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
         <label className="block text-xs font-semibold text-text-muted mb-1">Correo electrónico</label>
         <input
           type="email"
-          className="input"
+          className="input-underline"
           value={correo}
           onChange={(e) => setCorreo(e.target.value)}
           placeholder="correo@ejemplo.com"
@@ -110,7 +115,7 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
         <label className="block text-xs font-semibold text-text-muted mb-1">Teléfono</label>
         <input
           type="text"
-          className="input"
+          className="input-underline"
           value={telefono}
           onChange={(e) => setTelefono(e.target.value)}
           placeholder="999 888 777"
@@ -121,7 +126,7 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
         <label className="block text-xs font-semibold text-text-muted mb-1">Ocupación</label>
         <input
           type="text"
-          className="input"
+          className="input-underline"
           value={ocupacion}
           onChange={(e) => setOcupacion(e.target.value)}
           placeholder="Ej. Ingeniero"
@@ -137,7 +142,7 @@ export default function TabDatos({ onSave, onAvatarChange }: TabDatosProps) {
       <button
         onClick={handleGuardar}
         disabled={guardando}
-        className="btn btn-primary w-full"
+        className="btn-contained"
       >
         {guardando ? "Guardando..." : "Guardar cambios"}
       </button>

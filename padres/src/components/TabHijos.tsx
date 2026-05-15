@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import AvatarPicker from "./AvatarPicker";
 import { useSelectedChild, type Child } from "@/contexts/SelectedChildContext";
+import AvatarPicker from "./AvatarPicker";
 
 export default function TabHijos() {
   const { selectedChild, setSelectedChild, hijos, setHijos } = useSelectedChild();
@@ -31,13 +31,12 @@ export default function TabHijos() {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Actualizar el hijo en el contexto local
-const updatedHijos = hijos.map((h) =>
-  h.id_estudiante === hijoSeleccionado ? { ...h, avatar_url: avatarTmp } : h
-);
-setHijos(updatedHijos);
 
-      // Si el hijo modificado es el que está seleccionado actualmente, actualizar selectedChild
+      const updatedHijos = hijos.map((h) =>
+        h.id_estudiante === hijoSeleccionado ? { ...h, avatar_url: avatarTmp } : h
+      );
+      setHijos(updatedHijos);
+
       if (selectedChild?.id_estudiante === hijoSeleccionado) {
         setSelectedChild({
           ...selectedChild,
@@ -56,24 +55,22 @@ setHijos(updatedHijos);
   return (
     <div className="space-y-4">
       {hijos.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {hijos.map((h) => (
-            <button
-              key={h.id_estudiante}
-              onClick={() => {
-                setHijoSeleccionado(h.id_estudiante);
-                setAvatarTmp(h.avatar_url || "");
-              }}
-              className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                hijoSeleccionado === h.id_estudiante
-                  ? "bg-accent text-white"
-                  : "bg-surface-alt text-text-muted hover:bg-border"
-              }`}
-            >
-              {h.nombre}
-            </button>
-          ))}
-        </div>
+        <div className="flex flex-wrap justify-center gap-2 pb-2">
+  {hijos.map((h) => (
+    <button
+      key={h.id_estudiante}
+      onClick={() => {
+        setHijoSeleccionado(h.id_estudiante);
+        setAvatarTmp(h.avatar_url || "");
+      }}
+      className={`chip-select ${
+        hijoSeleccionado === h.id_estudiante ? "chip-active" : "chip-inactive"
+      }`}
+    >
+      {h.nombre}
+    </button>
+  ))}
+</div>
       )}
 
       {hijoActual && (
@@ -91,7 +88,7 @@ setHijos(updatedHijos);
               className="w-16 h-16 rounded-full border-2 border-accent"
             />
             <div>
-              <p className="font-extrabold text-text">{hijoActual.nombre}</p>
+              <p className="font-extrabold text-text dark:text-gray-100">{hijoActual.nombre}</p>
               <p className="text-xs text-text-muted">{hijoActual.grado}</p>
             </div>
           </div>
@@ -111,7 +108,7 @@ setHijos(updatedHijos);
           <button
             onClick={handleGuardarAvatarHijo}
             disabled={guardando}
-            className="btn btn-primary w-full"
+            className="btn-contained"
           >
             {guardando ? "Guardando..." : "Guardar avatar del estudiante"}
           </button>

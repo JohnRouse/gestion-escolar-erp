@@ -39,7 +39,12 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
 
   const handleTemaChange = (nuevoTema: string) => {
     setTema(nuevoTema);
-    document.documentElement.classList.toggle("dark", nuevoTema === "oscuro");
+    localStorage.setItem("tema", nuevoTema);
+    if (nuevoTema === "oscuro") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   };
 
   if (!isOpen || !mounted) return null;
@@ -53,48 +58,44 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
 
   return createPortal(
     <div className="fixed inset-0 z-[100]">
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
         onClick={onClose}
       />
-
-      {/* Drawer */}
-      <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-2xl animate-slide-left">
+      <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] profile-drawer shadow-2xl animate-slide-left custom-scrollbar">
         {/* Encabezado */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-extrabold text-text">Mi Perfil</h2>
+        <div className="flex items-center justify-between p-4 border-b border-border dark:border-gray-700">
+          <h2 className="text-lg font-extrabold text-text dark:text-gray-100">Mi Perfil</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-surface-alt flex items-center justify-center"
+            className="w-8 h-8 rounded-full hover:bg-surface-alt dark:hover:bg-gray-700 flex items-center justify-center"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border">
+        <div className="flex border-b border-border dark:border-gray-700">
           {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key as any)}
-              className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 ${
-                tab === t.key
-                  ? "border-accent text-accent"
-                  : "border-transparent text-text-muted hover:text-text"
-              }`}
-            >
-              <span className="material-symbols-rounded text-sm mr-1">{t.icon}</span>
-              {t.label}
-            </button>
-          ))}
+  <button
+    key={t.key}
+    onClick={() => setTab(t.key as any)}
+    className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs font-bold transition-all border-b-2 ${
+      tab === t.key
+        ? "border-accent text-accent"
+        : "border-transparent text-text-muted hover:text-text dark:text-gray-400 dark:hover:text-gray-200"
+    }`}
+  >
+    <span className="material-symbols-rounded text-lg">{t.icon}</span>
+    <span>{t.label}</span>
+  </button>
+))}
         </div>
 
         {/* Contenido */}
-        <div className="p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
+        <div className="p-4 overflow-y-auto custom-scrollbar" style={{ maxHeight: "calc(100vh - 140px)" }}>
           {tab === "datos" && <TabDatos onAvatarChange={onAvatarChange} />}
           {tab === "seguridad" && <TabSeguridad />}
-          {tab === "hijos" && <TabHijos />}
           {tab === "preferencias" && (
             <TabPreferencias
               temaActual={tema}
@@ -102,7 +103,7 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange }: Profi
               onTemaChange={handleTemaChange}
             />
           )}
-          
+          {tab === "hijos" && <TabHijos />}
         </div>
       </div>
     </div>,

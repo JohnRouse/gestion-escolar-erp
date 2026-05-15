@@ -7,7 +7,7 @@ import { useSelectedChild } from "@/contexts/SelectedChildContext";
 const navItems = [
   { label: "Inicio", icon: "home", path: "/dashboard" },
   { label: "Notas", icon: "description", path: "/dashboard/calificaciones" },
-  null, // espacio para el Student Switcher
+  null,
   { label: "Asistencia", icon: "event_available", path: "/dashboard/asistencia" },
   { label: "Pagos", icon: "credit_card", path: "/dashboard/pagos" },
 ];
@@ -21,25 +21,25 @@ export default function BottomNav() {
   const nombreEstudiante = selectedChild?.nombre?.split(" ")[0] || "";
   const generoEstudiante = nombreEstudiante.endsWith("a") ? "female" : "male";
   const avatarUrl = selectedChild?.avatar_url
-  ? selectedChild.avatar_url
-  : selectedChild
-    ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-        selectedChild.nombre
-      )}&gender=${nombreEstudiante.endsWith("a") ? "female" : "male"}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
-    : null;
+    ? selectedChild.avatar_url
+    : selectedChild
+      ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
+          selectedChild.nombre
+        )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+      : null;
 
   const colorBorde = selectedChild?.color || "#D97706";
 
   const handleChildToggle = () => {
-  if (hijos.length === 1) {
-    setShowChildSheet(true);
-  } else if (hijos.length === 2) {
-    const otro = hijos.find((h) => h.id_estudiante !== selectedChild?.id_estudiante);
-    if (otro) setSelectedChild(otro);
-  } else {
-    setShowChildSheet(!showChildSheet);
-  }
-};
+    if (hijos.length === 1) {
+      setShowChildSheet(true);
+    } else if (hijos.length === 2) {
+      const otro = hijos.find((h) => h.id_estudiante !== selectedChild?.id_estudiante);
+      if (otro) setSelectedChild(otro);
+    } else {
+      setShowChildSheet(!showChildSheet);
+    }
+  };
 
   return (
     <>
@@ -49,7 +49,6 @@ export default function BottomNav() {
       >
         <div className="grid grid-cols-5 items-end px-2 pt-1 pb-2 max-w-[420px] mx-auto">
           {navItems.map((item, idx) => {
-            // Espacio del Student Switcher
             if (item === null) {
               return (
                 <div key="child-switcher" className="flex flex-col items-center">
@@ -65,12 +64,11 @@ export default function BottomNav() {
                     )}
                   </button>
                   <span className="text-[10px] font-bold text-text-secondary mt-0.5">
-  {nombreEstudiante || "Estudiante"}
-</span>
+                    {nombreEstudiante || "Estudiante"}
+                  </span>
                 </div>
               );
             }
-            // Ítems normales
             return (
               <button
                 key={item.path}
@@ -87,7 +85,6 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* Bottom Sheet para 3+ hijos */}
       {showChildSheet && hijos.length >= 1 && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setShowChildSheet(false)} />
@@ -107,9 +104,12 @@ export default function BottomNav() {
                   }`}
                 >
                   <img
-                    src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(h.nombre)}&gender=${
-                      h.nombre.split(" ")[0].endsWith("a") ? "female" : "male"
-                    }&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`}
+                    src={
+                      h.avatar_url ||
+                      `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(h.nombre)}&gender=${
+                        h.nombre.split(" ")[0].endsWith("a") ? "female" : "male"
+                      }&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+                    }
                     alt={h.nombre}
                     className="w-10 h-10 rounded-full border-2"
                     style={{ borderColor: h.color || "#D97706" }}

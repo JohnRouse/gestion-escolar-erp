@@ -19,6 +19,10 @@ export default function DashboardHeader() {
   const [greeting, setGreeting] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const [avatarApoderado, setAvatarApoderado] = useState(
+    `https://api.dicebear.com/9.x/avataaars/svg?seed=usuario&gender=male&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+  );
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -28,7 +32,15 @@ export default function DashboardHeader() {
     const hour = new Date().getHours();
     const g = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
     setGreeting(g);
+
+    const savedAvatar = localStorage.getItem('avatar_url');
+    if (savedAvatar) setAvatarApoderado(savedAvatar);
   }, []);
+
+  const updateAvatar = (newUrl: string) => {
+    setAvatarApoderado(newUrl);
+    localStorage.setItem('avatar_url', newUrl);
+  };
 
   const fetchHijos = async (token: string) => {
     try {
@@ -55,50 +67,25 @@ export default function DashboardHeader() {
   };
 
   const nombreApoderado = user?.nombre?.split(" ")[0] || "Apoderado";
-  let generoApoderado = "male";
-  if (user?.genero) {
-    generoApoderado = user.genero === "F" ? "female" : "male";
-  } else {
-    generoApoderado = nombreApoderado.endsWith("a") ? "female" : "male";
-  }
-  const [avatarApoderado, setAvatarApoderado] = useState(
-  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-    user?.nombre || "usuario"
-  )}&gender=${generoApoderado}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
-);
-
-useEffect(() => {
-  const saved = localStorage.getItem('avatar_url');
-  if (saved) {
-    setAvatarApoderado(saved);
-  }
-}, []);
 
   const nombreEstudiante = selectedChild?.nombre?.split(" ")[0] || "";
   const generoEstudiante = nombreEstudiante.endsWith("a") ? "female" : "male";
   const avatarEstudiante = selectedChild?.avatar_url
-  ? selectedChild.avatar_url
-  : selectedChild
-    ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-        selectedChild.nombre
-      )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
-    : "";
-
-    const updateAvatar = (newUrl: string) => {
-  setAvatarApoderado(newUrl);
-  localStorage.setItem('avatar_url', newUrl);
-};
+    ? selectedChild.avatar_url
+    : selectedChild
+      ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
+          selectedChild.nombre
+        )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+      : "";
 
   return (
     <header className="bg-primary pt-12 pb-6 px-5 relative">
-      {/* Decorativos contenidos */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute right-[-30px] top-[-30px] w-44 h-44 rounded-full bg-white/5 blur-2xl" />
         <div className="absolute left-[-20px] bottom-[-30px] w-32 h-32 rounded-full bg-accent/10 blur-2xl" />
       </div>
 
       <div className="relative z-10 flex items-center gap-3">
-        {/* Botón de perfil (abre el drawer) */}
         <button
           onClick={() => setProfileOpen(true)}
           className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-md"
@@ -125,7 +112,6 @@ useEffect(() => {
           <p className="text-white text-lg font-extrabold leading-tight">{nombreApoderado}</p>
         </div>
 
-        {/* Campana de notificaciones */}
         <NotificationBell />
 
         <button
@@ -137,7 +123,6 @@ useEffect(() => {
         </button>
       </div>
 
-      {/* Tarjeta del estudiante */}
       {selectedChild && (
         <div className="mt-4 m-card p-4 animate-fade-in relative z-10">
           <p className="text-[10px] tracking-[.22em] text-text-muted font-bold uppercase">ESTUDIANTE</p>
@@ -156,12 +141,11 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Drawer de perfil */}
       <ProfileDrawer
-  isOpen={profileOpen}
-  onClose={() => setProfileOpen(false)}
-  onAvatarChange={updateAvatar}
-/>
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onAvatarChange={updateAvatar}
+      />
     </header>
   );
 }
