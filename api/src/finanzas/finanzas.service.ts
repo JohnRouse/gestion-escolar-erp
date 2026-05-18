@@ -143,4 +143,110 @@ export class FinanzasService {
       where: { estado_pago: { in: ['Pendiente', 'Vencido'] } },
     });
   }
+
+  async crearPagoExtraordinario(dto: any) {
+  const anioActivo = await this.prisma.anioLectivo.findFirst({
+    where: { estado: 'Abierto' },
+    orderBy: { fecha_inicio: 'desc' },
+  });
+  if (!anioActivo) throw new BadRequestException('No hay año lectivo activo');
+
+  // 1. Crear el concepto
+  const concepto = await this.prisma.conceptoPago.create({
+    data: {
+      nombre_concepto: dto.nombre_concepto,
+      monto_base: dto.monto,
+      id_anio: anioActivo.id_anio,
+      es_pension: false,
+      es_extraordinario: true,
+    },
+  });
+
+  const fechaVencimiento = dto.fecha_vencimiento
+    ? new Date(dto.fecha_vencimiento)
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // por defecto +7 días
+
+  // 2. Determinar los estudiantes
+  const idsEstudiantes = new Set<number>();
+
+  if (dto.estudiantes?.length) {
+    for (const id of dto.estudiantes) idsEstudiantes.add(id);
+  }
+
+  if (dto.niveles?.length) {
+    const matriculasNivel = await this.prisma.matricula.findMany({
+      where: {
+        estado_matricula: 'Activo',
+        id_anio: anioActivo.id_anio,
+        seccion: { grado: { id_nivel: { in: dto.niveles } } },
+      },
+      select: { id_estudiante: true },
+    });
+    for (const m of matriculasNivel) idsEstudiantes.add(m.id_estudiante);
+  }
+
+  if (dto.secciones?.length) {
+    const matriculasSeccion = await this.prisma.matricula.findMany({
+      where: {
+        estado_matricula: 'Activo',
+        id_anio: anioActivo.id_anio,
+        id_seccion: { in: dto.secciones },
+      },
+      select: { id_estudiante: true },
+    });
+    for (const m of matriculasSeccion) idsEstudiantes.add(m.id_estudiante);
+  }
+
+  if (idsEstudiantes.size === 0) {
+    throw new BadRequestException('No se encontraron estudiantes para asignar el cobro');
+  }
+
+  // 3. Crear cronograma para cada estudiante
+  const matriculas = await this.prisma.matricula.findMany({
+    where: {
+      id_estudiante: { in: Array.from(idsEstudiantes) },
+      estado_matricula: 'Activo',
+      id_anio: anioActivo.id_anio,
+    },
+    select: { id_matricula: true, id_estudiante: true },
+  });
+
+  let totalCreados = 0;
+
+  for (const mat of matriculas) {
+  const nuevoCronograma = await this.prisma.cronogramaPagos.create({
+    data: {
+      id_matricula: mat.id_matricula,
+      id_concepto: concepto.id_concepto,
+      fecha_vencimiento: fechaVencimiento,
+      estado_pago: 'Pendiente',
+    },
+  });
+  totalCreados++;
+
+  // Obtener el nombre del estudiante
+  const estudiante = await this.prisma.estudiante.findUnique({
+    where: { id_persona: mat.id_estudiante },
+    include: { persona: true },
+  });
+  const nombreEstudiante = estudiante
+    ? `${estudiante.persona.nombres} ${estudiante.persona.apellido_paterno}`
+    : 'su hijo';
+
+  // Notificar al apoderado
+  await this.notificacionesService.notificarApoderadosDeAlumno(
+    mat.id_estudiante,
+    'administrativa',
+    'Nuevo pago pendiente',
+    `Nuevo pago para ${nombreEstudiante}: "${dto.nombre_concepto}" por S/ ${dto.monto.toFixed(2)}.`,
+    `/dashboard/pagos?alumno_id=${mat.id_estudiante}&cronograma_id=${nuevoCronograma.id_cronograma}`,
+  );
+}
+
+  return {
+    message: `Concepto creado y ${totalCreados} cronogramas generados`,
+    id_concepto: concepto.id_concepto,
+    total_afectados: totalCreados,
+  };
+}
 }

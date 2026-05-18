@@ -6,6 +6,7 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import PageTransition from "@/components/PageTransition";
 
 interface AsistenciaItem { fecha: string; estado: string; }
 
@@ -54,6 +55,7 @@ export default function AsistenciaPage() {
   return (
     <main className="min-h-screen bg-surface-alt pb-20">
       <ScreenHeader title="Asistencia" />
+      <PageTransition>
       <div className="px-5 pt-4">
         <div className="flex items-center gap-5 mb-5">
           <div className="relative w-24 h-24">
@@ -120,6 +122,7 @@ export default function AsistenciaPage() {
           })
         )}
       </div>
+      </PageTransition>
       <BottomNav />
     </main>
   );

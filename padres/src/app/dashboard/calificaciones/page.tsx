@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import ComparativaNotas from "@/components/ComparativaNotas";
+import PageTransition from "@/components/PageTransition";
 
 interface Evaluacion { id: number; tipo: string; descripcion: string; valor: number; }
 interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
@@ -51,6 +52,7 @@ export default function CalificacionesPage() {
   return (
     <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
       <ScreenHeader title="Calificaciones" />
+      <PageTransition>
       <div className="px-5 pt-5 pb-4 space-y-3">
         {/* Cabecera */}
         <div className="flex items-center justify-between">
@@ -207,6 +209,7 @@ export default function CalificacionesPage() {
           })
         )}
       </div>
+      </PageTransition>
       <BottomNav />
     </main>
   );

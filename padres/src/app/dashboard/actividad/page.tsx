@@ -6,6 +6,7 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import PageTransition from "@/components/PageTransition";
 
 interface EventoActividad {
   tipo: string;
@@ -44,6 +45,7 @@ export default function ActividadPage() {
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Actividad Reciente" />
+      <PageTransition>
       <div className="px-5 pt-4 pb-28">
         {loading ? (
           <div className="space-y-3">
@@ -87,6 +89,7 @@ export default function ActividadPage() {
           </div>
         )}
       </div>
+      </PageTransition>
       <BottomNav />
     </main>
   );

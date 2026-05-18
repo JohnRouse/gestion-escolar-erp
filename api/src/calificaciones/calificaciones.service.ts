@@ -498,4 +498,162 @@ async getUnidadesComparativa(alumnoId: number, bimestreId: number) {
 
   return resultado;
 }
+
+async getAlertasAcademicas(alumnoId: number, bimestreId: number) {
+  const matriculaActiva = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    include: { seccion: { include: { grado: true } } },
+  });
+  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+  const idSeccion = matriculaActiva.id_seccion;
+  const idAnio = matriculaActiva.id_anio;
+
+  // Obtener todos los bimestres del año
+  const bimestres = await this.prisma.bimestre.findMany({
+    where: { id_anio: idAnio },
+    orderBy: { numero: 'asc' },
+  });
+
+  const bimestreActual = bimestres.find(b => b.numero === bimestreId);
+  const bimestreAnterior = bimestres.find(b => b.numero === bimestreId - 1);
+
+  if (!bimestreActual) throw new NotFoundException('Bimestre no encontrado');
+
+  // Cursos de la sección
+  const cursos = await this.prisma.curso.findMany({
+    where: {
+      asignaciones: {
+        some: { id_seccion: idSeccion, id_anio: idAnio },
+      },
+    },
+    include: {
+      asignaciones: {
+        where: { id_seccion: idSeccion, id_anio: idAnio },
+        include: {
+          evaluaciones: {
+            include: {
+              notas: true,
+              unidad: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const alertas: {
+    curso: string;
+    promedioActual: number | null;
+    promedioAnterior: number | null;
+    promedioSeccion: number | null;
+    diferencia: number | null;
+    tendencia: 'mejora' | 'bajada' | 'estable' | 'sin_datos';
+    mensaje: string;
+  }[] = [];
+
+  for (const curso of cursos) {
+    // Promedio en el bimestre actual
+    const notasActuales: number[] = [];
+    const notasSeccion: number[] = [];
+
+    for (const asignacion of curso.asignaciones) {
+      for (const evalDet of asignacion.evaluaciones) {
+        if (evalDet.unidad.id_bimestre === bimestreActual.id_bimestre) {
+          for (const nota of evalDet.notas) {
+            const valor = Number(nota.valor_nota);
+            notasSeccion.push(valor);
+            if (nota.id_matricula === matriculaActiva.id_matricula) {
+              notasActuales.push(valor);
+            }
+          }
+        }
+      }
+    }
+
+    const promedioActual = notasActuales.length > 0
+      ? Math.round((notasActuales.reduce((s, v) => s + v, 0) / notasActuales.length) * 10) / 10
+      : null;
+
+    const promedioSeccion = notasSeccion.length > 0
+      ? Math.round((notasSeccion.reduce((s, v) => s + v, 0) / notasSeccion.length) * 10) / 10
+      : null;
+
+    // Promedio en el bimestre anterior (si existe)
+    let promedioAnterior: number | null = null;
+    if (bimestreAnterior) {
+      const notasAnteriores: number[] = [];
+      for (const asignacion of curso.asignaciones) {
+        for (const evalDet of asignacion.evaluaciones) {
+          if (evalDet.unidad.id_bimestre === bimestreAnterior.id_bimestre) {
+            for (const nota of evalDet.notas) {
+              if (nota.id_matricula === matriculaActiva.id_matricula) {
+                notasAnteriores.push(Number(nota.valor_nota));
+              }
+            }
+          }
+        }
+      }
+      promedioAnterior = notasAnteriores.length > 0
+        ? Math.round((notasAnteriores.reduce((s, v) => s + v, 0) / notasAnteriores.length) * 10) / 10
+        : null;
+    }
+
+    // Calcular diferencia y tendencia
+    let diferencia: number | null = null;
+    let tendencia: 'mejora' | 'bajada' | 'estable' | 'sin_datos' = 'sin_datos';
+    let mensaje = '';
+
+    if (promedioActual !== null && promedioAnterior !== null) {
+      diferencia = Math.round((promedioActual - promedioAnterior) * 10) / 10;
+      if (diferencia > 0.5) {
+        tendencia = 'mejora';
+        mensaje = `${curso.nombre_curso} subió ${diferencia.toFixed(1)} puntos. ¡Sigue así!`;
+      } else if (diferencia < -0.5) {
+        tendencia = 'bajada';
+        mensaje = `${curso.nombre_curso} bajó ${Math.abs(diferencia).toFixed(1)} puntos respecto al bimestre anterior.`;
+      } else {
+        tendencia = 'estable';
+        mensaje = `${curso.nombre_curso} se mantiene estable.`;
+      }
+    } else if (promedioActual !== null) {
+      // Solo hay datos del bimestre actual; comparamos contra la sección
+      if (promedioSeccion !== null) {
+        diferencia = Math.round((promedioActual - promedioSeccion) * 10) / 10;
+        if (diferencia > 1) {
+          tendencia = 'mejora';
+          mensaje = `${curso.nombre_curso} supera el promedio de la sección por ${diferencia.toFixed(1)} puntos.`;
+        } else if (diferencia < -1) {
+          tendencia = 'bajada';
+          mensaje = `${curso.nombre_curso} está ${Math.abs(diferencia).toFixed(1)} puntos bajo el promedio de la sección.`;
+        } else {
+          tendencia = 'estable';
+          mensaje = `${curso.nombre_curso} está cerca del promedio de la sección.`;
+        }
+      } else {
+        mensaje = `${curso.nombre_curso}: ${promedioActual.toFixed(1)} en este bimestre.`;
+      }
+    }
+
+    if (promedioActual !== null) {
+      alertas.push({
+        curso: curso.nombre_curso,
+        promedioActual,
+        promedioAnterior,
+        promedioSeccion,
+        diferencia,
+        tendencia,
+        mensaje,
+      });
+    }
+  }
+
+  // Ordenar: primero las bajadas, luego mejoras, luego estables
+  alertas.sort((a, b) => {
+    const orden = { bajada: 0, mejora: 1, estable: 2, sin_datos: 3 };
+    return orden[a.tendencia] - orden[b.tendencia];
+  });
+
+  return alertas;
+}
 }

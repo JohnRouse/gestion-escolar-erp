@@ -113,4 +113,13 @@ async getUnidadesComparativa(
 ) {
   return this.calificacionesService.getUnidadesComparativa(Number(alumnoId), Number(bimestreId));
 }
+
+@Get('padres/alertas')
+@Roles('Apoderado', 'Admin')
+async getAlertasAcademicas(
+  @Query('alumno_id') alumnoId: string,
+  @Query('bimestre_id') bimestreId: string,
+) {
+  return this.calificacionesService.getAlertasAcademicas(Number(alumnoId), Number(bimestreId));
+}
 }

@@ -278,6 +278,7 @@ model ConceptoPago {
   monto_base      Decimal           @db.Decimal(10, 2)
   id_anio         Int
   es_pension      Boolean           @default(true)
+  es_extraordinario Boolean         @default(false)   // 🆕
   anio            AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
   cronogramas     CronogramaPagos[]
 }

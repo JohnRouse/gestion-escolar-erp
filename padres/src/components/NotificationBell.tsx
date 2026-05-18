@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface Notif {
   id_notif: number;
@@ -22,8 +23,10 @@ export default function NotificationBell() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null); // 🆕 Ref para el dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  const { setSelectedChild } = useSelectedChild();
 
   useEffect(() => {
     setMounted(true);
@@ -57,7 +60,6 @@ export default function NotificationBell() {
     return () => clearInterval(interval);
   }, []);
 
-  // Calcular posición del dropdown antes de abrirlo
   const handleToggle = () => {
     if (!open) {
       fetchNotifs();
@@ -91,35 +93,47 @@ export default function NotificationBell() {
     // Determinar la ruta de destino
     let targetUrl = notif.url;
     if (!targetUrl) {
-      // Fallback según tipo (usa los valores reales de tu proyecto)
       switch (notif.tipo) {
-        case "informativa":   // Circulares
-          targetUrl = "/dashboard/circulares";
-          break;
-        case "administrativa": // Pagos, matrículas
-          targetUrl = "/dashboard/pagos";
-          break;
-        case "academica":     // Notas, calificaciones
-          targetUrl = "/dashboard/calificaciones";
-          break;
-        default:
-          targetUrl = "/dashboard/actividad";
+        case "informativa":   targetUrl = "/dashboard/circulares"; break;
+        case "administrativa": targetUrl = "/dashboard/pagos"; break;
+        case "academica":     targetUrl = "/dashboard/calificaciones"; break;
+        default:              targetUrl = "/dashboard/actividad";
       }
     }
+
+    // Si la URL contiene alumno_id, cambiar al hijo correspondiente antes de navegar
+    /*const urlObj = new URL(targetUrl, window.location.origin);
+    const alumnoIdParam = urlObj.searchParams.get("alumno_id");
+
+    if (alumnoIdParam) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("/api/academicos/padres/hijos", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const hijos = res.data;
+        const hijo = hijos.find((h: any) => h.id_estudiante === Number(alumnoIdParam));
+        if (hijo) {
+          setSelectedChild(hijo);
+          // Pequeña pausa para asegurar que el contexto se actualice antes de navegar
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (e) {
+        console.error("Error al cambiar de hijo", e);
+      }
+    }*/
 
     // Cerrar el dropdown
     setOpen(false);
 
-    // Navegación robusta (window.location.href funciona incluso si el componente se desmonta)
-    window.location.href = targetUrl;
+    // Navegar de forma interna (SPA) para preservar el contexto
+    router.push(targetUrl);
   };
 
-  // Cerrar al hacer clic fuera del botón Y fuera del dropdown
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
-      // Si el clic es dentro del botón o dentro del dropdown, no cerrar
       if (
         (buttonRef.current && buttonRef.current.contains(target)) ||
         (dropdownRef.current && dropdownRef.current.contains(target))

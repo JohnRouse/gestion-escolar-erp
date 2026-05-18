@@ -45,4 +45,10 @@ export class FinanzasController {
 async getPagosPendientesCount() {
   return this.finanzasService.getPagosPendientesCount();
 }
+
+@Post('pagos-extraordinarios')
+@Roles('Admin', 'Secretaria', 'Director')
+async crearPagoExtraordinario(@Body() dto: any) {
+  return this.finanzasService.crearPagoExtraordinario(dto);
+}
 }

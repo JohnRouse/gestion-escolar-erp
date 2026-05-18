@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
+import PageTransition from "@/components/PageTransition";
 
 interface Adjunto {
   id_adjunto: number;
@@ -117,6 +118,7 @@ export default function CircularesPage() {
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
         <ScreenHeader title="Circular" />
+        <PageTransition>
         <div className="px-5 pt-4 pb-28">
           <button onClick={() => setSelected(null)} className="text-accent font-semibold text-sm mb-4 flex items-center gap-1">
             <span className="material-symbols-rounded">arrow_back</span> Volver
@@ -178,6 +180,7 @@ export default function CircularesPage() {
             )}
           </div>
         </div>
+        </PageTransition>
         <BottomNav />
       </main>
     );
@@ -188,6 +191,7 @@ export default function CircularesPage() {
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Avisos" />
+      <PageTransition>
       <div className="px-5 pt-4 pb-28">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-text-secondary">{noLeidas > 0 ? `${noLeidas} sin leer` : "Todas leídas"}</p>
@@ -252,6 +256,7 @@ export default function CircularesPage() {
           ))
         )}
       </div>
+      </PageTransition>
       <BottomNav />
     </main>
   );

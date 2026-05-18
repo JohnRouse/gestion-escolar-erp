@@ -149,36 +149,62 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
     const alumnoPoints = cursos.map((_, i) => getCoords(i, Math.round(cursos[i].promedioAlumno!)));
 
     return (
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-text dark:text-gray-200">Radar comparativo</p>
-        <svg width="100%" height="300" viewBox="0 0 280 290">
-          {[5, 10, 15, 20].map((nivel) => (
-            <circle key={nivel} cx={cx} cy={cy} r={(nivel / maxNota) * radius} fill="none" className="stroke-border dark:stroke-gray-600" strokeWidth="1" strokeDasharray="4 4" />
-          ))}
-          {cursos.map((c, i) => {
-            const end = getCoords(i, maxNota);
-            return <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y} className="stroke-border dark:stroke-gray-600" strokeWidth="1" />;
-          })}
-          {cursos.map((c, i) => {
-            const pos = getCoords(i, maxNota + 8);
-            return (
-              <text key={i} x={pos.x} y={pos.y} textAnchor="middle" className="text-[9px] fill-text-muted dark:fill-gray-400">
-                {abreviarCurso(c.curso)}
-              </text>
-            );
-          })}
-          <polygon points={seccionPoints.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" className="stroke-text-muted dark:stroke-gray-500" strokeWidth="2" strokeDasharray="6 3" />
-          <polygon points={alumnoPoints.map((p) => `${p.x},${p.y}`).join(" ")} className="fill-accent/20 stroke-accent" strokeWidth="2" />
-          {alumnoPoints.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="4" className="fill-accent" />
-          ))}
-        </svg>
-        <div className="flex items-center gap-4 text-[10px]">
-          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-accent inline-block" /> Alumno</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-text-muted inline-block" style={{ borderTop: '2px dashed' }} /> Sección</span>
-        </div>
-      </div>
-    );
+  <div className="space-y-1">
+    <p className="text-xs font-semibold text-text dark:text-gray-200 mb-2">Radar comparativo</p>
+    <svg width="100%" height="300" viewBox="-20 -20 320 320" className="overflow-visible">
+      {/* Niveles */}
+      {[5, 10, 15, 20].map((nivel) => (
+        <circle key={nivel} cx={cx} cy={cy} r={(nivel / maxNota) * radius} fill="none" className="stroke-border dark:stroke-gray-600" strokeWidth="1" strokeDasharray="4 4" />
+      ))}
+      {/* Ejes */}
+      {cursos.map((c, i) => {
+        const end = getCoords(i, maxNota);
+        return <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y} className="stroke-border dark:stroke-gray-600" strokeWidth="1" />;
+      })}
+      {/* Polígono sección */}
+      <polygon points={seccionPoints.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" className="stroke-text-muted dark:stroke-gray-500" strokeWidth="2" strokeDasharray="6 3" />
+      {/* Polígono alumno */}
+      <polygon points={alumnoPoints.map((p) => `${p.x},${p.y}`).join(" ")} className="fill-accent/20 stroke-accent" strokeWidth="2" />
+      {/* Puntos del alumno */}
+      {alumnoPoints.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="4" className="fill-accent" />
+      ))}
+{/* Etiquetas con alineación dinámica según ángulo */}
+{cursos.map((c, i) => {
+  // ángulo del eje
+  const angle = angleSlice * i - Math.PI / 2;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  // elegir anclaje según lado
+  let textAnchor: "start" | "middle" | "end" = "middle";
+  if (cos > 0.1) textAnchor = "start";
+  else if (cos < -0.1) textAnchor = "end";
+
+  // posición radial exterior: maxNota + 6 → aproximadamente 130 px desde el centro (radio=100 + 30)
+  const labelValue = maxNota + 6;          // esto equivale a 130 px en el SVG (100 + 30)
+  const pos = getCoords(i, labelValue);
+
+  return (
+    <text
+      key={i}
+      x={pos.x}
+      y={pos.y}
+      textAnchor={textAnchor}
+      dominantBaseline="middle"
+      className="text-[10px] font-semibold fill-text dark:fill-gray-200"
+    >
+      {abreviarCurso(c.curso)}
+    </text>
+  );
+})}
+    </svg>
+    <div className="flex items-center gap-4 text-[10px]">
+      <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-accent inline-block" /> Alumno</span>
+      <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-text-muted inline-block" style={{ borderTop: '2px dashed' }} /> Sección</span>
+    </div>
+  </div>
+);
   };
 
   // ── Gráfico de unidades por curso ──

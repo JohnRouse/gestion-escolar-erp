@@ -6,6 +6,7 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import PageTransition from "@/components/PageTransition";
 
 interface Clase { hora_inicio: string; hora_fin: string; curso: string; docente: string; }
 
@@ -43,6 +44,7 @@ export default function HorarioPage() {
   return (
     <main className="min-h-screen bg-surface-alt pb-20">
       <ScreenHeader title="Horario" />
+      <PageTransition>
       <div className="px-5 pt-4">
         <div className="flex gap-2 overflow-x-auto pb-4">
           {DIAS.map((dia) => (
@@ -100,6 +102,7 @@ export default function HorarioPage() {
           ))
         )}
       </div>
+      </PageTransition>
       <BottomNav />
     </main>
   );

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import PageTransition from "@/components/PageTransition";
 
 interface Pago { monto: string; fecha: string; metodo: string; }
 interface Deuda {
@@ -20,48 +21,84 @@ interface EstadoCuenta { id_matricula: number; estado_matricula: string; deudas:
 
 export default function PagosPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { selectedChild, setSelectedChild, hijos } = useSelectedChild();
+
   const [estadoCuenta, setEstadoCuenta] = useState<EstadoCuenta | null>(null);
   const [loading, setLoading] = useState(true);
-  const { selectedChild } = useSelectedChild();
-  const alumnoId = selectedChild?.id_estudiante ?? 2;
   const [filtro, setFiltro] = useState("Pendientes");
   const [verTodas, setVerTodas] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Deuda | null>(null);
+  const [cronogramaResaltado, setCronogramaResaltado] = useState<number | null>(null);
 
+  const initialMount = useRef(true);
+
+  // Ajustar el hijo solo en el primer render si la URL lo indica
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { router.push("/login"); return; }
-    fetchEstadoCuenta(token, alumnoId);
-  }, [router, alumnoId]);
+    if (!initialMount.current) return;
+    initialMount.current = false;
 
-  const fetchEstadoCuenta = async (token: string, id: number) => {
+    const alumnoIdParam = searchParams.get("alumno_id");
+    if (!alumnoIdParam) return;
+
+    const alumnoId = Number(alumnoIdParam);
+    if (isNaN(alumnoId)) return;
+
+    if (selectedChild?.id_estudiante !== alumnoId) {
+      const hijo = hijos.find((h) => h.id_estudiante === alumnoId);
+      if (hijo) {
+        setSelectedChild(hijo);
+      }
+    }
+
+    // Resaltar cronograma si viene en la URL
+    const cronogramaIdParam = searchParams.get("cronograma_id");
+    if (cronogramaIdParam) {
+      const idCron = Number(cronogramaIdParam);
+      if (!isNaN(idCron)) {
+        setCronogramaResaltado(idCron);
+        setTimeout(() => setCronogramaResaltado(null), 4000);
+      }
+    }
+
+    // Limpiar parámetros de la URL para que no interfieran en cambios futuros
+    router.replace("/dashboard/pagos");
+  }, [searchParams, selectedChild, hijos, setSelectedChild, router]);
+
+  // Cargar estado de cuenta cuando cambia el hijo seleccionado
+  useEffect(() => {
+    if (!selectedChild) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
     setLoading(true);
-    try {
-      const res = await axios.get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setEstadoCuenta(res.data);
-    } catch { setEstadoCuenta(null); } finally { setLoading(false); }
-  };
+    axios
+      .get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${selectedChild.id_estudiante}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setEstadoCuenta(res.data))
+      .catch(() => setEstadoCuenta(null))
+      .finally(() => setLoading(false));
+  }, [selectedChild]);
 
   const deudas = estadoCuenta?.deudas ?? [];
   const hoy = new Date();
   const dentroDe10Dias = new Date(); dentroDe10Dias.setDate(hoy.getDate() + 10);
 
-  // Total real de la cabecera (TODAS las deudas no pagadas)
   const totalCabecera = useMemo(() => {
     return deudas
       .filter((d) => d.estado !== "Pagado")
       .reduce((sum, d) => sum + Number(d.monto_base), 0);
   }, [deudas]);
 
-  // Deudas mostradas por defecto (próximas o vencidas)
   const deudasProximasOVencidas = useMemo(() => deudas.filter(d => {
     if (d.estado === "Pagado") return false;
     const venc = new Date(d.fecha_vencimiento);
     return venc <= hoy || venc <= dentroDe10Dias;
   }), [deudas]);
 
-  // Filtrado según el chip activo
   const filtradas = useMemo(() => {
     if (filtro === "Pendientes") return verTodas ? deudas : deudasProximasOVencidas;
     if (filtro === "Todos") return deudas;
@@ -91,17 +128,16 @@ export default function PagosPage() {
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Estado de Cuenta" />
-
-      {/* Cabecera con deuda total REAL */}
-      <div className="px-5 pt-4">
+  <ScreenHeader title="Estado de Cuenta" />
+  <PageTransition>
+    <div className="px-5 pt-4">
         <div className="bg-primary border border-accent/30 rounded-2xl p-5 mb-4 shadow-lg shadow-primary/20">
-  <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
-  <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
-  <p className="text-white/70 text-sm mt-1">
-    {totalCabecera === 0 ? "¡Sin deudas!" : "Pendientes y vencidas"}
-  </p>
-</div>
+          <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
+          <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
+          <p className="text-white/70 text-sm mt-1">
+            {totalCabecera === 0 ? "¡Sin deudas!" : "Pendientes y vencidas"}
+          </p>
+        </div>
 
         {/* Chips de filtro */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
@@ -155,7 +191,14 @@ export default function PagosPage() {
           <p className="text-center text-text-secondary py-10">No hay conceptos</p>
         ) : (
           filtradas.map((deuda) => (
-            <div key={deuda.id_cronograma} className="m-card p-4">
+            <div
+              key={deuda.id_cronograma}
+              className={`m-card p-4 transition-all duration-300 ${
+                cronogramaResaltado === deuda.id_cronograma
+                  ? "ring-2 ring-accent bg-accent-soft dark:bg-accent/20"
+                  : ""
+              }`}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-extrabold text-text">{deuda.concepto}</p>
@@ -225,7 +268,8 @@ export default function PagosPage() {
         </div>
       )}
 
-      <BottomNav />
-    </main>
+      </PageTransition>
+  <BottomNav />
+</main>
   );
 }
