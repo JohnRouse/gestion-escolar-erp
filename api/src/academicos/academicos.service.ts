@@ -425,4 +425,101 @@ async getUltimasMatriculas() {
   });
 }
 
+async getDirectorioStaff(usuarioId: number) {
+  // Obtener el apoderado
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: usuarioId },
+    include: { persona: { include: { apoderados: true } } },
+  });
+  const apoderadoId = usuario?.persona?.apoderados?.[0]?.id_persona;
+  if (!apoderadoId) throw new NotFoundException('Apoderado no encontrado');
+
+  // Obtener estudiantes del apoderado
+  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+    where: { id_apoderado: apoderadoId },
+    select: { id_estudiante: true },
+  });
+  const estudianteIds = relaciones.map(r => r.id_estudiante);
+
+  // Secciones donde están los estudiantes activos
+  const matriculas = await this.prisma.matricula.findMany({
+    where: {
+      id_estudiante: { in: estudianteIds },
+      estado_matricula: 'Activo',
+    },
+    select: { id_seccion: true },
+  });
+  const seccionIds = [...new Set(matriculas.map(m => m.id_seccion))];
+
+  // Buscar staff asignado a esas secciones (docentes, tutores, auxiliares)
+  const staffPorSeccion = await this.prisma.staff.findMany({
+    where: {
+      OR: [
+        { id_seccion: { in: seccionIds } },
+        { area: 'administrativa' }, // administrativos visibles para todos
+        { area: 'salud' },          // salud visibles para todos
+        { area: 'servicios' },      // servicios visibles para todos
+        { area: 'academica', id_seccion: null }, // directivos sin sección específica
+      ],
+    },
+    include: {
+      persona: true,
+      seccion: { include: { grado: { include: { nivel: true } } } },
+    },
+  });
+
+  // Para docentes/tutores, obtener sus cursos y horarios
+  const resultado: any[] = [];
+
+  for (const staff of staffPorSeccion) {
+    const item: any = {
+      id_staff: staff.id_staff,
+      id_persona: staff.id_persona,
+      nombre: `${staff.persona.nombres} ${staff.persona.apellido_paterno}`,
+      cargo: staff.cargo,
+      area: staff.area,
+      telefono: staff.persona.telefono,
+      permite_citas: staff.permite_citas,
+      avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(staff.persona.nombres)}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
+    };
+
+    // Si es docente o tutor, obtener cursos y horarios
+    if (staff.cargo === 'Docente' || staff.cargo === 'Tutor' || staff.cargo === 'Profesor de Taller' || staff.cargo === 'Auxiliar de Educación') {
+      const docente = await this.prisma.docente.findUnique({
+        where: { id_persona: staff.id_persona },
+        include: {
+          asignaciones: {
+            where: { id_seccion: { in: seccionIds } },
+            include: { curso: true },
+          },
+          horarios: {
+            include: { curso: true },
+            orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+          },
+        },
+      });
+
+      if (docente) {
+        item.cursos = [...new Set(docente.asignaciones.map(a => a.curso.nombre_curso))];
+        const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const horarioPorDia: Record<string, { hora_inicio: string; hora_fin: string; curso: string }[]> = {};
+        for (const h of docente.horarios) {
+          const dia = diasSemana[h.dia_semana - 1];
+          if (!horarioPorDia[dia]) horarioPorDia[dia] = [];
+          horarioPorDia[dia].push({
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            curso: h.curso.nombre_curso,
+          });
+        }
+        item.horario = horarioPorDia;
+      }
+    }
+
+    resultado.push(item);
+  }
+
+  return resultado;
+}
+
 }

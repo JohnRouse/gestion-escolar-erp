@@ -30,6 +30,7 @@ model Persona {
   apoderados       Apoderado[]
   docentes         Docente[]
   estudiantes      Estudiante[]
+  staff Staff[]
 }
 
 model Usuario {
@@ -85,6 +86,7 @@ model Seccion {
   asignaciones AsignacionDocente[]
   circulares   CircularDestinatario[]
   horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
+  staff Staff[]
 }
 
 model AreaCurricular {
@@ -373,6 +375,18 @@ model Notificacion {
   fecha_creacion DateTime @default(now())
   url            String?  // ruta a la que redirige al hacer clic
   usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+}
+
+model Staff {
+  id_staff     Int       @id @default(autoincrement())
+  id_persona   Int       @unique
+  cargo        String    @db.VarChar(100)
+  area         String    @db.VarChar(50)
+  id_seccion   Int?
+  es_tutor     Boolean   @default(false)
+  permite_citas Boolean  @default(true)   // 🆕
+  persona      Persona   @relation(fields: [id_persona], references: [id_persona])
+  seccion      Seccion?  @relation(fields: [id_seccion], references: [id_seccion])
 }
 
 

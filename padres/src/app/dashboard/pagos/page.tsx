@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import PageTransition from "@/components/PageTransition";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import { generarComprobantePDF } from "@/lib/generarComprobante";
 
-interface Pago { monto: string; fecha: string; metodo: string; }
+interface Pago { monto: string; fecha: string; metodo: string; id_transaccion?: number; }
 interface Deuda {
   id_cronograma: number;
   concepto: string;
@@ -28,31 +29,27 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("Pendientes");
   const [verTodas, setVerTodas] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);           // sheet de pago rápido
+  const [detalleOpen, setDetalleOpen] = useState(false);       // sheet de detalle
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Deuda | null>(null);
   const [cronogramaResaltado, setCronogramaResaltado] = useState<number | null>(null);
 
   const initialMount = useRef(true);
 
-  // Ajustar el hijo solo en el primer render si la URL lo indica
+  // Cambiar de hijo según URL (solo primer render)
   useEffect(() => {
     if (!initialMount.current) return;
     initialMount.current = false;
 
     const alumnoIdParam = searchParams.get("alumno_id");
-    if (!alumnoIdParam) return;
-
-    const alumnoId = Number(alumnoIdParam);
-    if (isNaN(alumnoId)) return;
-
-    if (selectedChild?.id_estudiante !== alumnoId) {
-      const hijo = hijos.find((h) => h.id_estudiante === alumnoId);
-      if (hijo) {
-        setSelectedChild(hijo);
+    if (alumnoIdParam) {
+      const alumnoId = Number(alumnoIdParam);
+      if (!isNaN(alumnoId) && selectedChild?.id_estudiante !== alumnoId) {
+        const hijo = hijos.find((h) => h.id_estudiante === alumnoId);
+        if (hijo) setSelectedChild(hijo);
       }
     }
 
-    // Resaltar cronograma si viene en la URL
     const cronogramaIdParam = searchParams.get("cronograma_id");
     if (cronogramaIdParam) {
       const idCron = Number(cronogramaIdParam);
@@ -62,11 +59,11 @@ export default function PagosPage() {
       }
     }
 
-    // Limpiar parámetros de la URL para que no interfieran en cambios futuros
+    // Limpiar URL
     router.replace("/dashboard/pagos");
   }, [searchParams, selectedChild, hijos, setSelectedChild, router]);
 
-  // Cargar estado de cuenta cuando cambia el hijo seleccionado
+  // Cargar estado de cuenta cuando cambia selectedChild
   useEffect(() => {
     if (!selectedChild) return;
 
@@ -126,123 +123,206 @@ export default function PagosPage() {
     return venc < hoy ? "Vencida el " : "Vence el ";
   };
 
+  // ── Abrir detalle ──
+  const abrirDetalle = (deuda: Deuda) => {
+    setPagoSeleccionado(deuda);
+    setDetalleOpen(true);
+  };
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const nombreApoderado = user?.nombre || "Apoderado";
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
-  <ScreenHeader title="Estado de Cuenta" />
-  <PageTransition>
-    <div className="px-5 pt-4">
-        <div className="bg-primary border border-accent/30 rounded-2xl p-5 mb-4 shadow-lg shadow-primary/20">
-          <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
-          <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
-          <p className="text-white/70 text-sm mt-1">
-            {totalCabecera === 0 ? "¡Sin deudas!" : "Pendientes y vencidas"}
-          </p>
-        </div>
+      <ScreenHeader title="Estado de Cuenta" />
+      <PageTransition>
+        <div className="px-5 pt-4">
+          {/* Cabecera */}
+          <div className="bg-primary border border-accent/30 rounded-2xl p-5 mb-4 shadow-lg shadow-primary/20">
+            <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
+            <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
+            <p className="text-white/70 text-sm mt-1">
+              {totalCabecera === 0 ? "¡Sin deudas!" : "Pendientes y vencidas"}
+            </p>
+          </div>
 
-        {/* Chips de filtro */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-          {["Pendientes", "Todos", "Pagado", "Vencido"].map((f) => (
+          {/* Chips de filtro */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+            {["Pendientes", "Todos", "Pagado", "Vencido"].map((f) => (
+              <button
+                key={f}
+                onClick={() => { setFiltro(f); setVerTodas(false); }}
+                className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                  filtro === f
+                    ? "bg-accent text-white shadow-lg shadow-accent/20"
+                    : "bg-white text-text-secondary border border-border hover:bg-surface-alt"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Botón "Ver todas" */}
+          {filtro === "Pendientes" && !verTodas && deudas.length > deudasProximasOVencidas.length && (
             <button
-              key={f}
-              onClick={() => { setFiltro(f); setVerTodas(false); }}
-              className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
-                filtro === f
-                  ? "bg-accent text-white shadow-lg shadow-accent/20"
-                  : "bg-white text-text-secondary border border-border hover:bg-surface-alt"
-              }`}
+              onClick={() => setVerTodas(true)}
+              className="text-xs text-accent font-semibold hover:underline mb-2"
             >
-              {f}
+              Ver todas ({deudas.length - deudasProximasOVencidas.length} ocultas)
             </button>
-          ))}
+          )}
+          {filtro === "Pendientes" && verTodas && (
+            <button
+              onClick={() => setVerTodas(false)}
+              className="text-xs text-accent font-semibold hover:underline mb-2"
+            >
+              Ocultar lejanas
+            </button>
+          )}
         </div>
 
-        {/* Botón "Ver todas" */}
-        {filtro === "Pendientes" && !verTodas && deudas.length > deudasProximasOVencidas.length && (
-          <button
-            onClick={() => setVerTodas(true)}
-            className="text-xs text-accent font-semibold hover:underline mb-2"
-          >
-            Ver todas ({deudas.length - deudasProximasOVencidas.length} ocultas)
-          </button>
-        )}
-        {filtro === "Pendientes" && verTodas && (
-          <button
-            onClick={() => setVerTodas(false)}
-            className="text-xs text-accent font-semibold hover:underline mb-2"
-          >
-            Ocultar lejanas
-          </button>
-        )}
-      </div>
-
-      {/* Lista de deudas */}
-      <div className="px-5 pb-28 space-y-3">
-        {loading ? (
-          [1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 space-y-3">
-              <div className="flex justify-between">
-                <div className="skel h-4 w-32" />
-                <div className="skel h-6 w-20 rounded-full" />
-              </div>
-              <div className="skel h-6 w-24" />
-            </div>
-          ))
-        ) : filtradas.length === 0 ? (
-          <p className="text-center text-text-secondary py-10">No hay conceptos</p>
-        ) : (
-          filtradas.map((deuda) => (
-            <div
-              key={deuda.id_cronograma}
-              className={`m-card p-4 transition-all duration-300 ${
-                cronogramaResaltado === deuda.id_cronograma
-                  ? "ring-2 ring-accent bg-accent-soft dark:bg-accent/20"
-                  : ""
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-extrabold text-text">{deuda.concepto}</p>
-                  <p className={`text-xs ${getFechaClase(deuda)}`}>
-                    {getFechaTexto(deuda)}
-                    {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
+        {/* Lista de deudas */}
+        <div className="px-5 pb-28 space-y-3">
+          {loading ? (
+            [1, 2, 3].map((i) => (
+              <div key={i} className="m-card p-4 space-y-3">
+                <div className="flex justify-between">
+                  <div className="skel h-4 w-32" />
+                  <div className="skel h-6 w-20 rounded-full" />
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${getBadgeStyle(deuda.estado)}`}>
-                  {deuda.estado}
+                <div className="skel h-6 w-24" />
+              </div>
+            ))
+          ) : filtradas.length === 0 ? (
+            <p className="text-center text-text-secondary py-10">No hay conceptos</p>
+          ) : (
+            filtradas.map((deuda) => (
+              <button
+                key={deuda.id_cronograma}
+                onClick={() => abrirDetalle(deuda)}
+                className={`w-full text-left m-card p-4 transition-all duration-300 press ${
+                  cronogramaResaltado === deuda.id_cronograma
+                    ? "ring-2 ring-accent bg-accent-soft dark:bg-accent/20"
+                    : ""
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-extrabold text-text">{deuda.concepto}</p>
+                    <p className={`text-xs ${getFechaClase(deuda)}`}>
+                      {getFechaTexto(deuda)}
+                      {new Date(deuda.fecha_vencimiento).toLocaleDateString("es-PE", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${getBadgeStyle(deuda.estado)}`}>
+                    {deuda.estado}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="font-mono text-lg font-bold text-text">
+                    S/ {Number(deuda.monto_base).toFixed(2)}
+                  </p>
+                  {deuda.estado !== "Pagado" && (
+                    <span className="text-xs text-accent font-bold">Tocar para ver detalle</span>
+                  )}
+                  {deuda.estado === "Pagado" && deuda.pagos.length > 0 && (
+                    <p className="text-xs text-success font-bold flex items-center gap-1">
+                      <span className="material-symbols-rounded text-sm">check_circle</span>
+                      Pagado el {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </PageTransition>
+
+      {/* Bottom Sheet de Detalle */}
+      {detalleOpen && pagoSeleccionado && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setDetalleOpen(false)} />
+          <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] p-6 animate-slide-up max-w-[420px] mx-auto overflow-y-auto max-h-[80vh]">
+            <div className="mx-auto w-12 h-1.5 rounded-full bg-border mb-4" />
+            <h3 className="text-xl font-extrabold text-text">{pagoSeleccionado.concepto}</h3>
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-text-muted">Estado</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getBadgeStyle(pagoSeleccionado.estado)}`}>
+                  {pagoSeleccionado.estado}
                 </span>
               </div>
-              <div className="mt-3 flex items-center justify-between">
-                <p className="font-mono text-lg font-bold text-text">
-                  S/ {Number(deuda.monto_base).toFixed(2)}
-                </p>
-                {deuda.estado !== "Pagado" && (
-                  <button
-                    onClick={() => { setPagoSeleccionado(deuda); setSheetOpen(true); }}
-                    className="press px-5 py-2 rounded-xl bg-accent text-white font-bold text-sm shadow-md hover:bg-accent/90"
-                  >
-                    Pagar
-                  </button>
-                )}
-                {deuda.estado === "Pagado" && deuda.pagos.length > 0 && (
-                  <p className="text-xs text-success font-bold flex items-center gap-1">
-                    <span className="material-symbols-rounded text-sm">check_circle</span>
-                    Pagado el {new Date(deuda.pagos[0].fecha).toLocaleDateString("es-PE", {
-                      day: "2-digit",
-                      month: "short",
-                    })}
-                  </p>
-                )}
+              <div className="flex justify-between">
+                <span className="text-text-muted">Monto</span>
+                <span className="font-bold text-text">S/ {Number(pagoSeleccionado.monto_base).toFixed(2)}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Vencimiento</span>
+                <span className="text-text">{new Date(pagoSeleccionado.fecha_vencimiento).toLocaleDateString("es-PE", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}</span>
+              </div>
+              {pagoSeleccionado.estado === "Pagado" && pagoSeleccionado.pagos.length > 0 && (
+                <>
+                  <div className="border-t border-border pt-2 mt-2">
+                    <p className="text-xs font-semibold text-text-muted mb-2">Historial de pagos</p>
+                    {pagoSeleccionado.pagos.map((p, i) => (
+                      <div key={i} className="flex justify-between text-xs mb-1">
+                        <span className="text-text-secondary">
+                          {new Date(p.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                        <span className="font-bold text-text">S/ {Number(p.monto).toFixed(2)}</span>
+                        <span className="text-text-muted">{p.metodo}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+  onClick={() => {
+    const pago = pagoSeleccionado.pagos[0];
+    generarComprobantePDF({
+      concepto: pagoSeleccionado.concepto,
+      monto: Number(pago.monto),
+      fechaPago: new Date(pago.fecha).toLocaleDateString("es-PE"),
+      metodo: pago.metodo,
+      nombreAlumno: selectedChild?.nombre || "Alumno",
+      nombreApoderado: nombreApoderado,
+      codigoTransaccion: pago.id_transaccion?.toString() || "—",
+    });
+  }}
+  className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
+>
+  Descargar comprobante
+</button>
+                </>
+              )}
+              {pagoSeleccionado.estado !== "Pagado" && (
+                <button
+                  onClick={() => {
+                    setDetalleOpen(false);
+                    setPagoSeleccionado(pagoSeleccionado);
+                    setSheetOpen(true);
+                  }}
+                  className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
+                >
+                  Pagar ahora
+                </button>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
-      {/* Bottom Sheet de pago */}
+      {/* Bottom Sheet de pago rápido (se abre desde el detalle) */}
       {sheetOpen && pagoSeleccionado && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setSheetOpen(false)} />
@@ -268,8 +348,7 @@ export default function PagosPage() {
         </div>
       )}
 
-      </PageTransition>
-  <BottomNav />
-</main>
+      <BottomNav />
+    </main>
   );
 }

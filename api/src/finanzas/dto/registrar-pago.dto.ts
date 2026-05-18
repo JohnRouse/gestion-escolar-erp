@@ -23,7 +23,7 @@ export class RegistrarPagoDto {
   id_apoderado: number;
 
   @IsString()
-  @IsIn(['Efectivo', 'Transferencia', 'Tarjeta'])
+  @IsIn(['Efectivo', 'Transferencia', 'Tarjeta', 'Yape', 'Plin'])
   metodo_pago: string;
 
   @IsOptional()

@@ -156,4 +156,10 @@ async getTotalDocentes() {
   return this.academicosService.getTotalDocentes();
 }
 
+@Get('staff')
+@UseGuards(AuthGuard('jwt'))
+async getDirectorioStaff(@Request() req) {
+  return this.academicosService.getDirectorioStaff(req.user.userId);
+}
+
 }
