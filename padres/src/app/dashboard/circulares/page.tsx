@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
-import PageTransition from "@/components/PageTransition";
 
 interface Adjunto {
   id_adjunto: number;
@@ -30,45 +28,49 @@ interface Circular {
 
 export default function CircularesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [circulares, setCirculares] = useState<Circular[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [selected, setSelected] = useState<Circular | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroUrgente, setFiltroUrgente] = useState(false);
   const [filtroAdjuntos, setFiltroAdjuntos] = useState(false);
 
-  const searchParams = useSearchParams();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (!token) { router.push("/login"); return; }
-  fetchCirculares(token).then((data) => {
-    const idParam = searchParams.get("id_circular");
-    if (idParam) {
-      const id = Number(idParam);
-      if (!isNaN(id)) {
-        const encontrada = data.find((c: Circular) => c.id_circular === id);
-        if (encontrada) setSelected(encontrada);
+    const token = localStorage.getItem("token");
+    if (!token) { router.push("/login"); return; }
+    fetchCirculares(token).then((data) => {
+      const idParam = searchParams.get("id_circular");
+      if (idParam) {
+        const id = Number(idParam);
+        if (!isNaN(id)) {
+          const encontrada = data.find((c: Circular) => c.id_circular === id);
+          if (encontrada) setSelected(encontrada);
+        }
       }
-    }
-  });
-}, [router, searchParams]);
+    });
+  }, [router, searchParams]);
 
   const fetchCirculares = async (token: string) => {
-  setLoading(true);
-  try {
-    const res = await axios.get("/api/circulares/padres", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setCirculares(res.data);
-    return res.data; // <-- añadir este return
-  } catch {
-    setCirculares([]);
-    return []; // <-- y este
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const res = await axios.get("/api/circulares/padres", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCirculares(res.data);
+      return res.data;
+    } catch {
+      setCirculares([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const marcarLeida = async (id: number) => {
     try {
@@ -80,19 +82,6 @@ export default function CircularesPage() {
       if (selected?.id_circular === id) setSelected(prev => prev ? { ...prev, leida: true } : null);
     } catch (err) {
       console.error("Error al marcar como leída:", err);
-    }
-  };
-
-  const confirmarAutorizacion = async (id: number) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(`/api/circulares/${id}/confirmar`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCirculares(prev => prev.map(c => c.id_circular === id ? { ...c, requiere_autorizacion: false } : c));
-      alert("Autorización confirmada correctamente.");
-    } catch {
-      alert("Error al confirmar la autorización.");
     }
   };
 
@@ -118,7 +107,6 @@ export default function CircularesPage() {
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
         <ScreenHeader title="Circular" />
-        <PageTransition>
         <div className="px-5 pt-4 pb-28">
           <button onClick={() => setSelected(null)} className="text-accent font-semibold text-sm mb-4 flex items-center gap-1">
             <span className="material-symbols-rounded">arrow_back</span> Volver
@@ -171,7 +159,7 @@ export default function CircularesPage() {
                 <p className="text-sm font-bold text-text mb-2">Acción requerida</p>
                 <p className="text-xs text-text-secondary mb-3">Esta circular requiere tu autorización.</p>
                 <button
-                  onClick={() => confirmarAutorizacion(selected.id_circular)}
+                  onClick={() => alert("Autorización confirmada (simulación)")}
                   className="press px-5 py-2 rounded-xl bg-accent text-white font-bold text-sm shadow-md"
                 >
                   Confirmar autorización
@@ -180,7 +168,6 @@ export default function CircularesPage() {
             )}
           </div>
         </div>
-        </PageTransition>
         <BottomNav />
       </main>
     );
@@ -188,17 +175,33 @@ export default function CircularesPage() {
 
   const noLeidas = circulares.filter(c => !c.leida).length;
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Avisos" />
+        <div className="px-5 pt-4 pb-28 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 mb-3 space-y-3">
+              <div className="skel h-4 w-3/4" />
+              <div className="skel h-3 w-full" />
+              <div className="skel h-3 w-1/4" />
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Avisos" />
-      <PageTransition>
       <div className="px-5 pt-4 pb-28">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-text-secondary">{noLeidas > 0 ? `${noLeidas} sin leer` : "Todas leídas"}</p>
           <p className="text-xs text-text-muted">{circulares.length} circulares</p>
         </div>
 
-        {/* Buscador */}
         <div className="relative mb-3">
           <span className="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">search</span>
           <input
@@ -210,7 +213,6 @@ export default function CircularesPage() {
           />
         </div>
 
-        {/* Filtros rápidos */}
         <div className="flex gap-2 mb-4 overflow-x-auto">
           <button onClick={() => setFiltroUrgente(!filtroUrgente)} className={`press px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${filtroUrgente ? "bg-danger text-white shadow-md" : "bg-white text-text-secondary border border-border"}`}>
             Urgentes
@@ -256,7 +258,6 @@ export default function CircularesPage() {
           ))
         )}
       </div>
-      </PageTransition>
       <BottomNav />
     </main>
   );

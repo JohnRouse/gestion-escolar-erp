@@ -7,7 +7,6 @@ import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import ComparativaNotas from "@/components/ComparativaNotas";
-import PageTransition from "@/components/PageTransition";
 
 interface Evaluacion { id: number; tipo: string; descripcion: string; valor: number; }
 interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
@@ -17,17 +16,21 @@ export default function CalificacionesPage() {
   const router = useRouter();
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [bimestre, setBimestre] = useState(1);
   const { selectedChild } = useSelectedChild();
-  const alumnoId = selectedChild?.id_estudiante ?? 2;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [mostrarComparativa, setMostrarComparativa] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) { router.push("/login"); return; }
-    fetchNotas(token, alumnoId, bimestre);
-  }, [router, alumnoId, bimestre]);
+    if (!token || !selectedChild) return;
+    fetchNotas(token, selectedChild.id_estudiante, bimestre);
+  }, [selectedChild, bimestre]);
 
   const fetchNotas = async (token: string, id: number, bim: number) => {
     setLoading(true);
@@ -49,12 +52,31 @@ export default function CalificacionesPage() {
         )
       : null;
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
+        <ScreenHeader title="Calificaciones" />
+        <div className="px-5 pt-5 pb-4 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 flex items-center gap-3">
+              <div className="skel w-11 h-11 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-3.5 w-1/2" />
+                <div className="skel h-2.5 w-1/4" />
+              </div>
+              <div className="skel h-6 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
       <ScreenHeader title="Calificaciones" />
-      <PageTransition>
       <div className="px-5 pt-5 pb-4 space-y-3">
-        {/* Cabecera */}
         <div className="flex items-center justify-between">
           <div>
             {promedioGeneral !== null && (
@@ -78,10 +100,7 @@ export default function CalificacionesPage() {
             <select
               className="bg-white dark:bg-gray-800 border border-border dark:border-gray-600 rounded-full px-4 py-2 text-sm font-bold text-text dark:text-gray-200"
               value={bimestre}
-              onChange={(e) => {
-                setBimestre(Number(e.target.value));
-                // No cerramos el análisis para que el usuario pueda comparar entre bimestres
-              }}
+              onChange={(e) => setBimestre(Number(e.target.value))}
             >
               <option value={1}>Bimestre I</option>
               <option value={2}>Bimestre II</option>
@@ -91,14 +110,12 @@ export default function CalificacionesPage() {
           </div>
         </div>
 
-        {/* Comparativa (colapsable) */}
         {mostrarComparativa && (
           <div className="m-card p-4 animate-fade-in">
             <ComparativaNotas bimestre={bimestre} />
           </div>
         )}
 
-        {/* Lista de cursos */}
         {loading ? (
           [1, 2, 3].map((i) => (
             <div key={i} className="m-card p-4 flex items-center gap-3">
@@ -184,14 +201,24 @@ export default function CalificacionesPage() {
                                   <td className="py-1.5 text-text dark:text-gray-200">{eva.descripcion}</td>
                                   <td className="py-1.5 text-text-secondary dark:text-gray-400">{eva.tipo}</td>
                                   <td className="py-1.5 text-right">
-                                    <span className={`inline-flex items-center gap-1 justify-center min-w-[3rem] px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                      Math.round(eva.valor) >= 15 ? 'bg-success-soft text-success' :
-                                      Math.round(eva.valor) >= 11 ? 'bg-warning-soft text-warning' :
-                                      'bg-danger-soft text-danger'
-                                    }`}>
-                                      <span className={`w-2 h-2 rounded-full ${
-                                        Math.round(eva.valor) >= 15 ? 'bg-success' : Math.round(eva.valor) >= 11 ? 'bg-warning' : 'bg-danger'
-                                      }`} />
+                                    <span
+                                      className={`inline-flex items-center gap-1 justify-center min-w-[3rem] px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                        Math.round(eva.valor) >= 15
+                                          ? "bg-success-soft text-success"
+                                          : Math.round(eva.valor) >= 11
+                                          ? "bg-warning-soft text-warning"
+                                          : "bg-danger-soft text-danger"
+                                      }`}
+                                    >
+                                      <span
+                                        className={`w-2 h-2 rounded-full ${
+                                          Math.round(eva.valor) >= 15
+                                            ? "bg-success"
+                                            : Math.round(eva.valor) >= 11
+                                            ? "bg-warning"
+                                            : "bg-danger"
+                                        }`}
+                                      />
                                       {Math.round(eva.valor)}
                                     </span>
                                   </td>
@@ -209,7 +236,6 @@ export default function CalificacionesPage() {
           })
         )}
       </div>
-      </PageTransition>
       <BottomNav />
     </main>
   );

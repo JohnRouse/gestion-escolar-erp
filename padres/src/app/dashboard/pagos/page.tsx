@@ -27,14 +27,19 @@ export default function PagosPage() {
 
   const [estadoCuenta, setEstadoCuenta] = useState<EstadoCuenta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [filtro, setFiltro] = useState("Pendientes");
   const [verTodas, setVerTodas] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);           // sheet de pago rápido
-  const [detalleOpen, setDetalleOpen] = useState(false);       // sheet de detalle
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Deuda | null>(null);
   const [cronogramaResaltado, setCronogramaResaltado] = useState<number | null>(null);
 
   const initialMount = useRef(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Cambiar de hijo según URL (solo primer render)
   useEffect(() => {
@@ -59,11 +64,9 @@ export default function PagosPage() {
       }
     }
 
-    // Limpiar URL
     router.replace("/dashboard/pagos");
   }, [searchParams, selectedChild, hijos, setSelectedChild, router]);
 
-  // Cargar estado de cuenta cuando cambia selectedChild
   useEffect(() => {
     if (!selectedChild) return;
 
@@ -123,21 +126,39 @@ export default function PagosPage() {
     return venc < hoy ? "Vencida el " : "Vence el ";
   };
 
-  // ── Abrir detalle ──
   const abrirDetalle = (deuda: Deuda) => {
     setPagoSeleccionado(deuda);
     setDetalleOpen(true);
   };
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const nombreApoderado = user?.nombre || "Apoderado";
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Estado de Cuenta" />
+        <div className="px-5 pt-4 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 space-y-3">
+              <div className="flex justify-between">
+                <div className="skel h-4 w-32" />
+                <div className="skel h-6 w-20 rounded-full" />
+              </div>
+              <div className="skel h-6 w-24" />
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Estado de Cuenta" />
       <PageTransition>
         <div className="px-5 pt-4">
-          {/* Cabecera */}
           <div className="bg-primary border border-accent/30 rounded-2xl p-5 mb-4 shadow-lg shadow-primary/20">
             <p className="text-[10px] tracking-[.22em] font-bold text-accent uppercase">Deuda total</p>
             <p className="text-4xl font-extrabold text-white mt-1">S/ {totalCabecera.toFixed(2)}</p>
@@ -146,7 +167,6 @@ export default function PagosPage() {
             </p>
           </div>
 
-          {/* Chips de filtro */}
           <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
             {["Pendientes", "Todos", "Pagado", "Vencido"].map((f) => (
               <button
@@ -163,26 +183,18 @@ export default function PagosPage() {
             ))}
           </div>
 
-          {/* Botón "Ver todas" */}
           {filtro === "Pendientes" && !verTodas && deudas.length > deudasProximasOVencidas.length && (
-            <button
-              onClick={() => setVerTodas(true)}
-              className="text-xs text-accent font-semibold hover:underline mb-2"
-            >
+            <button onClick={() => setVerTodas(true)} className="text-xs text-accent font-semibold hover:underline mb-2">
               Ver todas ({deudas.length - deudasProximasOVencidas.length} ocultas)
             </button>
           )}
           {filtro === "Pendientes" && verTodas && (
-            <button
-              onClick={() => setVerTodas(false)}
-              className="text-xs text-accent font-semibold hover:underline mb-2"
-            >
+            <button onClick={() => setVerTodas(false)} className="text-xs text-accent font-semibold hover:underline mb-2">
               Ocultar lejanas
             </button>
           )}
         </div>
 
-        {/* Lista de deudas */}
         <div className="px-5 pb-28 space-y-3">
           {loading ? (
             [1, 2, 3].map((i) => (
@@ -246,7 +258,7 @@ export default function PagosPage() {
         </div>
       </PageTransition>
 
-      {/* Bottom Sheet de Detalle */}
+      {/* Modal de detalle */}
       {detalleOpen && pagoSeleccionado && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setDetalleOpen(false)} />
@@ -287,29 +299,28 @@ export default function PagosPage() {
                     ))}
                   </div>
                   <button
-  onClick={() => {
-    const pago = pagoSeleccionado.pagos[0];
-    generarComprobantePDF({
-      concepto: pagoSeleccionado.concepto,
-      monto: Number(pago.monto),
-      fechaPago: new Date(pago.fecha).toLocaleDateString("es-PE"),
-      metodo: pago.metodo,
-      nombreAlumno: selectedChild?.nombre || "Alumno",
-      nombreApoderado: nombreApoderado,
-      codigoTransaccion: pago.id_transaccion?.toString() || "—",
-    });
-  }}
-  className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
->
-  Descargar comprobante
-</button>
+                    onClick={() => {
+                      const pago = pagoSeleccionado.pagos[0];
+                      generarComprobantePDF({
+                        concepto: pagoSeleccionado.concepto,
+                        monto: Number(pago.monto),
+                        fechaPago: new Date(pago.fecha).toLocaleDateString("es-PE"),
+                        metodo: pago.metodo,
+                        nombreAlumno: selectedChild?.nombre || "Alumno",
+                        nombreApoderado: nombreApoderado,
+                        codigoTransaccion: pago.id_transaccion?.toString() || "—",
+                      });
+                    }}
+                    className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
+                  >
+                    Descargar comprobante
+                  </button>
                 </>
               )}
               {pagoSeleccionado.estado !== "Pagado" && (
                 <button
                   onClick={() => {
                     setDetalleOpen(false);
-                    setPagoSeleccionado(pagoSeleccionado);
                     setSheetOpen(true);
                   }}
                   className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
@@ -322,7 +333,7 @@ export default function PagosPage() {
         </div>
       )}
 
-      {/* Bottom Sheet de pago rápido (se abre desde el detalle) */}
+      {/* Bottom Sheet de pago rápido */}
       {sheetOpen && pagoSeleccionado && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setSheetOpen(false)} />

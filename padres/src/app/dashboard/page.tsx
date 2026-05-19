@@ -30,9 +30,13 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [actividad, setActividad] = useState<EventoActividad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const initialized = useRef(false);
 
-  // ── Inicializar hijos y seleccionar primer hijo si no hay uno ──
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -51,21 +55,17 @@ export default function DashboardPage() {
         const hijosData = res.data.map((h: any) => ({ ...h, color: undefined }));
         setHijos(hijosData);
 
-        // Si no hay hijo seleccionado, seleccionar el primero
         if (!selectedChild && hijosData.length > 0) {
           setSelectedChild(hijosData[0]);
         }
       } catch {
-        const mock = [{ id_estudiante: 2, nombre: "Lucas García López", grado: "1.er Grado · Sección A" }];
-        setHijos(mock);
-        if (!selectedChild) setSelectedChild(mock[0]);
+        setHijos([]);
       }
     };
 
     fetchHijos();
   }, [router, selectedChild, setSelectedChild, setHijos]);
 
-  // ── Cargar datos cuando cambia el hijo seleccionado ──
   useEffect(() => {
     if (!selectedChild) return;
 
@@ -92,30 +92,25 @@ export default function DashboardPage() {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]).then(([asistRes, notasRes, pagosRes, circRes, actRes]) => {
-      // Asistencia
       const asistencias = asistRes.status === "fulfilled" ? asistRes.value.data : [];
       const total = asistencias.length;
       const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
       const pct = total > 0 ? Math.round((presentes / total) * 100) : null;
 
-      // Promedio
       const notas = notasRes.status === "fulfilled" ? notasRes.value.data : [];
       const promedios = notas.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
       const prom = promedios.length > 0
         ? Math.round((promedios.reduce((a: number, b: number) => a + b, 0) / promedios.length) * 10) / 10
         : null;
 
-      // Pagos
       const pendiente = pagosRes.status === "fulfilled" ? pagosRes.value.data.total_pendiente || 0 : 0;
       const estado = pendiente === 0 ? "Al día" : "Por pagar";
 
-      // Circulares
       const circulares = circRes.status === "fulfilled" ? circRes.value.data : [];
       const circ = circulares.length > 0
         ? { titulo: circulares[0].titulo, fecha: circulares[0].fecha_creacion }
         : null;
 
-      // Actividad reciente
       const actividadReciente = actRes.status === "fulfilled" ? actRes.value.data : [];
 
       setDashboardData({
@@ -134,10 +129,28 @@ export default function DashboardPage() {
         totalPendiente: 0,
         circularReciente: null,
       });
-    }).finally(() => {
-      setLoading(false);
-    });
+    }).finally(() => setLoading(false));
   }, [selectedChild]);
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-24">
+        <DashboardHeader />
+        <div className="-mt-4 px-5 pb-6 relative z-20">
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="m-card p-4 md:p-5 space-y-3">
+                <div className="skel h-3 md:h-4 w-16" />
+                <div className="skel h-8 md:h-10 w-20" />
+                <div className="skel h-2 md:h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-24">
@@ -146,9 +159,8 @@ export default function DashboardPage() {
         key={selectedChild?.id_estudiante}
         className="-mt-4 px-5 pb-6 relative z-20"
       >
-        {/* Contenedor con transición de opacidad suave */}
         <div className={`transition-opacity duration-500 ${loading ? "opacity-0" : "opacity-100"}`}>
-          {/* ── Métricas principales ── */}
+          {/* Métricas principales */}
           {loading ? (
             <div className="grid grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
@@ -257,12 +269,12 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ── Alertas académicas ── */}
+          {/* Alertas académicas */}
           <div className="mt-4">
             <AlertasAcademicas />
           </div>
 
-          {/* ── Actividad Reciente ── */}
+          {/* Actividad Reciente */}
           <div className="flex items-center justify-between mt-6">
             <p className="text-[10px] md:text-xs tracking-[.22em] font-extrabold text-text-secondary dark:text-gray-400 uppercase">
               ACTIVIDAD RECIENTE

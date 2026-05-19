@@ -6,7 +6,6 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
-import PageTransition from "@/components/PageTransition";
 
 interface EventoActividad {
   tipo: string;
@@ -21,10 +20,16 @@ export default function ActividadPage() {
   const { selectedChild } = useSelectedChild();
   const [eventos, setEventos] = useState<EventoActividad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChild) return;
     const token = localStorage.getItem("token");
-    if (!token || !selectedChild) return;
+    if (!token) return;
     fetchActividad(token, selectedChild.id_estudiante);
   }, [selectedChild]);
 
@@ -42,10 +47,29 @@ export default function ActividadPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Actividad Reciente" />
+        <div className="px-5 pt-4 pb-28 space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="m-card p-3 flex items-center gap-3">
+              <div className="skel w-10 h-10 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-3 w-3/4" />
+                <div className="skel h-2.5 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Actividad Reciente" />
-      <PageTransition>
       <div className="px-5 pt-4 pb-28">
         {loading ? (
           <div className="space-y-3">
@@ -89,7 +113,6 @@ export default function ActividadPage() {
           </div>
         )}
       </div>
-      </PageTransition>
       <BottomNav />
     </main>
   );

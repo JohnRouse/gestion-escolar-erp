@@ -25,6 +25,11 @@ export default function CitasPage() {
   const router = useRouter();
   const [citas, setCitas] = useState<Cita[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -57,12 +62,29 @@ export default function CitasPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Mis Citas" />
+        <div className="px-5 pt-4 pb-28 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 space-y-2">
+              <div className="skel h-4 w-32" />
+              <div className="skel h-3 w-24" />
+              <div className="skel h-3 w-20" />
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Mis Citas" />
       <PageTransition>
         <div className="px-5 pt-4 pb-28">
-          {/* Botón de regreso a Servicios (más visible) */}
           <button
             onClick={() => router.push("/dashboard?open=servicios")}
             className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"

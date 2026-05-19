@@ -20,7 +20,12 @@ export default function GaleriaPage() {
   const { selectedChild } = useSelectedChild();
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [selectedFoto, setSelectedFoto] = useState<Foto | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -28,7 +33,6 @@ export default function GaleriaPage() {
     if (!token) { router.push("/login"); return; }
 
     setLoading(true);
-    // 1. Obtener la sección del alumno
     axios
       .get(`/api/academicos/seccion-alumno?alumno_id=${selectedChild.id_estudiante}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -42,9 +46,8 @@ export default function GaleriaPage() {
       .then((res) => setFotos(res.data))
       .catch(() => setFotos([]))
       .finally(() => setLoading(false));
-  }, [selectedChild, router]);
+  }, [selectedChild]);
 
-  // ── Vista detalle (imagen ampliada) ──
   if (selectedFoto) {
     return (
       <main className="min-h-screen bg-black/95 pb-24">
@@ -66,7 +69,24 @@ export default function GaleriaPage() {
     );
   }
 
-  // ── Galería principal ──
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Momentos Victoria" />
+        <div className="px-5 pt-4 pb-28 columns-2 gap-2 space-y-2">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="skel rounded-xl"
+              style={{ height: `${Math.random() * 150 + 100}px` }}
+            />
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Momentos Victoria" />

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface Notif {
   id_notif: number;
@@ -25,8 +24,6 @@ export default function NotificationBell() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-
-  const { setSelectedChild } = useSelectedChild();
 
   useEffect(() => {
     setMounted(true);
@@ -79,7 +76,6 @@ export default function NotificationBell() {
   };
 
   const handleClick = async (notif: Notif) => {
-    // Marcar como leída si aún no lo estaba
     if (!notif.leida) {
       try {
         const token = localStorage.getItem("token");
@@ -90,7 +86,6 @@ export default function NotificationBell() {
       } catch {}
     }
 
-    // Determinar la ruta de destino
     let targetUrl = notif.url;
     if (!targetUrl) {
       switch (notif.tipo) {
@@ -101,32 +96,7 @@ export default function NotificationBell() {
       }
     }
 
-    // Si la URL contiene alumno_id, cambiar al hijo correspondiente antes de navegar
-    /*const urlObj = new URL(targetUrl, window.location.origin);
-    const alumnoIdParam = urlObj.searchParams.get("alumno_id");
-
-    if (alumnoIdParam) {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get("/api/academicos/padres/hijos", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const hijos = res.data;
-        const hijo = hijos.find((h: any) => h.id_estudiante === Number(alumnoIdParam));
-        if (hijo) {
-          setSelectedChild(hijo);
-          // Pequeña pausa para asegurar que el contexto se actualice antes de navegar
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (e) {
-        console.error("Error al cambiar de hijo", e);
-      }
-    }*/
-
-    // Cerrar el dropdown
     setOpen(false);
-
-    // Navegar de forma interna (SPA) para preservar el contexto
     router.push(targetUrl);
   };
 

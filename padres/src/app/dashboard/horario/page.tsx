@@ -6,7 +6,6 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
-import PageTransition from "@/components/PageTransition";
 
 interface Clase { hora_inicio: string; hora_fin: string; curso: string; docente: string; }
 
@@ -15,16 +14,21 @@ const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 export default function HorarioPage() {
   const router = useRouter();
   const { selectedChild } = useSelectedChild();
-  const alumnoId = selectedChild?.id_estudiante ?? 2;
   const [horario, setHorario] = useState<Record<string, Clase[]>>({});
   const [diaActivo, setDiaActivo] = useState("Lunes");
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetchHorario(token, alumnoId);
-  }, [router, alumnoId]);
+    fetchHorario(token, selectedChild.id_estudiante);
+  }, [selectedChild]);
 
   const fetchHorario = async (token: string, id: number) => {
     setLoading(true);
@@ -41,10 +45,29 @@ export default function HorarioPage() {
 
   const clases = horario[diaActivo] ?? [];
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-20">
+        <ScreenHeader title="Horario" />
+        <div className="px-5 pt-4 pb-28 space-y-3 relative">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 flex items-start gap-3 relative pl-6">
+              <div className="skel w-3 h-3 rounded-full absolute left-[10px] top-4" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-4 w-32" />
+                <div className="skel h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-20">
       <ScreenHeader title="Horario" />
-      <PageTransition>
       <div className="px-5 pt-4">
         <div className="flex gap-2 overflow-x-auto pb-4">
           {DIAS.map((dia) => (
@@ -102,7 +125,6 @@ export default function HorarioPage() {
           ))
         )}
       </div>
-      </PageTransition>
       <BottomNav />
     </main>
   );

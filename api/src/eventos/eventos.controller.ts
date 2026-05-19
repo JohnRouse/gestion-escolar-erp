@@ -1,11 +1,13 @@
 import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
 import { EventosService } from './eventos.service';
 import { AuthGuard } from '@nestjs/passport';
+import { RecordatoriosService } from './recordatorios.service';
 
 @Controller('eventos')
 @UseGuards(AuthGuard('jwt'))
 export class EventosController {
-  constructor(private readonly eventosService: EventosService) {}
+  constructor(private readonly eventosService: EventosService,
+  private readonly recordatoriosService: RecordatoriosService) {}
 
   @Get()
   async obtenerEventos(
@@ -19,4 +21,9 @@ export class EventosController {
   async crearEvento(@Body() body: any) {
     return this.eventosService.crearEvento(body);
   }
+
+  @Post('recordatorios/prueba')
+  async ejecutarRecordatoriosPrueba() {
+  return this.recordatoriosService.ejecutarRecordatoriosPrueba();
+}
 }

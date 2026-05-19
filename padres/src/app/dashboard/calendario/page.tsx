@@ -30,18 +30,38 @@ const TIPO_COLORS: Record<string, string> = {
 
 export default function CalendarioPage() {
   const router = useRouter();
-  const [anioId] = useState(1);
+  const [anioId, setAnioId] = useState<number | null>(null);
+  const [anio, setAnio] = useState<number>(new Date().getFullYear());
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) { router.push("/login"); return; }
+
+    axios
+      .get("/api/academicos/anios", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        const activo = res.data.find((a: any) => a.estado === 'Abierto');
+        if (activo) {
+          setAnioId(activo.id_anio);
+          setAnio(new Date(activo.fecha_inicio).getFullYear());
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
+    if (!anioId) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
     setLoading(true);
     axios
@@ -51,14 +71,15 @@ export default function CalendarioPage() {
       .then((res) => setEventos(res.data))
       .catch(() => setEventos([]))
       .finally(() => setLoading(false));
-  }, [anioId, mes, router]);
+  }, [anioId, mes]);
 
   const hoy = new Date();
-  const esMesActual = mes === hoy.getMonth() + 1;
+  const esMesActual = anio === hoy.getFullYear() && mes === hoy.getMonth() + 1;
 
   const diasDelMes = useMemo(() => {
-    const primerDia = new Date(2025, mes - 1, 1);
-    const ultimoDia = new Date(2025, mes, 0);
+    if (!anio) return [];
+    const primerDia = new Date(anio, mes - 1, 1);
+    const ultimoDia = new Date(anio, mes, 0);
     const dias: number[] = [];
     for (let i = 0; i < primerDia.getDay(); i++) {
       dias.push(0);
@@ -67,12 +88,11 @@ export default function CalendarioPage() {
       dias.push(d);
     }
     return dias;
-  }, [mes]);
+  }, [anio, mes]);
 
   const eventosPorDia = useMemo(() => {
     const mapa: Record<number, Evento[]> = {};
     for (const ev of eventos) {
-      // Tomar solo la parte de la fecha (YYYY-MM-DD) y forzar medianoche local
       const dia = new Date(ev.fecha.split('T')[0] + 'T00:00:00').getDate();
       if (!mapa[dia]) mapa[dia] = [];
       mapa[dia].push(ev);
@@ -91,6 +111,22 @@ export default function CalendarioPage() {
   };
 
   const eventosDelDia = selectedDia ? eventosPorDia[selectedDia] || [] : [];
+
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Calendario Escolar" />
+        <div className="px-5 pt-4 pb-28">
+          <div className="grid grid-cols-7 gap-1">
+            {[...Array(35)].map((_, i) => (
+              <div key={i} className="aspect-square skel rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
@@ -112,7 +148,7 @@ export default function CalendarioPage() {
               <span className="material-symbols-rounded">chevron_left</span>
             </button>
             <h2 className="text-lg font-extrabold text-text">
-              {MESES[mes - 1]} 2025
+              {MESES[mes - 1]} {anio}
             </h2>
             <button
               onClick={() => cambiarMes(1)}

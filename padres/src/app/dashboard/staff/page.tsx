@@ -49,9 +49,14 @@ export default function StaffPage() {
   const router = useRouter();
   const [staff, setStaff] = useState<StaffItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [selected, setSelected] = useState<StaffItem | null>(null);
   const [filtroArea, setFiltroArea] = useState("todas");
   const [solicitarCitaOpen, setSolicitarCitaOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -81,7 +86,6 @@ export default function StaffPage() {
     window.open(`https://wa.me/51${telefono}?text=${mensaje}`, "_blank");
   };
 
-  // ── Vista detalle ──
   if (selected) {
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
@@ -188,13 +192,31 @@ export default function StaffPage() {
     );
   }
 
-  // ── Lista general ──
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-24">
+        <ScreenHeader title="Directorio Académico" />
+        <div className="px-5 pt-4 pb-28 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 flex items-center gap-3">
+              <div className="skel w-12 h-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-4 w-32" />
+                <div className="skel h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
       <ScreenHeader title="Directorio Académico" />
       <PageTransition>
         <div className="px-5 pt-4 pb-28">
-          {/* Botón de regreso a Servicios (más visible) */}
           <button
             onClick={() => router.push("/dashboard?open=servicios")}
             className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"
@@ -202,7 +224,6 @@ export default function StaffPage() {
             <span className="material-symbols-rounded text-lg">arrow_back</span> Servicios
           </button>
 
-          {/* Chips de filtro por área */}
           <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
             {AREAS.map((area) => (
               <button

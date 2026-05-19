@@ -6,7 +6,6 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
-import PageTransition from "@/components/PageTransition";
 
 interface AsistenciaItem { fecha: string; estado: string; }
 
@@ -14,20 +13,27 @@ export default function AsistenciaPage() {
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<AsistenciaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const { selectedChild } = useSelectedChild();
-  const alumnoId = selectedChild?.id_estudiante ?? 2;
   const [filtro, setFiltro] = useState("Todos");
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetchAsistencia(token, alumnoId);
-  }, [router, alumnoId]);
+    fetchAsistencia(token, selectedChild.id_estudiante);
+  }, [selectedChild]);
 
   const fetchAsistencia = async (token: string, id: number) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=2025-01-01&hasta=2025-12-31`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=2025-01-01&hasta=2025-12-31`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setAsistencias(res.data);
     } catch { setAsistencias([]); } finally { setLoading(false); }
   };
@@ -52,10 +58,30 @@ export default function AsistenciaPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-surface-alt pb-20">
+        <ScreenHeader title="Asistencia" />
+        <div className="px-5 pt-4 pb-28 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="m-card p-4 flex items-center gap-3">
+              <div className="skel w-3 h-3 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="skel h-4 w-1/3" />
+                <div className="skel h-3 w-1/4" />
+              </div>
+              <div className="skel h-6 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-alt pb-20">
       <ScreenHeader title="Asistencia" />
-      <PageTransition>
       <div className="px-5 pt-4">
         <div className="flex items-center gap-5 mb-5">
           <div className="relative w-24 h-24">
@@ -122,7 +148,6 @@ export default function AsistenciaPage() {
           })
         )}
       </div>
-      </PageTransition>
       <BottomNav />
     </main>
   );
