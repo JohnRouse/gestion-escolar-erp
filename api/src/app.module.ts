@@ -9,6 +9,9 @@ import { AnaliticasModule } from './analiticas/analiticas.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { ActividadModule } from './actividad/actividad.module';
 import { ApoderadosModule } from './apoderados/apoderados.module';
+import { CitasModule } from './citas/citas.module';
+import { EventosModule } from './eventos/eventos.module';
+import { FotosModule } from './fotos/fotos.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { ApoderadosModule } from './apoderados/apoderados.module';
     NotificacionesModule,
     ActividadModule,
     ApoderadosModule,
+    CitasModule,
+    EventosModule,
+    FotosModule,
   ],
   controllers: [],
   providers: [],

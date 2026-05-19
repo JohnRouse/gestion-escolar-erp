@@ -522,4 +522,28 @@ async getDirectorioStaff(usuarioId: number) {
   return resultado;
 }
 
+async getSeccionAlumno(alumnoId: number) {
+  const matricula = await this.prisma.matricula.findFirst({
+    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+    select: {
+      id_seccion: true,
+      seccion: {
+        select: {
+          letra: true,
+          grado: {
+            select: {
+              nombre_grado: true,
+              nivel: {
+                select: { nombre_nivel: true }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+  if (!matricula) throw new NotFoundException('No se encontró matrícula activa');
+  return matricula;
+}
+
 }

@@ -152,27 +152,27 @@ export default function DashboardPage() {
           {loading ? (
             <div className="grid grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="m-card p-4 space-y-3">
-                  <div className="skel h-3 w-16" />
-                  <div className="skel h-8 w-20" />
-                  <div className="skel h-2 w-full" />
+                <div key={i} className="m-card p-4 md:p-5 space-y-3">
+                  <div className="skel h-3 md:h-4 w-16" />
+                  <div className="skel h-8 md:h-10 w-20" />
+                  <div className="skel h-2 md:h-3 w-full" />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {/* Asistencia */}
-              <button onClick={() => router.push("/dashboard/asistencia")} className="press m-card p-4 text-left">
+              <button onClick={() => router.push("/dashboard/asistencia")} className="press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ASISTENCIA</p>
-                  <span className="w-7 h-7 rounded-full bg-success-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-success text-lg">check</span>
+                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ASISTENCIA</p>
+                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-success-soft flex items-center justify-center">
+                    <span className="material-symbols-rounded text-success text-lg md:text-xl">check</span>
                   </span>
                 </div>
-                <p className="text-3xl font-extrabold text-text dark:text-gray-100 mt-2">
-                  {dashboardData?.asistencia ?? "—"}<span className="text-xl">%</span>
+                <p className="text-3xl md:text-4xl font-extrabold text-text dark:text-gray-100 mt-2">
+                  {dashboardData?.asistencia ?? "—"}<span className="text-xl md:text-2xl">%</span>
                 </p>
-                <p className="text-xs text-text-secondary dark:text-gray-400">Bimestre I</p>
+                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">Bimestre I</p>
                 <div className="mt-3 h-1.5 bg-border dark:bg-gray-600 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-success transition-all duration-700"
@@ -180,21 +180,22 @@ export default function DashboardPage() {
                   />
                 </div>
               </button>
+
               {/* Promedio */}
-              <button onClick={() => router.push("/dashboard/calificaciones")} className="press m-card p-4 text-left">
+              <button onClick={() => router.push("/dashboard/calificaciones")} className="press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PROMEDIO</p>
-                  <span className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-accent text-lg">trending_up</span>
+                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PROMEDIO</p>
+                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-accent-soft flex items-center justify-center">
+                    <span className="material-symbols-rounded text-accent text-lg md:text-xl">trending_up</span>
                   </span>
                 </div>
-                <p className="text-3xl font-extrabold text-text dark:text-gray-100 mt-2">
+                <p className="text-3xl md:text-4xl font-extrabold text-text dark:text-gray-100 mt-2">
                   {dashboardData?.promedio ?? "—"}
-                  <span className="text-base text-text-secondary dark:text-gray-400">.0</span>
+                  <span className="text-base md:text-lg text-text-secondary dark:text-gray-400">.0</span>
                 </p>
-                <p className="text-xs text-text-secondary dark:text-gray-400">General</p>
+                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">General</p>
                 <span
-                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] md:text-xs font-bold ${
                     (dashboardData?.promedio ?? 0) >= 11
                       ? "bg-success-soft text-success"
                       : "bg-danger-soft text-danger"
@@ -203,23 +204,24 @@ export default function DashboardPage() {
                   {(dashboardData?.promedio ?? 0) >= 11 ? "Aprobado" : "En riesgo"}
                 </span>
               </button>
+
               {/* Pagos */}
-              <button onClick={() => router.push("/dashboard/pagos")} className="press m-card p-4 text-left">
+              <button onClick={() => router.push("/dashboard/pagos")} className="press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PAGOS</p>
-                  <span className="w-7 h-7 rounded-full bg-danger-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-danger text-lg">credit_card</span>
+                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PAGOS</p>
+                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-danger-soft flex items-center justify-center">
+                    <span className="material-symbols-rounded text-danger text-lg md:text-xl">credit_card</span>
                   </span>
                 </div>
-                <p className="text-xl font-extrabold text-text dark:text-gray-100 mt-2">
+                <p className="text-xl md:text-2xl font-extrabold text-text dark:text-gray-100 mt-2">
                   S/{" "}
                   {dashboardData?.totalPendiente?.toLocaleString("es-PE", {
                     minimumFractionDigits: 2,
                   }) ?? "0.00"}
                 </p>
-                <p className="text-xs text-text-secondary dark:text-gray-400">{dashboardData?.estadoPagos}</p>
+                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">{dashboardData?.estadoPagos}</p>
                 <span
-                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] md:text-xs font-bold ${
                     dashboardData?.estadoPagos === "Al día"
                       ? "bg-success-soft text-success"
                       : "bg-warning-soft text-warning"
@@ -228,22 +230,23 @@ export default function DashboardPage() {
                   {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Por pagar"}
                 </span>
               </button>
+
               {/* Último aviso */}
-              <button onClick={() => router.push("/dashboard/circulares")} className="press m-card p-4 text-left">
+              <button onClick={() => router.push("/dashboard/circulares")} className="press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ÚLTIMO AVISO</p>
-                  <span className="w-7 h-7 rounded-full bg-info-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-info text-lg">campaign</span>
+                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ÚLTIMO AVISO</p>
+                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-info-soft flex items-center justify-center">
+                    <span className="material-symbols-rounded text-info text-lg md:text-xl">campaign</span>
                   </span>
                 </div>
-                <p className="text-base font-extrabold text-text dark:text-gray-100 mt-2 line-clamp-1">
+                <p className="text-base md:text-lg font-extrabold text-text dark:text-gray-100 mt-2 line-clamp-1">
                   {dashboardData?.circularReciente?.titulo ?? "Sin avisos"}
                 </p>
-                <p className="text-xs text-text-secondary dark:text-gray-400 truncate">
+                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400 truncate">
                   {dashboardData?.circularReciente ? "Nuevo comunicado" : "No hay circulares"}
                 </p>
                 {dashboardData?.circularReciente && (
-                  <p className="text-[11px] text-text-secondary dark:text-gray-400 mt-2">
+                  <p className="text-[11px] md:text-xs text-text-secondary dark:text-gray-400 mt-2">
                     {new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", {
                       day: "2-digit",
                       month: "short",
@@ -261,12 +264,12 @@ export default function DashboardPage() {
 
           {/* ── Actividad Reciente ── */}
           <div className="flex items-center justify-between mt-6">
-            <p className="text-[10px] tracking-[.22em] font-extrabold text-text-secondary dark:text-gray-400 uppercase">
+            <p className="text-[10px] md:text-xs tracking-[.22em] font-extrabold text-text-secondary dark:text-gray-400 uppercase">
               ACTIVIDAD RECIENTE
             </p>
             <button
               onClick={() => router.push("/dashboard/actividad")}
-              className="text-xs font-bold text-accent"
+              className="text-xs md:text-sm font-bold text-accent"
             >
               Ver más
             </button>
@@ -274,11 +277,11 @@ export default function DashboardPage() {
           {loading ? (
             <div className="mt-3 space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="m-card p-3 flex items-center gap-3">
-                  <div className="skel w-10 h-10 rounded-xl" />
+                <div key={i} className="m-card p-3 md:p-4 flex items-center gap-3">
+                  <div className="skel w-10 h-10 md:w-11 md:h-11 rounded-xl" />
                   <div className="flex-1 space-y-2">
-                    <div className="skel h-3 w-3/4" />
-                    <div className="skel h-2.5 w-1/3" />
+                    <div className="skel h-3 md:h-4 w-3/4" />
+                    <div className="skel h-2.5 md:h-3 w-1/3" />
                   </div>
                 </div>
               ))}
@@ -289,14 +292,14 @@ export default function DashboardPage() {
                 <button
                   key={idx}
                   onClick={() => router.push(evento.url)}
-                  className="m-card p-3 flex items-center gap-3 press w-full text-left"
+                  className="m-card p-3 md:p-4 flex items-center gap-3 press w-full text-left"
                 >
-                  <span className="w-10 h-10 rounded-xl bg-surface-alt dark:bg-gray-700 flex items-center justify-center text-lg">
+                  <span className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-surface-alt dark:bg-gray-700 flex items-center justify-center text-lg md:text-xl">
                     {evento.icono}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text dark:text-gray-100">{evento.mensaje}</p>
-                    <p className="text-xs text-text-secondary dark:text-gray-400 mt-0.5">
+                    <p className="text-sm md:text-base font-bold text-text dark:text-gray-100">{evento.mensaje}</p>
+                    <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400 mt-0.5">
                       {new Date(evento.fecha).toLocaleDateString("es-PE", {
                         day: "2-digit",
                         month: "short",

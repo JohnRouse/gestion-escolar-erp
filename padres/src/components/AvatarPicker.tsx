@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 const ESTILOS = [
   { id: "avataaars", nombre: "Clásico" },
   { id: "micah", nombre: "Sobrio" },
 ];
 
-const SEMILLAS_BASE = ["Felix", "Aneka", "Salem", "Mia", "Max", "Sassy", "Tinkerbell", "Bootsy"];
+const SEMILLAS_BASE = [
+  "Felix", "Aneka", "Salem", "Mia", "Max", "Sassy", "Tinkerbell", "Bootsy",
+  "Milo", "Cleo", "Bandit", "Luna", "Oliver", "Daisy", "Rocky", "Coco",
+  "Leo", "Ginger", "Zoe", "Oscar", "Lily", "Bella", "Charlie", "Lucy",
+];
 
 interface AvatarPickerProps {
   valorActual: string;
@@ -21,14 +25,25 @@ function generarUrl(estilo: string, semilla: string, genero: string) {
   )}&gender=${genero}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`;
 }
 
+function barajarSemillas(): string[] {
+  const copia = [...SEMILLAS_BASE];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia.slice(0, 4);
+}
+
 export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPickerProps) {
   const [estiloSeleccionado, setEstiloSeleccionado] = useState("avataaars");
+  const [semillasMostradas, setSemillasMostradas] = useState<string[]>(() => barajarSemillas());
+  const [claveRegeneracion, setClaveRegeneracion] = useState(0);
 
   const generosAMostrar = genero === "M" ? ["male"] : genero === "F" ? ["female"] : ["male", "female"];
 
   const opciones = useMemo(() => {
     const resultado: { url: string; semilla: string }[] = [];
-    for (const semilla of SEMILLAS_BASE) {
+    for (const semilla of semillasMostradas) {
       for (const gen of generosAMostrar) {
         resultado.push({
           url: generarUrl(estiloSeleccionado, semilla, gen),
@@ -37,10 +52,16 @@ export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPi
       }
     }
     return resultado;
-  }, [estiloSeleccionado, generosAMostrar]);
+  }, [estiloSeleccionado, semillasMostradas, generosAMostrar, claveRegeneracion]);
+
+  const regenerarAvatares = useCallback(() => {
+    setSemillasMostradas(barajarSemillas());
+    setClaveRegeneracion((prev) => prev + 1);
+  }, []);
 
   return (
     <div className="space-y-3">
+      {/* Selector de estilo */}
       <div className="flex justify-center gap-2">
         {ESTILOS.map((estilo) => (
           <button
@@ -57,6 +78,7 @@ export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPi
         ))}
       </div>
 
+      {/* Grid de avatares */}
       <div className="avatar-grid custom-scrollbar">
         {opciones.map((op, idx) => (
           <button
@@ -69,14 +91,18 @@ export default function AvatarPicker({ valorActual, onSelect, genero }: AvatarPi
             }`}
             title={op.semilla}
           >
-            <img
-              src={op.url}
-              alt={op.semilla}
-              className="w-full h-auto rounded-lg"
-            />
+            <img src={op.url} alt={op.semilla} className="w-full h-auto rounded-lg" />
           </button>
         ))}
       </div>
+
+      {/* Botón para regenerar */}
+      <button
+        onClick={regenerarAvatares}
+        className="w-full py-2 rounded-xl bg-surface-alt dark:bg-gray-700 text-text-secondary dark:text-gray-300 font-bold text-xs hover:bg-border dark:hover:bg-gray-600 transition-colors"
+      >
+        🔄 Más opciones
+      </button>
     </div>
   );
 }

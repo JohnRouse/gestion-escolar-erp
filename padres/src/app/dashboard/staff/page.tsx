@@ -6,6 +6,7 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
+import SolicitarCitaModal from "@/components/SolicitarCitaModal";
 
 interface HorarioDia {
   hora_inicio: string;
@@ -50,6 +51,7 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StaffItem | null>(null);
   const [filtroArea, setFiltroArea] = useState("todas");
+  const [solicitarCitaOpen, setSolicitarCitaOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -162,9 +164,9 @@ export default function StaffPage() {
               </button>
             )}
 
-            {selected.permite_citas !== false && (
+            {selected.permite_citas === true && (
               <button
-                onClick={() => alert("Solicitud de cita en desarrollo")}
+                onClick={() => setSolicitarCitaOpen(true)}
                 className="mt-3 w-full py-3 rounded-xl bg-accent text-white font-bold text-sm"
               >
                 Solicitar cita
@@ -172,6 +174,15 @@ export default function StaffPage() {
             )}
           </div>
         </PageTransition>
+
+        <SolicitarCitaModal
+          idStaff={selected.id_staff}
+          nombreStaff={selected.nombre}
+          horario={selected.horario}
+          isOpen={solicitarCitaOpen}
+          onClose={() => setSolicitarCitaOpen(false)}
+        />
+
         <BottomNav />
       </main>
     );
@@ -183,6 +194,14 @@ export default function StaffPage() {
       <ScreenHeader title="Directorio Académico" />
       <PageTransition>
         <div className="px-5 pt-4 pb-28">
+          {/* Botón de regreso a Servicios (más visible) */}
+          <button
+            onClick={() => router.push("/dashboard?open=servicios")}
+            className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"
+          >
+            <span className="material-symbols-rounded text-lg">arrow_back</span> Servicios
+          </button>
+
           {/* Chips de filtro por área */}
           <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
             {AREAS.map((area) => (

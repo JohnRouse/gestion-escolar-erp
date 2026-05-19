@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import axios from "axios";
 import NotificationBell from "@/components/NotificationBell";
 import ProfileDrawer from "@/components/ProfileDrawer";
+
+type TabKey = "datos" | "seguridad" | "preferencias" | "hijos" | "servicios";
 
 const COLORES_ESTUDIANTES = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'
@@ -14,10 +16,12 @@ const COLORES_ESTUDIANTES = [
 
 export default function DashboardHeader() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
   const [user, setUser] = useState<{ nombre: string; genero?: string } | null>(null);
   const [greeting, setGreeting] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [initialTab, setInitialTab] = useState<TabKey>("datos");
 
   const [avatarApoderado, setAvatarApoderado] = useState(
     `https://api.dicebear.com/9.x/avataaars/svg?seed=usuario&gender=male&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
@@ -35,7 +39,14 @@ export default function DashboardHeader() {
 
     const savedAvatar = localStorage.getItem('avatar_url');
     if (savedAvatar) setAvatarApoderado(savedAvatar);
-  }, []);
+
+    // Abrir drawer en pestaña específica si viene de un botón "Servicios"
+    const openTab = searchParams.get("open");
+    if (openTab === "servicios") {
+      setInitialTab("servicios");
+      setProfileOpen(true);
+    }
+  }, [searchParams]);
 
   const updateAvatar = (newUrl: string) => {
     setAvatarApoderado(newUrl);
@@ -143,8 +154,9 @@ export default function DashboardHeader() {
 
       <ProfileDrawer
         isOpen={profileOpen}
-        onClose={() => setProfileOpen(false)}
+        onClose={() => { setProfileOpen(false); setInitialTab("datos"); }}
         onAvatarChange={updateAvatar}
+        initialTab={initialTab}
       />
     </header>
   );

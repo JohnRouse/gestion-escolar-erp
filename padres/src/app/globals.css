@@ -236,3 +236,33 @@ body {
 .dark .skel {
   background: linear-gradient(90deg, #334155 0%, #1E293B 50%, #334155 100%);
 }
+
+/* Tablet y superior: 3 columnas en métricas */
+/* ── Tablet y superior ── */
+@media (min-width: 768px) {
+  /* Dashboard: 3 columnas para métricas */
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Tarjetas más espaciadas */
+  .m-card {
+    padding: 1.25rem;
+  }
+
+  /* BottomNav más espaciado */
+  .bottom-nav-item {
+    padding: 0.75rem 0.5rem;
+  }
+
+  /* Calendario: celdas más grandes */
+  .calendario-celda {
+    aspect-ratio: 1 / 1;
+    font-size: 1rem;
+  }
+
+  /* Inputs y selects más cómodos */
+  .input, .input-underline, select {
+    font-size: 0.95rem;
+  }
+}

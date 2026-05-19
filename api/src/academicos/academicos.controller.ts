@@ -162,4 +162,10 @@ async getDirectorioStaff(@Request() req) {
   return this.academicosService.getDirectorioStaff(req.user.userId);
 }
 
+@Get('seccion-alumno')
+@UseGuards(AuthGuard('jwt'))
+async getSeccionAlumno(@Query('alumno_id') alumnoId: string) {
+  return this.academicosService.getSeccionAlumno(Number(alumnoId));
+}
+
 }

@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <SelectedChildProvider>
-          <div className="max-w-[420px] mx-auto min-h-screen bg-brand-paper shadow-2xl relative overflow-hidden">
+          <div className="w-full max-w-[420px] md:max-w-4xl mx-auto min-h-screen bg-brand-paper shadow-2xl relative overflow-hidden">
             {children}
           </div>
         </SelectedChildProvider>
