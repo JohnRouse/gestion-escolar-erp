@@ -131,6 +131,12 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange, initial
 >
   Momentos Victoria
 </button>
+<button
+  onClick={() => { router.push("/dashboard/libreta"); onClose(); }}
+  className="btn-contained"
+>
+  Libreta Virtual
+</button>
             </div>
           )}
         </div>

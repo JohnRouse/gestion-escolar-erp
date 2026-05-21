@@ -51,4 +51,12 @@ async getPagosPendientesCount() {
 async crearPagoExtraordinario(@Body() dto: any) {
   return this.finanzasService.crearPagoExtraordinario(dto);
 }
+
+@Post('webhook')
+async webhookPago(@Body() body: any) {
+  // TODO: Verificar firma de Culqi/Stripe
+  // TODO: Registrar el pago como confirmado
+  console.log('[Webhook] Pago recibido:', body);
+  return { received: true };
+}
 }

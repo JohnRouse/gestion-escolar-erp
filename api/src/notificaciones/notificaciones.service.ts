@@ -113,4 +113,12 @@ export class NotificacionesService {
     }
   }
 }
+
+async enviarPush(usuarioId: number, titulo: string, mensaje: string) {
+  const tokens = await this.prisma.tokenFCM.findMany({
+    where: { id_usuario: usuarioId },
+  });
+  // TODO: Integrar con Firebase Admin SDK
+  console.log(`[FCM] Enviando a ${tokens.length} dispositivos: ${titulo} - ${mensaje}`);
+}
 }

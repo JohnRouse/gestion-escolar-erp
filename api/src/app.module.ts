@@ -13,6 +13,7 @@ import { CitasModule } from './citas/citas.module';
 import { EventosModule } from './eventos/eventos.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AlbumesModule } from './albumes/albumes.module';
+import { NfcModule } from './nfc/nfc.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AlbumesModule } from './albumes/albumes.module';
     EventosModule,
     ScheduleModule.forRoot(),
     AlbumesModule,
+    NfcModule,
   ],
   controllers: [],
   providers: [],

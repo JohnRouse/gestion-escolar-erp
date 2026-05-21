@@ -122,4 +122,14 @@ async getAlertasAcademicas(
 ) {
   return this.calificacionesService.getAlertasAcademicas(Number(alumnoId), Number(bimestreId));
 }
+
+@Get('padres/libreta')
+@Roles('Apoderado', 'Admin')
+async getLibreta(
+  @Query('alumno_id') alumnoId: string,
+  @Query('bimestre_id') bimestreId: string,
+) {
+  return this.calificacionesService.getLibreta(Number(alumnoId), Number(bimestreId));
+}
+
 }

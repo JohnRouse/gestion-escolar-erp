@@ -249,4 +249,10 @@ export class FinanzasService {
     total_afectados: totalCreados,
   };
 }
+
+async procesarPagoExterno(data: any) {
+  // TODO: Validar data, buscar el cronograma, registrar transacción
+  return { message: 'Pago externo procesado (simulación)' };
+}
+
 }

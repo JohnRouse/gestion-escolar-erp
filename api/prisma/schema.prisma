@@ -50,6 +50,7 @@ model Usuario {
   tema                   String    @default("claro") @db.VarChar(10)   // "claro" | "oscuro"
   notificaciones_activas Boolean   @default(true)
   avatar_url             String?   @db.VarChar(255)                     // URL del avatar personalizado
+  tokensFCM TokenFCM[]
 }
 
 // ── MÓDULO ACADÉMICO ──
@@ -128,6 +129,7 @@ model Bimestre {
   id_anio      Int
   anio         AnioLectivo @relation(fields: [id_anio], references: [id_anio])
   unidades     Unidad[]
+  comentariosBimestrales ComentarioBimestral[]
 }
 
 model Unidad {
@@ -161,6 +163,7 @@ model Docente {
   asignaciones   AsignacionDocente[]
   horarios       Horario[] // <-- AGREGAR ESTA LÍNEA
   albumes Album[]
+  comentariosBimestrales ComentarioBimestral[]
 }
 
 model Estudiante {
@@ -170,6 +173,7 @@ model Estudiante {
   persona           Persona               @relation(fields: [id_persona], references: [id_persona])
   apoderados        ApoderadoEstudiante[]
   matriculas        Matricula[]
+  registrosNFC RegistroNFC[]
 }
 
 model ApoderadoEstudiante {
@@ -206,6 +210,7 @@ model Matricula {
   notas            NotaAlumno[]
   asistencias      Asistencia[]
   cronogramas      CronogramaPagos[]
+  comentariosBimestrales ComentarioBimestral[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -465,4 +470,36 @@ model ReaccionFoto {
   apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
 
   @@unique([id_foto, id_apoderado])
+}
+
+model ComentarioBimestral {
+  id_comentario Int       @id @default(autoincrement())
+  id_matricula  Int
+  id_bimestre   Int
+  id_docente    Int
+  comentario    String    @db.Text
+  creado_en     DateTime  @default(now())
+  matricula     Matricula @relation(fields: [id_matricula], references: [id_matricula])
+  bimestre      Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
+  docente       Docente   @relation(fields: [id_docente], references: [id_persona])
+
+  @@unique([id_matricula, id_bimestre])
+}
+
+model TokenFCM {
+  id_token    Int      @id @default(autoincrement())
+  id_usuario  Int
+  token       String   @db.VarChar(500)
+  creado_en   DateTime @default(now())
+  usuario     Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@unique([id_usuario, token])
+}
+
+model RegistroNFC {
+  id_registro Int      @id @default(autoincrement())
+  id_estudiante Int
+  fecha       DateTime @default(now())
+  tipo        String   @default("entrada")  // entrada, salida
+  estudiante  Estudiante @relation(fields: [id_estudiante], references: [id_persona])
 }
