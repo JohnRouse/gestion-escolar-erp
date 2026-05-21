@@ -81,7 +81,7 @@ export class ApoderadosService {
       data: {
         ...(data.tema !== undefined && { tema: data.tema }),
         ...(data.notificaciones_activas !== undefined && { notificaciones_activas: data.notificaciones_activas }),
-        ...(data.avatar_url !== undefined && { avatar_url: data.avatar_url }),
+        avatar_url: data.avatar_url !== undefined ? data.avatar_url : undefined,
       },
     });
 

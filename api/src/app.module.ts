@@ -11,8 +11,8 @@ import { ActividadModule } from './actividad/actividad.module';
 import { ApoderadosModule } from './apoderados/apoderados.module';
 import { CitasModule } from './citas/citas.module';
 import { EventosModule } from './eventos/eventos.module';
-import { FotosModule } from './fotos/fotos.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AlbumesModule } from './albumes/albumes.module';
 
 @Module({
   imports: [
@@ -28,8 +28,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     ApoderadosModule,
     CitasModule,
     EventosModule,
-    FotosModule,
     ScheduleModule.forRoot(),
+    AlbumesModule,
   ],
   controllers: [],
   providers: [],

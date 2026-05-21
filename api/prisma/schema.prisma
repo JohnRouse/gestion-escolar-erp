@@ -87,7 +87,7 @@ model Seccion {
   circulares   CircularDestinatario[]
   horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
   staff Staff[]
-  fotos Foto[]
+  albumes Album[]
 }
 
 model AreaCurricular {
@@ -149,6 +149,8 @@ model Apoderado {
   estudiantes ApoderadoEstudiante[]
   pagos       PagoTransaccion[]
   citas Cita[]
+  comentarios ComentarioFoto[]
+  reacciones ReaccionFoto[]
 }
 
 model Docente {
@@ -158,7 +160,7 @@ model Docente {
   especialidades DocenteEspecialidad[]
   asignaciones   AsignacionDocente[]
   horarios       Horario[] // <-- AGREGAR ESTA LÍNEA
-  fotos Foto[]
+  albumes Album[]
 }
 
 model Estudiante {
@@ -419,14 +421,48 @@ model Evento {
   anio        AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 }
 
-model Foto {
-  id_foto    Int       @id @default(autoincrement())
-  url        String    @db.VarChar(500)
-  titulo     String?   @db.VarChar(200)
-  id_seccion Int?       // 🆕 ahora es opcional
-  id_docente Int
-  creado_en  DateTime  @default(now())
-  seccion    Seccion?   @relation(fields: [id_seccion], references: [id_seccion]) // relación opcional
-  docente    Docente   @relation(fields: [id_docente], references: [id_persona])
+model Album {
+  id_album    Int       @id @default(autoincrement())
+  titulo      String    @db.VarChar(200)
+  descripcion String?   @db.Text
+  fecha       DateTime  @db.Date
+  id_seccion  Int
+  id_docente  Int
+  portada_url String?   @db.VarChar(500)   // foto de portada
+  creado_en   DateTime  @default(now())
+  seccion     Seccion   @relation(fields: [id_seccion], references: [id_seccion])
+  docente     Docente   @relation(fields: [id_docente], references: [id_persona])
+  fotos       Foto[]
 }
 
+model Foto {
+  id_foto    Int       @id @default(autoincrement())
+  id_album   Int
+  url        String    @db.VarChar(500)
+  titulo     String?   @db.VarChar(200)
+  creado_en  DateTime  @default(now())
+  album      Album     @relation(fields: [id_album], references: [id_album])
+  comentarios ComentarioFoto[]
+  reacciones ReaccionFoto[]
+}
+
+model ComentarioFoto {
+  id_comentario Int      @id @default(autoincrement())
+  id_foto       Int
+  id_apoderado  Int
+  texto         String   @db.Text
+  creado_en     DateTime @default(now())
+  foto          Foto     @relation(fields: [id_foto], references: [id_foto])
+  apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+}
+
+model ReaccionFoto {
+  id_reaccion   Int       @id @default(autoincrement())
+  id_foto       Int
+  id_apoderado  Int
+  creado_en     DateTime  @default(now())
+  foto          Foto      @relation(fields: [id_foto], references: [id_foto])
+  apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+
+  @@unique([id_foto, id_apoderado])
+}

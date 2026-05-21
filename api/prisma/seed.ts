@@ -31,11 +31,11 @@ async function main() {
   });
 
   // ── NIVELES ──
-  const nivelInicial = await prisma.nivel.upsert({ where: { id_nivel: 1 }, update: {}, create: { id_nivel: 1, nombre_nivel: 'Inicial' } });
-  const nivelPrimaria = await prisma.nivel.upsert({ where: { id_nivel: 2 }, update: {}, create: { id_nivel: 2, nombre_nivel: 'Primaria' } });
-  const nivelSecundaria = await prisma.nivel.upsert({ where: { id_nivel: 3 }, update: {}, create: { id_nivel: 3, nombre_nivel: 'Secundaria' } });
+  await prisma.nivel.upsert({ where: { id_nivel: 1 }, update: {}, create: { id_nivel: 1, nombre_nivel: 'Inicial' } });
+  await prisma.nivel.upsert({ where: { id_nivel: 2 }, update: {}, create: { id_nivel: 2, nombre_nivel: 'Primaria' } });
+  await prisma.nivel.upsert({ where: { id_nivel: 3 }, update: {}, create: { id_nivel: 3, nombre_nivel: 'Secundaria' } });
 
-  // ── GRADOS ── (Inicial: 3-4-5 años, Primaria: 1ero-6to, Secundaria: 1ero-5to)
+  // ── GRADOS ──
   const gradosData = [
     { nombre: '3 años', nivel: 1 }, { nombre: '4 años', nivel: 1 }, { nombre: '5 años', nivel: 1 },
     { nombre: '1er Grado', nivel: 2 }, { nombre: '2do Grado', nivel: 2 }, { nombre: '3er Grado', nivel: 2 },
@@ -51,7 +51,7 @@ async function main() {
     });
   }
 
-  // ── AULAS ── (creamos dos por grado)
+  // ── AULAS ──
   for (let i = 1; i <= 28; i++) {
     const letra = i % 2 === 1 ? 'A' : 'B';
     await prisma.aula.upsert({
@@ -61,7 +61,7 @@ async function main() {
     });
   }
 
-  // ── SECCIONES ── (dos secciones por grado: A y B)
+  // ── SECCIONES ──
   let seccionId = 1;
   for (let gradoId = 1; gradoId <= 14; gradoId++) {
     for (const letra of ['A', 'B']) {
@@ -75,7 +75,7 @@ async function main() {
   }
 
   // ── AÑO LECTIVO ──
-  const anioActual = await prisma.anioLectivo.upsert({
+  await prisma.anioLectivo.upsert({
     where: { id_anio: 1 },
     update: {},
     create: {
@@ -85,14 +85,13 @@ async function main() {
     },
   });
 
-  // ── BIMESTRES Y UNIDADES ── (opcional pero útil para pruebas)
+  // ── BIMESTRES Y UNIDADES ──
   for (let b = 1; b <= 4; b++) {
     const bim = await prisma.bimestre.upsert({
       where: { id_bimestre: b },
       update: {},
       create: { id_bimestre: b, numero: b, fecha_inicio: new Date(2025, (b - 1) * 3, 1), fecha_fin: new Date(2025, b * 3, 1), id_anio: 1 },
     });
-    // dos unidades por bimestre
     for (let u = 1; u <= 2; u++) {
       await prisma.unidad.upsert({
         where: { id_unidad: (b - 1) * 2 + u },
@@ -110,7 +109,6 @@ async function main() {
       update: {},
       create: { id_area: i + 1, nombre_area: areas[i] },
     });
-    // Por simplicidad, creamos un curso por área con el mismo nombre
     await prisma.curso.upsert({
       where: { id_curso: i + 1 },
       update: {},
@@ -132,14 +130,7 @@ async function main() {
     { nombre: 'Pensión Noviembre', monto: 350.00, esPension: true },
   ];
   for (const cp of conceptosPago) {
-    await prisma.conceptoPago.create({
-      data: {
-        nombre_concepto: cp.nombre,
-        monto_base: cp.monto,
-        id_anio: 1,
-        es_pension: cp.esPension,
-      },
-    });
+    await prisma.conceptoPago.create({ data: { nombre_concepto: cp.nombre, monto_base: cp.monto, id_anio: 1, es_pension: cp.esPension } });
   }
 
   // ── TIPOS DE EVALUACIÓN ──
@@ -156,86 +147,114 @@ async function main() {
   await prisma.escalaCalificacion.upsert({
     where: { id_escala: 1 },
     update: {},
-    create: {
-      id_escala: 1,
-      nombre_escala: 'Escala Numérica (0-20)',
-      nota_minima: 0,
-      nota_maxima: 20,
-      nota_aprobatoria: 11,
-      tipo_calificacion: 'Numérica',
-    },
+    create: { id_escala: 1, nombre_escala: 'Escala Numérica (0-20)', nota_minima: 0, nota_maxima: 20, nota_aprobatoria: 11, tipo_calificacion: 'Numérica' },
   });
 
   // ── DOCENTE DE PRUEBA ──
-const personaDocente = await prisma.persona.upsert({
-  where: { dni: '11111111' },
-  update: {},
-  create: {
-    dni: '11111111',
-    nombres: 'Juan',
-    apellido_paterno: 'Ríos',
-    apellido_materno: 'Mendoza',
-    fecha_nacimiento: new Date('1985-05-10'),
-    genero: 'M',
-    correo: 'juan.rios@colegio.edu.pe',
-  },
-});
-const docente = await prisma.docente.upsert({
-  where: { id_persona: personaDocente.id_persona },
-  update: {},
-  create: {
-    id_persona: personaDocente.id_persona,
-    fecha_ingreso: new Date('2020-03-01'),
-  },
-});
-// Crear usuario para el docente
-const hashedDocente = await bcrypt.hash('docente123', 10);
-await prisma.usuario.upsert({
-  where: { username: 'juan.rios' },
-  update: {},
-  create: {
-    username: 'juan.rios',
-    password_hash: hashedDocente,
-    id_persona: personaDocente.id_persona,
-    id_rol: rolProfesor.id_rol,
-    estado: true,
-  },
-});
+  const personaDocente = await prisma.persona.upsert({
+    where: { dni: '11111111' },
+    update: {},
+    create: { dni: '11111111', nombres: 'Juan', apellido_paterno: 'Ríos', apellido_materno: 'Mendoza', fecha_nacimiento: new Date('1985-05-10'), genero: 'M', correo: 'juan.rios@colegio.edu.pe' },
+  });
+  const docente = await prisma.docente.upsert({
+    where: { id_persona: personaDocente.id_persona },
+    update: {},
+    create: { id_persona: personaDocente.id_persona, fecha_ingreso: new Date('2020-03-01') },
+  });
+  const hashedDocente = await bcrypt.hash('docente123', 10);
+  await prisma.usuario.upsert({
+    where: { username: 'juan.rios' },
+    update: {},
+    create: { username: 'juan.rios', password_hash: hashedDocente, id_persona: personaDocente.id_persona, id_rol: rolProfesor.id_rol, estado: true },
+  });
 
-await prisma.evaluacionDetalle.createMany({
-  data: [
-    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 1', fecha_evaluacion: new Date('2025-03-10') },
-    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 3, descripcion_actividad: 'Práctica 2', fecha_evaluacion: new Date('2025-03-17') },
-    { id_asignacion: 1, id_unidad: 1, id_tipo_eval: 4, descripcion_actividad: 'Examen', fecha_evaluacion: new Date('2025-03-24') },
-  ],
-  skipDuplicates: true,
-});
+  // ── APODERADOS ADICIONALES ──
 
-// Asignar al docente a la sección 1 (Inicial 3 años A) en el año 1, curso Matemática (id_curso=2)
-await prisma.asignacionDocente.upsert({
-  where: { id_asignacion: 1 },
-  update: {},
-  create: {
-    id_docente: docente.id_persona,
-    id_curso: 2, // Matemática
-    id_seccion: 1,
-    id_anio: 1,
-  },
-});
-const horarios = [
-  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '08:30', hora_fin: '09:15' },
-  { id_seccion: 7, id_curso: 1, id_docente: docente.id_persona, dia_semana: 1, hora_inicio: '09:30', hora_fin: '10:15' },
-  { id_seccion: 7, id_curso: 3, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '08:30', hora_fin: '09:15' },
-  { id_seccion: 7, id_curso: 2, id_docente: docente.id_persona, dia_semana: 2, hora_inicio: '09:30', hora_fin: '10:15' },
-  { id_seccion: 7, id_curso: 4, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '08:30', hora_fin: '09:15' },
-  { id_seccion: 7, id_curso: 5, id_docente: docente.id_persona, dia_semana: 3, hora_inicio: '09:30', hora_fin: '10:15' },
-];
+  // Carlos Mendoza + hijos
+  const personaCarlos = await prisma.persona.upsert({
+    where: { dni: '55555555' },
+    update: {},
+    create: { dni: '55555555', nombres: 'Carlos', apellido_paterno: 'Mendoza', apellido_materno: 'Torres', fecha_nacimiento: new Date('1980-06-20'), genero: 'M', correo: 'carlos.mendoza@email.com' },
+  });
+  await prisma.apoderado.upsert({ where: { id_persona: personaCarlos.id_persona }, update: {}, create: { id_persona: personaCarlos.id_persona, ocupacion: 'Ingeniero' } });
+  const hashedCarlos = await bcrypt.hash('apoderado123', 10);
+  await prisma.usuario.upsert({ where: { username: 'carlos.mendoza' }, update: {}, create: { username: 'carlos.mendoza', password_hash: hashedCarlos, id_persona: personaCarlos.id_persona, id_rol: rolApoderado.id_rol, estado: true } });
 
-for (const h of horarios) {
-  await prisma.horario.create({ data: h });
-}
+  const personaDiego = await prisma.persona.upsert({ where: { dni: '66666666' }, update: {}, create: { dni: '66666666', nombres: 'Diego', apellido_paterno: 'Mendoza', apellido_materno: 'López', fecha_nacimiento: new Date('2016-09-12'), genero: 'M' } });
+  const personaValeria = await prisma.persona.upsert({ where: { dni: '77777777' }, update: {}, create: { dni: '77777777', nombres: 'Valeria', apellido_paterno: 'Mendoza', apellido_materno: 'López', fecha_nacimiento: new Date('2014-04-25'), genero: 'F' } });
+  await prisma.estudiante.upsert({ where: { id_persona: personaDiego.id_persona }, update: {}, create: { id_persona: personaDiego.id_persona, codigo_estudiante: 'ALU000005' } });
+  await prisma.estudiante.upsert({ where: { id_persona: personaValeria.id_persona }, update: {}, create: { id_persona: personaValeria.id_persona, codigo_estudiante: 'ALU000006' } });
+  await prisma.apoderadoEstudiante.upsert({ where: { id_apoderado_id_estudiante: { id_apoderado: personaCarlos.id_persona, id_estudiante: personaDiego.id_persona } }, update: {}, create: { id_apoderado: personaCarlos.id_persona, id_estudiante: personaDiego.id_persona, parentesco: 'Padre' } });
+  await prisma.apoderadoEstudiante.upsert({ where: { id_apoderado_id_estudiante: { id_apoderado: personaCarlos.id_persona, id_estudiante: personaValeria.id_persona } }, update: {}, create: { id_apoderado: personaCarlos.id_persona, id_estudiante: personaValeria.id_persona, parentesco: 'Padre' } });
+  await prisma.matricula.upsert({ where: { id_matricula: 7 }, update: {}, create: { id_matricula: 7, id_estudiante: personaDiego.id_persona, id_seccion: 3, id_anio: 1, estado_matricula: 'Activo' } });
+  await prisma.matricula.upsert({ where: { id_matricula: 8 }, update: {}, create: { id_matricula: 8, id_estudiante: personaValeria.id_persona, id_seccion: 7, id_anio: 1, estado_matricula: 'Activo' } });
 
-  console.log('✅ Seed completado: roles, admin, niveles, grados, secciones, año lectivo, conceptos de pago, tipos de evaluación, escala.');
+  // Rosa Castillo + hija
+  const personaRosa = await prisma.persona.upsert({ where: { dni: '88888888' }, update: {}, create: { dni: '88888888', nombres: 'Rosa', apellido_paterno: 'Castillo', apellido_materno: 'Paredes', fecha_nacimiento: new Date('1983-11-08'), genero: 'F', correo: 'rosa.castillo@email.com' } });
+  await prisma.apoderado.upsert({ where: { id_persona: personaRosa.id_persona }, update: {}, create: { id_persona: personaRosa.id_persona, ocupacion: 'Abogada' } });
+  const hashedRosa = await bcrypt.hash('apoderado123', 10);
+  await prisma.usuario.upsert({ where: { username: 'rosa.castillo' }, update: {}, create: { username: 'rosa.castillo', password_hash: hashedRosa, id_persona: personaRosa.id_persona, id_rol: rolApoderado.id_rol, estado: true } });
+  const personaLuciana = await prisma.persona.upsert({ where: { dni: '99999999' }, update: {}, create: { dni: '99999999', nombres: 'Luciana', apellido_paterno: 'Castillo', apellido_materno: 'Paredes', fecha_nacimiento: new Date('2019-07-15'), genero: 'F' } });
+  await prisma.estudiante.upsert({ where: { id_persona: personaLuciana.id_persona }, update: {}, create: { id_persona: personaLuciana.id_persona, codigo_estudiante: 'ALU000007' } });
+  await prisma.apoderadoEstudiante.upsert({ where: { id_apoderado_id_estudiante: { id_apoderado: personaRosa.id_persona, id_estudiante: personaLuciana.id_persona } }, update: {}, create: { id_apoderado: personaRosa.id_persona, id_estudiante: personaLuciana.id_persona, parentesco: 'Madre' } });
+  await prisma.matricula.upsert({ where: { id_matricula: 9 }, update: {}, create: { id_matricula: 9, id_estudiante: personaLuciana.id_persona, id_seccion: 5, id_anio: 1, estado_matricula: 'Activo' } });
+
+  // ── CRONOGRAMAS DE PAGO PARA NUEVOS ALUMNOS ──
+  const idsMatriculasNuevas = [7, 8, 9]; // Diego, Valeria, Luciana
+  for (const idMat of idsMatriculasNuevas) {
+    const matric = await prisma.matricula.findUnique({ where: { id_matricula: idMat } });
+    if (!matric) continue;
+    const conceptos = await prisma.conceptoPago.findMany({ where: { id_anio: 1 } });
+    for (let i = 0; i < conceptos.length; i++) {
+      const concepto = conceptos[i];
+      let fechaVenc = new Date('2025-03-01');
+      if (concepto.es_pension) {
+        fechaVenc = new Date('2025-03-05');
+        fechaVenc.setMonth(fechaVenc.getMonth() + (i - 1)); // el primer concepto es matrícula (no pensión)
+      } else {
+        fechaVenc = new Date('2025-03-01');
+      }
+      await prisma.cronogramaPagos.upsert({
+        where: { id_cronograma: i + 1 + (idMat - 1) * conceptos.length },
+        update: {},
+        create: { id_matricula: idMat, id_concepto: concepto.id_concepto, fecha_vencimiento: fechaVenc, estado_pago: 'Pendiente' },
+      });
+    }
+  }
+
+  // ── STAFF ADICIONAL ──
+  await prisma.staff.upsert({ where: { id_persona: 1 }, update: {}, create: { id_persona: 1, cargo: 'Director', area: 'academica' } });
+  await prisma.staff.upsert({ where: { id_persona: 2 }, update: {}, create: { id_persona: 2, cargo: 'Docente', area: 'academica' } });
+
+  const personaAna = await prisma.persona.upsert({ where: { dni: '12345678' }, update: {}, create: { dni: '12345678', nombres: 'Ana', apellido_paterno: 'Torres', apellido_materno: 'Ramírez', fecha_nacimiento: new Date('1990-03-15'), genero: 'F', correo: 'ana.torres@colegio.edu.pe' } });
+  await prisma.staff.upsert({ where: { id_persona: personaAna.id_persona }, update: {}, create: { id_persona: personaAna.id_persona, cargo: 'Secretaría', area: 'administrativa' } });
+
+  const personaLuis = await prisma.persona.upsert({ where: { dni: '23456789' }, update: {}, create: { dni: '23456789', nombres: 'Luis', apellido_paterno: 'Gonzales', apellido_materno: 'Pérez', fecha_nacimiento: new Date('1985-07-20'), genero: 'M', correo: 'luis.gonzales@colegio.edu.pe' } });
+  await prisma.staff.upsert({ where: { id_persona: personaLuis.id_persona }, update: {}, create: { id_persona: personaLuis.id_persona, cargo: 'Psicólogo Educativo', area: 'salud' } });
+
+  const personaCarmen = await prisma.persona.upsert({ where: { dni: '34567890' }, update: {}, create: { dni: '34567890', nombres: 'Carmen', apellido_paterno: 'Rojas', apellido_materno: 'Linares', fecha_nacimiento: new Date('1992-11-10'), genero: 'F', correo: 'carmen.rojas@colegio.edu.pe' } });
+  await prisma.staff.upsert({ where: { id_persona: personaCarmen.id_persona }, update: {}, create: { id_persona: personaCarmen.id_persona, cargo: 'Enfermería', area: 'salud' } });
+
+  // ── ÁLBUMES Y FOTOS ──
+  const album1 = await prisma.album.upsert({ where: { id_album: 1 }, update: {}, create: { titulo: 'Visita a la Granja - 3 años', descripcion: 'Los niños de inicial visitaron la granja educativa', fecha: new Date('2025-04-15'), id_seccion: 3, id_docente: 2, portada_url: 'https://picsum.photos/id/301/400/300' } });
+  const album2 = await prisma.album.upsert({ where: { id_album: 2 }, update: {}, create: { titulo: 'Día del Logro - 1er Grado', descripcion: 'Exposición de trabajos del primer bimestre', fecha: new Date('2025-05-20'), id_seccion: 7, id_docente: 2, portada_url: 'https://picsum.photos/id/302/400/300' } });
+
+  const fotosData = [
+    { id_album: 1, url: 'https://picsum.photos/id/201/400/300', titulo: 'Jugando en el patio' },
+    { id_album: 1, url: 'https://picsum.photos/id/202/400/300', titulo: 'Clase de arte' },
+    { id_album: 1, url: 'https://picsum.photos/id/203/300/400', titulo: 'Día del logro' },
+    { id_album: 1, url: 'https://picsum.photos/id/204/400/300', titulo: 'Hora del cuento' },
+    { id_album: 1, url: 'https://picsum.photos/id/205/300/400', titulo: 'Educación física' },
+    { id_album: 2, url: 'https://picsum.photos/id/104/400/300', titulo: 'Exposición de ciencias' },
+    { id_album: 2, url: 'https://picsum.photos/id/105/300/400', titulo: 'Trabajo en equipo' },
+    { id_album: 2, url: 'https://picsum.photos/id/106/400/300', titulo: 'Educación física' },
+    { id_album: 2, url: 'https://picsum.photos/id/107/400/300', titulo: 'Actuación especial' },
+  ];
+  for (let i = 0; i < fotosData.length; i++) {
+    await prisma.foto.upsert({ where: { id_foto: i + 1 }, update: {}, create: fotosData[i] });
+  }
+
+  console.log('✅ Seed completado con todos los datos de prueba.');
 }
 
 main()
