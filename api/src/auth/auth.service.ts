@@ -1,9 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { NotFoundException } from '@nestjs/common';
-import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -47,26 +45,76 @@ export class AuthService {
     };
   }
 
+  async getPerfil(userId: number) {
+    const user = await this.prisma.usuario.findUnique({
+      where: { id_usuario: userId },
+      include: { persona: true, rol: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Token inválido o usuario no encontrado');
+    }
+
+    return {
+      id: user.id_usuario,
+      username: user.username,
+      nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`,
+      rol: user.rol.nombre_rol,
+    };
+  }
+
   async cambiarPassword(usuarioId: number, passwordActual: string, passwordNueva: string) {
-  const usuario = await this.prisma.usuario.findUnique({
-    where: { id_usuario: usuarioId },
-  });
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: usuarioId },
+    });
 
-  if (!usuario) {
-    throw new NotFoundException('Usuario no encontrado');
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
+    if (!isPasswordValid) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+
+    const hashed = await bcrypt.hash(passwordNueva, 10);
+    await this.prisma.usuario.update({
+      where: { id_usuario: usuarioId },
+      data: { password_hash: hashed },
+    });
+
+    return { message: 'Contraseña actualizada correctamente' };
   }
 
-  const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
-  if (!isPasswordValid) {
-    throw new BadRequestException('La contraseña actual no es correcta');
+  async updatePerfil(userId: number, data: any) {
+  const user = await this.prisma.usuario.findUnique({
+    where: { id_usuario: userId },
+    include: { persona: true },
+  });
+  if (!user) throw new NotFoundException('Usuario no encontrado');
+
+  // Actualizar persona
+  if (data.nombres || data.apellido_paterno || data.apellido_materno || data.correo || data.telefono) {
+    await this.prisma.persona.update({
+      where: { id_persona: user.id_persona },
+      data: {
+        nombres: data.nombres,
+        apellido_paterno: data.apellido_paterno,
+        apellido_materno: data.apellido_materno,
+        correo: data.correo,
+        telefono: data.telefono,
+      },
+    });
   }
 
-  const hashed = await bcrypt.hash(passwordNueva, 10);
-  await this.prisma.usuario.update({
-    where: { id_usuario: usuarioId },
-    data: { password_hash: hashed },
-  });
+  // Actualizar avatar (foto de perfil)
+  if (data.avatar_url !== undefined) {
+    await this.prisma.usuario.update({
+      where: { id_usuario: userId },
+      data: { avatar_url: data.avatar_url },
+    });
+  }
 
-  return { message: 'Contraseña actualizada correctamente' };
+  return this.getPerfil(userId);
 }
 }

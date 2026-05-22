@@ -51,6 +51,8 @@ model Usuario {
   notificaciones_activas Boolean   @default(true)
   avatar_url             String?   @db.VarChar(255)                     // URL del avatar personalizado
   tokensFCM TokenFCM[]
+  estado_conexion   String   @default("desconectado")  // conectado, ocupado, ausente, desconectado
+  ultima_conexion   DateTime?                          // última vez que hizo una petición
 }
 
 // ── MÓDULO ACADÉMICO ──

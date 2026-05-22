@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
 interface User {
@@ -14,40 +14,49 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token_intranet'));
-  const [user, setUser] = useState<User | null>(
-    JSON.parse(localStorage.getItem('user_intranet') || 'null')
-  );
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('token_intranet', token);
+    const storedToken = localStorage.getItem('token_intranet');
+    if (storedToken) {
+      axios
+        .get('/api/auth/perfil', { headers: { Authorization: `Bearer ${storedToken}` } })
+        .then((res) => {
+          setToken(storedToken);
+          setUser(res.data);
+        })
+        .catch(() => {
+          localStorage.removeItem('token_intranet');
+          localStorage.removeItem('user_intranet');
+          setToken(null);
+          setUser(null);
+        })
+        .finally(() => setIsLoading(false));
     } else {
-      localStorage.removeItem('token_intranet');
+      setIsLoading(false);
     }
-  }, [token]);
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('user_intranet', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user_intranet');
-    }
-  }, [user]);
+  }, []);
 
   const login = async (username: string, password: string) => {
     const response = await axios.post('/api/auth/login', { username, password });
     const { access_token, user: userData } = response.data;
+    localStorage.setItem('token_intranet', access_token);
+    localStorage.setItem('user_intranet', JSON.stringify(userData));
     setToken(access_token);
     setUser(userData);
   };
 
   const logout = () => {
+    localStorage.removeItem('token_intranet');
+    localStorage.removeItem('user_intranet');
     setToken(null);
     setUser(null);
   };
@@ -55,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

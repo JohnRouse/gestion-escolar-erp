@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import MatriculaPage from './pages/MatriculaPage';
@@ -7,13 +8,22 @@ import TesoreriaPage from './pages/TesoreriaPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotasPage from './pages/NotasPage';
 import CircularesPage from './pages/CircularesPage';
-import ConfiguracionPage from './pages/ConfiguracionPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import IntranetLayout from './components/IntranetLayout';
+import ConfiguracionPage from './pages/configuracion/ConfiguracionPage';
 import DocentesPage from './pages/DocentesPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import AppLayout from './layout/AppLayout';
+import PerfilPage from './pages/PerfilPage';
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <Routes>
@@ -21,7 +31,9 @@ function AppRoutes() {
       <Route
         element={
           <ProtectedRoute>
-            <IntranetLayout />
+            <SidebarProvider>
+              <AppLayout />
+            </SidebarProvider>
           </ProtectedRoute>
         }
       >
@@ -33,6 +45,7 @@ function AppRoutes() {
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
+        <Route path="/perfil" element={<PerfilPage />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>

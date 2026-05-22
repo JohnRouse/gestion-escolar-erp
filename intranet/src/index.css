@@ -1,83 +1,112 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../src/**/*.{js,ts,jsx,tsx}";
+
+@theme {
+  /* Paleta principal (Indigo/Violeta como TailAdmin) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-ta-blue: #3652AD;
+--color-ta-dark: #1B2559;
+--color-ta-gray: #6a728b;
+--color-ta-border: #e2e5ef;
+--color-ta-bg: #F5F7FA;
+
+  /* Fondos */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f3f4f6;
+  --color-sidebar: #111827;
+}
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #F8FAFC; /* Fondo claro unificado (slate-50) */
-  color: #1E293B; /* Texto principal oscuro */
+  background-color: #F5F7FA;
+  color: #111827;
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
-  /* Botones */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 select-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 select-none;
   }
   .btn:active { transform: scale(0.97); }
   .btn-primary {
-    /* Amarillo con texto oscuro para accesibilidad */
-    @apply bg-yellow-500 hover:bg-yellow-600 text-gray-900 shadow-sm font-medium;
+    @apply bg-brand-500 hover:bg-brand-600 text-white shadow-sm;
   }
   .btn-secondary {
     @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
   }
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white shadow-sm font-medium;
+    @apply bg-red-600 hover:bg-red-700 text-white shadow-sm;
   }
   .btn-ghost { @apply text-gray-500 hover:bg-gray-100 border-transparent; }
   .btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
 
-  /* Inputs */
   .input {
-    @apply w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition-all duration-200;
-    outline: none;
+    @apply w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 outline-none;
   }
   .input:focus {
-    border-color: #EAB308;
-    box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.15);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
   }
   .label { @apply block text-xs font-medium text-gray-500 mb-1.5; }
 
-  /* Cards */
   .card {
     @apply bg-white rounded-2xl border border-gray-200 shadow-sm;
   }
   .card-interactive {
-    @apply transition-all duration-200;
+    @apply transition-all duration-200 cursor-pointer;
   }
   .card-interactive:hover {
-    @apply shadow-md border-yellow-300;
+    @apply shadow-md border-brand-200;
     transform: translateY(-1px);
   }
 
-  /* Badges */
   .badge {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
   .badge-success { @apply bg-emerald-100 text-emerald-700; }
-  .badge-warning { @apply bg-yellow-100 text-yellow-700; }
+  .badge-warning { @apply bg-amber-100 text-amber-700; }
   .badge-danger  { @apply bg-red-100 text-red-700; }
   .badge-info    { @apply bg-blue-100 text-blue-700; }
 
-  /* Títulos */
   .section-title { @apply text-2xl font-bold text-gray-900 tracking-tight; }
   .subsection-title { @apply text-lg font-semibold text-gray-800; }
 
-  /* Skeleton */
   .skeleton { @apply bg-gray-200 rounded-2xl animate-pulse; }
 
-  /* Barra lateral */
-  .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer;
+  @keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
   }
-  .sidebar-item-active {
-    @apply bg-yellow-50 text-yellow-700 border-r-2 border-yellow-500 font-semibold;
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
-  .sidebar-item-inactive {
-    @apply text-gray-600 hover:bg-gray-100;
-  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out both;
+}
+
+/* Ocultar scrollbar en navegadores modernos */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 }

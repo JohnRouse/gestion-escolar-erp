@@ -14,6 +14,8 @@ import { EventosModule } from './eventos/eventos.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AlbumesModule } from './albumes/albumes.module';
 import { NfcModule } from './nfc/nfc.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ActividadInterceptor } from './auth/actividad.interceptor';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { NfcModule } from './nfc/nfc.module';
     NfcModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: ActividadInterceptor },
+  ],
 })
 export class AppModule {}
