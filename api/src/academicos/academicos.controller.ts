@@ -93,12 +93,15 @@ export class AcademicosController {
 
   // ── SECCIONES ────────────────────────────────────────
   @Get('secciones')
-  getSecciones(
-    @Query('grado_id') gradoId: string,
-    @Query('anio_id') anioId: string,
-  ) {
-    return this.academicosService.getSecciones(Number(gradoId), Number(anioId));
-  }
+async getSecciones(
+  @Query('grado_id') gradoId?: string,
+  @Query('anio_id') anioId?: string,
+) {
+  return this.academicosService.getSecciones(
+    gradoId ? Number(gradoId) : undefined,
+    anioId ? Number(anioId) : undefined,
+  );
+}
 
   @Post('secciones')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

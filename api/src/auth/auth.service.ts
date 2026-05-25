@@ -46,45 +46,44 @@ export class AuthService {
   }
 
   async getPerfil(userId: number) {
-    const user = await this.prisma.usuario.findUnique({
-      where: { id_usuario: userId },
-      include: { persona: true, rol: true },
-    });
+  const user = await this.prisma.usuario.findUnique({
+    where: { id_usuario: userId },
+    include: { persona: true, rol: true },
+  });
 
-    if (!user) {
-      throw new UnauthorizedException('Token inválido o usuario no encontrado');
-    }
-
-    return {
-      id: user.id_usuario,
-      username: user.username,
-      nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`,
-      rol: user.rol.nombre_rol,
-    };
+  if (!user) {
+    throw new UnauthorizedException('Token inválido o usuario no encontrado');
   }
+
+  return {
+    id: user.id_usuario,
+    username: user.username,
+    nombres: user.persona.nombres,
+    apellido_paterno: user.persona.apellido_paterno,
+    apellido_materno: user.persona.apellido_materno,
+    nombre: `${user.persona.nombres} ${user.persona.apellido_paterno} ${user.persona.apellido_materno}`.trim(),
+    correo: user.persona.correo,
+    telefono: user.persona.telefono,
+    rol: user.rol.nombre_rol,
+    avatar_url: user.avatar_url,
+    email: user.persona.correo, // para compatibilidad con el header
+  };
+}
 
   async cambiarPassword(usuarioId: number, passwordActual: string, passwordNueva: string) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id_usuario: usuarioId },
-    });
+  const usuario = await this.prisma.usuario.findUnique({ where: { id_usuario: usuarioId } });
+  if (!usuario) throw new NotFoundException('Usuario no encontrado');
 
-    if (!usuario) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
+  const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
+  if (!isPasswordValid) throw new BadRequestException('La contraseña actual no es correcta');
 
-    const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
-    if (!isPasswordValid) {
-      throw new BadRequestException('La contraseña actual no es correcta');
-    }
-
-    const hashed = await bcrypt.hash(passwordNueva, 10);
-    await this.prisma.usuario.update({
-      where: { id_usuario: usuarioId },
-      data: { password_hash: hashed },
-    });
-
-    return { message: 'Contraseña actualizada correctamente' };
-  }
+  const hashed = await bcrypt.hash(passwordNueva, 10);
+  await this.prisma.usuario.update({
+    where: { id_usuario: usuarioId },
+    data: { password_hash: hashed },
+  });
+  return { message: 'Contraseña actualizada correctamente' };
+}
 
   async updatePerfil(userId: number, data: any) {
   const user = await this.prisma.usuario.findUnique({
@@ -117,4 +116,5 @@ export class AuthService {
 
   return this.getPerfil(userId);
 }
+
 }

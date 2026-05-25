@@ -39,4 +39,10 @@ async updatePerfil(@Request() req, @Body() body: any) {
   return this.authService.updatePerfil(req.user.userId, body);
 }
 
+@Put('cambiar-password')
+@UseGuards(AuthGuard('jwt'))
+async cambiarPassword(@Request() req, @Body() body: { password_actual: string; password_nueva: string }) {
+  return this.authService.cambiarPassword(req.user.userId, body.password_actual, body.password_nueva);
+}
+
 }

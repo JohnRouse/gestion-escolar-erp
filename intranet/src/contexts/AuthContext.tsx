@@ -6,6 +6,8 @@ interface User {
   username: string;
   nombre: string;
   rol: string;
+  avatar_url?: string | null;
+  email?: string;
 }
 
 interface AuthContextType {
@@ -15,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -61,10 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = (data: Partial<User>) => {
+  if (user) {
+    const updated = { ...user, ...data };
+    setUser(updated);
+    localStorage.setItem('user_intranet', JSON.stringify(updated));
+  }
+  };
   const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated, isLoading }}>
+    <AuthContext.Provider value={{ token, user, login, logout, updateUser, isAuthenticated, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -21,28 +21,35 @@ export class AcademicosService {
     });
   }
 
-  async getSecciones(gradoId: number, anioId: number) {
-    // Secciones del grado con conteo de matriculados activos en ese año
-    const secciones = await this.prisma.seccion.findMany({
-      where: { id_grado: gradoId },
-      include: {
-        aula: true,
-        matriculas: {
-          where: {
-            id_anio: anioId,
-            estado_matricula: 'Activo',
-          },
-        },
-      },
-    });
-    return secciones.map((sec) => ({
-      id_seccion: sec.id_seccion,
-      letra: sec.letra,
-      capacidad: sec.aula.capacidad,
-      matriculados: sec.matriculas.length,
-      disponibles: sec.aula.capacidad - sec.matriculas.length,
-    }));
-  }
+  async getSecciones(gradoId?: number, anioId?: number) {
+  const where: any = {};
+  if (gradoId) where.id_grado = gradoId;
+
+  const secciones = await this.prisma.seccion.findMany({
+    where,
+    include: {
+      aula: true,
+      grado: { include: { nivel: true } },
+      matriculas: anioId
+        ? {
+            where: { id_anio: anioId, estado_matricula: 'Activo' },
+          }
+        : false,
+    },
+  });
+
+  return secciones.map((sec) => ({
+    id_seccion: sec.id_seccion,
+    letra: sec.letra,
+    grado: sec.grado,
+    aula: sec.aula,
+    matriculas: sec.matriculas || [],
+    capacidad: sec.aula.capacidad,
+    matriculados: Array.isArray(sec.matriculas) ? sec.matriculas.length : 0,
+    disponibles:
+      sec.aula.capacidad - (Array.isArray(sec.matriculas) ? sec.matriculas.length : 0),
+  }));
+}
 
   async buscarAlumno(dni: string) {
     return this.prisma.persona.findFirst({

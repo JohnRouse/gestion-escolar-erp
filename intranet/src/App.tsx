@@ -13,6 +13,7 @@ import DocentesPage from './pages/DocentesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './layout/AppLayout';
 import PerfilPage from './pages/PerfilPage';
+import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
         <Route path="/perfil" element={<PerfilPage />} />
+        <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>

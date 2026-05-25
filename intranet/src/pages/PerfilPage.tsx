@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Camera, X } from 'lucide-react';
+import { Pencil, Camera, X, Save } from 'lucide-react';
 
 interface PerfilData {
   nombres: string;
@@ -13,13 +13,17 @@ interface PerfilData {
   avatar_url: string | null;
 }
 
+function generarAvatar(nombre: string): string {
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nombre)}&backgroundColor=4c6ef5,748ffc,91a7ff,bac8ff,dbe4ff&textColor=ffffff&radius=50`;
+}
+
 export default function PerfilPage() {
-  const { token, user } = useAuth();
+  const { token, user, updateUser } = useAuth();
   const [perfil, setPerfil] = useState<PerfilData | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Campos editables (para el modal)
+  // Campos editables (modal)
   const [editNombres, setEditNombres] = useState('');
   const [editApPaterno, setEditApPaterno] = useState('');
   const [editApMaterno, setEditApMaterno] = useState('');
@@ -29,17 +33,23 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Cambio de contraseña
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     axios.get('/api/auth/perfil', { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
         const data = res.data;
-        const nombreCompleto = data.nombre.split(' ');
         setPerfil({
-          nombres: nombreCompleto[0] || '',
-          apellidoPaterno: nombreCompleto[1] || '',
-          apellidoMaterno: nombreCompleto[2] || '',
+          nombres: data.nombres || '',
+          apellidoPaterno: data.apellido_paterno || '',
+          apellidoMaterno: data.apellido_materno || '',
           correo: data.correo || '',
           telefono: data.telefono || '',
           cargo: data.rol || '',
@@ -75,7 +85,6 @@ export default function PerfilPage() {
         avatar_url: editAvatarUrl,
       }, { headers: { Authorization: `Bearer ${token}` } });
 
-      // Actualizar datos locales
       setPerfil({
         nombres: editNombres,
         apellidoPaterno: editApPaterno,
@@ -85,9 +94,15 @@ export default function PerfilPage() {
         cargo: perfil?.cargo || '',
         avatar_url: editAvatarUrl || null,
       });
+
+      updateUser({
+        nombre: `${editNombres} ${editApPaterno} ${editApMaterno}`.trim(),
+        avatar_url: editAvatarUrl || null,
+      });
+
       setModalOpen(false);
-    } catch {
-      setMessage('Error saving changes');
+    } catch (err: any) {
+      setMessage(err.response?.data?.message || 'Error al guardar los cambios');
     } finally {
       setSaving(false);
     }
@@ -100,11 +115,38 @@ export default function PerfilPage() {
     setEditAvatarUrl(url);
   };
 
+  const handleChangePassword = async () => {
+    setPasswordMessage('');
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('Las contraseñas no coinciden');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordMessage('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await axios.put('/api/auth/cambiar-password', {
+        password_actual: currentPassword,
+        password_nueva: newPassword,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setPasswordMessage('Contraseña actualizada con éxito');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordMessage(err.response?.data?.message || 'Error al cambiar la contraseña');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="animate-slide-in-right">
-        <h1 className="text-xl font-bold text-[#1B2559] mb-6">Profile</h1>
-        <div className="bg-white rounded-xl border border-[#e2e5ef] p-6">
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
+        <div className="card p-6">
           <div className="flex items-center gap-4 mb-8">
             <div className="skeleton w-16 h-16 rounded-full" />
             <div>
@@ -128,191 +170,179 @@ export default function PerfilPage() {
   if (!perfil) {
     return (
       <div className="animate-slide-in-right">
-        <h1 className="text-xl font-bold text-[#1B2559] mb-6">Profile</h1>
-        <p className="text-[#6a728b]">No se pudo cargar la información del perfil.</p>
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
+        <p className="text-gray-500">No se pudo cargar la información del perfil.</p>
       </div>
     );
   }
 
-  const avatarSrc = perfil.avatar_url ||
-    `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(`${perfil.nombres} ${perfil.apellidoPaterno}`)}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`;
+  const avatarSrc = perfil.avatar_url || generarAvatar(`${perfil.nombres} ${perfil.apellidoPaterno}`);
 
   return (
     <div className="animate-slide-in-right">
-      <h1 className="text-xl font-bold text-[#1B2559] mb-6">Profile</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
 
-      {/* Personal Information Card */}
-      <div className="bg-white rounded-xl border border-[#e2e5ef] p-6 mb-6">
-        {/* Cabecera con avatar y botones */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <img src={avatarSrc} alt="Avatar" className="w-16 h-16 rounded-full object-cover" />
-            <div>
-              <h2 className="text-lg font-bold text-[#1B2559]">
-                {perfil.nombres} {perfil.apellidoPaterno} {perfil.apellidoMaterno}
-              </h2>
-              <p className="text-sm text-[#6a728b]">{perfil.cargo}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tarjeta de información personal */}
+        <div className="card p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <img src={avatarSrc} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-gray-100" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {perfil.nombres} {perfil.apellidoPaterno} {perfil.apellidoMaterno}
+                </h2>
+                <p className="text-sm text-gray-500">{perfil.cargo}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openModal}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#e2e5ef] text-sm font-medium text-[#1B2559] hover:bg-[#f9fafb] transition-colors ml-2"
-            >
-              <Pencil size={16} />
-              Edit
+            <button onClick={openModal} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition-colors duration-150">
+              <Pencil size={15} /> Editar
             </button>
           </div>
-        </div>
 
-        {/* Datos personales */}
-        <div>
-          <h3 className="text-lg font-bold text-[#1B2559] mb-6">Personal Information</h3>
+          <h3 className="text-base font-semibold text-gray-900 mb-6">Información Personal</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-xs font-medium text-[#6a728b] mb-1">First Name</p>
-              <p className="text-sm font-semibold text-[#1B2559]">{perfil.nombres || '—'}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">NOMBRES</p>
+              <p className="text-sm font-medium text-gray-800">{perfil.nombres || '—'}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#6a728b] mb-1">Last Name</p>
-              <p className="text-sm font-semibold text-[#1B2559]">
-                {perfil.apellidoPaterno} {perfil.apellidoMaterno}
+              <p className="text-xs font-medium text-gray-500 mb-1">APELLIDOS</p>
+              <p className="text-sm font-medium text-gray-800">
+                {perfil.apellidoPaterno ? `${perfil.apellidoPaterno} ${perfil.apellidoMaterno}` : '—'}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#6a728b] mb-1">Email address</p>
-              <p className="text-sm font-semibold text-[#1B2559]">{perfil.correo || '—'}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">CORREO ELECTRÓNICO</p>
+              <p className="text-sm font-medium text-gray-800">
+                {perfil.correo || <span className="text-gray-400 italic">No registrado</span>}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#6a728b] mb-1">Phone</p>
-              <p className="text-sm font-semibold text-[#1B2559]">{perfil.telefono || '—'}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">TELÉFONO</p>
+              <p className="text-sm font-medium text-gray-800">
+                {perfil.telefono || <span className="text-gray-400 italic">No registrado</span>}
+              </p>
             </div>
             <div className="md:col-span-2">
-              <p className="text-xs font-medium text-[#6a728b] mb-1">Role / Position</p>
-              <p className="text-sm font-semibold text-[#1B2559]">{perfil.cargo}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">CARGO / PUESTO</p>
+              <p className="text-sm font-medium text-gray-800">{perfil.cargo}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Tarjeta de Seguridad */}
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-gray-900 mb-6">Seguridad</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="label">Contraseña actual</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Nueva contraseña</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="Mínimo 6 caracteres"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Confirmar nueva contraseña</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="Repite la nueva contraseña"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+
+            {passwordMessage && (
+              <p className={`text-sm ${passwordMessage.includes('éxito') ? 'text-emerald-600' : 'text-red-500'}`}>
+                {passwordMessage}
+              </p>
+            )}
+
+            <button
+              onClick={handleChangePassword}
+              disabled={changingPassword}
+              className="btn btn-secondary w-full"
+            >
+              {changingPassword ? 'Cambiando...' : 'Actualizar contraseña'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* MODAL: Edit Personal Information */}
+      {/* Modal de edición */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-[#1B2559] bg-opacity-50 backdrop-blur-sm transition-opacity"
-            onClick={() => setModalOpen(false)}
-          />
-
-          {/* Modal Content */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-xl overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto slide-up">
             <div className="p-8">
-              {/* Header */}
               <div className="flex items-start justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-[#1B2559]">Edit Personal Information</h2>
-                  <p className="text-sm text-[#6a728b] mt-1">Update your details to keep your profile up-to-date.</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">Editar Información Personal</h2>
+                  <p className="text-sm text-gray-500 mt-1">Actualiza tus datos para mantener tu perfil al día.</p>
                 </div>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-[#F0F2F9] text-[#6a728b] hover:bg-[#e2e5ef] transition-colors shrink-0"
-                >
-                  <X size={20} />
+                <button onClick={() => setModalOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                  <X size={18} />
                 </button>
               </div>
 
-              {/* Profile Picture Section */}
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-[#1B2559] mb-4">Change Profile Picture</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Cambiar Foto de Perfil</h3>
                 <div className="flex items-center gap-6">
-                  <div className="relative group shrink-0">
-                    <img
-                      src={editAvatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(`${editNombres} ${editApPaterno}`)}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`}
-                      alt="Avatar"
-                      className="w-24 h-24 rounded-full object-cover"
-                    />
-                    <label className="absolute bottom-0 right-0 bg-white border border-[#e2e5ef] rounded-full p-1.5 shadow-sm cursor-pointer hover:bg-gray-50">
-                      <Camera size={16} className="text-[#6a728b]" />
+                  <div className="relative group">
+                    <img src={editAvatarUrl || avatarSrc} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
+                    <label className="absolute bottom-0 right-0 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+                      <Camera size={14} className="text-gray-400" />
                       <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                     </label>
                   </div>
-                  <div>
-                    <p className="text-sm text-[#6a728b]">
-                      Upload a square image (200×200 px)<br />in JPEG or PNG format.
-                    </p>
-                  </div>
+                  <p className="text-sm text-gray-500">Sube una imagen cuadrada (200×200 px)<br />en formato JPEG o PNG.</p>
                 </div>
               </div>
 
-              {/* Form Fields */}
-              <h3 className="text-lg font-semibold text-[#1B2559] mb-6">Personal Information</h3>
-
+              <h3 className="text-base font-semibold text-gray-900 mb-6">Información Personal</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#1B2559] mb-2">First Name</label>
-                  <input
-                    type="text"
-                    value={editNombres}
-                    onChange={e => setEditNombres(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e2e5ef] text-sm text-[#1B2559] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label className="label">Nombres</label>
+                  <input type="text" className="input" value={editNombres} onChange={e => setEditNombres(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1B2559] mb-2">Last Name (Paternal)</label>
-                  <input
-                    type="text"
-                    value={editApPaterno}
-                    onChange={e => setEditApPaterno(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e2e5ef] text-sm text-[#1B2559] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label className="label">Apellido Paterno</label>
+                  <input type="text" className="input" value={editApPaterno} onChange={e => setEditApPaterno(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1B2559] mb-2">Last Name (Maternal)</label>
-                  <input
-                    type="text"
-                    value={editApMaterno}
-                    onChange={e => setEditApMaterno(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e2e5ef] text-sm text-[#1B2559] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label className="label">Apellido Materno</label>
+                  <input type="text" className="input" value={editApMaterno} onChange={e => setEditApMaterno(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1B2559] mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    value={editCorreo}
-                    onChange={e => setEditCorreo(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e2e5ef] text-sm text-[#1B2559] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label className="label">Correo Electrónico</label>
+                  <input type="email" className="input" value={editCorreo} onChange={e => setEditCorreo(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1B2559] mb-2">Phone</label>
-                  <input
-                    type="text"
-                    value={editTelefono}
-                    onChange={e => setEditTelefono(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e2e5ef] text-sm text-[#1B2559] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label className="label">Teléfono</label>
+                  <input type="text" className="input" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} />
                 </div>
               </div>
 
-              {message && (
-                <p className="mt-4 text-sm text-red-500">{message}</p>
-              )}
+              {message && <p className="mt-4 text-sm text-red-500">{message}</p>}
 
-              {/* Footer Buttons */}
-              <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-[#e2e5ef]">
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="px-6 py-2.5 rounded-lg border border-[#e2e5ef] text-sm font-medium text-[#1B2559] hover:bg-[#f9fafb] transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-6 py-2.5 rounded-lg bg-[#3652AD] text-white text-sm font-medium hover:bg-[#2b428b] transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
+              <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+                <button onClick={() => setModalOpen(false)} className="btn btn-secondary">Cerrar</button>
+                <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+                  <Save size={15} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </div>
