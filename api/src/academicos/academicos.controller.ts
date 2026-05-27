@@ -70,26 +70,26 @@ export class AcademicosController {
   }
 
   @Put('grados/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async updateGrado(@Param('id') id: string, @Body() body: { nombre_grado: string; id_nivel?: number }) {
-    const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
-    if (!grado) throw new NotFoundException('Grado no encontrado');
-    const data: any = { nombre_grado: body.nombre_grado };
-    if (body.id_nivel) data.id_nivel = body.id_nivel;
-    return this.prisma.grado.update({ where: { id_grado: Number(id) }, data });
-  }
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async updateGrado(@Param('id') id: string, @Body() body: { nombre_grado: string; id_nivel?: number }) {
+  const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
+  if (!grado) throw new NotFoundException('Grado no encontrado');
+  const data: any = { nombre_grado: body.nombre_grado };
+  if (body.id_nivel) data.id_nivel = body.id_nivel;
+  return this.prisma.grado.update({ where: { id_grado: Number(id) }, data });
+}
 
-  @Delete('grados/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async deleteGrado(@Param('id') id: string) {
-    const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
-    if (!grado) throw new NotFoundException('Grado no encontrado');
-    const secciones = await this.prisma.seccion.count({ where: { id_grado: Number(id) } });
-    if (secciones > 0) throw new BadRequestException('No se puede eliminar un grado con secciones asignadas');
-    return this.prisma.grado.delete({ where: { id_grado: Number(id) } });
-  }
+@Delete('grados/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteGrado(@Param('id') id: string) {
+  const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
+  if (!grado) throw new NotFoundException('Grado no encontrado');
+  const secciones = await this.prisma.seccion.count({ where: { id_grado: Number(id) } });
+  if (secciones > 0) throw new BadRequestException('No se puede eliminar un grado con secciones asignadas');
+  return this.prisma.grado.delete({ where: { id_grado: Number(id) } });
+}
 
   // ── SECCIONES ────────────────────────────────────────
   @Get('secciones')
@@ -113,24 +113,58 @@ async getSecciones(
   }
 
   @Put('secciones/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async updateSeccion(@Param('id') id: string, @Body() body: { letra?: string; id_aula?: number }) {
-    const seccion = await this.prisma.seccion.findUnique({ where: { id_seccion: Number(id) } });
-    if (!seccion) throw new NotFoundException('Sección no encontrada');
-    return this.prisma.seccion.update({ where: { id_seccion: Number(id) }, data: body });
-  }
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async updateSeccion(@Param('id') id: string, @Body() body: { letra?: string; id_aula?: number }) {
+  const seccion = await this.prisma.seccion.findUnique({ where: { id_seccion: Number(id) } });
+  if (!seccion) throw new NotFoundException('Sección no encontrada');
+  return this.prisma.seccion.update({ where: { id_seccion: Number(id) }, data: body });
+}
 
-  @Delete('secciones/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async deleteSeccion(@Param('id') id: string) {
-    const seccion = await this.prisma.seccion.findUnique({ where: { id_seccion: Number(id) } });
-    if (!seccion) throw new NotFoundException('Sección no encontrada');
-    const matriculas = await this.prisma.matricula.count({ where: { id_seccion: Number(id), estado_matricula: 'Activo' } });
-    if (matriculas > 0) throw new BadRequestException('No se puede eliminar una sección con alumnos matriculados');
-    return this.prisma.seccion.delete({ where: { id_seccion: Number(id) } });
-  }
+@Delete('secciones/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteSeccion(@Param('id') id: string) {
+  const seccion = await this.prisma.seccion.findUnique({ where: { id_seccion: Number(id) } });
+  if (!seccion) throw new NotFoundException('Sección no encontrada');
+  const matriculas = await this.prisma.matricula.count({ where: { id_seccion: Number(id), estado_matricula: 'Activo' } });
+  if (matriculas > 0) throw new BadRequestException('No se puede eliminar una sección con alumnos matriculados');
+  return this.prisma.seccion.delete({ where: { id_seccion: Number(id) } });
+}
+
+@Put('cursos/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async updateCurso(@Param('id') id: string, @Body() body: { nombre_curso: string; id_area?: number }) {
+  const curso = await this.prisma.curso.findUnique({ where: { id_curso: Number(id) } });
+  if (!curso) throw new NotFoundException('Curso no encontrado');
+  const data: any = { nombre_curso: body.nombre_curso };
+  if (body.id_area) data.id_area = body.id_area;
+  return this.prisma.curso.update({ where: { id_curso: Number(id) }, data });
+}
+
+@Delete('cursos/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteCurso(@Param('id') id: string) {
+  return this.prisma.curso.delete({ where: { id_curso: Number(id) } });
+}
+
+@Put('areas/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async updateArea(@Param('id') id: string, @Body() body: { nombre_area: string }) {
+  return this.prisma.areaCurricular.update({ where: { id_area: Number(id) }, data: { nombre_area: body.nombre_area } });
+}
+
+@Delete('areas/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteArea(@Param('id') id: string) {
+  return this.prisma.areaCurricular.delete({ where: { id_area: Number(id) } });
+}
+
+
 
   // ── AÑOS LECTIVOS ────────────────────────────────────
   @Get('anios')

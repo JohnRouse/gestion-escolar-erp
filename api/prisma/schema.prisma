@@ -61,6 +61,7 @@ model Nivel {
   nombre_nivel String                 @db.VarChar(50)
   grados       Grado[]
   circulares   CircularDestinatario[]
+  plantillas PlantillaEvaluacion[]
 }
 
 model Grado {
@@ -107,6 +108,7 @@ model Curso {
   area         AreaCurricular      @relation(fields: [id_area], references: [id_area])
   asignaciones AsignacionDocente[]
   horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
+  plantillas PlantillaEvaluacion[]
 }
 
 // ── MÓDULO DE TIEMPO ──
@@ -238,6 +240,7 @@ model TipoEvaluacion {
   id_tipo_eval Int                 @id @default(autoincrement())
   nombre_tipo  String              @db.VarChar(50)
   evaluaciones EvaluacionDetalle[]
+  detallesPlantilla PlantillaEvaluacionDetalle[]
 }
 
 model EvaluacionDetalle {
@@ -504,4 +507,24 @@ model RegistroNFC {
   fecha       DateTime @default(now())
   tipo        String   @default("entrada")  // entrada, salida
   estudiante  Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+}
+
+model PlantillaEvaluacion {
+  id_plantilla Int                       @id @default(autoincrement())
+  nombre       String                    @db.VarChar(200)
+  id_nivel     Int?
+  id_curso     Int?
+  detalles     PlantillaEvaluacionDetalle[]
+  nivel        Nivel?                    @relation(fields: [id_nivel], references: [id_nivel])
+  curso        Curso?                    @relation(fields: [id_curso], references: [id_curso])
+}
+
+model PlantillaEvaluacionDetalle {
+  id_detalle   Int                @id @default(autoincrement())
+  id_plantilla Int
+  id_tipo_eval Int
+  descripcion  String             @db.VarChar(200)
+  orden        Int                @default(1)
+  plantilla    PlantillaEvaluacion @relation(fields: [id_plantilla], references: [id_plantilla])
+  tipo         TipoEvaluacion     @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
 }

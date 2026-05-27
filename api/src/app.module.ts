@@ -16,6 +16,7 @@ import { AlbumesModule } from './albumes/albumes.module';
 import { NfcModule } from './nfc/nfc.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ActividadInterceptor } from './auth/actividad.interceptor';
+import { PlantillasModule } from './plantillas/plantillas.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ActividadInterceptor } from './auth/actividad.interceptor';
     ScheduleModule.forRoot(),
     AlbumesModule,
     NfcModule,
+    PlantillasModule,
   ],
   controllers: [],
   providers: [
