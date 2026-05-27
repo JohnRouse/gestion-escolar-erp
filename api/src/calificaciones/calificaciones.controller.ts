@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Param, Query, Body,
+  Controller, Get, Post, Put, Param, Query, Body, Delete,
   UseGuards, Request, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { CalificacionesService } from './calificaciones.service';
@@ -130,6 +130,52 @@ async getLibreta(
   @Query('bimestre_id') bimestreId: string,
 ) {
   return this.calificacionesService.getLibreta(Number(alumnoId), Number(bimestreId));
+}
+
+@Delete('evaluaciones/:id')
+@Roles('Admin', 'Profesor')
+async deleteEvaluacion(@Param('id') id: string) {
+  return this.calificacionesService.deleteEvaluacion(Number(id));
+}
+
+@Get('escala')
+@Roles('Admin')
+async getEscala() {
+  return this.prisma.escalaCalificacion.findFirst();
+}
+
+@Put('escala')
+@Roles('Admin')
+async updateEscala(@Body() body: { nota_minima: number; nota_maxima: number; nota_aprobatoria: number }) {
+  const escala = await this.prisma.escalaCalificacion.findFirst();
+  if (!escala) throw new NotFoundException('Escala no encontrada');
+  return this.prisma.escalaCalificacion.update({
+    where: { id_escala: escala.id_escala },
+    data: body,
+  });
+}
+
+@Get('tipos-evaluacion')
+async getTiposEvaluacion() {
+  return this.prisma.tipoEvaluacion.findMany();
+}
+
+@Post('tipos-evaluacion')
+@Roles('Admin')
+async createTipoEvaluacion(@Body() body: { nombre_tipo: string }) {
+  return this.prisma.tipoEvaluacion.create({ data: { nombre_tipo: body.nombre_tipo } });
+}
+
+@Put('tipos-evaluacion/:id')
+@Roles('Admin')
+async updateTipoEvaluacion(@Param('id') id: string, @Body() body: { nombre_tipo: string }) {
+  return this.prisma.tipoEvaluacion.update({ where: { id_tipo_eval: Number(id) }, data: { nombre_tipo: body.nombre_tipo } });
+}
+
+@Delete('tipos-evaluacion/:id')
+@Roles('Admin')
+async deleteTipoEvaluacion(@Param('id') id: string) {
+  return this.prisma.tipoEvaluacion.delete({ where: { id_tipo_eval: Number(id) } });
 }
 
 }

@@ -3,6 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import NivelesGradosTab from './NivelesGradosTab';
 import SeccionesTab from './SeccionesTab';
 import CursosTab from './CursosTab';
+import ConceptosPagoTab from './ConceptosPagoTab';
+import EscalaTab from './EscalaTab';
+import TiposEvalTab from './TiposEvalTab';
 
 const TABS = [
   { key: 'niveles', label: 'Niveles y Grados' },
@@ -33,7 +36,7 @@ export default function ConfiguracionPage() {
             onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
               tabActivo === t.key
-                ? 'border-brand-500 text-brand-600'
+                ? 'border-accent-500 text-accent-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -46,11 +49,9 @@ export default function ConfiguracionPage() {
       {tabActivo === 'niveles' && <NivelesGradosTab />}
       {tabActivo === 'secciones' && <SeccionesTab />}
       {tabActivo === 'cursos' && <CursosTab />}
-      {tabActivo !== 'niveles' && tabActivo !== 'secciones' && tabActivo !== 'cursos' && (
-        <div className="card p-8 text-center text-gray-500">
-          Módulo en desarrollo
-        </div>
-      )}
+      {tabActivo === 'pagos' && <ConceptosPagoTab />}
+      {tabActivo === 'escala' && <EscalaTab />}
+      {tabActivo === 'tipos' && <TiposEvalTab />}
     </div>
   );
 }

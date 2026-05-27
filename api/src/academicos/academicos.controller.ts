@@ -339,4 +339,48 @@ async createArea(@Body() body: { nombre_area: string }) {
 async createCurso(@Body() body: { nombre_curso: string; id_area: number }) {
   return this.prisma.curso.create({ data: { nombre_curso: body.nombre_curso, id_area: body.id_area } });
 }
+
+@Get('docente/asignaciones')
+@UseGuards(AuthGuard('jwt'))
+async getAsignacionesDocente(@Request() req) {
+  const usuario = await this.prisma.usuario.findUnique({
+    where: { id_usuario: req.user.userId },
+    include: { persona: { include: { docentes: true } }, rol: true },
+  });
+
+  // Si es Admin o Director, devolver todas las asignaciones del año activo
+  if (usuario?.rol?.nombre_rol === 'Admin' || usuario?.rol?.nombre_rol === 'Director') {
+    const asignaciones = await this.prisma.asignacionDocente.findMany({
+      where: { id_anio: 1 },
+      include: {
+        curso: true,
+        seccion: { include: { grado: { include: { nivel: true } } } },
+      },
+    });
+    return asignaciones.map((a) => ({
+      id_asignacion: a.id_asignacion,
+      curso: a.curso.nombre_curso,
+      seccion: `${a.seccion.grado.nombre_grado} "${a.seccion.letra}" · ${a.seccion.grado.nivel.nombre_nivel}`,
+    }));
+  }
+
+  // Para docentes normales, solo sus propias asignaciones
+  const docente = usuario?.persona?.docentes?.[0];
+  if (!docente) throw new NotFoundException('No se encontró docente');
+
+  const asignaciones = await this.prisma.asignacionDocente.findMany({
+    where: { id_docente: docente.id_persona, id_anio: 1 },
+    include: {
+      curso: true,
+      seccion: { include: { grado: { include: { nivel: true } } } },
+    },
+  });
+
+  return asignaciones.map((a) => ({
+    id_asignacion: a.id_asignacion,
+    curso: a.curso.nombre_curso,
+    seccion: `${a.seccion.grado.nombre_grado} "${a.seccion.letra}" · ${a.seccion.grado.nivel.nombre_nivel}`,
+  }));
+}
+
 }

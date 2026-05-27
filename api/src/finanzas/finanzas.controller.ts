@@ -1,15 +1,18 @@
 import {
-  Controller, Get, Post, Param, Body, UseGuards, Request, Query,
+  Controller, Get, Post, Param, Body, UseGuards, Request, Query, Delete, Put
 } from '@nestjs/common';
 import { FinanzasService } from './finanzas.service';
 import { RegistrarPagoDto } from './dto/registrar-pago.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('tesoreria')
 @UseGuards(AuthGuard('jwt'))
 export class FinanzasController {
-  constructor(private readonly finanzasService: FinanzasService) {}
+  constructor(private readonly finanzasService: FinanzasService,
+  private prisma: PrismaService,
+  ) {}
 
   /**
    * Obtiene estado de cuenta por matrícula (uso interno)
@@ -59,4 +62,46 @@ async webhookPago(@Body() body: any) {
   console.log('[Webhook] Pago recibido:', body);
   return { received: true };
 }
+
+@Get('conceptos')
+@Roles('Admin')
+async getConceptos() {
+  return this.prisma.conceptoPago.findMany({
+    where: { id_anio: 1 },
+    orderBy: { nombre_concepto: 'asc' },
+  });
+}
+
+@Post('conceptos')
+@Roles('Admin')
+async createConcepto(@Body() body: { nombre_concepto: string; monto_base: number; es_pension: boolean }) {
+  return this.prisma.conceptoPago.create({
+    data: {
+      nombre_concepto: body.nombre_concepto,
+      monto_base: body.monto_base,
+      id_anio: 1,
+      es_pension: body.es_pension,
+    },
+  });
+}
+
+@Put('conceptos/:id')
+@Roles('Admin')
+async updateConcepto(@Param('id') id: string, @Body() body: { nombre_concepto: string; monto_base: number; es_pension: boolean }) {
+  return this.prisma.conceptoPago.update({
+    where: { id_concepto: Number(id) },
+    data: {
+      nombre_concepto: body.nombre_concepto,
+      monto_base: body.monto_base,
+      es_pension: body.es_pension,
+    },
+  });
+}
+
+@Delete('conceptos/:id')
+@Roles('Admin')
+async deleteConcepto(@Param('id') id: string) {
+  return this.prisma.conceptoPago.delete({ where: { id_concepto: Number(id) } });
+}
+
 }

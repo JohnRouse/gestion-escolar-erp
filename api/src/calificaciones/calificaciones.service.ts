@@ -716,4 +716,16 @@ export class CalificacionesService {
   };
 }
 
+async deleteEvaluacion(id: number) {
+  const evaluacion = await this.prisma.evaluacionDetalle.findUnique({
+    where: { id_evaluacion_det: id },
+    include: { notas: true },
+  });
+  if (!evaluacion) throw new NotFoundException('Evaluación no encontrada');
+  if (evaluacion.notas.length > 0) {
+    throw new BadRequestException('No se puede eliminar una evaluación con notas registradas');
+  }
+  return this.prisma.evaluacionDetalle.delete({ where: { id_evaluacion_det: id } });
+}
+
 }
