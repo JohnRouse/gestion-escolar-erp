@@ -18,7 +18,6 @@ import {
   School,
   Calendar,
   BookOpen,
-  Play,
 } from 'lucide-react';
 
 interface Asignacion {
@@ -186,12 +185,6 @@ export default function NotasPage() {
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
   const [nuevaEvalTipo, setNuevaEvalTipo] = useState('3');
 
-  // Plantillas
-  const [plantillas, setPlantillas] = useState<any[]>([]);
-  const [showPlantillas, setShowPlantillas] = useState(false);
-  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<any>(null);
-  const [showConfirmReemplazo, setShowConfirmReemplazo] = useState(false);
-
   // Cargar salones/cursos asignados al docente
   useEffect(() => {
     if (!token) return;
@@ -209,15 +202,6 @@ export default function NotasPage() {
           setAsignacionId(data[0].id_asignacion);
         }
       })
-      .catch(() => {});
-  }, [token]);
-
-  // Cargar plantillas disponibles
-  useEffect(() => {
-    if (!token) return;
-    axios
-      .get('/api/plantillas', { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setPlantillas(res.data))
       .catch(() => {});
   }, [token]);
 
@@ -338,39 +322,7 @@ export default function NotasPage() {
     setUnidadId(nuevoPeriodo.unidades[0]);
   };
 
-  // Seleccionar plantilla (con verificación de evaluaciones existentes)
-  const seleccionarPlantilla = (plantilla: any) => {
-    if (grilla && grilla.evaluaciones.length > 0) {
-      setPlantillaSeleccionada(plantilla);
-      setShowConfirmReemplazo(true);
-    } else {
-      aplicarPlantilla(plantilla.id_plantilla, 'agregar');
-    }
-  };
-
-  // Aplicar plantilla con modo (reemplazar o agregar)
-  const aplicarPlantilla = async (idPlantilla: number, modo: 'reemplazar' | 'agregar') => {
-    if (!asignacionId) return;
-    try {
-      await axios.post(
-        `/api/plantillas/${idPlantilla}/aplicar`,
-        {
-          id_asignacion: asignacionId,
-          id_unidad: unidadId,
-          modo,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setShowPlantillas(false);
-      setShowConfirmReemplazo(false);
-      setPlantillaSeleccionada(null);
-      cargarGrilla();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al aplicar plantilla');
-    }
-  };
-
-  // Actualizar una nota localmente y recalcular el promedio en tiempo real
+  // Actualizar una nota localmente
   const handleNotaChange = (idMatricula: number, idEval: number, valor: string) => {
     if (!grilla) return;
 
@@ -476,16 +428,6 @@ export default function NotasPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowPlantillas(true)}
-              disabled={!asignacionId}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm shadow-gray-200/50 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Play size={16} />
-              Cargar plantilla
-            </button>
-
             <button
               type="button"
               onClick={() => setModalOpen(true)}
@@ -958,107 +900,6 @@ export default function NotasPage() {
               >
                 <Plus size={16} />
                 Crear evaluación
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de selección de plantilla */}
-      {showPlantillas && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white bg-white shadow-2xl shadow-gray-950/20">
-            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
-                  <Play size={13} />
-                  Plantillas
-                </div>
-                <h2 className="mt-3 text-xl font-bold text-gray-950">Seleccionar Plantilla</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Aplica una plantilla predefinida para crear las evaluaciones automáticamente.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowPlantillas(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Cerrar modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-2 px-6 py-5 max-h-64 overflow-y-auto">
-              {plantillas.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No hay plantillas disponibles.</p>
-              ) : (
-                plantillas.map((p: any) => (
-                  <button
-                    key={p.id_plantilla}
-                    onClick={() => seleccionarPlantilla(p)}
-                    className="w-full text-left p-4 rounded-xl hover:bg-gray-50 border border-gray-100 transition-colors"
-                  >
-                    <div className="flex justify-between items-center">
-                      <p className="font-semibold text-gray-800">{p.nombre}</p>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        {p.detalles.length} evaluaciones
-                      </span>
-                    </div>
-                    {p.nivel && <p className="text-xs text-gray-400 mt-1">Nivel: {p.nivel.nombre_nivel}</p>}
-                    {p.curso && <p className="text-xs text-gray-400 mt-1">Curso: {p.curso.nombre_curso}</p>}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmación: ¿Reemplazar o Agregar? */}
-      {showConfirmReemplazo && plantillaSeleccionada && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white bg-white shadow-2xl shadow-gray-950/20">
-            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-gray-950">Ya existen evaluaciones</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Esta unidad tiene {grilla?.evaluaciones.length} evaluaciones. ¿Qué deseas hacer?
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowConfirmReemplazo(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 p-6">
-              <button
-                type="button"
-                onClick={() => aplicarPlantilla(plantillaSeleccionada.id_plantilla, 'reemplazar')}
-                className="flex flex-col items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center transition hover:bg-rose-100"
-              >
-                <Trash2 size={24} className="text-rose-500" />
-                <div>
-                  <p className="text-sm font-bold text-rose-700">Reemplazar</p>
-                  <p className="mt-1 text-xs text-rose-500">Borra las actuales y aplica la plantilla</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => aplicarPlantilla(plantillaSeleccionada.id_plantilla, 'agregar')}
-                className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center transition hover:bg-emerald-100"
-              >
-                <Plus size={24} className="text-emerald-500" />
-                <div>
-                  <p className="text-sm font-bold text-emerald-700">Agregar</p>
-                  <p className="mt-1 text-xs text-emerald-500">Conserva las actuales y añade las nuevas</p>
-                </div>
               </button>
             </div>
           </div>

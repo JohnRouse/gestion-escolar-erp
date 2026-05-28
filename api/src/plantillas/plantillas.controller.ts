@@ -99,4 +99,65 @@ async aplicar(
 
   return { message: 'Plantilla aplicada', total: evaluaciones.length, modo: body.modo || 'agregar' };
 }
+
+@Post(':id/aplicar-anio')
+@Roles('Admin', 'Director')
+async aplicarAnio(
+  @Param('id') id: string,
+  @Body() body: { id_anio: number },
+) {
+  const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
+    where: { id_plantilla: Number(id) },
+    include: { detalles: true },
+  });
+  if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
+
+  // Obtener todas las asignaciones activas del año
+  const where: any = { id_anio: body.id_anio };
+  if (plantilla.id_nivel) {
+    where.seccion = { grado: { id_nivel: plantilla.id_nivel } };
+  }
+  if (plantilla.id_curso) {
+    where.id_curso = plantilla.id_curso;
+  }
+
+  const asignaciones = await this.prisma.asignacionDocente.findMany({ where });
+
+  let totalCreadas = 0;
+
+  for (const asignacion of asignaciones) {
+    // Para cada unidad (1 a 8)
+    for (let unidad = 1; unidad <= 8; unidad++) {
+      for (const detalle of plantilla.detalles) {
+        // Verificar si ya existe una evaluación similar en esa unidad y asignación
+        const existente = await this.prisma.evaluacionDetalle.findFirst({
+  where: {
+    id_asignacion: asignacion.id_asignacion,
+    id_unidad: unidad,
+    descripcion_actividad: detalle.descripcion,
+    id_tipo_eval: detalle.id_tipo_eval,
+  },
+});
+        if (!existente) {
+          await this.prisma.evaluacionDetalle.create({
+            data: {
+              id_asignacion: asignacion.id_asignacion,
+              id_unidad: unidad,
+              id_tipo_eval: detalle.id_tipo_eval,
+              descripcion_actividad: detalle.descripcion,
+            },
+          });
+          totalCreadas++;
+        }
+      }
+    }
+  }
+
+  return {
+    message: 'Plantilla aplicada a todas las asignaciones del año',
+    asignaciones: asignaciones.length,
+    evaluacionesCreadas: totalCreadas,
+  };
+}
+
 }

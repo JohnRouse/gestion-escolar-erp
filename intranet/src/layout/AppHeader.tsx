@@ -30,7 +30,10 @@ export default function AppHeader() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hideOnScroll, setHideOnScroll] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const lastScrollY = useRef(0);
 
   const avatarSrc = user?.avatar_url || generarAvatar(user?.nombre || 'Usuario');
   const userName = user?.nombre || 'Usuario';
@@ -69,10 +72,46 @@ export default function AppHeader() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  useEffect(() => {
+    const getScrollY = () => window.scrollY || document.documentElement.scrollTop || 0;
+
+    const handleScroll = () => {
+      const currentY = getScrollY();
+      const scrollingDown = currentY > lastScrollY.current;
+      const passedHeaderArea = currentY > 96;
+
+      setIsScrolled(currentY > 12);
+
+      if (!dropdownOpen && !mobileSearchOpen) {
+        setHideOnScroll(scrollingDown && passedHeaderArea);
+      }
+
+      if (currentY < 24) {
+        setHideOnScroll(false);
+      }
+
+      lastScrollY.current = Math.max(currentY, 0);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [dropdownOpen, mobileSearchOpen]);
+
 
   return (
-    <header className="sticky top-3 z-30 px-3 sm:px-5">
-      <div className="relative mx-auto flex h-16 max-w-[1600px] items-center justify-between rounded-[1.35rem] border border-gray-200/70 bg-white/85 px-3 shadow-[0_20px_70px_-45px_rgba(15,23,42,0.55)] backdrop-blur-xl sm:px-4">
+    <header
+      className={`sticky top-3 z-30 px-3 transition-all duration-300 ease-out sm:px-5 ${
+        hideOnScroll ? '-translate-y-24 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+      }`}
+    >
+      <div
+        className={`relative mx-auto flex h-16 max-w-[1600px] items-center justify-between rounded-[1.35rem] border px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 ${
+          isScrolled
+            ? 'border-gray-200/80 bg-white/90 shadow-[0_18px_55px_-38px_rgba(15,23,42,0.65)]'
+            : 'border-gray-200/70 bg-white/85 shadow-[0_20px_70px_-45px_rgba(15,23,42,0.55)]'
+        }`}
+      >
         {/* Izquierda */}
         <div className="flex min-w-0 items-center gap-3">
           <button
