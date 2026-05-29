@@ -346,12 +346,18 @@ export default function NotasPage() {
     setMensaje(null);
 
     const notas = grilla.grilla.flatMap((fila) =>
-      grilla.evaluaciones.map((eva) => ({
-        id_matricula: fila.id_matricula,
-        id_evaluacion_det: eva.id,
-        valor_nota: normalizarNotaEntera(fila[eva.id]),
-      }))
-    );
+  grilla.evaluaciones
+    .filter((eva) => {
+      const valor = fila[eva.id];
+
+      return valor !== null && valor !== undefined && valor !== '';
+    })
+    .map((eva) => ({
+      id_matricula: fila.id_matricula,
+      id_evaluacion_det: eva.id,
+      valor_nota: normalizarNotaEntera(fila[eva.id]),
+    }))
+);
 
     try {
       await axios.put(

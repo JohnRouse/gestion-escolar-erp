@@ -31,41 +31,102 @@ interface NavItem {
 }
 
 const menuPrincipal: NavItem[] = [
-  { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['Admin', 'Secretaria', 'Director', 'Profesor'] },
+  {
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/dashboard',
+    roles: ['Admin', 'Secretaria', 'Director', 'Profesor'],
+  },
 ];
 
 const menuAcademico: NavItem[] = [
-  { title: 'Matrícula', icon: UserPlus, path: '/matricula', roles: ['Admin', 'Secretaria'] },
   {
-    title: 'Notas', icon: FileText, path: '/notas', roles: ['Profesor', 'Admin'],
+    title: 'Matrícula',
+    icon: UserPlus,
+    path: '/matricula',
+    roles: ['Admin', 'Secretaria'],
+  },
+  {
+    title: 'Notas',
+    icon: FileText,
+    path: '/notas',
+    roles: ['Profesor', 'Admin'],
     children: [
       { title: 'Registro', path: '/notas' },
       { title: 'Comentarios', path: '/notas/comentarios' },
     ],
   },
-  { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin'] },
-  { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria'] },
-  { title: 'Horario', icon: GraduationCap, path: '/horario', roles: ['Profesor'] },
+  {
+    title: 'Asistencia',
+    icon: CheckSquare,
+    path: '/asistencia',
+    roles: ['Profesor', 'Admin'],
+  },
+  {
+    title: 'Calendario',
+    icon: CalendarDays,
+    path: '/calendario',
+    roles: ['Admin', 'Secretaria'],
+  },
+  {
+    title: 'Horario',
+    icon: GraduationCap,
+    path: '/horario',
+    roles: ['Profesor'],
+  },
 ];
 
 const menuPersonal: NavItem[] = [
-  { title: 'Docentes', icon: Users, path: '/docentes', roles: ['Admin', 'Director'] },
-  { title: 'Staff', icon: UserCircle, path: '/staff', roles: ['Admin', 'Director'] },
-  { title: 'Citas', icon: MessageSquareHeart, path: '/citas', roles: ['Admin', 'Secretaria'] },
+  {
+    title: 'Docentes',
+    icon: Users,
+    path: '/docentes',
+    roles: ['Admin', 'Director'],
+  },
+  {
+    title: 'Staff',
+    icon: UserCircle,
+    path: '/staff',
+    roles: ['Admin', 'Director'],
+  },
+  {
+    title: 'Citas',
+    icon: MessageSquareHeart,
+    path: '/citas',
+    roles: ['Admin', 'Secretaria'],
+  },
 ];
 
 const menuBienestar: NavItem[] = [
-  { title: 'Enfermería', icon: HeartPulse, path: '/enfermeria', roles: ['Admin'] },
+  {
+    title: 'Enfermería',
+    icon: HeartPulse,
+    path: '/enfermeria',
+    roles: ['Admin'],
+  },
 ];
 
 const menuComunicacion: NavItem[] = [
-  { title: 'Circulares', icon: Mail, path: '/circulares', roles: ['Admin', 'Secretaria', 'Director'] },
-  { title: 'Notificaciones', icon: Bell, path: '/notificaciones', roles: ['Admin'] },
+  {
+    title: 'Circulares',
+    icon: Mail,
+    path: '/circulares',
+    roles: ['Admin', 'Secretaria', 'Director'],
+  },
+  {
+    title: 'Notificaciones',
+    icon: Bell,
+    path: '/notificaciones',
+    roles: ['Admin'],
+  },
 ];
 
 const menuFinanzas: NavItem[] = [
   {
-    title: 'Tesorería', icon: Wallet, path: '/tesoreria', roles: ['Admin', 'Secretaria'],
+    title: 'Tesorería',
+    icon: Wallet,
+    path: '/tesoreria',
+    roles: ['Admin', 'Secretaria'],
     children: [
       { title: 'Estado de Cuenta', path: '/tesoreria' },
       { title: 'Pagos Extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
@@ -74,11 +135,21 @@ const menuFinanzas: NavItem[] = [
 ];
 
 const menuReportes: NavItem[] = [
-  { title: 'Reportes', icon: ChartColumn, path: '/reportes', roles: ['Admin', 'Director'] },
+  {
+    title: 'Reportes',
+    icon: ChartColumn,
+    path: '/reportes',
+    roles: ['Admin', 'Director'],
+  },
 ];
 
 const menuConfiguracion: NavItem[] = [
-  { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin'] },
+  {
+    title: 'Configuración',
+    icon: Settings,
+    path: '/configuracion',
+    roles: ['Admin'],
+  },
 ];
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
@@ -93,7 +164,7 @@ export default function AppSidebar() {
 
   const categorias = useMemo(() => {
     const filterByRole = (items: NavItem[]) =>
-      items.filter(item => !item.roles || item.roles.includes(user?.rol || ''));
+      items.filter((item) => !item.roles || item.roles.includes(user?.rol || ''));
 
     return [
       { titulo: 'Principal', items: filterByRole(menuPrincipal) },
@@ -104,8 +175,14 @@ export default function AppSidebar() {
       { titulo: 'Finanzas', items: filterByRole(menuFinanzas) },
       { titulo: 'Reportes', items: filterByRole(menuReportes) },
       { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
-    ].filter(cat => cat.items.length > 0);
+    ].filter((cat) => cat.items.length > 0);
   }, [user?.rol]);
+
+  const totalVisibleItems = useMemo(() => {
+    return categorias.reduce((total, categoria) => total + categoria.items.length, 0);
+  }, [categorias]);
+
+  const isCompactSidebar = totalVisibleItems <= 4 && user?.rol !== 'Admin' && user?.rol !== 'Director';
 
   const isRouteActive = (path?: string) => {
     if (!path) return false;
@@ -116,8 +193,8 @@ export default function AppSidebar() {
 
   useEffect(() => {
     const activeParent = categorias
-      .flatMap(categoria => categoria.items)
-      .find(item => item.children?.length && isRouteActive(item.path));
+      .flatMap((categoria) => categoria.items)
+      .find((item) => item.children?.length && isRouteActive(item.path));
 
     if (activeParent) setExpanded(activeParent.title);
   }, [categorias, location.pathname]);
@@ -183,7 +260,7 @@ export default function AppSidebar() {
 
           {isExpanded && !isCollapsed && (
             <div className="relative ml-5 mt-1.5 space-y-1 pl-4 before:absolute before:bottom-2 before:left-1 before:top-2 before:w-px before:bg-gray-200">
-              {item.children!.map(child => {
+              {item.children!.map((child) => {
                 const activeChild = isChildActive(child.path);
 
                 return (
@@ -253,8 +330,16 @@ export default function AppSidebar() {
           isCollapsed ? 'w-[88px]' : 'w-[280px]'
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl">
-          {/* Cabecera del sidebar */}
+        <div
+          className={cx(
+            'flex flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl transition-all duration-300',
+            isCompactSidebar
+              ? 'h-auto max-h-[calc(100vh-24px)]'
+              : 'h-full',
+            isCollapsed && 'h-auto max-h-[calc(100vh-24px)]'
+          )}
+        >
+          {/* Cabecera */}
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100/80 px-3">
             <button
               type="button"
@@ -270,8 +355,12 @@ export default function AppSidebar() {
 
               {!isCollapsed && (
                 <span className="min-w-0 text-left">
-                  <span className="block truncate text-base font-bold leading-5 text-gray-950">SMV</span>
-                  <span className="block truncate text-[11px] font-medium text-gray-400">Gestión escolar</span>
+                  <span className="block truncate text-base font-bold leading-5 text-gray-950">
+                    SMV
+                  </span>
+                  <span className="block truncate text-[11px] font-medium text-gray-400">
+                    Gestión escolar
+                  </span>
                 </span>
               )}
             </button>
@@ -302,8 +391,13 @@ export default function AppSidebar() {
           )}
 
           {/* Navegación */}
-          <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4 scrollbar-hide">
-            {categorias.map(categoria => (
+          <nav
+            className={cx(
+              'space-y-5 overflow-y-auto px-3 py-4 scrollbar-hide',
+              isCompactSidebar || isCollapsed ? 'flex-none' : 'flex-1'
+            )}
+          >
+            {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
                   <p className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
@@ -320,12 +414,21 @@ export default function AppSidebar() {
             ))}
           </nav>
 
-          {/* Pie discreto */}
-          <div className="shrink-0 border-t border-gray-100/80 p-3">
+          {/* Pie */}
+          <div
+            className={cx(
+              'shrink-0 border-t border-gray-100/80 p-3',
+              !isCompactSidebar && !isCollapsed && 'mt-auto'
+            )}
+          >
             {!isCollapsed ? (
               <div className="rounded-2xl bg-gray-50 px-3 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">Rol activo</p>
-                <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">{user?.rol || 'Usuario'}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                  Rol activo
+                </p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+                  {user?.rol || 'Usuario'}
+                </p>
               </div>
             ) : (
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-50 text-xs font-bold text-gray-500">

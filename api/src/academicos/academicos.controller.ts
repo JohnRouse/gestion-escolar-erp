@@ -416,5 +416,179 @@ async getAsignacionesDocente(@Request() req) {
     seccion: `${a.seccion.grado.nombre_grado} "${a.seccion.letra}" · ${a.seccion.grado.nivel.nombre_nivel}`,
   }));
 }
+// ── PERIODOS ACADÉMICOS / BIMESTRES Y UNIDADES ────────────────
+
+@Get('periodos')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async getPeriodos(@Query('anio_id') anioId?: string) {
+  const idAnio = anioId ? Number(anioId) : 1;
+
+  const anio = await this.prisma.anioLectivo.findUnique({
+    where: { id_anio: idAnio },
+    include: {
+      bimestres: {
+        orderBy: { numero: 'asc' },
+        include: {
+          unidades: {
+            orderBy: { numero: 'asc' },
+          },
+        },
+      },
+    },
+  });
+
+  if (!anio) throw new NotFoundException('Año lectivo no encontrado');
+
+  return {
+    id_anio: anio.id_anio,
+    nombre_anio: anio.nombre_anio,
+    fecha_inicio: anio.fecha_inicio,
+    fecha_fin: anio.fecha_fin,
+    estado: anio.estado,
+    bimestres: anio.bimestres.map((bimestre) => {
+      const tieneUnidadAbierta = bimestre.unidades.some((unidad) => unidad.estado_abierto);
+
+      return {
+        id_bimestre: bimestre.id_bimestre,
+        numero: bimestre.numero,
+        fecha_inicio: bimestre.fecha_inicio,
+        fecha_fin: bimestre.fecha_fin,
+        estado: tieneUnidadAbierta ? 'abierto' : 'cerrado',
+        unidades: bimestre.unidades.map((unidad) => ({
+          id_unidad: unidad.id_unidad,
+          numero: unidad.numero,
+          fecha_inicio: unidad.fecha_inicio,
+          fecha_fin: unidad.fecha_fin,
+          estado_abierto: unidad.estado_abierto,
+        })),
+      };
+    }),
+  };
+}
+
+@Put('bimestres/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async updateBimestre(
+  @Param('id') id: string,
+  @Body()
+  body: {
+    fecha_inicio?: string;
+    fecha_fin?: string;
+  },
+) {
+  const bimestre = await this.prisma.bimestre.findUnique({
+    where: { id_bimestre: Number(id) },
+  });
+
+  if (!bimestre) throw new NotFoundException('Bimestre no encontrado');
+
+  const data: any = {};
+
+  if (body.fecha_inicio !== undefined) {
+    data.fecha_inicio = new Date(body.fecha_inicio);
+  }
+
+  if (body.fecha_fin !== undefined) {
+    data.fecha_fin = new Date(body.fecha_fin);
+  }
+
+  return this.prisma.bimestre.update({
+    where: { id_bimestre: Number(id) },
+    data,
+  });
+}
+
+@Put('unidades/:id')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async updateUnidad(
+  @Param('id') id: string,
+  @Body()
+  body: {
+    fecha_inicio?: string;
+    fecha_fin?: string;
+  },
+) {
+  const unidad = await this.prisma.unidad.findUnique({
+    where: { id_unidad: Number(id) },
+  });
+
+  if (!unidad) throw new NotFoundException('Unidad no encontrada');
+
+  const data: any = {};
+
+  if (body.fecha_inicio !== undefined) {
+    data.fecha_inicio = new Date(body.fecha_inicio);
+  }
+
+  if (body.fecha_fin !== undefined) {
+    data.fecha_fin = new Date(body.fecha_fin);
+  }
+
+  return this.prisma.unidad.update({
+    where: { id_unidad: Number(id) },
+    data,
+  });
+}
+
+@Put('unidades/:id/abrir')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async abrirUnidad(@Param('id') id: string) {
+  const unidad = await this.prisma.unidad.findUnique({
+    where: { id_unidad: Number(id) },
+    include: { bimestre: true },
+  });
+
+  if (!unidad) throw new NotFoundException('Unidad no encontrada');
+
+  await this.prisma.$transaction(async (tx) => {
+    await tx.unidad.updateMany({
+      where: {
+        bimestre: {
+          id_anio: unidad.bimestre.id_anio,
+        },
+      },
+      data: {
+        estado_abierto: false,
+      },
+    });
+
+    await tx.unidad.update({
+      where: { id_unidad: unidad.id_unidad },
+      data: {
+        estado_abierto: true,
+      },
+    });
+  });
+
+  return {
+    message: `Unidad ${unidad.numero} abierta correctamente`,
+  };
+}
+
+@Put('unidades/:id/cerrar')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin', 'Director')
+async cerrarUnidadConfiguracion(@Param('id') id: string) {
+  const unidad = await this.prisma.unidad.findUnique({
+    where: { id_unidad: Number(id) },
+  });
+
+  if (!unidad) throw new NotFoundException('Unidad no encontrada');
+
+  await this.prisma.unidad.update({
+    where: { id_unidad: Number(id) },
+    data: {
+      estado_abierto: false,
+    },
+  });
+
+  return {
+    message: `Unidad ${unidad.numero} cerrada correctamente`,
+  };
+}
 
 }

@@ -1,6 +1,32 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
+interface UserContexto {
+  cargo_principal?: string;
+  docente?: {
+    id_docente: number;
+    total_asignaciones: number;
+    total_cursos: number;
+    total_secciones: number;
+    asignaciones: any[];
+  } | null;
+  staff?: {
+    id_staff: number;
+    cargo: string;
+    area: string;
+    es_tutor: boolean;
+    permite_citas: boolean;
+    id_seccion?: number | null;
+    seccion?: string | null;
+  } | null;
+  tutoria?: {
+    es_tutor: boolean;
+    secciones: any[];
+  };
+  permisos?: Record<string, boolean>;
+  modulos_dashboard?: string[];
+}
+
 interface User {
   id: number;
   username: string;
@@ -8,6 +34,7 @@ interface User {
   rol: string;
   avatar_url?: string | null;
   email?: string;
+  contexto?: UserContexto;
 }
 
 interface AuthContextType {
@@ -18,6 +45,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   updateUser: (data: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -27,15 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadPerfil = async (storedToken: string) => {
+    const res = await axios.get('/api/auth/perfil', {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    });
+
+    setToken(storedToken);
+    setUser(res.data);
+    localStorage.setItem('user_intranet', JSON.stringify(res.data));
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token_intranet');
+
     if (storedToken) {
-      axios
-        .get('/api/auth/perfil', { headers: { Authorization: `Bearer ${storedToken}` } })
-        .then((res) => {
-          setToken(storedToken);
-          setUser(res.data);
-        })
+      loadPerfil(storedToken)
         .catch(() => {
           localStorage.removeItem('token_intranet');
           localStorage.removeItem('user_intranet');
@@ -51,10 +85,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     const response = await axios.post('/api/auth/login', { username, password });
     const { access_token, user: userData } = response.data;
+
     localStorage.setItem('token_intranet', access_token);
     localStorage.setItem('user_intranet', JSON.stringify(userData));
+
     setToken(access_token);
     setUser(userData);
+  };
+
+  const refreshUser = async () => {
+    const storedToken = token || localStorage.getItem('token_intranet');
+    if (!storedToken) return;
+
+    await loadPerfil(storedToken);
   };
 
   const logout = () => {
@@ -65,16 +108,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = (data: Partial<User>) => {
-  if (user) {
-    const updated = { ...user, ...data };
-    setUser(updated);
-    localStorage.setItem('user_intranet', JSON.stringify(updated));
-  }
+    if (user) {
+      const updated = { ...user, ...data };
+      setUser(updated);
+      localStorage.setItem('user_intranet', JSON.stringify(updated));
+    }
   };
+
   const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, updateUser, isAuthenticated, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        user,
+        login,
+        logout,
+        isAuthenticated,
+        isLoading,
+        updateUser,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

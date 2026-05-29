@@ -18,7 +18,8 @@ import ConceptosPagoTab from './ConceptosPagoTab';
 import EscalaTab from './EscalaTab';
 import TiposEvalTab from './TiposEvalTab';
 import PlantillasTab from './PlantillasTab';
-import { ClipboardList, FileText } from 'lucide-react';
+import { ClipboardList, FileText, CalendarRange } from 'lucide-react';
+import PeriodosTab from './PeriodosTab';
 
 const TABS = [
   {
@@ -27,6 +28,13 @@ const TABS = [
     shortLabel: 'Niveles',
     description: 'Estructura académica base del colegio.',
     icon: GraduationCap,
+  },
+  {
+  key: 'periodos',
+  label: 'Año Académico',
+  shortLabel: 'Periodos',
+  description: 'Apertura de bimestres, unidades y fechas académicas.',
+  icon: CalendarRange,
   },
   {
     key: 'secciones',
@@ -156,12 +164,13 @@ export default function ConfiguracionPage() {
         </div>
 
         {tabActivo === 'niveles' && <NivelesGradosTab />}
-        {tabActivo === 'secciones' && <SeccionesTab />}
-        {tabActivo === 'cursos' && <CursosTab />}
-        {tabActivo === 'pagos' && <ConceptosPagoTab />}
-        {tabActivo === 'escala' && <EscalaTab />}
-        {tabActivo === 'tipos' && <TiposEvalTab />}
-        {tabActivo === 'plantillas' && <PlantillasTab />}
+{tabActivo === 'periodos' && <PeriodosTab />}
+{tabActivo === 'secciones' && <SeccionesTab />}
+{tabActivo === 'cursos' && <CursosTab />}
+{tabActivo === 'pagos' && <ConceptosPagoTab />}
+{tabActivo === 'escala' && <EscalaTab />}
+{tabActivo === 'tipos' && <TiposEvalTab />}
+{tabActivo === 'plantillas' && <PlantillasTab />}
       </section>
     </div>
   );
