@@ -178,11 +178,6 @@ export default function AppSidebar() {
     ].filter((cat) => cat.items.length > 0);
   }, [user?.rol]);
 
-  const totalVisibleItems = useMemo(() => {
-    return categorias.reduce((total, categoria) => total + categoria.items.length, 0);
-  }, [categorias]);
-
-  const isCompactSidebar = totalVisibleItems <= 4 && user?.rol !== 'Admin' && user?.rol !== 'Director';
 
   const isRouteActive = (path?: string) => {
     if (!path) return false;
@@ -324,19 +319,13 @@ export default function AppSidebar() {
       )}
 
       <aside
-  className={cx(
-    'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
-    isOpen ? 'translate-x-0' : '-translate-x-full',
-    isCollapsed ? 'w-[88px]' : 'w-[260px]'
-  )}
->
-        <div
-  className={cx(
-    'flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl transition-all duration-300',
-    isCompactSidebar && 'xl:h-auto xl:max-h-[calc(100vh-24px)]',
-    isCollapsed && 'xl:h-[calc(100vh-24px)]'
-  )}
->
+          className={cx(
+            'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
+            isOpen ? 'translate-x-0' : '-translate-x-full',
+            isCollapsed ? 'w-[88px]' : 'w-[260px]'
+          )}
+        >
+        <div className="flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl transition-all duration-300">
           {/* Cabecera */}
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100/80 px-3">
             <button
@@ -389,12 +378,7 @@ export default function AppSidebar() {
           )}
 
           {/* Navegación */}
-          <nav
-  className={cx(
-    'min-h-0 space-y-4 overflow-y-auto px-3 py-4 scrollbar-hide',
-    isCompactSidebar && !isCollapsed ? 'xl:flex-none' : 'flex-1'
-  )}
->
+          <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-hide">
             {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
@@ -413,7 +397,7 @@ export default function AppSidebar() {
           </nav>
 
           {/* Pie */}
-          <div className="shrink-0 border-t border-gray-100/80 p-3">
+          <div className="mt-auto shrink-0 border-t border-gray-100/80 p-3">
             {!isCollapsed ? (
               <div className="rounded-2xl bg-gray-50 px-3 py-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">

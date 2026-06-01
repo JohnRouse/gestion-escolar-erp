@@ -1,41 +1,72 @@
 import {
-  Controller, Get, Post, Param, Body, UseGuards, Request, Query, Delete, Put
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  Query,
+  Delete,
+  Put,
 } from '@nestjs/common';
 import { FinanzasService } from './finanzas.service';
 import { RegistrarPagoDto } from './dto/registrar-pago.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('tesoreria')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class FinanzasController {
-  constructor(private readonly finanzasService: FinanzasService,
-  private prisma: PrismaService,
-  ) {}
+  constructor(private readonly finanzasService: FinanzasService) {}
 
-  /**
-   * Obtiene estado de cuenta por matrícula (uso interno)
-   */
+  @Get('kpis')
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getTesoreriaKpis(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.getTesoreriaKpis({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   @Get('estado-cuenta/:matricula_id')
   @Roles('Admin', 'Secretaria', 'Director')
-  async getEstadoCuenta(@Param('matricula_id') matriculaId: string) {
-    return this.finanzasService.getEstadoCuenta(Number(matriculaId));
+  async getEstadoCuenta(
+    @Request() req,
+    @Param('matricula_id') matriculaId: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.getEstadoCuenta(Number(matriculaId), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
   }
 
-  /**
-   * Registra uno o varios pagos (cajero/secretaria)
-   */
   @Post('pagos')
   @Roles('Admin', 'Secretaria')
-  async registrarPago(@Body() dto: RegistrarPagoDto, @Request() req) {
-    // El id del cajero viene del token JWT (req.user.userId)
-    return this.finanzasService.registrarPago(dto, req.user.userId);
+  async registrarPago(
+    @Body() dto: RegistrarPagoDto,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.registrarPago(dto, req.user.userId, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
   }
 
-  /**
-   * Estado de cuenta para el padre (app móvil)
-   */
   @Get('padres/estado-cuenta')
   @Roles('Apoderado', 'Admin')
   async getEstadoCuentaPadre(@Query('alumno_id') alumnoId: string) {
@@ -43,65 +74,87 @@ export class FinanzasController {
   }
 
   @Get('pagos/pendientes/count')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Admin', 'Secretaria', 'Director')
-async getPagosPendientesCount() {
-  return this.finanzasService.getPagosPendientesCount();
-}
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getPagosPendientesCount(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.getPagosPendientesCount({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
 
-@Post('pagos-extraordinarios')
-@Roles('Admin', 'Secretaria', 'Director')
-async crearPagoExtraordinario(@Body() dto: any) {
-  return this.finanzasService.crearPagoExtraordinario(dto);
-}
+  @Get('pagos-extraordinarios/destinatarios')
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getDestinatariosPagoExtraordinario(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.getDestinatariosPagoExtraordinario({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
 
-@Post('webhook')
-async webhookPago(@Body() body: any) {
-  // TODO: Verificar firma de Culqi/Stripe
-  // TODO: Registrar el pago como confirmado
-  console.log('[Webhook] Pago recibido:', body);
-  return { received: true };
-}
+  @Post('pagos-extraordinarios')
+  @Roles('Admin', 'Secretaria', 'Director')
+  async crearPagoExtraordinario(@Body() dto: any, @Request() req) {
+    return this.finanzasService.crearPagoExtraordinario(dto, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: dto.scope,
+      colegioId: dto.id_colegio ? Number(dto.id_colegio) : undefined,
+    });
+  }
 
-@Get('conceptos')
-@Roles('Admin')
-async getConceptos() {
-  return this.prisma.conceptoPago.findMany({
-    where: { id_anio: 1 },
-    orderBy: { nombre_concepto: 'asc' },
-  });
-}
+  @Post('webhook')
+  async webhookPago(@Body() body: any) {
+    console.log('[Webhook] Pago recibido:', body);
+    return { received: true };
+  }
 
-@Post('conceptos')
-@Roles('Admin')
-async createConcepto(@Body() body: { nombre_concepto: string; monto_base: number; es_pension: boolean }) {
-  return this.prisma.conceptoPago.create({
-    data: {
-      nombre_concepto: body.nombre_concepto,
-      monto_base: body.monto_base,
-      id_anio: 1,
-      es_pension: body.es_pension,
-    },
-  });
-}
+  @Get('conceptos')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async getConceptos(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.getConceptos({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
 
-@Put('conceptos/:id')
-@Roles('Admin')
-async updateConcepto(@Param('id') id: string, @Body() body: { nombre_concepto: string; monto_base: number; es_pension: boolean }) {
-  return this.prisma.conceptoPago.update({
-    where: { id_concepto: Number(id) },
-    data: {
-      nombre_concepto: body.nombre_concepto,
-      monto_base: body.monto_base,
-      es_pension: body.es_pension,
-    },
-  });
-}
+  @Post('conceptos')
+  @Roles('Admin', 'Director')
+  async createConcepto(@Body() body: any, @Request() req) {
+    return this.finanzasService.createConcepto(body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: body.scope,
+      colegioId: body.id_colegio ? Number(body.id_colegio) : undefined,
+    });
+  }
 
-@Delete('conceptos/:id')
-@Roles('Admin')
-async deleteConcepto(@Param('id') id: string) {
-  return this.prisma.conceptoPago.delete({ where: { id_concepto: Number(id) } });
-}
+  @Put('conceptos/:id')
+  @Roles('Admin', 'Director')
+  async updateConcepto(@Param('id') id: string, @Body() body: any) {
+    return this.finanzasService.updateConcepto(Number(id), body);
+  }
 
+  @Delete('conceptos/:id')
+  @Roles('Admin', 'Director')
+  async deleteConcepto(@Param('id') id: string) {
+    return this.finanzasService.deleteConcepto(Number(id));
+  }
 }

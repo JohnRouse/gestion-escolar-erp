@@ -1,4 +1,9 @@
-import { IsString, IsDateString, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsDateString,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateAlumnoDto {
   @IsString()
@@ -19,11 +24,28 @@ export class CreateAlumnoDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1)
   genero?: string;
 
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @IsOptional()
+  @IsString()
+  pais?: string;
+
+  @IsOptional()
+  @IsString()
+  departamento?: string;
+
+  @IsOptional()
+  @IsString()
+  provincia?: string;
+
+  @IsOptional()
+  @IsString()
+  distrito?: string;
 
   @IsOptional()
   @IsString()

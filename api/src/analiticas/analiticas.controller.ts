@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import { AnaliticasService } from './analiticas.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
@@ -8,48 +8,96 @@ import { RolesGuard, Roles } from '../auth/roles.guard';
 export class AnaliticasController {
   constructor(private readonly analiticasService: AnaliticasService) {}
 
+  private buildParams(req: any, scope?: string, colegioId?: string) {
+    return {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    };
+  }
+
   @Get('financieras')
   @Roles('Admin', 'Director')
-  async getFinancieras() {
-    return this.analiticasService.getFinancieras();
+  async getFinancieras(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getFinancieras(
+      this.buildParams(req, scope, colegioId),
+    );
   }
 
   @Get('academicas')
   @Roles('Admin', 'Director')
-  async getAcademicas() {
-    return this.analiticasService.getAcademicas();
+  async getAcademicas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getAcademicas(
+      this.buildParams(req, scope, colegioId),
+    );
   }
 
   @Get('alertas')
   @Roles('Admin', 'Director')
-  async getAlertas() {
-    return this.analiticasService.getAlertas();
+  async getAlertas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getAlertas(
+      this.buildParams(req, scope, colegioId),
+    );
   }
 
   @Get('operativas')
   @Roles('Admin', 'Director')
-  async getOperativas() {
-    return this.analiticasService.getOperativas();
+  async getOperativas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getOperativas(
+      this.buildParams(req, scope, colegioId),
+    );
   }
 
   @Get('tesoreria/kpis')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Admin', 'Secretaria', 'Director')
-async getTesoreriaKpis() {
-  return this.analiticasService.getTesoreriaKpis();
-}
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getTesoreriaKpis(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getTesoreriaKpis(
+      this.buildParams(req, scope, colegioId),
+    );
+  }
 
-@Get('matricula-tendencia')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Admin', 'Director')
-async getMatriculaTendencia() {
-  return this.analiticasService.getMatriculaTendencia();
-}
+  @Get('matricula-tendencia')
+  @Roles('Admin', 'Director')
+  async getMatriculaTendencia(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getMatriculaTendencia(
+      this.buildParams(req, scope, colegioId),
+    );
+  }
 
-@Get('distribucion-nivel')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Admin', 'Director')
-async getDistribucionPorNivel() {
-  return this.analiticasService.getDistribucionPorNivel();
-}
+  @Get('distribucion-nivel')
+  @Roles('Admin', 'Director')
+  async getDistribucionPorNivel(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.analiticasService.getDistribucionPorNivel(
+      this.buildParams(req, scope, colegioId),
+    );
+  }
 }

@@ -123,10 +123,12 @@ export default function AppHeader() {
 
   return (
     <header
-  className={`sticky top-3 z-30 px-4 transition-all duration-300 ease-out md:px-6 lg:px-8 ${
-    hideOnScroll ? '-translate-y-24 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
-  }`}
->
+      className={`sticky top-3 z-30 px-4 transition-all duration-300 ease-out md:px-6 lg:px-8 ${
+        hideOnScroll
+          ? '-translate-y-24 opacity-0 pointer-events-none'
+          : 'translate-y-0 opacity-100'
+      }`}
+    >
       <div
         className={`relative mx-auto flex h-16 max-w-[1600px] items-center justify-between rounded-[1.35rem] border px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 ${
           isScrolled
@@ -217,10 +219,9 @@ export default function AppHeader() {
                         <button
                           type="button"
                           onClick={() => {
-                            setTodosLosColegios();
-                            setSchoolDropdownOpen(false);
-                            navigate('/dashboard');
-                          }}
+  setTodosLosColegios();
+  setSchoolDropdownOpen(false);
+}}
                           className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50"
                         >
                           <span className="flex min-w-0 items-center gap-3">
@@ -256,10 +257,9 @@ export default function AppHeader() {
                             key={colegio.id_colegio}
                             type="button"
                             onClick={() => {
-                              setColegioActivo(colegio.id_colegio);
-                              setSchoolDropdownOpen(false);
-                              navigate('/dashboard');
-                            }}
+  setColegioActivo(colegio.id_colegio);
+  setSchoolDropdownOpen(false);
+}}
                             className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50"
                           >
                             <span className="flex min-w-0 items-center gap-3">

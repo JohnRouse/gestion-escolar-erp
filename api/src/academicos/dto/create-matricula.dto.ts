@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsInt, IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ApoderadoMatriculaDto {
@@ -19,9 +19,13 @@ export class CreateMatriculaDto {
   @IsInt()
   id_anio: number;
 
-  @IsOptional()
   @IsArray()
+  @ArrayMinSize(1, { message: 'Debes vincular al menos un apoderado para matricular al alumno.' })
   @ValidateNested({ each: true })
   @Type(() => ApoderadoMatriculaDto)
-  apoderados?: ApoderadoMatriculaDto[];
+  apoderados: ApoderadoMatriculaDto[];
+
+  @IsOptional()
+  @IsInt()
+  id_colegio?: number;
 }

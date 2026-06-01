@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
+import PageHeader from '../components/PageHeader';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -321,6 +323,7 @@ function EstadoCargaBadge({ estado }: { estado?: string }) {
 
 export default function ReportesPage() {
   const { token, user } = useAuth();
+  const { activeScope, scopeLabel, queryString } = useSchool();
 
   const [data, setData] = useState<ReportesState>(emptyData);
   const [loading, setLoading] = useState(true);
@@ -347,12 +350,12 @@ export default function ReportesPage() {
         matriculaTendencia,
         distribucionNivel,
       ] = await Promise.allSettled([
-        axios.get('/api/analiticas/financieras', authHeaders),
-        axios.get('/api/analiticas/academicas', authHeaders),
-        axios.get('/api/analiticas/alertas', authHeaders),
-        axios.get('/api/analiticas/operativas', authHeaders),
-        axios.get('/api/analiticas/matricula-tendencia', authHeaders),
-        axios.get('/api/analiticas/distribucion-nivel', authHeaders),
+        axios.get(`/api/analiticas/financieras${queryString}`, authHeaders),
+        axios.get(`/api/analiticas/academicas${queryString}`, authHeaders),
+        axios.get(`/api/analiticas/alertas${queryString}`, authHeaders),
+        axios.get(`/api/analiticas/operativas${queryString}`, authHeaders),
+        axios.get(`/api/analiticas/matricula-tendencia${queryString}`, authHeaders),
+        axios.get(`/api/analiticas/distribucion-nivel${queryString}`, authHeaders),
       ]);
 
       setData({
@@ -384,7 +387,7 @@ export default function ReportesPage() {
   useEffect(() => {
     cargarReportes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, canView]);
+  }, [token, canView, queryString]);
 
   const capacidadTotal = useMemo(() => {
     return (data.academicas?.capacidad || []).reduce(
@@ -408,8 +411,8 @@ export default function ReportesPage() {
 
   if (!canView) {
     return (
-      <div className="animate-slide-in-right">
-        <div className="mx-auto max-w-5xl">
+      <div className="w-full">
+        <div className="w-full">
           <section className="rounded-[32px] border border-white bg-white/90 p-8 text-center shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-amber-50 text-amber-600 ring-1 ring-amber-100">
               <AlertTriangle size={24} />
@@ -429,26 +432,25 @@ export default function ReportesPage() {
   }
 
   return (
-    <div className="animate-slide-in-right">
-      <div className="mx-auto w-full max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-[32px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 backdrop-blur">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
-                <BarChart3 size={13} className="text-accent-500" />
-                Centro de reportes
-              </div>
-
-              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                Reportes institucionales
-              </h1>
-
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                Vista ejecutiva para revisar indicadores académicos, financieros,
-                operativos y alertas del colegio.
-              </p>
-            </div>
-
+    <div className="w-full space-y-6">
+      <>
+        <PageHeader
+          eyebrow="Centro de reportes"
+          title="Reportes institucionales"
+          description={
+            activeScope.tipo === 'todos'
+              ? `Vista ejecutiva consolidada de ${scopeLabel.toLowerCase()} para revisar indicadores académicos, financieros, operativos y alertas.`
+              : `Vista ejecutiva de ${scopeLabel} para revisar indicadores académicos, financieros, operativos y alertas.`
+          }
+          icon={BarChart3}
+          meta={[
+            { label: 'Contexto activo', value: scopeLabel },
+            {
+              label: 'Vista',
+              value: activeScope.tipo === 'todos' ? 'Consolidada' : 'Por colegio',
+            },
+          ]}
+          actions={
             <button
               type="button"
               onClick={cargarReportes}
@@ -458,10 +460,9 @@ export default function ReportesPage() {
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
               Actualizar
             </button>
-          </div>
-        </section>
-
-        {error && (
+          }
+        />
+{error && (
           <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
             <AlertTriangle size={18} />
             {error}
@@ -933,7 +934,7 @@ export default function ReportesPage() {
             </section>
           </>
         )}
-      </div>
+      </>
     </div>
   );
 }

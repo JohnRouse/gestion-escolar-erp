@@ -233,8 +233,6 @@ export default function DashboardPage() {
     return nombre.split(' ').slice(0, 2).join(' ');
   }, [resumen?.usuario?.nombre, user?.nombre]);
 
-  const panelLabel =
-    activeScope.tipo === 'todos' ? 'Panel del grupo académico' : getSaludoRol(rol);
 
   const panelDescription =
     activeScope.tipo === 'todos'
@@ -246,65 +244,45 @@ export default function DashboardPage() {
   return (
     <div className="animate-slide-in-right">
       <div className="w-full space-y-6">
-        <section className="overflow-hidden rounded-[32px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 backdrop-blur">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
-                <LayoutDashboard size={13} className="text-accent-500" />
-                {panelLabel}
-              </div>
-
-              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                Hola, {nombreUsuario}
-              </h1>
-
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                {panelDescription}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
-  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-    Contexto activo
-  </p>
-  <p className="mt-1 text-sm font-black text-slate-800">
-    {scopeLabel}
-  </p>
-</div>
-<div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
-  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-    Rol del sistema
-  </p>
-  <p className="mt-1 text-sm font-black text-slate-800">
-    {rol || 'Usuario'}
-  </p>
-</div>
-
-              <div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
-  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-    Función institucional
-  </p>
-  <p className="mt-1 text-sm font-black text-slate-800">
-    {resumen?.usuario?.cargo ||
-      user?.contexto?.cargo_principal ||
-      'Sin cargo'}
-  </p>
-</div>
-
-              {(rol === 'Admin' || rol === 'Director') && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/reportes')}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
-                >
-                  Ver reportes
-                  <ArrowUpRight size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
+        <PageHeader
+          eyebrow={
+            activeScope.tipo === 'todos'
+              ? 'Panel del grupo académico'
+              : getSaludoRol(rol)
+          }
+          title={`Hola, ${nombreUsuario}`}
+          description={panelDescription}
+          icon={LayoutDashboard}
+          meta={[
+            {
+              label: 'Contexto activo',
+              value: scopeLabel,
+            },
+            {
+              label: 'Rol del sistema',
+              value: rol || 'Usuario',
+            },
+            {
+              label: 'Función institucional',
+              value:
+                resumen?.usuario?.cargo ||
+                user?.contexto?.cargo_principal ||
+                'Sin cargo',
+            },
+          ]}
+          actions={
+            rol === 'Admin' || rol === 'Director' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/reportes')}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+              >
+                Ver reportes
+                <ArrowUpRight size={16} />
+              </button>
+            ) : null
+          }
+        />
 
         {loading ? (
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

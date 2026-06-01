@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import PageHeader from '../components/PageHeader';
 import {
   Plus,
   Trash2,
@@ -419,42 +420,36 @@ export default function NotasPage() {
 
   return (
     <div className="animate-slide-in-right">
-      <div className="mx-auto max-w-[1540px] space-y-5">
-        {/* Cabecera */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-accent-100 bg-white/80 px-3 py-1 text-xs font-semibold text-accent-600 shadow-sm shadow-gray-200/60">
-              <BookOpenCheck size={14} />
-              Registro de notas por unidad
+      <div className="w-full space-y-5">
+        <PageHeader
+          eyebrow="Registro de notas por unidad"
+          title="Registro de Notas"
+          description="Grilla dinámica por salón, bimestre, unidad y curso."
+          icon={BookOpenCheck}
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                disabled={!asignacionId}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm shadow-gray-200/50 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={16} />
+                Agregar evaluación
+              </button>
+
+              <button
+                type="button"
+                onClick={guardarNotas}
+                disabled={saving || !grilla}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-gray-950">Registro de Notas</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Grilla dinámica por salón, bimestre, unidad y curso.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              disabled={!asignacionId}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm shadow-gray-200/50 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus size={16} />
-              Agregar evaluación
-            </button>
-
-            <button
-              type="button"
-              onClick={guardarNotas}
-              disabled={saving || !grilla}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Filtros principales */}
         <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-gray-200/70 ring-1 ring-gray-100 backdrop-blur">

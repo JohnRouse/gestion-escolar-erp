@@ -24,6 +24,26 @@ export class CreateApoderadoDto {
 
   @IsOptional()
   @IsString()
+  direccion?: string;
+
+  @IsOptional()
+  @IsString()
+  pais?: string;
+
+  @IsOptional()
+  @IsString()
+  departamento?: string;
+
+  @IsOptional()
+  @IsString()
+  provincia?: string;
+
+  @IsOptional()
+  @IsString()
+  distrito?: string;
+
+  @IsOptional()
+  @IsString()
   ocupacion?: string;
 
   @IsOptional()
