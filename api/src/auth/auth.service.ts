@@ -20,14 +20,130 @@ export class AuthService {
 
     const grado = seccion.grado?.nombre_grado || 'Grado';
     const nivel = seccion.grado?.nivel?.nombre_nivel || 'Nivel';
+    const letra = seccion.letra || '';
 
-    return `${grado} "${seccion.letra}" · ${nivel}`;
+    return `${grado} "${letra}" · ${nivel}`;
+  }
+
+  private formatNombrePersona(persona: any) {
+    if (!persona) return 'Usuario';
+
+    return `${persona.nombres || ''} ${persona.apellido_paterno || ''} ${
+      persona.apellido_materno || ''
+    }`
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private formatNombreCorto(persona: any) {
+    if (!persona) return 'Usuario';
+
+    return `${persona.nombres || ''} ${persona.apellido_paterno || ''}`
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private async getSaasContext(userId: number, rol: string) {
+    const accesosColegio = await this.prisma.usuarioColegio.findMany({
+      where: {
+        id_usuario: userId,
+        estado: 'Activo',
+      },
+      include: {
+        colegio: {
+          include: {
+            tenant: true,
+            niveles: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        es_principal: 'desc',
+      },
+    });
+
+    const accesoTenant = await this.prisma.usuarioTenant.findFirst({
+      where: {
+        id_usuario: userId,
+        estado: 'Activo',
+      },
+      include: {
+        tenant: true,
+      },
+    });
+
+    const colegios = accesosColegio.map((acceso) => ({
+      id_colegio: acceso.colegio.id_colegio,
+      id_tenant: acceso.colegio.id_tenant,
+      nombre: acceso.colegio.nombre,
+      nombre_corto: acceso.colegio.nombre_corto,
+      codigo: acceso.colegio.codigo,
+      logo_url: acceso.colegio.logo_url,
+      color_principal: acceso.colegio.color_principal,
+      estado: acceso.colegio.estado,
+      rol_colegio: acceso.rol_colegio,
+      es_principal: acceso.es_principal,
+      niveles: acceso.colegio.niveles.map((item) => ({
+        id_nivel: item.nivel.id_nivel,
+        nombre_nivel: item.nivel.nombre_nivel,
+      })),
+    }));
+
+    const tenant =
+      accesoTenant?.tenant || accesosColegio[0]?.colegio?.tenant || null;
+
+    const colegioPrincipal =
+      colegios.find((colegio) => colegio.es_principal) || colegios[0] || null;
+
+    const puedeVerConsolidado =
+      ['Admin', 'Director'].includes(rol) && colegios.length > 1;
+
+    return {
+      tenant: tenant
+        ? {
+            id_tenant: tenant.id_tenant,
+            nombre: tenant.nombre,
+            slug: tenant.slug,
+            ruc: tenant.ruc,
+            logo_url: tenant.logo_url,
+            plan: tenant.plan,
+            estado: tenant.estado,
+          }
+        : null,
+
+      colegios,
+
+      colegios_permitidos: colegios.map((colegio) => colegio.id_colegio),
+
+      colegio_principal: colegioPrincipal,
+
+      puedeVerConsolidado,
+
+      contexto_default: puedeVerConsolidado
+        ? {
+            tipo: 'todos',
+            id_tenant: tenant?.id_tenant || null,
+            id_colegio: null,
+          }
+        : {
+            tipo: 'colegio',
+            id_tenant: tenant?.id_tenant || colegioPrincipal?.id_tenant || null,
+            id_colegio: colegioPrincipal?.id_colegio || null,
+          },
+    };
   }
 
   async login(username: string, password: string) {
     const user = await this.prisma.usuario.findUnique({
       where: { username },
-      include: { persona: true, rol: true },
+      include: {
+        persona: true,
+        rol: true,
+      },
     });
 
     if (!user || !user.estado) {
@@ -54,9 +170,15 @@ export class AuthService {
       user: {
         id: user.id_usuario,
         username: user.username,
-        nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`,
+        nombre: this.formatNombreCorto(user.persona),
+        nombres: user.persona.nombres,
+        apellido_paterno: user.persona.apellido_paterno,
+        apellido_materno: user.persona.apellido_materno,
         rol: user.rol.nombre_rol,
         genero: user.persona.genero,
+        email: user.persona.correo,
+        correo: user.persona.correo,
+        avatar_url: user.avatar_url,
         contexto,
       },
     };
@@ -65,7 +187,10 @@ export class AuthService {
   async getPerfil(userId: number) {
     const user = await this.prisma.usuario.findUnique({
       where: { id_usuario: userId },
-      include: { persona: true, rol: true },
+      include: {
+        persona: true,
+        rol: true,
+      },
     });
 
     if (!user) {
@@ -80,12 +205,16 @@ export class AuthService {
       nombres: user.persona.nombres,
       apellido_paterno: user.persona.apellido_paterno,
       apellido_materno: user.persona.apellido_materno,
-      nombre: `${user.persona.nombres} ${user.persona.apellido_paterno} ${user.persona.apellido_materno}`.trim(),
+      nombre: this.formatNombrePersona(user.persona),
       correo: user.persona.correo,
+      email: user.persona.correo,
       telefono: user.persona.telefono,
       rol: user.rol.nombre_rol,
       avatar_url: user.avatar_url,
-      email: user.persona.correo,
+      tema: user.tema,
+      notificaciones_activas: user.notificaciones_activas,
+      estado_conexion: user.estado_conexion,
+      ultima_conexion: user.ultima_conexion,
       contexto,
     };
   }
@@ -106,22 +235,32 @@ export class AuthService {
                     seccion: {
                       include: {
                         grado: {
-                          include: { nivel: true },
+                          include: {
+                            nivel: true,
+                          },
                         },
+                        colegio: true,
                       },
                     },
+                    colegio: true,
                   },
-                  orderBy: { id_asignacion: 'asc' },
+                  orderBy: {
+                    id_asignacion: 'asc',
+                  },
                 },
               },
             },
             staff: {
               include: {
+                colegio: true,
                 seccion: {
                   include: {
                     grado: {
-                      include: { nivel: true },
+                      include: {
+                        nivel: true,
+                      },
                     },
+                    colegio: true,
                   },
                 },
               },
@@ -139,12 +278,27 @@ export class AuthService {
     const docente = user.persona.docentes?.[0] || null;
     const staff = user.persona.staff?.[0] || null;
 
+    const saas = await this.getSaasContext(user.id_usuario, rol);
+
     const asignaciones = (docente?.asignaciones || []).map((asignacion) => ({
       id_asignacion: asignacion.id_asignacion,
       id_docente: asignacion.id_docente,
       id_curso: asignacion.id_curso,
       id_seccion: asignacion.id_seccion,
       id_anio: asignacion.id_anio,
+
+      id_tenant: asignacion.id_tenant,
+      id_colegio:
+        asignacion.id_colegio ||
+        asignacion.seccion?.id_colegio ||
+        asignacion.colegio?.id_colegio ||
+        null,
+
+      colegio:
+        asignacion.colegio?.nombre ||
+        asignacion.seccion?.colegio?.nombre ||
+        null,
+
       curso: asignacion.curso.nombre_curso,
       seccion: this.formatSeccion(asignacion.seccion),
       grado: asignacion.seccion.grado.nombre_grado,
@@ -157,6 +311,16 @@ export class AuthService {
         ? [
             {
               id_seccion: staff.seccion.id_seccion,
+              id_tenant: staff.id_tenant,
+              id_colegio:
+                staff.id_colegio ||
+                staff.seccion?.id_colegio ||
+                staff.colegio?.id_colegio ||
+                null,
+              colegio:
+                staff.colegio?.nombre ||
+                staff.seccion?.colegio?.nombre ||
+                null,
               seccion: this.formatSeccion(staff.seccion),
               grado: staff.seccion.grado.nombre_grado,
               nivel: staff.seccion.grado.nivel.nombre_nivel,
@@ -165,19 +329,38 @@ export class AuthService {
           ]
         : [];
 
-    const puedeVerDashboardInstitucional = ['Admin', 'Director', 'Secretaria'].includes(rol);
+    const puedeVerDashboardInstitucional = ['Admin', 'Director', 'Secretaria'].includes(
+      rol,
+    );
+
     const puedeVerDashboardDocente = rol === 'Profesor' || asignaciones.length > 0;
-    const puedeVerTutoria = Boolean(seccionesTutoria.length) || ['Admin', 'Director'].includes(rol);
+
+    const puedeVerTutoria =
+      Boolean(seccionesTutoria.length) || ['Admin', 'Director'].includes(rol);
+
+    const puedeGestionarNotas = ['Admin', 'Director', 'Profesor'].includes(rol);
+
+    const puedeGestionarAsistencia = ['Admin', 'Director', 'Profesor'].includes(rol);
+
+    const puedeGestionarTesoreria = ['Admin', 'Director', 'Secretaria'].includes(rol);
+
+    const puedeConfigurarSistema = ['Admin', 'Director'].includes(rol);
+
+    const puedeGestionarSaas = ['Admin'].includes(rol);
 
     return {
       usuario: {
         id: user.id_usuario,
         id_persona: user.id_persona,
         username: user.username,
-        nombre: `${user.persona.nombres} ${user.persona.apellido_paterno}`.trim(),
+        nombre: this.formatNombreCorto(user.persona),
+        nombre_completo: this.formatNombrePersona(user.persona),
         rol,
         avatar_url: user.avatar_url,
+        email: user.persona.correo,
       },
+
+      saas,
 
       cargo_principal: staff?.cargo || (docente ? 'Docente' : rol),
 
@@ -187,13 +370,31 @@ export class AuthService {
             asignaciones,
             total_asignaciones: asignaciones.length,
             total_cursos: new Set(asignaciones.map((item) => item.id_curso)).size,
-            total_secciones: new Set(asignaciones.map((item) => item.id_seccion)).size,
+            total_secciones: new Set(asignaciones.map((item) => item.id_seccion))
+              .size,
+            colegios: Array.from(
+              new Set(
+                asignaciones
+                  .map((item) => item.id_colegio)
+                  .filter((value) => value !== null && value !== undefined),
+              ),
+            ),
           }
         : null,
 
       staff: staff
         ? {
             id_staff: staff.id_staff,
+            id_tenant: staff.id_tenant,
+            id_colegio:
+              staff.id_colegio ||
+              staff.seccion?.id_colegio ||
+              staff.colegio?.id_colegio ||
+              null,
+            colegio:
+              staff.colegio?.nombre ||
+              staff.seccion?.colegio?.nombre ||
+              null,
             cargo: staff.cargo,
             area: staff.area,
             es_tutor: staff.es_tutor,
@@ -212,28 +413,42 @@ export class AuthService {
         puedeVerDashboardInstitucional,
         puedeVerDashboardDocente,
         puedeVerTutoria,
-        puedeGestionarNotas: ['Admin', 'Profesor'].includes(rol),
-        puedeGestionarAsistencia: ['Admin', 'Profesor', 'Director'].includes(rol),
-        puedeGestionarTesoreria: ['Admin', 'Secretaria'].includes(rol),
-        puedeConfigurarSistema: rol === 'Admin',
+        puedeGestionarNotas,
+        puedeGestionarAsistencia,
+        puedeGestionarTesoreria,
+        puedeConfigurarSistema,
+        puedeGestionarSaas,
+
+        puedeVerConsolidado: saas.puedeVerConsolidado,
+        colegiosPermitidos: saas.colegios_permitidos,
       },
 
       modulos_dashboard: [
         puedeVerDashboardInstitucional ? 'institucional' : null,
         puedeVerDashboardDocente ? 'docente' : null,
         seccionesTutoria.length ? 'tutoria' : null,
+        saas.puedeVerConsolidado ? 'organizacion' : null,
       ].filter(Boolean),
     };
   }
 
-  async cambiarPassword(usuarioId: number, passwordActual: string, passwordNueva: string) {
+  async cambiarPassword(
+    usuarioId: number,
+    passwordActual: string,
+    passwordNueva: string,
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: usuarioId },
     });
 
-    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
 
-    const isPasswordValid = await bcrypt.compare(passwordActual, usuario.password_hash);
+    const isPasswordValid = await bcrypt.compare(
+      passwordActual,
+      usuario.password_hash,
+    );
 
     if (!isPasswordValid) {
       throw new BadRequestException('La contraseña actual no es correcta');
@@ -243,29 +458,39 @@ export class AuthService {
 
     await this.prisma.usuario.update({
       where: { id_usuario: usuarioId },
-      data: { password_hash: hashed },
+      data: {
+        password_hash: hashed,
+      },
     });
 
-    return { message: 'Contraseña actualizada correctamente' };
+    return {
+      message: 'Contraseña actualizada correctamente',
+    };
   }
 
   async updatePerfil(userId: number, data: any) {
     const user = await this.prisma.usuario.findUnique({
       where: { id_usuario: userId },
-      include: { persona: true },
+      include: {
+        persona: true,
+      },
     });
 
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
 
     if (
-      data.nombres ||
-      data.apellido_paterno ||
-      data.apellido_materno ||
-      data.correo ||
-      data.telefono
+      data.nombres !== undefined ||
+      data.apellido_paterno !== undefined ||
+      data.apellido_materno !== undefined ||
+      data.correo !== undefined ||
+      data.telefono !== undefined
     ) {
       await this.prisma.persona.update({
-        where: { id_persona: user.id_persona },
+        where: {
+          id_persona: user.id_persona,
+        },
         data: {
           nombres: data.nombres,
           apellido_paterno: data.apellido_paterno,
@@ -276,10 +501,20 @@ export class AuthService {
       });
     }
 
-    if (data.avatar_url !== undefined) {
+    if (
+      data.avatar_url !== undefined ||
+      data.tema !== undefined ||
+      data.notificaciones_activas !== undefined
+    ) {
       await this.prisma.usuario.update({
-        where: { id_usuario: userId },
-        data: { avatar_url: data.avatar_url },
+        where: {
+          id_usuario: userId,
+        },
+        data: {
+          avatar_url: data.avatar_url,
+          tema: data.tema,
+          notificaciones_activas: data.notificaciones_activas,
+        },
       });
     }
 

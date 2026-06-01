@@ -475,7 +475,7 @@ export default function PlantillasTab() {
       setAnioSeleccionado(null);
       setMensaje({
         tipo: 'exito',
-        texto: `Plantilla aplicada a ${res.data?.asignaciones ?? 0} asignaciones (${res.data?.evaluacionesCreadas ?? 0} evaluaciones creadas).`,
+        texto: `Plantilla aplicada a ${res.data?.asignaciones ?? 0} asignaciones y ${res.data?.unidades ?? 0} unidades. ${res.data?.evaluacionesCreadas ?? 0} evaluaciones creadas, ${res.data?.evaluacionesExistentes ?? 0} ya existían.`,
       });
     } catch (err: any) {
       setMensaje({

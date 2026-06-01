@@ -12,12 +12,16 @@ export class DashboardController {
     @Request() req,
     @Query('anio_id') anioId?: string,
     @Query('bimestre_id') bimestreId?: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
   ) {
     return this.dashboardService.getResumen({
       userId: req.user.userId,
       rol: req.user.rol,
-      anioId: anioId ? Number(anioId) : 1,
+      anioId: anioId ? Number(anioId) : undefined,
       bimestreId: bimestreId ? Number(bimestreId) : undefined,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
     });
   }
 }

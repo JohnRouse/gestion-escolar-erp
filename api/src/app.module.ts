@@ -18,6 +18,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ActividadInterceptor } from './auth/actividad.interceptor';
 import { PlantillasModule } from './plantillas/plantillas.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ColegiosModule } from './colegios/colegios.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     NfcModule,
     PlantillasModule,
     DashboardModule,
+    ColegiosModule,
   ],
   controllers: [],
   providers: [

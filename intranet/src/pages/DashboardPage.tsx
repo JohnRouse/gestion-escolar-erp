@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -23,7 +25,15 @@ import {
 
 interface DashboardResumen {
   rol: string;
-  anioId: number;
+  anioIds?: number[];
+  anioId?: number;
+  scope?: {
+    tipo: 'todos' | 'colegio';
+    tenantId: number | null;
+    colegioIds: number[];
+    colegios: any[];
+    puedeVerConsolidado: boolean;
+  };
   usuario: {
     id: number;
     nombre: string;
@@ -190,24 +200,28 @@ function EstadoCargaBadge({ estado }: { estado: string }) {
 
 export default function DashboardPage() {
   const { token, user } = useAuth();
+  const { activeScope, activeColegio, scopeLabel, queryString } = useSchool();
   const navigate = useNavigate();
 
   const [resumen, setResumen] = useState<DashboardResumen | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
 
     axios
-      .get('/api/dashboard/resumen?anio_id=1', {
+      .get(`/api/dashboard/resumen${queryString}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setResumen(res.data))
       .catch(() => setResumen(null))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, queryString]);
 
   const rol = resumen?.rol || user?.rol;
   const institucional = resumen?.modulos?.institucional;
@@ -219,16 +233,25 @@ export default function DashboardPage() {
     return nombre.split(' ').slice(0, 2).join(' ');
   }, [resumen?.usuario?.nombre, user?.nombre]);
 
+  const panelLabel =
+    activeScope.tipo === 'todos' ? 'Panel del grupo académico' : getSaludoRol(rol);
+
+  const panelDescription =
+    activeScope.tipo === 'todos'
+      ? `Vista consolidada de ${scopeLabel.toLowerCase()} para revisar el estado general del grupo.`
+      : `Vista rápida de ${
+          activeColegio?.nombre || 'la institución'
+        } con la información más importante para tu cargo.`;
+
   return (
     <div className="animate-slide-in-right">
-      <div className="mx-auto w-full max-w-7xl space-y-6">
-        {/* Header */}
+      <div className="w-full space-y-6">
         <section className="overflow-hidden rounded-[32px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 backdrop-blur">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
                 <LayoutDashboard size={13} className="text-accent-500" />
-                {getSaludoRol(rol)}
+                {panelLabel}
               </div>
 
               <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
@@ -236,20 +259,38 @@ export default function DashboardPage() {
               </h1>
 
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                Aquí tienes una vista rápida con la información más importante para tu cargo
-                actual en el colegio.
+                {panelDescription}
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                  Cargo activo
-                </p>
-                <p className="mt-1 text-sm font-black text-slate-800">
-                  {resumen?.usuario?.cargo || user?.contexto?.cargo_principal || rol || 'Usuario'}
-                </p>
-              </div>
+  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+    Contexto activo
+  </p>
+  <p className="mt-1 text-sm font-black text-slate-800">
+    {scopeLabel}
+  </p>
+</div>
+<div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
+  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+    Rol del sistema
+  </p>
+  <p className="mt-1 text-sm font-black text-slate-800">
+    {rol || 'Usuario'}
+  </p>
+</div>
+
+              <div className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100">
+  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+    Función institucional
+  </p>
+  <p className="mt-1 text-sm font-black text-slate-800">
+    {resumen?.usuario?.cargo ||
+      user?.contexto?.cargo_principal ||
+      'Sin cargo'}
+  </p>
+</div>
 
               {(rol === 'Admin' || rol === 'Director') && (
                 <button
@@ -280,21 +321,39 @@ export default function DashboardPage() {
           </section>
         ) : (
           <>
-            {/* Dashboard institucional */}
             {institucional && (
               <section className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-black text-slate-900">
-                      Resumen institucional
+                      {activeScope.tipo === 'todos'
+                        ? 'Resumen del grupo académico'
+                        : 'Resumen institucional'}
                     </h2>
                     <p className="text-xs text-slate-400">
-                      Indicadores generales del colegio.
+                      {activeScope.tipo === 'todos'
+                        ? 'Indicadores consolidados de los colegios activos.'
+                        : 'Indicadores generales del colegio.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div
+                  className={cx(
+                    'grid gap-4 sm:grid-cols-2',
+                    activeScope.tipo === 'todos' ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
+                  )}
+                >
+                  {activeScope.tipo === 'todos' && (
+                    <KpiCard
+                      label="Colegios"
+                      value={formatNumber(institucional.kpis?.colegios)}
+                      helper="Instituciones activas"
+                      icon={School}
+                      tone="violet"
+                    />
+                  )}
+
                   <KpiCard
                     label="Matriculados"
                     value={formatNumber(institucional.kpis?.matriculados)}
@@ -338,7 +397,8 @@ export default function DashboardPage() {
                       <KpiCard
                         label="Avance carga"
                         value={`${
-                          institucional.avanceCargaDocente.resumen?.porcentajePromedio || 0
+                          institucional.avanceCargaDocente.resumen
+                            ?.porcentajePromedio || 0
                         }%`}
                         helper={
                           institucional.avanceCargaDocente.unidadActual
@@ -352,7 +412,8 @@ export default function DashboardPage() {
                       <KpiCard
                         label="Docentes completos"
                         value={`${
-                          institucional.avanceCargaDocente.resumen?.docentesCompletos || 0
+                          institucional.avanceCargaDocente.resumen
+                            ?.docentesCompletos || 0
                         }/${institucional.avanceCargaDocente.resumen?.docentes || 0}`}
                         helper="Carga de notas al 100%"
                         icon={CheckSquare}
@@ -373,7 +434,116 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Avance de carga por docente para Admin / Director */}
+            {activeScope.tipo === 'todos' &&
+              institucional?.colegios?.length > 0 && (
+                <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+                        <School size={18} />
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900">
+                          Estado por colegio
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          Comparativo rápido de cada institución del grupo.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {institucional.colegios.map((colegio: any) => (
+                      <div
+                        key={colegio.id_colegio}
+                        className="rounded-[28px] bg-slate-50/80 p-5 ring-1 ring-slate-100"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm"
+                                style={{
+                                  backgroundColor:
+                                    colegio.color_principal || '#4f46e5',
+                                }}
+                              >
+                                <School size={19} />
+                              </span>
+
+                              <div className="min-w-0">
+                                <h4 className="truncate text-base font-black text-slate-950">
+                                  {colegio.nombre}
+                                </h4>
+                                <p className="mt-1 truncate text-xs text-slate-400">
+                                  {colegio.niveles?.join(' · ') ||
+                                    'Sin niveles configurados'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+                            {colegio.codigo}
+                          </span>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-3 gap-3">
+                          <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                              Alumnos
+                            </p>
+                            <p className="mt-1 text-xl font-black text-slate-950">
+                              {formatNumber(colegio.kpis?.matriculados)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                              Docentes
+                            </p>
+                            <p className="mt-1 text-xl font-black text-slate-950">
+                              {formatNumber(colegio.kpis?.docentes)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                              Pagos
+                            </p>
+                            <p className="mt-1 text-xl font-black text-slate-950">
+                              {formatNumber(colegio.kpis?.pagosPendientes)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-5">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs font-bold text-slate-500">
+                              Avance de carga de notas
+                            </p>
+                            <p className="text-sm font-black text-slate-950">
+                              {colegio.avanceCarga?.porcentajePromedio || 0}%
+                            </p>
+                          </div>
+
+                          <ProgressBar
+                            value={colegio.avanceCarga?.porcentajePromedio || 0}
+                          />
+
+                          <p className="mt-2 text-xs text-slate-400">
+                            {colegio.avanceCarga?.registradas || 0} registradas ·{' '}
+                            {colegio.avanceCarga?.pendientes || 0} pendientes
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
             {(rol === 'Admin' || rol === 'Director') &&
               institucional?.avanceCargaDocente && (
                 <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
@@ -395,8 +565,10 @@ export default function DashboardPage() {
 
                     {institucional.avanceCargaDocente.unidadActual ? (
                       <span className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
-                        Bimestre {institucional.avanceCargaDocente.unidadActual.bimestre} ·
-                        Unidad {institucional.avanceCargaDocente.unidadActual.numero}
+                        Bimestre{' '}
+                        {institucional.avanceCargaDocente.unidadActual.bimestre} ·
+                        Unidad{' '}
+                        {institucional.avanceCargaDocente.unidadActual.numero}
                       </span>
                     ) : (
                       <span className="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
@@ -433,6 +605,13 @@ export default function DashboardPage() {
                                   {item.cursos?.join(' · ') || 'Sin cursos'} ·{' '}
                                   {item.secciones?.join(' / ') || 'Sin sección'}
                                 </p>
+
+                                {activeScope.tipo === 'todos' &&
+                                  item.colegios?.length > 0 && (
+                                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                                      {item.colegios.join(' · ')}
+                                    </p>
+                                  )}
                               </div>
 
                               <div className="flex items-center gap-4">
@@ -468,7 +647,6 @@ export default function DashboardPage() {
                 </section>
               )}
 
-            {/* Dashboard docente */}
             {docente && (
               <section className="space-y-4">
                 <div>
@@ -706,7 +884,6 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Tutoría */}
             {tutoria && (
               <section className="space-y-4">
                 <div>
@@ -804,7 +981,6 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Próximos eventos */}
             {institucional?.eventosProximos && (
               <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
                 <div className="mb-5 flex items-center justify-between gap-3">
@@ -833,7 +1009,9 @@ export default function DashboardPage() {
                     {institucional.eventosProximos.map((evento: any) => {
                       const fecha = new Date(evento.fecha);
                       const dia = fecha.getDate();
-                      const mes = fecha.toLocaleDateString('es-PE', { month: 'short' });
+                      const mes = fecha.toLocaleDateString('es-PE', {
+                        month: 'short',
+                      });
 
                       return (
                         <div
@@ -841,7 +1019,9 @@ export default function DashboardPage() {
                           className="flex items-start gap-4 rounded-2xl px-2 py-3 transition hover:bg-slate-50"
                         >
                           <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
-                            <span className="text-lg font-black leading-none">{dia}</span>
+                            <span className="text-lg font-black leading-none">
+                              {dia}
+                            </span>
                             <span className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
                               {mes}
                             </span>
@@ -875,7 +1055,6 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Estado de pagos */}
             {institucional && (
               <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
                 <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

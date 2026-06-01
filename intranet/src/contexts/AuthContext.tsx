@@ -1,17 +1,65 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
+export interface ColegioSaas {
+  id_colegio: number;
+  id_tenant: number;
+  nombre: string;
+  nombre_corto?: string | null;
+  codigo?: string | null;
+  logo_url?: string | null;
+  color_principal?: string | null;
+  estado?: string;
+  rol_colegio?: string;
+  es_principal?: boolean;
+  niveles?: {
+    id_nivel: number;
+    nombre_nivel: string;
+  }[];
+}
+
+export interface TenantSaas {
+  id_tenant: number;
+  nombre: string;
+  slug: string;
+  ruc?: string | null;
+  logo_url?: string | null;
+  plan?: string;
+  estado?: string;
+}
+
+export interface SaasContexto {
+  tenant: TenantSaas | null;
+  colegios: ColegioSaas[];
+  colegios_permitidos?: number[];
+  colegio_principal?: ColegioSaas | null;
+  puedeVerConsolidado: boolean;
+  contexto_default?: {
+    tipo: 'todos' | 'colegio';
+    id_tenant?: number | null;
+    id_colegio?: number | null;
+  };
+}
+
 interface UserContexto {
+  saas?: SaasContexto;
+
   cargo_principal?: string;
+
   docente?: {
     id_docente: number;
     total_asignaciones: number;
     total_cursos: number;
     total_secciones: number;
     asignaciones: any[];
+    colegios?: number[];
   } | null;
+
   staff?: {
     id_staff: number;
+    id_tenant?: number | null;
+    id_colegio?: number | null;
+    colegio?: string | null;
     cargo: string;
     area: string;
     es_tutor: boolean;
@@ -19,11 +67,13 @@ interface UserContexto {
     id_seccion?: number | null;
     seccion?: string | null;
   } | null;
+
   tutoria?: {
     es_tutor: boolean;
     secciones: any[];
   };
-  permisos?: Record<string, boolean>;
+
+  permisos?: Record<string, any>;
   modulos_dashboard?: string[];
 }
 
@@ -31,9 +81,13 @@ interface User {
   id: number;
   username: string;
   nombre: string;
+  nombres?: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
   rol: string;
   avatar_url?: string | null;
-  email?: string;
+  email?: string | null;
+  correo?: string | null;
   contexto?: UserContexto;
 }
 
@@ -73,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .catch(() => {
           localStorage.removeItem('token_intranet');
           localStorage.removeItem('user_intranet');
+          localStorage.removeItem('school_context_intranet');
           setToken(null);
           setUser(null);
         })
@@ -103,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token_intranet');
     localStorage.removeItem('user_intranet');
+    localStorage.removeItem('school_context_intranet');
+
     setToken(null);
     setUser(null);
   };

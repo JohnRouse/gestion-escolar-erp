@@ -14,6 +14,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './layout/AppLayout';
 import PerfilPage from './pages/PerfilPage';
 import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage';
+import ReportesPage from './pages/ReportesPage';
+import { SchoolProvider } from './contexts/SchoolContext';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,24 +32,27 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route
-        element={
-          <ProtectedRoute>
-            <SidebarProvider>
-              <AppLayout />
-            </SidebarProvider>
-          </ProtectedRoute>
-        }
-      >
+  element={
+    <ProtectedRoute>
+      <SchoolProvider>
+        <SidebarProvider>
+          <AppLayout />
+        </SidebarProvider>
+      </SchoolProvider>
+    </ProtectedRoute>
+  }
+>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/matricula" element={<MatriculaPage />} />
-        <Route path="/tesoreria" element={<TesoreriaPage />} />
-        <Route path="/asistencia" element={<AsistenciaPage />} />
-        <Route path="/notas" element={<NotasPage />} />
-        <Route path="/circulares" element={<CircularesPage />} />
-        <Route path="/configuracion" element={<ConfiguracionPage />} />
-        <Route path="/docentes" element={<DocentesPage />} />
-        <Route path="/perfil" element={<PerfilPage />} />
-        <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
+<Route path="/matricula" element={<MatriculaPage />} />
+<Route path="/tesoreria" element={<TesoreriaPage />} />
+<Route path="/asistencia" element={<AsistenciaPage />} />
+<Route path="/notas" element={<NotasPage />} />
+<Route path="/circulares" element={<CircularesPage />} />
+<Route path="/configuracion" element={<ConfiguracionPage />} />
+<Route path="/docentes" element={<DocentesPage />} />
+<Route path="/perfil" element={<PerfilPage />} />
+<Route path="/reportes" element={<ReportesPage />} />
+<Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>

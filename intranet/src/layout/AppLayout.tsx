@@ -7,13 +7,18 @@ export default function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <AppSidebar />
       <Backdrop />
-      <div className="flex-1 flex flex-col min-w-0">
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AppHeader />
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          <div key={location.pathname} className="animate-slide-in-right">
+
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4 md:px-6 lg:px-8">
+          <div
+            key={location.pathname}
+            className="mx-auto w-full max-w-[1600px] animate-slide-in-right"
+          >
             <Outlet />
           </div>
         </main>

@@ -106,57 +106,134 @@ async aplicarAnio(
   @Param('id') id: string,
   @Body() body: { id_anio: number },
 ) {
+  const idPlantilla = Number(id);
+  const idAnio = Number(body.id_anio);
+
   const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
-    where: { id_plantilla: Number(id) },
-    include: { detalles: true },
+    where: { id_plantilla: idPlantilla },
+    include: {
+      detalles: {
+        orderBy: { orden: 'asc' },
+      },
+      nivel: true,
+      curso: true,
+    },
   });
+
   if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
 
-  // Obtener todas las asignaciones activas del año
-  const where: any = { id_anio: body.id_anio };
+  const anio = await this.prisma.anioLectivo.findUnique({
+    where: { id_anio: idAnio },
+    include: {
+      bimestres: {
+        include: {
+          unidades: true,
+        },
+      },
+    },
+  });
+
+  if (!anio) throw new NotFoundException('Año lectivo no encontrado');
+
+  const unidades = anio.bimestres
+    .flatMap((bimestre) => bimestre.unidades)
+    .sort((a, b) => a.numero - b.numero);
+
+  if (unidades.length === 0) {
+    return {
+      message: 'El año lectivo no tiene unidades configuradas',
+      asignaciones: 0,
+      unidades: 0,
+      evaluacionesCreadas: 0,
+      evaluacionesExistentes: 0,
+    };
+  }
+
+  const whereAsignaciones: any = {
+    id_anio: idAnio,
+  };
+
   if (plantilla.id_nivel) {
-    where.seccion = { grado: { id_nivel: plantilla.id_nivel } };
+    whereAsignaciones.seccion = {
+      grado: {
+        id_nivel: plantilla.id_nivel,
+      },
+    };
   }
+
   if (plantilla.id_curso) {
-    where.id_curso = plantilla.id_curso;
+    whereAsignaciones.id_curso = plantilla.id_curso;
   }
 
-  const asignaciones = await this.prisma.asignacionDocente.findMany({ where });
+  const asignaciones = await this.prisma.asignacionDocente.findMany({
+    where: whereAsignaciones,
+    include: {
+      curso: true,
+      seccion: {
+        include: {
+          grado: {
+            include: {
+              nivel: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  let totalCreadas = 0;
+  let evaluacionesCreadas = 0;
+  let evaluacionesExistentes = 0;
 
-  for (const asignacion of asignaciones) {
-    // Para cada unidad (1 a 8)
-    for (let unidad = 1; unidad <= 8; unidad++) {
-      for (const detalle of plantilla.detalles) {
-        // Verificar si ya existe una evaluación similar en esa unidad y asignación
-        const existente = await this.prisma.evaluacionDetalle.findFirst({
-  where: {
-    id_asignacion: asignacion.id_asignacion,
-    id_unidad: unidad,
-    descripcion_actividad: detalle.descripcion,
-    id_tipo_eval: detalle.id_tipo_eval,
-  },
-});
-        if (!existente) {
-          await this.prisma.evaluacionDetalle.create({
-            data: {
+  await this.prisma.$transaction(async (tx) => {
+    for (const asignacion of asignaciones) {
+      for (const unidad of unidades) {
+        for (const detalle of plantilla.detalles) {
+          const existente = await tx.evaluacionDetalle.findFirst({
+            where: {
               id_asignacion: asignacion.id_asignacion,
-              id_unidad: unidad,
+              id_unidad: unidad.id_unidad,
               id_tipo_eval: detalle.id_tipo_eval,
               descripcion_actividad: detalle.descripcion,
             },
           });
-          totalCreadas++;
+
+          if (existente) {
+            evaluacionesExistentes++;
+            continue;
+          }
+
+          await tx.evaluacionDetalle.create({
+            data: {
+              id_asignacion: asignacion.id_asignacion,
+              id_unidad: unidad.id_unidad,
+              id_tipo_eval: detalle.id_tipo_eval,
+              descripcion_actividad: detalle.descripcion,
+            },
+          });
+
+          evaluacionesCreadas++;
         }
       }
     }
-  }
+  });
 
   return {
-    message: 'Plantilla aplicada a todas las asignaciones del año',
+    message: 'Plantilla aplicada al año lectivo correctamente',
+    plantilla: {
+      id_plantilla: plantilla.id_plantilla,
+      nombre: plantilla.nombre,
+      alcance: plantilla.id_curso
+        ? 'curso'
+        : plantilla.id_nivel
+          ? 'nivel'
+          : 'global',
+      nivel: plantilla.nivel?.nombre_nivel || null,
+      curso: plantilla.curso?.nombre_curso || null,
+    },
     asignaciones: asignaciones.length,
-    evaluacionesCreadas: totalCreadas,
+    unidades: unidades.length,
+    evaluacionesCreadas,
+    evaluacionesExistentes,
   };
 }
 

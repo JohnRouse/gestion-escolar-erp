@@ -10,9 +10,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
-
 @Controller('calificaciones')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class CalificacionesController {
   constructor(
     private readonly calificacionesService: CalificacionesService,

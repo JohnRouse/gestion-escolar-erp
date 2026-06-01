@@ -6,78 +6,180 @@ import { Prisma } from '@prisma/client';
 export class AnaliticasService {
   constructor(private prisma: PrismaService) {}
 
+  private async getAnioActivoId() {
+  const anioActivo = await this.prisma.anioLectivo.findFirst({
+    where: { estado: 'Activo' },
+    orderBy: { id_anio: 'desc' },
+  });
+
+  return anioActivo?.id_anio || 1;
+}
+
+private async getUnidadAbierta(idAnio: number) {
+  return this.prisma.unidad.findFirst({
+    where: {
+      estado_abierto: true,
+      bimestre: {
+        id_anio: idAnio,
+      },
+    },
+    include: {
+      bimestre: true,
+    },
+    orderBy: {
+      numero: 'asc',
+    },
+  });
+}
+
   // ── FINANCIERAS ──
   async getFinancieras() {
-    // Morosidad vencida
-    const morosidad = await this.prisma.$queryRaw<{ total_vencido: string }[]>(
-      Prisma.sql`
-        SELECT COALESCE(SUM(con.monto_base), 0) as total_vencido
-        FROM CronogramaPagos cp
-        JOIN ConceptoPago con ON cp.id_concepto = con.id_concepto
-        WHERE cp.estado_pago IN ('Pendiente','Vencido') AND cp.fecha_vencimiento < NOW()
-      `
-    );
-    const totalVencido = Number(morosidad[0]?.total_vencido ?? 0);
+  const idAnio = await this.getAnioActivoId();
 
-    // Ingresos del mes actual
-    const ingresosMes = await this.prisma.$queryRaw<{ total_ingresado: string }[]>(
-      Prisma.sql`
-        SELECT COALESCE(SUM(pt.monto_pagado), 0) as total_ingresado
-        FROM PagoTransaccion pt
-        WHERE MONTH(pt.fecha_pago) = MONTH(CURRENT_DATE()) AND YEAR(pt.fecha_pago) = YEAR(CURRENT_DATE())
-      `
-    );
-    const totalIngresado = Number(ingresosMes[0]?.total_ingresado ?? 0);
+  const morosidad = await this.prisma.$queryRaw<{ total_vencido: string }[]>(
+    Prisma.sql`
+      SELECT 
+        COALESCE(
+          SUM(
+            GREATEST(con.monto_base - COALESCE(pagos.total_pagado, 0), 0)
+          ), 
+          0
+        ) AS total_vencido
+      FROM CronogramaPagos cp
+      JOIN ConceptoPago con ON cp.id_concepto = con.id_concepto
+      JOIN Matricula m ON cp.id_matricula = m.id_matricula
+      LEFT JOIN (
+        SELECT 
+          id_cronograma,
+          SUM(monto_pagado) AS total_pagado
+        FROM PagoTransaccion
+        GROUP BY id_cronograma
+      ) pagos ON pagos.id_cronograma = cp.id_cronograma
+      WHERE m.id_anio = ${idAnio}
+        AND m.estado_matricula = 'Activo'
+        AND cp.estado_pago <> 'Pagado'
+        AND cp.fecha_vencimiento < CURDATE()
+        AND GREATEST(con.monto_base - COALESCE(pagos.total_pagado, 0), 0) > 0
+    `
+  );
 
-    // Tasa de cumplimiento (porcentaje de cronogramas pagados)
-    const tasa = await this.prisma.$queryRaw<{ porcentaje: number }[]>(
+  const totalVencido = Number(morosidad[0]?.total_vencido ?? 0);
+
+  const morosidadDetalle = await this.prisma.$queryRaw<
+  { concepto: string; cantidad: bigint; total: string }[]
+>(
   Prisma.sql`
-    SELECT ROUND(
-      (SUM(CASE WHEN cp.estado_pago = 'Pagado' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 1
-    ) as porcentaje
+    SELECT 
+      con.nombre_concepto AS concepto,
+      COUNT(*) AS cantidad,
+      COALESCE(
+        SUM(
+          GREATEST(con.monto_base - COALESCE(pagos.total_pagado, 0), 0)
+        ), 
+        0
+      ) AS total
     FROM CronogramaPagos cp
+    JOIN ConceptoPago con ON cp.id_concepto = con.id_concepto
     JOIN Matricula m ON cp.id_matricula = m.id_matricula
-    WHERE m.estado_matricula = 'Activo'
+    LEFT JOIN (
+      SELECT 
+        id_cronograma,
+        SUM(monto_pagado) AS total_pagado
+      FROM PagoTransaccion
+      GROUP BY id_cronograma
+    ) pagos ON pagos.id_cronograma = cp.id_cronograma
+    WHERE m.id_anio = ${idAnio}
+      AND m.estado_matricula = 'Activo'
+      AND cp.estado_pago <> 'Pagado'
+      AND cp.fecha_vencimiento < CURDATE()
+      AND GREATEST(con.monto_base - COALESCE(pagos.total_pagado, 0), 0) > 0
+    GROUP BY con.id_concepto, con.nombre_concepto
+    ORDER BY total DESC
   `
 );
-    const tasaCumplimiento = Number(tasa[0]?.porcentaje ?? 0);
 
-    // Ingresos por nivel
-    const ingresosPorNivel = await this.prisma.$queryRaw<{ nivel: string; total: string }[]>(
-      Prisma.sql`
-        SELECT n.nombre_nivel as nivel, COALESCE(SUM(pt.monto_pagado), 0) as total
-        FROM PagoTransaccion pt
-        JOIN CronogramaPagos cp ON pt.id_cronograma = cp.id_cronograma
-        JOIN Matricula m ON cp.id_matricula = m.id_matricula
-        JOIN Seccion s ON m.id_seccion = s.id_seccion
-        JOIN Grado g ON s.id_grado = g.id_grado
-        JOIN Nivel n ON g.id_nivel = n.id_nivel
-        GROUP BY n.id_nivel
-      `
-    );
+  const ingresosMes = await this.prisma.$queryRaw<{ total_ingresado: string }[]>(
+    Prisma.sql`
+      SELECT COALESCE(SUM(pt.monto_pagado), 0) AS total_ingresado
+      FROM PagoTransaccion pt
+      JOIN CronogramaPagos cp ON pt.id_cronograma = cp.id_cronograma
+      JOIN Matricula m ON cp.id_matricula = m.id_matricula
+      WHERE m.id_anio = ${idAnio}
+        AND MONTH(pt.fecha_pago) = MONTH(CURRENT_DATE())
+        AND YEAR(pt.fecha_pago) = YEAR(CURRENT_DATE())
+    `
+  );
 
-    // Próximos 5 días
-    const proximos = await this.prisma.cronogramaPagos.count({
-      where: {
-        estado_pago: 'Pendiente',
-        fecha_vencimiento: {
-          gte: new Date(),
-          lt: new Date(new Date().setDate(new Date().getDate() + 5)),
-        },
+  const totalIngresado = Number(ingresosMes[0]?.total_ingresado ?? 0);
+
+  const tasa = await this.prisma.$queryRaw<{ porcentaje: number }[]>(
+    Prisma.sql`
+      SELECT 
+        COALESCE(
+          ROUND(
+            (
+              SUM(CASE WHEN cp.estado_pago = 'Pagado' THEN 1 ELSE 0 END) 
+              / NULLIF(COUNT(*), 0)
+            ) * 100, 
+            1
+          ), 
+          0
+        ) AS porcentaje
+      FROM CronogramaPagos cp
+      JOIN Matricula m ON cp.id_matricula = m.id_matricula
+      WHERE m.estado_matricula = 'Activo'
+        AND m.id_anio = ${idAnio}
+    `
+  );
+
+  const tasaCumplimiento = Number(tasa[0]?.porcentaje ?? 0);
+
+  const ingresosPorNivel = await this.prisma.$queryRaw<{ nivel: string; total: string }[]>(
+    Prisma.sql`
+      SELECT 
+        n.nombre_nivel AS nivel, 
+        COALESCE(SUM(pt.monto_pagado), 0) AS total
+      FROM PagoTransaccion pt
+      JOIN CronogramaPagos cp ON pt.id_cronograma = cp.id_cronograma
+      JOIN Matricula m ON cp.id_matricula = m.id_matricula
+      JOIN Seccion s ON m.id_seccion = s.id_seccion
+      JOIN Grado g ON s.id_grado = g.id_grado
+      JOIN Nivel n ON g.id_nivel = n.id_nivel
+      WHERE m.id_anio = ${idAnio}
+      GROUP BY n.id_nivel, n.nombre_nivel
+    `
+  );
+
+  const proximos = await this.prisma.cronogramaPagos.count({
+    where: {
+      estado_pago: { not: 'Pagado' },
+      matricula: {
+        id_anio: idAnio,
+        estado_matricula: 'Activo',
       },
-    });
+      fecha_vencimiento: {
+        gte: new Date(),
+        lt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+    },
+  });
 
-    return {
-      morosidadVencida: totalVencido,
-      ingresosMes: totalIngresado,
-      tasaCumplimiento,
-      ingresosPorNivel: ingresosPorNivel.map((i) => ({
-        nivel: i.nivel,
-        total: Number(i.total),
-      })),
-      proximosAVencer: proximos,
-    };
-  }
+  return {
+  morosidadVencida: totalVencido,
+  morosidadDetalle: morosidadDetalle.map((item) => ({
+    concepto: item.concepto,
+    cantidad: Number(item.cantidad),
+    total: Number(item.total),
+  })),
+  ingresosMes: totalIngresado,
+  tasaCumplimiento,
+  ingresosPorNivel: ingresosPorNivel.map((i) => ({
+    nivel: i.nivel,
+    total: Number(i.total),
+  })),
+  proximosAVencer: proximos,
+};
+}
 
   async getTesoreriaKpis() {
   // Recaudado hoy (basado en la fecha de la base de datos)
@@ -192,14 +294,25 @@ async getDistribucionPorNivel() {
   });
 
   // Promedio general – obtener todas las notas de la unidad 1
-  const notas = await this.prisma.notaAlumno.findMany({
-    where: { evaluacion: { id_unidad: 1 } },
-    select: { valor_nota: true },
-  });
+  const idAnio = await this.getAnioActivoId();
+const unidadAbierta = await this.getUnidadAbierta(idAnio);
+
+const notas = unidadAbierta
+  ? await this.prisma.notaAlumno.findMany({
+      where: {
+        evaluacion: {
+          id_unidad: unidadAbierta.id_unidad,
+        },
+      },
+      select: { valor_nota: true },
+    })
+  : [];
   const promedioGeneral =
-    notas.length > 0
-      ? Math.round((notas.reduce((a, b) => a + Number(b.valor_nota), 0) / notas.length) * 10) / 10
-      : 0;
+  notas.length > 0
+    ? Math.round(
+        notas.reduce((a, b) => a + Number(b.valor_nota), 0) / notas.length
+      )
+    : 0;
 
   // Asistencia por semana – con Prisma, agrupando con JS
   const asistencias = await this.prisma.asistencia.findMany({
@@ -290,58 +403,264 @@ async getDistribucionPorNivel() {
 
   // ── OPERATIVAS ──
   async getOperativas() {
-    // Carga de notas por docente (unidad 1)
-    const cargaDocentes = await this.prisma.$queryRaw<{ docente: string; porcentaje: number }[]>(
-      Prisma.sql`
-        SELECT CONCAT(p.nombres, ' ', p.apellido_paterno) as docente,
-               ROUND(
-                 COUNT(na.id_nota) * 100.0 / 
-                 (COUNT(DISTINCT ed.id_evaluacion_det) * 
-                  (SELECT COUNT(*) FROM Matricula m2 WHERE m2.id_seccion = a.id_seccion AND m2.estado_matricula = 'Activo')
-                 ), 1
-               ) as porcentaje
-        FROM AsignacionDocente a
-        JOIN Docente d ON a.id_docente = d.id_persona
-        JOIN Persona p ON d.id_persona = p.id_persona
-        LEFT JOIN EvaluacionDetalle ed ON ed.id_asignacion = a.id_asignacion AND ed.id_unidad = 1
-        LEFT JOIN NotaAlumno na ON na.id_evaluacion_det = ed.id_evaluacion_det
-        GROUP BY a.id_asignacion
-      `
+  const anioActivo = await this.prisma.anioLectivo.findFirst({
+    where: { estado: 'Activo' },
+    orderBy: { id_anio: 'desc' },
+  });
+
+  const idAnio = anioActivo?.id_anio || 1;
+
+  const unidadAbierta = await this.prisma.unidad.findFirst({
+    where: {
+      estado_abierto: true,
+      bimestre: {
+        id_anio: idAnio,
+      },
+    },
+    include: {
+      bimestre: true,
+    },
+    orderBy: {
+      numero: 'asc',
+    },
+  });
+
+  if (!unidadAbierta) {
+    const comunicados = await this.prisma.circular.findMany({
+      orderBy: { fecha_creacion: 'desc' },
+      take: 3,
+      select: {
+        id_circular: true,
+        titulo: true,
+        contenido: true,
+        fecha_creacion: true,
+        remitente: {
+          select: {
+            username: true,
+            persona: {
+              select: {
+                nombres: true,
+                apellido_paterno: true,
+                apellido_materno: true,
+              },
+            },
+          },
+        },
+        destinatarios: {
+          select: {
+            nivel: {
+              select: {
+                nombre_nivel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      unidadActual: null,
+      cargaDocentes: [],
+      comunicados,
+    };
+  }
+
+  const asignaciones = await this.prisma.asignacionDocente.findMany({
+    where: {
+      id_anio: idAnio,
+    },
+    include: {
+      docente: {
+        include: {
+          persona: true,
+        },
+      },
+      curso: true,
+      seccion: {
+        include: {
+          grado: {
+            include: {
+              nivel: true,
+            },
+          },
+        },
+      },
+      evaluaciones: {
+        where: {
+          id_unidad: unidadAbierta.id_unidad,
+        },
+        include: {
+          notas: {
+            where: {
+              matricula: {
+                id_anio: idAnio,
+                estado_matricula: 'Activo',
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      id_docente: 'asc',
+    },
+  });
+
+  const idsSecciones = Array.from(
+    new Set(asignaciones.map((asignacion) => asignacion.id_seccion)),
+  );
+
+  const alumnosPorSeccionRaw = await this.prisma.matricula.groupBy({
+    by: ['id_seccion'],
+    where: {
+      id_anio: idAnio,
+      estado_matricula: 'Activo',
+      id_seccion: {
+        in: idsSecciones.length ? idsSecciones : [-1],
+      },
+    },
+    _count: {
+      id_matricula: true,
+    },
+  });
+
+  const alumnosPorSeccion = new Map<number, number>();
+
+  alumnosPorSeccionRaw.forEach((item) => {
+    alumnosPorSeccion.set(item.id_seccion, item._count.id_matricula);
+  });
+
+  const docentesMap = new Map<
+    number,
+    {
+      id_docente: number;
+      docente: string;
+      cursos: string[];
+      secciones: string[];
+      evaluaciones: number;
+      totalEsperado: number;
+      registradas: number;
+      pendientes: number;
+      porcentaje: number;
+      estado: 'completo' | 'avanzado' | 'en_proceso' | 'pendiente' | 'sin_evaluaciones';
+    }
+  >();
+
+  for (const asignacion of asignaciones) {
+    const idDocente = asignacion.id_docente;
+
+    const docenteNombre = `${asignacion.docente.persona.nombres} ${asignacion.docente.persona.apellido_paterno}`.trim();
+
+    const totalAlumnos = alumnosPorSeccion.get(asignacion.id_seccion) || 0;
+    const totalEvaluaciones = asignacion.evaluaciones.length;
+
+    const registradasAsignacion = asignacion.evaluaciones.reduce(
+      (total, evaluacion) => total + evaluacion.notas.length,
+      0,
     );
 
-    // Comunicados recientes
-    const comunicados = await this.prisma.circular.findMany({
-  orderBy: { fecha_creacion: 'desc' },
-  take: 3,
-  select: {
-    id_circular: true,
-    titulo: true,
-    contenido: true,
-    fecha_creacion: true,
-    remitente: {
-      select: {
-        username: true,
-        persona: {
-          select: {
-            nombres: true,
-            apellido_paterno: true,
-            apellido_materno: true,
-          },
-        },
-      },
-    },
-    destinatarios: {
-      select: {
-        nivel: {
-          select: {
-            nombre_nivel: true,
-          },
-        },
-      },
-    },
-  },
-});
+    const totalEsperadoAsignacion = totalAlumnos * totalEvaluaciones;
 
-    return { cargaDocentes, comunicados };
+    if (!docentesMap.has(idDocente)) {
+      docentesMap.set(idDocente, {
+        id_docente: idDocente,
+        docente: docenteNombre,
+        cursos: [],
+        secciones: [],
+        evaluaciones: 0,
+        totalEsperado: 0,
+        registradas: 0,
+        pendientes: 0,
+        porcentaje: 0,
+        estado: 'pendiente',
+      });
+    }
+
+    const docente = docentesMap.get(idDocente)!;
+
+    docente.cursos.push(asignacion.curso.nombre_curso);
+
+    const grado = asignacion.seccion.grado?.nombre_grado || 'Grado';
+    const nivel = asignacion.seccion.grado?.nivel?.nombre_nivel || 'Nivel';
+    docente.secciones.push(`${grado} "${asignacion.seccion.letra}" · ${nivel}`);
+
+    docente.evaluaciones += totalEvaluaciones;
+    docente.totalEsperado += totalEsperadoAsignacion;
+    docente.registradas += registradasAsignacion;
   }
+
+  const cargaDocentes = Array.from(docentesMap.values())
+    .map((docente) => {
+      const pendientes = Math.max(0, docente.totalEsperado - docente.registradas);
+
+      const porcentaje =
+        docente.totalEsperado > 0
+          ? Math.round((docente.registradas / docente.totalEsperado) * 100)
+          : 0;
+
+      let estado: typeof docente.estado = 'pendiente';
+
+      if (docente.evaluaciones === 0) estado = 'sin_evaluaciones';
+      else if (porcentaje >= 100) estado = 'completo';
+      else if (porcentaje >= 80) estado = 'avanzado';
+      else if (porcentaje > 0) estado = 'en_proceso';
+      else estado = 'pendiente';
+
+      return {
+        ...docente,
+        cursos: Array.from(new Set(docente.cursos)),
+        secciones: Array.from(new Set(docente.secciones)),
+        pendientes,
+        porcentaje,
+        estado,
+      };
+    })
+    .sort((a, b) => a.porcentaje - b.porcentaje);
+
+  const comunicados = await this.prisma.circular.findMany({
+    orderBy: { fecha_creacion: 'desc' },
+    take: 3,
+    select: {
+      id_circular: true,
+      titulo: true,
+      contenido: true,
+      fecha_creacion: true,
+      remitente: {
+        select: {
+          username: true,
+          persona: {
+            select: {
+              nombres: true,
+              apellido_paterno: true,
+              apellido_materno: true,
+            },
+          },
+        },
+      },
+      destinatarios: {
+        select: {
+          nivel: {
+            select: {
+              nombre_nivel: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return {
+    unidadActual: {
+      id_unidad: unidadAbierta.id_unidad,
+      numero: unidadAbierta.numero,
+      id_bimestre: unidadAbierta.id_bimestre,
+      bimestre: unidadAbierta.bimestre.numero,
+      fecha_inicio: unidadAbierta.fecha_inicio,
+      fecha_fin: unidadAbierta.fecha_fin,
+      estado_abierto: unidadAbierta.estado_abierto,
+    },
+    cargaDocentes,
+    comunicados,
+  };
+}
 }

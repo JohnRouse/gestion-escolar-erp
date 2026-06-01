@@ -7,30 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── MÓDULO DE IDENTIDAD Y ACCESO ──
+// ======================================================
+// IDENTIDAD, ACCESO Y SAAS
+// ======================================================
+
 model Rol {
-  id_rol     Int       @id @default(autoincrement())
-  nombre_rol String    @unique @db.VarChar(50)
-  usuarios   Usuario[]
+  id_rol     Int    @id @default(autoincrement())
+  nombre_rol String @unique @db.VarChar(50)
+
+  usuarios Usuario[]
 }
 
 model Persona {
-  id_persona       Int          @id @default(autoincrement())
-  dni              String       @unique @db.Char(8)
-  nombres          String       @db.VarChar(100)
-  apellido_paterno String       @db.VarChar(100)
-  apellido_materno String       @db.VarChar(100)
-  fecha_nacimiento DateTime     @db.Date
-  genero           String?      @db.VarChar(1)
-  direccion        String?      @db.VarChar(255)
-  telefono         String?      @db.VarChar(20)
-  correo           String?      @unique @db.VarChar(150)
-  created_at       DateTime     @default(now()) @db.Timestamp(0)
-  usuarios         Usuario[]
-  apoderados       Apoderado[]
-  docentes         Docente[]
-  estudiantes      Estudiante[]
-  staff Staff[]
+  id_persona       Int      @id @default(autoincrement())
+  dni              String   @unique @db.Char(8)
+  nombres          String   @db.VarChar(100)
+  apellido_paterno String   @db.VarChar(100)
+  apellido_materno String   @db.VarChar(100)
+  fecha_nacimiento DateTime @db.Date
+  genero           String?  @db.VarChar(1)
+  direccion        String?  @db.VarChar(255)
+  telefono         String?  @db.VarChar(20)
+  correo           String?  @unique @db.VarChar(150)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+
+  usuarios    Usuario[]
+  apoderados  Apoderado[]
+  docentes    Docente[]
+  estudiantes Estudiante[]
+  staff       Staff[]
 }
 
 model Usuario {
@@ -40,152 +45,310 @@ model Usuario {
   id_persona             Int
   id_rol                 Int
   estado                 Boolean   @default(true)
-  persona                Persona   @relation(fields: [id_persona], references: [id_persona])
-  rol                    Rol       @relation(fields: [id_rol], references: [id_rol])
-  pagos_cajero           PagoTransaccion[]
-  circulares             Circular[]
-  notificaciones         Notificacion[]
-  
-  // 🆕 Fase 3 – Perfil del Apoderado
-  tema                   String    @default("claro") @db.VarChar(10)   // "claro" | "oscuro"
+  tema                   String    @default("claro") @db.VarChar(10)
   notificaciones_activas Boolean   @default(true)
-  avatar_url             String?   @db.VarChar(255)                     // URL del avatar personalizado
-  tokensFCM TokenFCM[]
-  estado_conexion   String   @default("desconectado")  // conectado, ocupado, ausente, desconectado
-  ultima_conexion   DateTime?                          // última vez que hizo una petición
+  avatar_url             String?   @db.VarChar(255)
+  estado_conexion        String    @default("desconectado") @db.VarChar(30)
+  ultima_conexion        DateTime?
+
+  persona Persona @relation(fields: [id_persona], references: [id_persona])
+  rol     Rol     @relation(fields: [id_rol], references: [id_rol])
+
+  tenants        UsuarioTenant[]
+  colegios       UsuarioColegio[]
+  pagos_cajero   PagoTransaccion[]
+  circulares     Circular[]
+  notificaciones Notificacion[]
+  tokensFCM      TokenFCM[]
 }
 
-// ── MÓDULO ACADÉMICO ──
+model Tenant {
+  id_tenant  Int      @id @default(autoincrement())
+  nombre     String   @db.VarChar(150)
+  slug       String   @unique @db.VarChar(80)
+  ruc        String?  @db.VarChar(20)
+  logo_url   String?  @db.VarChar(500)
+  estado     String   @default("Activo") @db.VarChar(20)
+  plan       String   @default("basic") @db.VarChar(30)
+  created_at DateTime @default(now())
+
+  colegios     Colegio[]
+  usuarios     UsuarioTenant[]
+  anios        AnioLectivo[]
+  aulas        Aula[]
+  secciones    Seccion[]
+  matriculas   Matricula[]
+  asignaciones AsignacionDocente[]
+  conceptos    ConceptoPago[]
+  circulares   Circular[]
+  eventos      Evento[]
+  staff        Staff[]
+  albumes      Album[]
+  plantillas   PlantillaEvaluacion[]
+}
+
+model Colegio {
+  id_colegio      Int      @id @default(autoincrement())
+  id_tenant       Int
+  nombre          String   @db.VarChar(150)
+  nombre_corto    String?  @db.VarChar(50)
+  codigo          String?  @db.VarChar(30)
+  direccion       String?  @db.VarChar(255)
+  telefono        String?  @db.VarChar(30)
+  logo_url        String?  @db.VarChar(500)
+  color_principal String?  @db.VarChar(20)
+  estado          String   @default("Activo") @db.VarChar(20)
+  created_at      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [id_tenant], references: [id_tenant])
+
+  usuarios     UsuarioColegio[]
+  niveles      ColegioNivel[]
+  anios        AnioLectivo[]
+  aulas        Aula[]
+  secciones    Seccion[]
+  matriculas   Matricula[]
+  asignaciones AsignacionDocente[]
+  conceptos    ConceptoPago[]
+  circulares   Circular[]
+  eventos      Evento[]
+  staff        Staff[]
+  albumes      Album[]
+  plantillas   PlantillaEvaluacion[]
+
+  @@unique([id_tenant, codigo])
+  @@index([id_tenant])
+}
+
+model UsuarioTenant {
+  id_usuario Int
+  id_tenant  Int
+  rol_tenant String @default("Miembro") @db.VarChar(50)
+  estado     String @default("Activo") @db.VarChar(20)
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+  tenant  Tenant  @relation(fields: [id_tenant], references: [id_tenant])
+
+  @@id([id_usuario, id_tenant])
+  @@index([id_tenant])
+}
+
+model UsuarioColegio {
+  id_usuario   Int
+  id_colegio   Int
+  rol_colegio  String  @db.VarChar(50)
+  es_principal Boolean @default(false)
+  estado       String  @default("Activo") @db.VarChar(20)
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio])
+
+  @@id([id_usuario, id_colegio])
+  @@index([id_colegio])
+}
+
+model ColegioNivel {
+  id_colegio Int
+  id_nivel   Int
+
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio])
+  nivel   Nivel   @relation(fields: [id_nivel], references: [id_nivel])
+
+  @@id([id_colegio, id_nivel])
+}
+
+// ======================================================
+// ESTRUCTURA ACADÉMICA
+// ======================================================
+
 model Nivel {
-  id_nivel     Int                    @id @default(autoincrement())
-  nombre_nivel String                 @db.VarChar(50)
-  grados       Grado[]
-  circulares   CircularDestinatario[]
+  id_nivel     Int    @id @default(autoincrement())
+  nombre_nivel String @db.VarChar(50)
+
+  grados     Grado[]
+  colegios   ColegioNivel[]
+  circulares CircularDestinatario[]
   plantillas PlantillaEvaluacion[]
 }
 
 model Grado {
-  id_grado     Int       @id @default(autoincrement())
-  nombre_grado String    @db.VarChar(50)
+  id_grado     Int    @id @default(autoincrement())
+  nombre_grado String @db.VarChar(50)
   id_nivel     Int
-  nivel        Nivel     @relation(fields: [id_nivel], references: [id_nivel])
-  secciones    Seccion[]
+
+  nivel     Nivel     @relation(fields: [id_nivel], references: [id_nivel])
+  secciones Seccion[]
 }
 
 model Aula {
-  id_aula     Int       @id @default(autoincrement())
-  nombre_aula String    @db.VarChar(50)
-  capacidad   Int       @db.TinyInt
-  secciones   Seccion[]
+  id_aula     Int    @id @default(autoincrement())
+  id_tenant   Int?
+  id_colegio  Int?
+  nombre_aula String @db.VarChar(50)
+  capacidad   Int    @db.TinyInt
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+
+  secciones Seccion[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model Seccion {
-  id_seccion   Int                    @id @default(autoincrement())
-  letra        String                 @db.Char(1)
-  id_grado     Int
-  id_aula      Int
-  grado        Grado                  @relation(fields: [id_grado], references: [id_grado])
-  aula         Aula                   @relation(fields: [id_aula], references: [id_aula])
+  id_seccion Int    @id @default(autoincrement())
+  id_tenant  Int?
+  id_colegio Int?
+  letra      String @db.Char(1)
+  id_grado   Int
+  id_aula    Int
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+  grado   Grado    @relation(fields: [id_grado], references: [id_grado])
+  aula    Aula     @relation(fields: [id_aula], references: [id_aula])
+
   matriculas   Matricula[]
   asignaciones AsignacionDocente[]
   circulares   CircularDestinatario[]
-  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
-  staff Staff[]
-  albumes Album[]
+  horarios     Horario[]
+  staff        Staff[]
+  albumes      Album[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_grado])
+  @@index([id_aula])
 }
 
 model AreaCurricular {
-  id_area        Int                   @id @default(autoincrement())
-  nombre_area    String                @db.VarChar(100)
+  id_area     Int    @id @default(autoincrement())
+  nombre_area String @db.VarChar(100)
+
   cursos         Curso[]
   especialidades DocenteEspecialidad[]
 }
 
 model Curso {
-  id_curso     Int                 @id @default(autoincrement())
-  nombre_curso String              @db.VarChar(100)
+  id_curso     Int    @id @default(autoincrement())
+  nombre_curso String @db.VarChar(100)
   id_area      Int
-  area         AreaCurricular      @relation(fields: [id_area], references: [id_area])
+
+  area AreaCurricular @relation(fields: [id_area], references: [id_area])
+
   asignaciones AsignacionDocente[]
-  horarios     Horario[] // <-- AGREGAR ESTA LÍNEA
-  plantillas PlantillaEvaluacion[]
+  horarios     Horario[]
+  plantillas   PlantillaEvaluacion[]
+
+  @@index([id_area])
 }
 
-// ── MÓDULO DE TIEMPO ──
+// ======================================================
+// TIEMPO ACADÉMICO
+// ======================================================
+
 model AnioLectivo {
-  id_anio      Int                 @id @default(autoincrement())
-  nombre_anio  String              @db.VarChar(50)
-  fecha_inicio DateTime            @db.Date
-  fecha_fin    DateTime            @db.Date
-  estado       String              @default("Planificación") @db.VarChar(20)
+  id_anio      Int      @id @default(autoincrement())
+  id_tenant    Int?
+  id_colegio   Int?
+  nombre_anio  String   @db.VarChar(50)
+  fecha_inicio DateTime @db.Date
+  fecha_fin    DateTime @db.Date
+  estado       String   @default("Planificación") @db.VarChar(20)
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+
   bimestres    Bimestre[]
   matriculas   Matricula[]
   conceptos    ConceptoPago[]
   asignaciones AsignacionDocente[]
-  eventos Evento[]   // 🆕
+  eventos      Evento[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model Bimestre {
-  id_bimestre  Int         @id @default(autoincrement())
-  numero       Int         @db.TinyInt
-  fecha_inicio DateTime    @db.Date
-  fecha_fin    DateTime    @db.Date
+  id_bimestre  Int      @id @default(autoincrement())
+  numero       Int      @db.TinyInt
+  fecha_inicio DateTime @db.Date
+  fecha_fin    DateTime @db.Date
   id_anio      Int
-  anio         AnioLectivo @relation(fields: [id_anio], references: [id_anio])
-  unidades     Unidad[]
+
+  anio AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  unidades               Unidad[]
   comentariosBimestrales ComentarioBimestral[]
+
+  @@index([id_anio])
 }
 
 model Unidad {
-  id_unidad      Int                 @id @default(autoincrement())
-  numero         Int                 @db.TinyInt
-  fecha_inicio   DateTime            @db.Date
-  fecha_fin      DateTime            @db.Date
+  id_unidad      Int      @id @default(autoincrement())
+  numero         Int      @db.TinyInt
+  fecha_inicio   DateTime @db.Date
+  fecha_fin      DateTime @db.Date
   id_bimestre    Int
-  estado_abierto Boolean             @default(false)
-  bimestre       Bimestre            @relation(fields: [id_bimestre], references: [id_bimestre])
-  evaluaciones   EvaluacionDetalle[]
+  estado_abierto Boolean  @default(false)
+
+  bimestre Bimestre @relation(fields: [id_bimestre], references: [id_bimestre])
+
+  evaluaciones EvaluacionDetalle[]
+
+  @@index([id_bimestre])
 }
 
-// ── ACTORES ──
+// ======================================================
+// ACTORES EDUCATIVOS
+// ======================================================
+
 model Apoderado {
-  id_persona  Int                   @id
-  ocupacion   String?               @db.VarChar(100)
-  persona     Persona               @relation(fields: [id_persona], references: [id_persona])
+  id_persona Int     @id
+  ocupacion  String? @db.VarChar(100)
+
+  persona Persona @relation(fields: [id_persona], references: [id_persona])
+
   estudiantes ApoderadoEstudiante[]
   pagos       PagoTransaccion[]
-  citas Cita[]
+  citas       Cita[]
   comentarios ComentarioFoto[]
-  reacciones ReaccionFoto[]
+  reacciones  ReaccionFoto[]
 }
 
 model Docente {
-  id_persona     Int                   @id
-  fecha_ingreso  DateTime?             @db.Date
-  persona        Persona               @relation(fields: [id_persona], references: [id_persona])
-  especialidades DocenteEspecialidad[]
-  asignaciones   AsignacionDocente[]
-  horarios       Horario[] // <-- AGREGAR ESTA LÍNEA
-  albumes Album[]
+  id_persona    Int       @id
+  fecha_ingreso DateTime? @db.Date
+
+  persona Persona @relation(fields: [id_persona], references: [id_persona])
+
+  especialidades         DocenteEspecialidad[]
+  asignaciones           AsignacionDocente[]
+  horarios               Horario[]
+  albumes                Album[]
   comentariosBimestrales ComentarioBimestral[]
 }
 
 model Estudiante {
-  id_persona        Int                   @id
-  codigo_estudiante String                @unique @db.VarChar(20)
-  avatar_url        String?               @db.VarChar(255)   // 🆕
-  persona           Persona               @relation(fields: [id_persona], references: [id_persona])
-  apoderados        ApoderadoEstudiante[]
-  matriculas        Matricula[]
+  id_persona        Int     @id
+  codigo_estudiante String  @unique @db.VarChar(20)
+  avatar_url        String? @db.VarChar(255)
+
+  persona Persona @relation(fields: [id_persona], references: [id_persona])
+
+  apoderados   ApoderadoEstudiante[]
+  matriculas   Matricula[]
   registrosNFC RegistroNFC[]
 }
 
 model ApoderadoEstudiante {
   id_apoderado  Int
   id_estudiante Int
-  parentesco    String     @db.VarChar(30)
-  apoderado     Apoderado  @relation(fields: [id_apoderado], references: [id_persona])
-  estudiante    Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+  parentesco    String @db.VarChar(30)
+
+  apoderado  Apoderado  @relation(fields: [id_apoderado], references: [id_persona])
+  estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona])
 
   @@id([id_apoderado, id_estudiante])
   @@index([id_estudiante])
@@ -194,66 +357,99 @@ model ApoderadoEstudiante {
 model DocenteEspecialidad {
   id_docente Int
   id_area    Int
-  docente    Docente        @relation(fields: [id_docente], references: [id_persona])
-  area       AreaCurricular @relation(fields: [id_area], references: [id_area])
+
+  docente Docente        @relation(fields: [id_docente], references: [id_persona])
+  area    AreaCurricular @relation(fields: [id_area], references: [id_area])
 
   @@id([id_docente, id_area])
 }
 
-// ── MATRÍCULA ──
+// ======================================================
+// MATRÍCULA
+// ======================================================
+
 model Matricula {
-  id_matricula     Int               @id @default(autoincrement())
+  id_matricula     Int      @id @default(autoincrement())
+  id_tenant        Int?
+  id_colegio       Int?
   id_estudiante    Int
   id_seccion       Int
   id_anio          Int
-  fecha_matricula  DateTime          @default(now())
-  estado_matricula String            @default("Activo") @db.VarChar(20)
-  estudiante       Estudiante        @relation(fields: [id_estudiante], references: [id_persona])
-  seccion          Seccion           @relation(fields: [id_seccion], references: [id_seccion])
-  anio             AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
-  notas            NotaAlumno[]
-  asistencias      Asistencia[]
-  cronogramas      CronogramaPagos[]
+  fecha_matricula  DateTime @default(now())
+  estado_matricula String   @default("Activo") @db.VarChar(20)
+
+  tenant     Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio    Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  estudiante Estudiante  @relation(fields: [id_estudiante], references: [id_persona])
+  seccion    Seccion     @relation(fields: [id_seccion], references: [id_seccion])
+  anio       AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  notas                  NotaAlumno[]
+  asistencias            Asistencia[]
+  cronogramas            CronogramaPagos[]
   comentariosBimestrales ComentarioBimestral[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
+  @@index([id_anio])
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
-// ── ASIGNACIÓN DOCENTE Y EVALUACIONES ──
+// ======================================================
+// DOCENTES, EVALUACIONES Y NOTAS
+// ======================================================
+
 model AsignacionDocente {
-  id_asignacion Int                 @id @default(autoincrement())
+  id_asignacion Int  @id @default(autoincrement())
+  id_tenant     Int?
+  id_colegio    Int?
   id_docente    Int
   id_curso      Int
   id_seccion    Int
   id_anio       Int
-  docente       Docente             @relation(fields: [id_docente], references: [id_persona])
-  curso         Curso               @relation(fields: [id_curso], references: [id_curso])
-  seccion       Seccion             @relation(fields: [id_seccion], references: [id_seccion])
-  anio          AnioLectivo         @relation(fields: [id_anio], references: [id_anio])
-  evaluaciones  EvaluacionDetalle[]
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  docente Docente     @relation(fields: [id_docente], references: [id_persona])
+  curso   Curso       @relation(fields: [id_curso], references: [id_curso])
+  seccion Seccion     @relation(fields: [id_seccion], references: [id_seccion])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  evaluaciones EvaluacionDetalle[]
 
   @@index([id_docente, id_anio])
+  @@index([id_curso])
+  @@index([id_seccion])
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model TipoEvaluacion {
-  id_tipo_eval Int                 @id @default(autoincrement())
-  nombre_tipo  String              @db.VarChar(50)
-  evaluaciones EvaluacionDetalle[]
+  id_tipo_eval Int    @id @default(autoincrement())
+  nombre_tipo  String @db.VarChar(50)
+
+  evaluaciones      EvaluacionDetalle[]
   detallesPlantilla PlantillaEvaluacionDetalle[]
 }
 
 model EvaluacionDetalle {
-  id_evaluacion_det     Int               @id @default(autoincrement())
+  id_evaluacion_det     Int       @id @default(autoincrement())
   id_asignacion         Int
   id_unidad             Int
   id_tipo_eval          Int
-  descripcion_actividad String?           @db.VarChar(100)
-  fecha_evaluacion      DateTime?         @db.Date
-  asignacion            AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
-  unidad                Unidad            @relation(fields: [id_unidad], references: [id_unidad])
-  tipo                  TipoEvaluacion    @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
-  notas                 NotaAlumno[]
+  descripcion_actividad String?   @db.VarChar(100)
+  fecha_evaluacion      DateTime? @db.Date
+
+  asignacion AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
+  unidad     Unidad            @relation(fields: [id_unidad], references: [id_unidad])
+  tipo       TipoEvaluacion    @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
+
+  notas NotaAlumno[]
+
+  @@index([id_asignacion])
+  @@index([id_unidad])
+  @@index([id_tipo_eval])
 }
 
 model EscalaCalificacion {
@@ -266,83 +462,122 @@ model EscalaCalificacion {
 }
 
 model NotaAlumno {
-  id_nota           Int               @id @default(autoincrement())
+  id_nota           Int     @id @default(autoincrement())
   id_matricula      Int
   id_evaluacion_det Int
-  valor_nota        Decimal           @db.Decimal(4, 2)
-  comentario        String?           @db.Text
-  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
-  evaluacion        EvaluacionDetalle @relation(fields: [id_evaluacion_det], references: [id_evaluacion_det])
+  valor_nota        Decimal @db.Decimal(4, 2)
+  comentario        String? @db.Text
+
+  matricula  Matricula         @relation(fields: [id_matricula], references: [id_matricula])
+  evaluacion EvaluacionDetalle @relation(fields: [id_evaluacion_det], references: [id_evaluacion_det])
 
   @@index([id_matricula])
+  @@index([id_evaluacion_det])
 }
 
-// ── ASISTENCIA ──
+// ======================================================
+// ASISTENCIA
+// ======================================================
+
 model Asistencia {
-  id_asistencia Int       @id @default(autoincrement())
+  id_asistencia Int      @id @default(autoincrement())
   id_matricula  Int
-  fecha         DateTime  @db.Date
-  estado        String    @db.VarChar(20)
-  matricula     Matricula @relation(fields: [id_matricula], references: [id_matricula])
+  fecha         DateTime @db.Date
+  estado        String   @db.VarChar(20)
+
+  matricula Matricula @relation(fields: [id_matricula], references: [id_matricula])
 
   @@unique([id_matricula, fecha])
   @@index([fecha])
 }
 
-// ── MÓDULO DE PAGOS ──
+// ======================================================
+// FINANZAS
+// ======================================================
+
 model ConceptoPago {
-  id_concepto     Int               @id @default(autoincrement())
-  nombre_concepto String            @db.VarChar(100)
-  monto_base      Decimal           @db.Decimal(10, 2)
-  id_anio         Int
-  es_pension      Boolean           @default(true)
-  es_extraordinario Boolean         @default(false)   // 🆕
-  anio            AnioLectivo       @relation(fields: [id_anio], references: [id_anio])
-  cronogramas     CronogramaPagos[]
+  id_concepto       Int     @id @default(autoincrement())
+  id_tenant         Int?
+  id_colegio        Int?
+  nombre_concepto   String  @db.VarChar(100)
+  monto_base        Decimal @db.Decimal(10, 2)
+  id_anio           Int
+  es_pension        Boolean @default(true)
+  es_extraordinario Boolean @default(false)
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  cronogramas CronogramaPagos[]
+
+  @@index([id_anio])
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model CronogramaPagos {
-  id_cronograma     Int               @id @default(autoincrement())
+  id_cronograma     Int      @id @default(autoincrement())
   id_matricula      Int
   id_concepto       Int
-  fecha_vencimiento DateTime          @db.Date
-  estado_pago       String            @default("Pendiente") @db.VarChar(20)
-  matricula         Matricula         @relation(fields: [id_matricula], references: [id_matricula])
-  concepto          ConceptoPago      @relation(fields: [id_concepto], references: [id_concepto])
-  pagos             PagoTransaccion[]
+  fecha_vencimiento DateTime @db.Date
+  estado_pago       String   @default("Pendiente") @db.VarChar(20)
 
+  matricula Matricula    @relation(fields: [id_matricula], references: [id_matricula])
+  concepto  ConceptoPago @relation(fields: [id_concepto], references: [id_concepto])
+
+  pagos PagoTransaccion[]
+
+  @@unique([id_matricula, id_concepto], name: "uq_cronograma_matricula_concepto")
   @@index([fecha_vencimiento, estado_pago])
+  @@index([id_concepto])
 }
 
 model PagoTransaccion {
-  id_transaccion    Int             @id @default(autoincrement())
+  id_transaccion    Int      @id @default(autoincrement())
   id_cronograma     Int
   id_apoderado      Int
   id_usuario_cajero Int
-  monto_pagado      Decimal         @db.Decimal(10, 2)
-  fecha_pago        DateTime        @default(now())
-  metodo_pago       String?         @db.VarChar(20)
-  nro_operacion     String?         @db.VarChar(50)
-  cronograma        CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
-  apoderado         Apoderado       @relation(fields: [id_apoderado], references: [id_persona])
-  cajero            Usuario         @relation(fields: [id_usuario_cajero], references: [id_usuario])
+  monto_pagado      Decimal  @db.Decimal(10, 2)
+  fecha_pago        DateTime @default(now())
+  metodo_pago       String?  @db.VarChar(20)
+  nro_operacion     String?  @db.VarChar(50)
+
+  cronograma CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
+  apoderado  Apoderado       @relation(fields: [id_apoderado], references: [id_persona])
+  cajero     Usuario         @relation(fields: [id_usuario_cajero], references: [id_usuario])
 
   @@index([id_cronograma])
+  @@index([id_apoderado])
+  @@index([id_usuario_cajero])
 }
 
-// ── MEJORAS EN CIRCULARES ──
+// ======================================================
+// COMUNICACIÓN
+// ======================================================
+
 model Circular {
-  id_circular          Int                    @id @default(autoincrement())
-  titulo               String                 @db.VarChar(150)
-  contenido            String                 @db.Text
-  fecha_creacion       DateTime               @default(now())
-  remitente_id_usuario Int
-  categoria            String?                // 'Academico', 'Evento', 'Urgente', 'General'
-  urgente              Boolean                @default(false)
-  requiere_autorizacion Boolean               @default(false)
-  remitente            Usuario                @relation(fields: [remitente_id_usuario], references: [id_usuario])
-  destinatarios        CircularDestinatario[]
-  adjuntos             Adjunto[]
+  id_circular           Int      @id @default(autoincrement())
+  id_tenant             Int?
+  id_colegio            Int?
+  titulo                String   @db.VarChar(150)
+  contenido             String   @db.Text
+  fecha_creacion        DateTime @default(now())
+  remitente_id_usuario  Int
+  categoria             String?  @db.VarChar(50)
+  urgente               Boolean  @default(false)
+  requiere_autorizacion Boolean  @default(false)
+
+  tenant    Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio   Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+  remitente Usuario  @relation(fields: [remitente_id_usuario], references: [id_usuario])
+
+  destinatarios CircularDestinatario[]
+  adjuntos      Adjunto[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([remitente_id_usuario])
 }
 
 model CircularDestinatario {
@@ -354,106 +589,170 @@ model CircularDestinatario {
   fecha_lectura      DateTime?
   confirmada         Boolean   @default(false)
   fecha_confirmacion DateTime?
-  circular           Circular  @relation(fields: [id_circular], references: [id_circular])
-  nivel              Nivel?    @relation(fields: [id_nivel], references: [id_nivel])
-  seccion            Seccion?  @relation(fields: [id_seccion], references: [id_seccion])
+
+  circular Circular @relation(fields: [id_circular], references: [id_circular])
+  nivel    Nivel?   @relation(fields: [id_nivel], references: [id_nivel])
+  seccion  Seccion? @relation(fields: [id_seccion], references: [id_seccion])
+
+  @@index([id_circular])
+  @@index([id_nivel])
+  @@index([id_seccion])
 }
 
 model Adjunto {
-  id_adjunto   Int      @id @default(autoincrement())
-  id_circular  Int
+  id_adjunto     Int    @id @default(autoincrement())
+  id_circular    Int
   nombre_archivo String
-  url          String
-  circular     Circular @relation(fields: [id_circular], references: [id_circular])
+  url            String
+
+  circular Circular @relation(fields: [id_circular], references: [id_circular])
+
+  @@index([id_circular])
 }
 
-model Horario {
-  id_horario  Int     @id @default(autoincrement())
-  id_seccion  Int
-  id_curso    Int
-  id_docente  Int
-  dia_semana  Int // 1 = Lunes ... 5 = Viernes
-  hora_inicio String  @db.VarChar(5) // HH:mm
-  hora_fin    String  @db.VarChar(5)
-  seccion     Seccion @relation(fields: [id_seccion], references: [id_seccion])
-  curso       Curso   @relation(fields: [id_curso], references: [id_curso])
-  docente     Docente @relation(fields: [id_docente], references: [id_persona])
-}
-
-// ── NOTIFICACIONES ──
 model Notificacion {
   id_notif       Int      @id @default(autoincrement())
   id_usuario     Int
-  tipo           String   // 'academica', 'administrativa', 'informativa'
+  tipo           String   @db.VarChar(50)
   titulo         String
   mensaje        String
   leida          Boolean  @default(false)
   fecha_creacion DateTime @default(now())
-  url            String?  // ruta a la que redirige al hacer clic
-  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  url            String?
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@index([id_usuario])
+  @@index([fecha_creacion])
+}
+
+// ======================================================
+// HORARIOS, STAFF Y CITAS
+// ======================================================
+
+model Horario {
+  id_horario  Int    @id @default(autoincrement())
+  id_seccion  Int
+  id_curso    Int
+  id_docente  Int
+  dia_semana  Int
+  hora_inicio String @db.VarChar(5)
+  hora_fin    String @db.VarChar(5)
+
+  seccion Seccion @relation(fields: [id_seccion], references: [id_seccion])
+  curso   Curso   @relation(fields: [id_curso], references: [id_curso])
+  docente Docente @relation(fields: [id_docente], references: [id_persona])
+
+  @@index([id_seccion])
+  @@index([id_curso])
+  @@index([id_docente])
 }
 
 model Staff {
-  id_staff     Int       @id @default(autoincrement())
-  id_persona   Int       @unique
-  cargo        String    @db.VarChar(100)
-  area         String    @db.VarChar(50)
-  id_seccion   Int?
-  es_tutor     Boolean   @default(false)
-  permite_citas Boolean  @default(true)   // 🆕
-  persona      Persona   @relation(fields: [id_persona], references: [id_persona])
-  seccion      Seccion?  @relation(fields: [id_seccion], references: [id_seccion])
+  id_staff      Int     @id @default(autoincrement())
+  id_tenant     Int?
+  id_colegio    Int?
+  id_persona    Int     @unique
+  cargo         String  @db.VarChar(100)
+  area          String  @db.VarChar(50)
+  id_seccion    Int?
+  es_tutor      Boolean @default(false)
+  permite_citas Boolean @default(true)
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+  persona Persona  @relation(fields: [id_persona], references: [id_persona])
+  seccion Seccion? @relation(fields: [id_seccion], references: [id_seccion])
+
   citas Cita[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_seccion])
 }
 
 model Cita {
-  id_cita       Int       @id @default(autoincrement())
-  id_staff      Int
-  id_apoderado  Int
-  fecha         DateTime  @db.Date
-  hora_inicio   String    @db.VarChar(5)   // formato "HH:mm"
-  hora_fin      String    @db.VarChar(5)
-  motivo        String?   @db.Text
-  estado        String    @default("pendiente")   // pendiente, confirmada, rechazada, cancelada
-  creado_en     DateTime  @default(now())
-  staff         Staff     @relation(fields: [id_staff], references: [id_staff])
-  apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+  id_cita      Int      @id @default(autoincrement())
+  id_staff     Int
+  id_apoderado Int
+  fecha        DateTime @db.Date
+  hora_inicio  String   @db.VarChar(5)
+  hora_fin     String   @db.VarChar(5)
+  motivo       String?  @db.Text
+  estado       String   @default("pendiente") @db.VarChar(30)
+  creado_en    DateTime @default(now())
+
+  staff     Staff     @relation(fields: [id_staff], references: [id_staff])
+  apoderado Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+
+  @@index([id_staff])
+  @@index([id_apoderado])
+  @@index([fecha])
 }
 
+// ======================================================
+// EVENTOS Y ÁLBUMES
+// ======================================================
+
 model Evento {
-  id_evento   Int       @id @default(autoincrement())
-  titulo      String    @db.VarChar(200)
-  fecha       DateTime  @db.Date
-  hora        String?   @db.VarChar(5)   // 🆕 formato "HH:mm"
-  tipo        String    @db.VarChar(50)
-  descripcion String?   @db.Text
+  id_evento   Int      @id @default(autoincrement())
+  id_tenant   Int?
+  id_colegio  Int?
+  titulo      String   @db.VarChar(200)
+  fecha       DateTime @db.Date
+  hora        String?  @db.VarChar(5)
+  tipo        String   @db.VarChar(50)
+  descripcion String?  @db.Text
   id_anio     Int
-  anio        AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_anio])
+  @@index([fecha])
 }
 
 model Album {
-  id_album    Int       @id @default(autoincrement())
-  titulo      String    @db.VarChar(200)
-  descripcion String?   @db.Text
-  fecha       DateTime  @db.Date
+  id_album    Int      @id @default(autoincrement())
+  id_tenant   Int?
+  id_colegio  Int?
+  titulo      String   @db.VarChar(200)
+  descripcion String?  @db.Text
+  fecha       DateTime @db.Date
   id_seccion  Int
   id_docente  Int
-  portada_url String?   @db.VarChar(500)   // foto de portada
-  creado_en   DateTime  @default(now())
-  seccion     Seccion   @relation(fields: [id_seccion], references: [id_seccion])
-  docente     Docente   @relation(fields: [id_docente], references: [id_persona])
-  fotos       Foto[]
+  portada_url String?  @db.VarChar(500)
+  creado_en   DateTime @default(now())
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+  seccion Seccion  @relation(fields: [id_seccion], references: [id_seccion])
+  docente Docente  @relation(fields: [id_docente], references: [id_persona])
+
+  fotos Foto[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_seccion])
+  @@index([id_docente])
 }
 
 model Foto {
-  id_foto    Int       @id @default(autoincrement())
-  id_album   Int
-  url        String    @db.VarChar(500)
-  titulo     String?   @db.VarChar(200)
-  creado_en  DateTime  @default(now())
-  album      Album     @relation(fields: [id_album], references: [id_album])
+  id_foto   Int      @id @default(autoincrement())
+  id_album  Int
+  url       String   @db.VarChar(500)
+  titulo    String?  @db.VarChar(200)
+  creado_en DateTime @default(now())
+
+  album Album @relation(fields: [id_album], references: [id_album])
+
   comentarios ComentarioFoto[]
-  reacciones ReaccionFoto[]
+  reacciones  ReaccionFoto[]
+
+  @@index([id_album])
 }
 
 model ComentarioFoto {
@@ -462,69 +761,110 @@ model ComentarioFoto {
   id_apoderado  Int
   texto         String   @db.Text
   creado_en     DateTime @default(now())
-  foto          Foto     @relation(fields: [id_foto], references: [id_foto])
-  apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+
+  foto      Foto      @relation(fields: [id_foto], references: [id_foto])
+  apoderado Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+
+  @@index([id_foto])
+  @@index([id_apoderado])
 }
 
 model ReaccionFoto {
-  id_reaccion   Int       @id @default(autoincrement())
-  id_foto       Int
-  id_apoderado  Int
-  creado_en     DateTime  @default(now())
-  foto          Foto      @relation(fields: [id_foto], references: [id_foto])
-  apoderado     Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+  id_reaccion  Int      @id @default(autoincrement())
+  id_foto      Int
+  id_apoderado Int
+  creado_en    DateTime @default(now())
+
+  foto      Foto      @relation(fields: [id_foto], references: [id_foto])
+  apoderado Apoderado @relation(fields: [id_apoderado], references: [id_persona])
 
   @@unique([id_foto, id_apoderado])
+  @@index([id_apoderado])
 }
 
+// ======================================================
+// TUTORÍA Y COMENTARIOS
+// ======================================================
+
 model ComentarioBimestral {
-  id_comentario Int       @id @default(autoincrement())
+  id_comentario Int      @id @default(autoincrement())
   id_matricula  Int
   id_bimestre   Int
   id_docente    Int
-  comentario    String    @db.Text
-  creado_en     DateTime  @default(now())
-  matricula     Matricula @relation(fields: [id_matricula], references: [id_matricula])
-  bimestre      Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
-  docente       Docente   @relation(fields: [id_docente], references: [id_persona])
+  comentario    String   @db.Text
+  creado_en     DateTime @default(now())
+
+  matricula Matricula @relation(fields: [id_matricula], references: [id_matricula])
+  bimestre  Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
+  docente   Docente   @relation(fields: [id_docente], references: [id_persona])
 
   @@unique([id_matricula, id_bimestre])
+  @@index([id_bimestre])
+  @@index([id_docente])
 }
 
+// ======================================================
+// APP PADRES, TOKENS Y REGISTROS
+// ======================================================
+
 model TokenFCM {
-  id_token    Int      @id @default(autoincrement())
-  id_usuario  Int
-  token       String   @db.VarChar(500)
-  creado_en   DateTime @default(now())
-  usuario     Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  id_token   Int      @id @default(autoincrement())
+  id_usuario Int
+  token      String   @db.VarChar(500)
+  creado_en  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
 
   @@unique([id_usuario, token])
 }
 
 model RegistroNFC {
-  id_registro Int      @id @default(autoincrement())
+  id_registro   Int      @id @default(autoincrement())
   id_estudiante Int
-  fecha       DateTime @default(now())
-  tipo        String   @default("entrada")  // entrada, salida
-  estudiante  Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+  fecha         DateTime @default(now())
+  tipo          String   @default("entrada") @db.VarChar(30)
+
+  estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+
+  @@index([id_estudiante])
+  @@index([fecha])
 }
 
+// ======================================================
+// PLANTILLAS DE EVALUACIÓN
+// ======================================================
+
 model PlantillaEvaluacion {
-  id_plantilla Int                       @id @default(autoincrement())
-  nombre       String                    @db.VarChar(200)
+  id_plantilla Int    @id @default(autoincrement())
+  id_tenant    Int?
+  id_colegio   Int?
+  nombre       String @db.VarChar(200)
   id_nivel     Int?
   id_curso     Int?
-  detalles     PlantillaEvaluacionDetalle[]
-  nivel        Nivel?                    @relation(fields: [id_nivel], references: [id_nivel])
-  curso        Curso?                    @relation(fields: [id_curso], references: [id_curso])
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+  nivel   Nivel?   @relation(fields: [id_nivel], references: [id_nivel])
+  curso   Curso?   @relation(fields: [id_curso], references: [id_curso])
+
+  detalles PlantillaEvaluacionDetalle[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_nivel])
+  @@index([id_curso])
 }
 
 model PlantillaEvaluacionDetalle {
-  id_detalle   Int                @id @default(autoincrement())
+  id_detalle   Int    @id @default(autoincrement())
   id_plantilla Int
   id_tipo_eval Int
-  descripcion  String             @db.VarChar(200)
-  orden        Int                @default(1)
-  plantilla    PlantillaEvaluacion @relation(fields: [id_plantilla], references: [id_plantilla])
-  tipo         TipoEvaluacion     @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
+  descripcion  String @db.VarChar(200)
+  orden        Int    @default(1)
+
+  plantilla PlantillaEvaluacion @relation(fields: [id_plantilla], references: [id_plantilla])
+  tipo      TipoEvaluacion      @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
+
+  @@index([id_plantilla])
+  @@index([id_tipo_eval])
 }
