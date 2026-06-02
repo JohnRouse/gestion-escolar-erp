@@ -134,6 +134,12 @@ type Seccion = {
   };
 };
 
+type ReglaEdad = {
+  edad: number;
+  permiteExcepcionTraslado: boolean;
+  label: string;
+};
+
 interface UltimaMatricula {
   id_matricula: number;
   fecha_matricula: string;
@@ -355,6 +361,9 @@ export default function MatriculaPage() {
   const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
 
+  const [modalEditarAlumno, setModalEditarAlumno] = useState(false);
+  const [excepcionTraslado, setExcepcionTraslado] = useState(false);
+
   const estudiante = alumno?.estudiantes?.[0] || null;
 
   const colegioDestinoQuery = useMemo(() => {
@@ -380,6 +389,121 @@ export default function MatriculaPage() {
 
     return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado';
   }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
+
+  const getAnioCorteFrontend = () => {
+    const anio = anios.find((item) => item.id_anio === anioId);
+    const desdeNombre = anio?.nombre_anio?.match(/\d{4}/)?.[0];
+
+    return desdeNombre ? Number(desdeNombre) : new Date().getFullYear();
+  };
+
+  const edadAl31Marzo = (fecha?: string | null) => {
+    if (!fecha) return null;
+
+    const nacimiento = new Date(fecha);
+    if (Number.isNaN(nacimiento.getTime())) return null;
+
+    const anioCorte = getAnioCorteFrontend();
+    const corte = new Date(`${anioCorte}-03-31T23:59:59`);
+
+    let edad = corte.getFullYear() - nacimiento.getFullYear();
+    const mes = corte.getMonth() - nacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && corte.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  };
+
+  const reglaEdadSeleccionada = (): ReglaEdad | null => {
+    if (!seccionSeleccionada) return null;
+
+    const nivel =
+      seccionSeleccionada.grado?.nivel?.nombre_nivel?.toLowerCase() || '';
+    const grado = seccionSeleccionada.grado?.nombre_grado?.toLowerCase() || '';
+
+    if (nivel.includes('inicial')) {
+      const edad = Number(grado.match(/\d+/)?.[0]);
+
+      if (edad >= 3 && edad <= 5) {
+        return {
+          edad,
+          permiteExcepcionTraslado: false,
+          label: `Inicial ${edad} años`,
+        };
+      }
+    }
+
+    if (nivel.includes('primaria')) {
+      const gradoNumero =
+        grado.includes('primer') || grado.includes('1')
+          ? 1
+          : grado.includes('segundo') || grado.includes('2')
+            ? 2
+            : grado.includes('tercer') || grado.includes('3')
+              ? 3
+              : grado.includes('cuarto') || grado.includes('4')
+                ? 4
+                : grado.includes('quinto') || grado.includes('5')
+                  ? 5
+                  : grado.includes('sexto') || grado.includes('6')
+                    ? 6
+                    : null;
+
+      if (gradoNumero) {
+        return {
+          edad: 5 + gradoNumero,
+          permiteExcepcionTraslado: gradoNumero >= 2,
+          label: `${gradoNumero}.° de primaria`,
+        };
+      }
+    }
+
+    return null;
+  };
+  const seccionSeleccionada = useMemo(
+    () => secciones.find((s) => s.id_seccion === seccionId) || null,
+    [seccionId, secciones],
+  );
+  const errorEdadNormativa = useMemo(() => {
+    if (!alumno || !seccionSeleccionada) return null;
+
+    const edadCorte = edadAl31Marzo(alumno.fecha_nacimiento);
+    const regla = reglaEdadSeleccionada();
+    const anioCorte = getAnioCorteFrontend();
+
+    if (!regla || edadCorte === null) return null;
+
+    if (edadCorte >= regla.edad) return null;
+
+    if (regla.permiteExcepcionTraslado && excepcionTraslado) return null;
+
+    return `No cumple la edad para ${regla.label}. Debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadCorte} años.`;
+  }, [alumno, seccionSeleccionada, anioId, excepcionTraslado]);
+
+  const avisoEdadFichaAlumno = useMemo(() => {
+    if (!formAlumno.fecha_nacimiento) return null;
+
+    const nacimiento = new Date(`${formAlumno.fecha_nacimiento}T00:00:00`);
+    if (Number.isNaN(nacimiento.getTime())) return null;
+
+    const anioCorte = getAnioCorteFrontend();
+    const corte = new Date(`${anioCorte}-03-31T23:59:59`);
+
+    let edad = corte.getFullYear() - nacimiento.getFullYear();
+    const mes = corte.getMonth() - nacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && corte.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+
+    if (edad < 3) {
+      return `Aviso: para el año lectivo ${anioCorte}, el alumno tendría ${edad} años al 31 de marzo. Puedes guardar la ficha como prospecto/reserva, pero no podrá matricularse en Inicial 3 años de ese año.`;
+    }
+
+    return null;
+  }, [formAlumno.fecha_nacimiento, anioId]);
 
   const niveles = useMemo(
     () =>
@@ -417,10 +541,7 @@ export default function MatriculaPage() {
     [gradoFiltro, nivelFiltro, secciones],
   );
 
-  const seccionSeleccionada = useMemo(
-    () => secciones.find((s) => s.id_seccion === seccionId) || null,
-    [seccionId, secciones],
-  );
+  
 
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
@@ -782,6 +903,44 @@ export default function MatriculaPage() {
     }
   };
 
+  const editarAlumno = async () => {
+    if (!token || !estudiante?.id_persona) return;
+
+    const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento);
+
+    if (errorFecha) {
+      setErrorPersona(errorFecha);
+      return;
+    }
+
+    setSavingPersona(true);
+    setErrorPersona(null);
+
+    try {
+      const res = await axios.put(
+        `/api/academicos/alumnos/${estudiante.id_persona}`,
+        {
+          ...formAlumno,
+          pais: formAlumno.pais || 'Perú',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      setAlumno(res.data);
+      setApoderados(apoderadosDesdeAlumno(res.data));
+      setModalEditarAlumno(false);
+      setMensaje('Datos del alumno actualizados correctamente.');
+    } catch (err: any) {
+      setErrorPersona(
+        err.response?.data?.message || 'No se pudo actualizar el alumno.',
+      );
+    } finally {
+      setSavingPersona(false);
+    }
+  };
+
   const revisarMatricula = () => {
     if (!alumno || !estudiante) {
       return setMensaje('Primero busca o registra un alumno.');
@@ -801,6 +960,10 @@ export default function MatriculaPage() {
 
     if (matriculaActiva) {
       return setMensaje(formatMatriculaActiva(matriculaActiva));
+    }
+
+    if (errorEdadNormativa) {
+      return setMensaje(errorEdadNormativa);
     }
 
     setConfirmOpen(true);
@@ -824,6 +987,7 @@ export default function MatriculaPage() {
             id_apoderado: a.id_persona,
             parentesco: a.parentesco || 'Apoderado',
           })),
+          excepcion_traslado: excepcionTraslado,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -1035,6 +1199,34 @@ export default function MatriculaPage() {
                         Código: {estudiante?.codigo_estudiante || '—'}
                       </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormAlumno({
+                          dni: alumno.dni || '',
+                          nombres: alumno.nombres || '',
+                          apellido_paterno: alumno.apellido_paterno || '',
+                          apellido_materno: alumno.apellido_materno || '',
+                          fecha_nacimiento: alumno.fecha_nacimiento
+                            ? alumno.fecha_nacimiento.slice(0, 10)
+                            : '',
+                          genero: alumno.genero || '',
+                          telefono: alumno.telefono || '',
+                          correo: alumno.correo || '',
+                          direccion: alumno.direccion || '',
+                          pais: alumno.pais || 'Perú',
+                          departamento: alumno.departamento || '',
+                          provincia: alumno.provincia || '',
+                          distrito: alumno.distrito || '',
+                        });
+                        setErrorPersona(null);
+                        setModalEditarAlumno(true);
+                      }}
+                      className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                    >
+                      Editar datos del alumno
+                    </button>
                   </div>
 
                   {matriculaActiva ? (
@@ -1215,13 +1407,25 @@ export default function MatriculaPage() {
 
                         <button
                           type="button"
-                          onClick={() =>
-                            setApoderados(
-                              apoderados.filter(
-                                (x) => x.id_persona !== a.id_persona,
-                              ),
-                            )
-                          }
+                          onClick={async () => {
+                            if (!token || !estudiante?.id_persona) return;
+
+                            try {
+                              await axios.delete(
+                                `/api/academicos/alumnos/${estudiante.id_persona}/apoderados/${a.id_persona}`,
+                                {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                },
+                              );
+
+                              setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona));
+                              setMensaje('Apoderado desvinculado correctamente.');
+                            } catch (err: any) {
+                              setMensaje(
+                                err.response?.data?.message || 'No se pudo desvincular el apoderado.',
+                              );
+                            }
+                          }}
                           className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-rose-600 ring-1 ring-rose-100"
                         >
                           Quitar
@@ -1242,9 +1446,10 @@ export default function MatriculaPage() {
                     <Label>Año lectivo</Label>
                     <select
                       value={anioId}
-                      onChange={(e) =>
-                        setAnioId(e.target.value ? Number(e.target.value) : '')
-                      }
+                      onChange={(e) => {
+                        setAnioId(e.target.value ? Number(e.target.value) : '');
+                        setExcepcionTraslado(false);
+                      }}
                       className={selectClass}
                     >
                       <option value="">Selecciona año</option>
@@ -1313,9 +1518,10 @@ export default function MatriculaPage() {
                         key={s.id_seccion}
                         type="button"
                         disabled={sinCupos}
-                        onClick={() =>
-                          setSeccionId(selected ? '' : s.id_seccion)
-                        }
+                        onClick={() => {
+                          setSeccionId(selected ? '' : s.id_seccion);
+                          setExcepcionTraslado(false);
+                        }}
                         className={cx(
                           'rounded-2xl border p-4 text-left transition',
                           selected
@@ -1361,6 +1567,27 @@ export default function MatriculaPage() {
 
                 {seccionesFiltradas.length === 0 && (
                   <Empty text="Sin secciones disponibles" />
+                )}
+
+                {seccionSeleccionada && reglaEdadSeleccionada()?.permiteExcepcionTraslado && (
+                  <label className="mt-4 flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
+                    <input
+                      type="checkbox"
+                      checked={excepcionTraslado}
+                      onChange={(e) => setExcepcionTraslado(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>
+                      Excepción por traslado. Usar solo si el alumno viene de otra institución
+                      con constancia/certificado de estudios que sustente la continuidad.
+                    </span>
+                  </label>
+                )}
+
+                {errorEdadNormativa && (
+                  <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
+                    {errorEdadNormativa}
+                  </div>
                 )}
 
                 {mensaje && (
@@ -1475,6 +1702,20 @@ export default function MatriculaPage() {
           loading={savingPersona}
           onClose={() => setModalAlumno(false)}
           onSave={() => crearPersona('alumno')}
+          aviso={avisoEdadFichaAlumno}
+          alumno
+        />
+      )}
+
+      {modalEditarAlumno && (
+        <PersonaModal
+          title="Editar alumno"
+          form={formAlumno}
+          setForm={setFormAlumno}
+          error={errorPersona}
+          loading={savingPersona}
+          onClose={() => setModalEditarAlumno(false)}
+          onSave={editarAlumno}
           alumno
         />
       )}
@@ -1950,17 +2191,8 @@ function PersonaModal({
   onSave,
   alumno,
   apoderado,
-}: {
-  title: string;
-  form: PersonaForm;
-  setForm: (form: PersonaForm) => void;
-  error: string | null;
-  loading: boolean;
-  onClose: () => void;
-  onSave: () => void;
-  alumno?: boolean;
-  apoderado?: boolean;
-}) {
+  aviso,
+}: any) {
   const set = (key: keyof PersonaForm, value: string) =>
     setForm({ ...form, [key]: value });
 
@@ -2076,6 +2308,12 @@ function PersonaModal({
               />
             </div>
           </div>
+
+          {aviso && (
+            <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
+              {aviso}
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">

@@ -44,7 +44,11 @@ const menuAcademico: NavItem[] = [
     title: 'Matrícula',
     icon: UserPlus,
     path: '/matricula',
-    roles: ['Admin', 'Secretaria', 'Director']
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
+      { title: 'Registrar matrícula', path: '/matricula' },
+      { title: 'Historial de matrículas', path: '/matricula/historial' },
+    ],
   },
   {
     title: 'Notas',

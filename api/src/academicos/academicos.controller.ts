@@ -343,6 +343,16 @@ export class AcademicosController {
     return this.academicosService.createAlumno(dto);
   }
 
+  @Put('alumnos/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  updateAlumno(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateAlumnoDto>,
+  ) {
+    return this.academicosService.updateAlumno(Number(id), dto);
+  }
+
   @Post('apoderados')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria')
@@ -368,6 +378,19 @@ export class AcademicosController {
       idEstudiante: Number(idEstudiante),
       idApoderado: Number(body.id_apoderado),
       parentesco: body.parentesco || 'Apoderado',
+    });
+  }
+
+  @Delete('alumnos/:idEstudiante/apoderados/:idApoderado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  desvincularApoderadoAlumno(
+    @Param('idEstudiante') idEstudiante: string,
+    @Param('idApoderado') idApoderado: string,
+  ) {
+    return this.academicosService.desvincularApoderadoAlumno({
+      idEstudiante: Number(idEstudiante),
+      idApoderado: Number(idApoderado),
     });
   }
 

@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsInt, IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ApoderadoMatriculaDto {
@@ -28,4 +28,12 @@ export class CreateMatriculaDto {
   @IsOptional()
   @IsInt()
   id_colegio?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  excepcion_traslado?: boolean;
+
+  @IsOptional()
+  @IsString()
+  motivo_excepcion_edad?: string;
 }

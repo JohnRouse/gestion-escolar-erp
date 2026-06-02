@@ -125,6 +125,7 @@ model Colegio {
   staff        Staff[]
   albumes      Album[]
   plantillas   PlantillaEvaluacion[]
+  codigos_estudiantes EstudianteCodigoColegio[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -350,6 +351,7 @@ model Estudiante {
   apoderados   ApoderadoEstudiante[]
   matriculas   Matricula[]
   registrosNFC RegistroNFC[]
+  codigos_colegio EstudianteCodigoColegio[]
 }
 
 model ApoderadoEstudiante {
@@ -880,4 +882,19 @@ model PlantillaEvaluacionDetalle {
 
   @@index([id_plantilla])
   @@index([id_tipo_eval])
+}
+
+
+model EstudianteCodigoColegio {
+  id_estudiante Int
+  id_colegio    Int
+  codigo        String   @db.VarChar(30)
+  created_at    DateTime @default(now())
+
+  estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+  colegio    Colegio    @relation(fields: [id_colegio], references: [id_colegio])
+
+  @@id([id_estudiante, id_colegio])
+  @@unique([id_colegio, codigo])
+  @@index([codigo])
 }

@@ -73,6 +73,233 @@ export class AcademicosService {
     return nacimiento;
   }
 
+  // ── HELPERS PARA VALIDACIÓN DE EDAD ────────────────────
+
+  private calcularEdadAlCorte(fechaNacimiento: Date, anio: number) {
+    const corte = new Date(`${anio}-03-31T23:59:59.999-05:00`);
+
+    let edad = corte.getFullYear() - fechaNacimiento.getFullYear();
+    const mes = corte.getMonth() - fechaNacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && corte.getDate() < fechaNacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  }
+
+  private extraerPrimerNumero(texto?: string | null) {
+    const match = String(texto || '').match(/\d+/);
+    return match ? Number(match[0]) : null;
+  }
+
+  private extraerGradoPrimaria(nombreGrado?: string | null) {
+    const normalizado = String(nombreGrado || '').toLowerCase();
+
+    if (normalizado.includes('primer') || normalizado.includes('1')) return 1;
+    if (normalizado.includes('segundo') || normalizado.includes('2')) return 2;
+    if (normalizado.includes('tercer') || normalizado.includes('3')) return 3;
+    if (normalizado.includes('cuarto') || normalizado.includes('4')) return 4;
+    if (normalizado.includes('quinto') || normalizado.includes('5')) return 5;
+    if (normalizado.includes('sexto') || normalizado.includes('6')) return 6;
+
+    return null;
+  }
+
+  private getAnioCorte(anio: { fecha_inicio?: Date | string | null; nombre_anio?: string | null }) {
+    if (anio.fecha_inicio) {
+      const fechaInicio = new Date(anio.fecha_inicio);
+      if (!Number.isNaN(fechaInicio.getTime())) return fechaInicio.getFullYear();
+    }
+
+    const desdeNombre = this.extraerPrimerNumero(anio.nombre_anio);
+    if (desdeNombre && desdeNombre >= 2000) return desdeNombre;
+
+    return new Date().getFullYear();
+  }
+
+  private getEdadRequerida(nivel?: string | null, grado?: string | null) {
+    const nivelNormalizado = String(nivel || '').toLowerCase();
+    const gradoNormalizado = String(grado || '').toLowerCase();
+
+    if (nivelNormalizado.includes('inicial')) {
+      const edadInicial = this.extraerPrimerNumero(gradoNormalizado);
+      if (edadInicial && edadInicial >= 3 && edadInicial <= 5) {
+        return {
+          edad: edadInicial,
+          permiteExcepcionTraslado: false,
+          motivo: `Inicial ${edadInicial} años`,
+        };
+      }
+
+      return null;
+    }
+
+    if (nivelNormalizado.includes('primaria')) {
+      const gradoPrimaria = this.extraerGradoPrimaria(gradoNormalizado);
+
+      if (!gradoPrimaria) return null;
+
+      return {
+        edad: 5 + gradoPrimaria,
+        permiteExcepcionTraslado: gradoPrimaria >= 2,
+        motivo: `${gradoPrimaria}.° de primaria`,
+      };
+    }
+
+    return null;
+  }
+
+  private async validarEdadParaMatricula(params: {
+    idEstudiante: number;
+    idSeccion: number;
+    idAnio: number;
+    excepcionTraslado?: boolean;
+  }) {
+    const [estudiante, seccion, anio] = await Promise.all([
+      this.prisma.estudiante.findUnique({
+        where: { id_persona: params.idEstudiante },
+        include: { persona: true },
+      }),
+      this.prisma.seccion.findUnique({
+        where: { id_seccion: params.idSeccion },
+        include: {
+          grado: {
+            include: { nivel: true },
+          },
+        },
+      }),
+      this.prisma.anioLectivo.findUnique({
+        where: { id_anio: params.idAnio },
+      }),
+    ]);
+
+    if (!estudiante) throw new NotFoundException('No se encontró el alumno seleccionado.');
+    if (!seccion) throw new NotFoundException('No se encontró la sección seleccionada.');
+    if (!anio) throw new NotFoundException('No se encontró el año lectivo seleccionado.');
+
+    const fechaNacimiento = new Date(estudiante.persona.fecha_nacimiento);
+
+    if (Number.isNaN(fechaNacimiento.getTime())) {
+      throw new BadRequestException('La fecha de nacimiento del alumno no es válida.');
+    }
+
+    const anioCorte = this.getAnioCorte(anio);
+    const edadAlCorte = this.calcularEdadAlCorte(fechaNacimiento, anioCorte);
+
+    const regla = this.getEdadRequerida(
+      seccion.grado?.nivel?.nombre_nivel,
+      seccion.grado?.nombre_grado,
+    );
+
+    if (!regla) {
+      return {
+        valido: true,
+        edadAlCorte,
+        anioCorte,
+      };
+    }
+
+    if (edadAlCorte >= regla.edad) {
+      return {
+        valido: true,
+        edadAlCorte,
+        anioCorte,
+      };
+    }
+
+    if (regla.permiteExcepcionTraslado && params.excepcionTraslado) {
+      return {
+        valido: true,
+        edadAlCorte,
+        anioCorte,
+        advertencia:
+          'Se permitió por excepción de traslado. Debe existir constancia/certificado de estudios de la institución de origen.',
+      };
+    }
+
+    throw new BadRequestException(
+      `No cumple la edad normativa para ${regla.motivo}. Debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadAlCorte} años.`,
+    );
+  }
+
+  // ── HELPERS PARA CÓDIGO DE ESTUDIANTE POR COLEGIO ─────
+
+  private normalizarPrefijoColegio(colegio: {
+    codigo?: string | null;
+    nombre_corto?: string | null;
+    nombre?: string | null;
+  }) {
+    const base = colegio.codigo || colegio.nombre_corto || colegio.nombre || 'COL';
+
+    const limpio = base
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase();
+
+    return (limpio || 'COL').slice(0, 6);
+  }
+
+  private async asegurarCodigoEstudianteColegio(
+    tx: Prisma.TransactionClient,
+    idEstudiante: number,
+    idColegio: number,
+  ) {
+    const existente = await tx.estudianteCodigoColegio.findUnique({
+      where: {
+        id_estudiante_id_colegio: {
+          id_estudiante: idEstudiante,
+          id_colegio: idColegio,
+        },
+      },
+    });
+
+    if (existente) return existente;
+
+    const colegio = await tx.colegio.findUnique({
+      where: { id_colegio: idColegio },
+      select: { codigo: true, nombre_corto: true, nombre: true },
+    });
+
+    if (!colegio) {
+      throw new BadRequestException('No se encontró el colegio para generar el código del alumno.');
+    }
+
+    const prefijo = this.normalizarPrefijoColegio(colegio);
+
+    const totalActual = await tx.estudianteCodigoColegio.count({
+      where: { id_colegio: idColegio },
+    });
+
+    for (let intento = 1; intento <= 20; intento++) {
+      const codigo = `${prefijo}-${String(totalActual + intento).padStart(6, '0')}`;
+
+      try {
+        return await tx.estudianteCodigoColegio.create({
+          data: {
+            id_estudiante: idEstudiante,
+            id_colegio: idColegio,
+            codigo,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new BadRequestException('No se pudo generar un código único para el alumno.');
+  }
+
+  // ── FIN HELPERS ──────────────────────────────────────
+
   private handlePersonaPrismaError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
@@ -412,6 +639,15 @@ export class AcademicosService {
             },
           },
         },
+        {
+          estudiante: {
+            codigos_colegio: {
+              some: {
+                codigo: { contains: q },
+              },
+            },
+          },
+        },
       ].filter(Boolean);
     }
 
@@ -450,6 +686,7 @@ export class AcademicosService {
           estudiante: {
             include: {
               persona: true,
+              codigos_colegio: true,
               apoderados: {
                 include: {
                   apoderado: {
@@ -534,6 +771,24 @@ export class AcademicosService {
     };
   }
 
+  async desvincularApoderadoAlumno(params: {
+    idEstudiante: number;
+    idApoderado: number;
+  }) {
+    await this.prisma.apoderadoEstudiante.delete({
+      where: {
+        id_apoderado_id_estudiante: {
+          id_apoderado: params.idApoderado,
+          id_estudiante: params.idEstudiante,
+        },
+      },
+    });
+
+    return {
+      message: 'Apoderado desvinculado correctamente.',
+    };
+  }
+
   async buscarApoderado(dni: string) {
     const persona = await this.prisma.persona.findFirst({
       where: {
@@ -615,6 +870,73 @@ export class AcademicosService {
       });
 
       return { persona, estudiante };
+    } catch (error) {
+      this.handlePersonaPrismaError(error);
+    }
+  }
+
+  async updateAlumno(idEstudiante: number, dto: Partial<CreateAlumnoDto>) {
+    const estudiante = await this.prisma.estudiante.findUnique({
+      where: { id_persona: idEstudiante },
+      include: { persona: true },
+    });
+
+    if (!estudiante) {
+      throw new NotFoundException('No se encontró el alumno seleccionado.');
+    }
+
+    const data: Prisma.PersonaUpdateInput = {};
+
+    if (dto.dni !== undefined) data.dni = dto.dni.trim();
+    if (dto.nombres !== undefined) data.nombres = dto.nombres.trim();
+    if (dto.apellido_paterno !== undefined) data.apellido_paterno = dto.apellido_paterno.trim();
+    if (dto.apellido_materno !== undefined) data.apellido_materno = dto.apellido_materno.trim();
+
+    if (dto.fecha_nacimiento !== undefined) {
+      data.fecha_nacimiento = this.validarFechaNacimiento(dto.fecha_nacimiento);
+    }
+
+    if (dto.genero !== undefined) data.genero = this.normalizeGenero(dto.genero);
+    if (dto.telefono !== undefined) data.telefono = this.normalizeEmpty(dto.telefono);
+    if (dto.correo !== undefined) data.correo = this.normalizeEmpty(dto.correo);
+    if (dto.direccion !== undefined) data.direccion = this.normalizeEmpty(dto.direccion);
+    if (dto.pais !== undefined) data.pais = this.normalizeEmpty(dto.pais) || 'Perú';
+    if (dto.departamento !== undefined) data.departamento = this.normalizeEmpty(dto.departamento);
+    if (dto.provincia !== undefined) data.provincia = this.normalizeEmpty(dto.provincia);
+    if (dto.distrito !== undefined) data.distrito = this.normalizeEmpty(dto.distrito);
+
+    try {
+      const persona = await this.prisma.persona.update({
+        where: { id_persona: idEstudiante },
+        data,
+        include: {
+          estudiantes: {
+            include: {
+              apoderados: {
+                include: {
+                  apoderado: {
+                    include: { persona: true },
+                  },
+                },
+              },
+              matriculas: {
+                include: {
+                  colegio: true,
+                  anio: true,
+                  seccion: {
+                    include: {
+                      grado: { include: { nivel: true } },
+                    },
+                  },
+                },
+                orderBy: { id_matricula: 'desc' },
+              },
+            },
+          },
+        },
+      });
+
+      return persona;
     } catch (error) {
       this.handlePersonaPrismaError(error);
     }
@@ -808,10 +1130,6 @@ export class AcademicosService {
       throw new BadRequestException('La sección está llena');
     }
 
-    /**
-     * Validación obligatoria de apoderados
-     * antes de crear la matrícula.
-     */
     if (!params.dto.apoderados || params.dto.apoderados.length === 0) {
       throw new BadRequestException(
         'Debes vincular al menos un apoderado para matricular al alumno.',
@@ -830,6 +1148,13 @@ export class AcademicosService {
       }
     }
 
+    await this.validarEdadParaMatricula({
+      idEstudiante: params.dto.id_estudiante,
+      idSeccion: params.dto.id_seccion,
+      idAnio: params.dto.id_anio,
+      excepcionTraslado: Boolean((params.dto as any).excepcion_traslado),
+    });
+
     return this.prisma.$transaction(async (tx) => {
       const matricula = await tx.matricula.create({
         data: {
@@ -843,10 +1168,12 @@ export class AcademicosService {
         },
       });
 
-      /**
-       * Vinculación de apoderados con el estudiante.
-       * Se conserva el upsert solicitado.
-       */
+      await this.asegurarCodigoEstudianteColegio(
+        tx,
+        params.dto.id_estudiante,
+        idColegio,
+      );
+
       for (const ap of params.dto.apoderados) {
         await tx.apoderadoEstudiante.upsert({
           where: {
@@ -1110,7 +1437,12 @@ export class AcademicosService {
             rol: true,
           },
         },
-        estudiante: { include: { persona: true } },
+        estudiante: {
+          include: {
+            persona: true,
+            codigos_colegio: true,
+          },
+        },
         seccion: {
           include: {
             grado: { include: { nivel: true } },
@@ -1143,6 +1475,7 @@ export class AcademicosService {
         estudiante: {
           include: {
             persona: true,
+            codigos_colegio: true,
             apoderados: {
               include: {
                 apoderado: {
