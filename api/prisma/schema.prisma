@@ -18,7 +18,7 @@ model Rol {
   usuarios Usuario[]
 }
 
-  model Persona {
+model Persona {
   id_persona       Int      @id @default(autoincrement())
   dni              String   @unique @db.VarChar(8)
   nombres          String   @db.VarChar(100)
@@ -27,21 +27,21 @@ model Rol {
   fecha_nacimiento DateTime
   genero           String?  @db.VarChar(1)
 
-  direccion        String?  @db.VarChar(255)
-  pais String? @default("Peru") @db.VarChar(80)
-  departamento     String?  @db.VarChar(80)
-  provincia        String?  @db.VarChar(80)
-  distrito         String?  @db.VarChar(80)
+  direccion    String? @db.VarChar(255)
+  pais         String? @default("Peru") @db.VarChar(80)
+  departamento String? @db.VarChar(80)
+  provincia    String? @db.VarChar(80)
+  distrito     String? @db.VarChar(80)
 
-  telefono         String?  @db.VarChar(20)
-  correo           String?  @unique @db.VarChar(150)
-  created_at       DateTime @default(now())
+  telefono   String?  @db.VarChar(20)
+  correo     String?  @db.VarChar(150)
+  created_at DateTime @default(now())
 
-  usuarios         Usuario[]
-  apoderados       Apoderado[]
-  docentes         Docente[]
-  estudiantes      Estudiante[]
-  staff            Staff[]
+  usuarios    Usuario[]
+  apoderados  Apoderado[]
+  docentes    Docente[]
+  estudiantes Estudiante[]
+  staff       Staff[]
 
   @@index([distrito])
   @@index([departamento, distrito])
@@ -63,12 +63,13 @@ model Usuario {
   persona Persona @relation(fields: [id_persona], references: [id_persona])
   rol     Rol     @relation(fields: [id_rol], references: [id_rol])
 
-  tenants        UsuarioTenant[]
-  colegios       UsuarioColegio[]
-  pagos_cajero   PagoTransaccion[]
-  circulares     Circular[]
-  notificaciones Notificacion[]
-  tokensFCM      TokenFCM[]
+  tenants                UsuarioTenant[]
+  colegios               UsuarioColegio[]
+  pagos_cajero           PagoTransaccion[]
+  matriculas_registradas Matricula[]       @relation("UsuarioMatriculasRegistradas")
+  circulares             Circular[]
+  notificaciones         Notificacion[]
+  tokensFCM              TokenFCM[]
 }
 
 model Tenant {
@@ -378,20 +379,22 @@ model DocenteEspecialidad {
 // ======================================================
 
 model Matricula {
-  id_matricula     Int      @id @default(autoincrement())
-  id_tenant        Int?
-  id_colegio       Int?
-  id_estudiante    Int
-  id_seccion       Int
-  id_anio          Int
-  fecha_matricula  DateTime @default(now())
-  estado_matricula String   @default("Activo") @db.VarChar(20)
+  id_matricula        Int      @id @default(autoincrement())
+  id_tenant           Int?
+  id_colegio          Int?
+  id_estudiante       Int
+  id_seccion          Int
+  id_anio             Int
+  fecha_matricula     DateTime @default(now())
+  estado_matricula    String   @default("Pre-matriculado") @db.VarChar(20)
+  id_usuario_registro Int?
 
-  tenant     Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
-  colegio    Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
-  estudiante Estudiante  @relation(fields: [id_estudiante], references: [id_persona])
-  seccion    Seccion     @relation(fields: [id_seccion], references: [id_seccion])
-  anio       AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+  tenant         Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio        Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  estudiante     Estudiante  @relation(fields: [id_estudiante], references: [id_persona])
+  seccion        Seccion     @relation(fields: [id_seccion], references: [id_seccion])
+  anio           AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+  registrado_por Usuario?   @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
 
   notas                  NotaAlumno[]
   asistencias            Asistencia[]
@@ -403,6 +406,7 @@ model Matricula {
   @@index([id_anio])
   @@index([id_tenant])
   @@index([id_colegio])
+  @@index([id_usuario_registro])
 }
 
 // ======================================================

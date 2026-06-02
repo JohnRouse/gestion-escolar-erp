@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
@@ -55,7 +56,42 @@ type Alumno = {
   estudiantes: {
     id_persona: number;
     codigo_estudiante: string;
-    matriculas: any[];
+    apoderados?: {
+      parentesco: string;
+      apoderado: {
+        id_persona: number;
+        ocupacion?: string | null;
+        persona: {
+          id_persona: number;
+          dni: string;
+          nombres: string;
+          apellido_paterno: string;
+          apellido_materno: string;
+          telefono?: string | null;
+          correo?: string | null;
+          direccion?: string | null;
+          pais?: string | null;
+          departamento?: string | null;
+          provincia?: string | null;
+          distrito?: string | null;
+        };
+      };
+    }[];
+    matriculas: {
+      id_matricula: number;
+      estado_matricula: string;
+      id_colegio?: number;
+      colegio?: { nombre: string; codigo?: string | null };
+      anio?: { nombre_anio: string };
+      seccion?: {
+        letra: string;
+        grado: {
+          id_grado?: number;
+          nombre_grado: string;
+          nivel?: { id_nivel?: number; nombre_nivel: string };
+        };
+      };
+    }[];
   }[];
 };
 
@@ -73,25 +109,61 @@ type Apoderado = {
   provincia?: string | null;
   distrito?: string | null;
   parentesco?: string;
+  apoderado?: {
+    id_persona: number;
+    ocupacion?: string | null;
+  };
 };
 
-type Anio = { id_anio: number; nombre_anio: string; estado: string };
+type Anio = {
+  id_anio: number;
+  nombre_anio: string;
+  estado: string;
+};
+
 type Seccion = {
   id_seccion: number;
-  label: string;
+  label?: string;
   letra: string;
   capacidad: number;
   matriculados: number;
   disponibles: number;
-  grado: { nombre_grado: string; nivel?: { nombre_nivel: string } };
+  grado: {
+    nombre_grado: string;
+    nivel?: { nombre_nivel: string };
+  };
 };
-type UltimaMatricula = {
+
+interface UltimaMatricula {
   id_matricula: number;
   fecha_matricula: string;
-  colegio?: { nombre: string };
-  estudiante: { persona: { nombres: string; apellido_paterno: string } };
-  seccion: { letra: string; grado: { nombre_grado: string; nivel?: { nombre_nivel: string } } };
-};
+  estado_matricula?: string;
+  colegio?: { nombre: string; codigo?: string | null };
+  anio?: { nombre_anio: string };
+  registrado_por?: {
+    username: string;
+    rol?: { nombre_rol: string };
+    persona?: {
+      nombres: string;
+      apellido_paterno: string;
+      apellido_materno?: string;
+    };
+  } | null;
+  estudiante: {
+    persona: {
+      dni?: string;
+      nombres: string;
+      apellido_paterno: string;
+    };
+  };
+  seccion: {
+    letra: string;
+    grado: {
+      nombre_grado: string;
+      nivel?: { nombre_nivel: string };
+    };
+  };
+}
 
 const emptyAlumno: PersonaForm = {
   dni: '',
@@ -124,16 +196,41 @@ const emptyApoderado: PersonaForm = {
   ocupacion: '',
 };
 
-const parentescos = ['Madre', 'Padre', 'Abuela', 'Abuelo', 'Tía', 'Tío', 'Tutor legal', 'Otro'];
+const parentescos = [
+  'Madre',
+  'Padre',
+  'Abuela',
+  'Abuelo',
+  'Tía',
+  'Tío',
+  'Tutor legal',
+  'Otro',
+];
+
+const inputClass =
+  'h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+
+const selectClass = inputClass;
+
+const darkButtonClass =
+  'inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50';
+
+const outlineButtonClass =
+  'mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50';
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
 
-const buildQuery = (base: string, extra: Record<string, string | number | undefined | null>) => {
+const buildQuery = (
+  base: string,
+  extra: Record<string, string | number | undefined | null>,
+) => {
   const params = new URLSearchParams(base.replace('?', ''));
 
   Object.entries(extra).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
   });
 
   const query = params.toString();
@@ -142,6 +239,7 @@ const buildQuery = (base: string, extra: Record<string, string | number | undefi
 
 const edadNumero = (fecha?: string | null) => {
   if (!fecha) return null;
+
   const nacimiento = new Date(fecha);
   if (Number.isNaN(nacimiento.getTime())) return null;
 
@@ -149,13 +247,20 @@ const edadNumero = (fecha?: string | null) => {
   let edad = hoy.getFullYear() - nacimiento.getFullYear();
   const mes = hoy.getMonth() - nacimiento.getMonth();
 
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+
   return edad;
 };
 
 const edadTexto = (fecha?: string | null) => {
   const edad = edadNumero(fecha);
-  return edad === null ? '—' : `${edad} años`;
+
+  if (edad === null) return '—';
+  if (edad < 0) return 'Fecha inválida';
+
+  return `${edad} años`;
 };
 
 const generoTexto = (genero?: string | null) => {
@@ -165,18 +270,52 @@ const generoTexto = (genero?: string | null) => {
   return genero;
 };
 
-const fechaCorta = (fecha: string) =>
-  new Date(fecha).toLocaleDateString('es-PE', {
+const formatFechaHora = (value: string) =>
+  new Date(value).toLocaleString('es-PE', {
     day: '2-digit',
     month: 'short',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
 
+const formatMoney = (value: number | string | null | undefined) =>
+  `S/ ${Number(value || 0).toFixed(2)}`;
+
+const validarFechaNacimientoFrontend = (fecha?: string) => {
+  if (!fecha) return 'Ingresa la fecha de nacimiento.';
+
+  const nacimiento = new Date(`${fecha}T00:00:00`);
+  const hoy = new Date();
+  const minima = new Date('1990-01-01T00:00:00');
+
+  if (Number.isNaN(nacimiento.getTime())) {
+    return 'La fecha de nacimiento no es válida.';
+  }
+
+  if (nacimiento > hoy) {
+    return 'La fecha de nacimiento no puede ser futura.';
+  }
+
+  if (nacimiento < minima) {
+    return 'La fecha de nacimiento parece demasiado antigua. Revisa el dato.';
+  }
+
+  return null;
+};
+
 export default function MatriculaPage() {
   const { token } = useAuth();
-  const { activeScope, activeColegio, colegios, scopeLabel, queryString, puedeVerConsolidado } =
-    useSchool();
+  const {
+    activeScope,
+    activeColegio,
+    colegios,
+    scopeLabel,
+    queryString,
+    puedeVerConsolidado,
+  } = useSchool();
+
+  const navigate = useNavigate();
 
   const [colegioDestinoId, setColegioDestinoId] = useState<number | ''>('');
   const [dni, setDni] = useState('');
@@ -197,17 +336,24 @@ export default function MatriculaPage() {
   const [apoderadoDni, setApoderadoDni] = useState('');
   const [parentesco, setParentesco] = useState('Madre');
   const [buscandoApoderado, setBuscandoApoderado] = useState(false);
-  const [apoderadoEncontrado, setApoderadoEncontrado] = useState<Apoderado | null>(null);
+  const [apoderadoEncontrado, setApoderadoEncontrado] =
+    useState<Apoderado | null>(null);
   const [apoderados, setApoderados] = useState<Apoderado[]>([]);
 
   const [modalAlumno, setModalAlumno] = useState(false);
   const [modalApoderado, setModalApoderado] = useState(false);
   const [formAlumno, setFormAlumno] = useState<PersonaForm>(emptyAlumno);
-  const [formApoderado, setFormApoderado] = useState<PersonaForm>(emptyApoderado);
+  const [formApoderado, setFormApoderado] =
+    useState<PersonaForm>(emptyApoderado);
   const [savingPersona, setSavingPersona] = useState(false);
   const [errorPersona, setErrorPersona] = useState<string | null>(null);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detalleLoading, setDetalleLoading] = useState(false);
+  const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
+  const [cronogramaOpen, setCronogramaOpen] = useState(false);
 
   const estudiante = alumno?.estudiantes?.[0] || null;
 
@@ -219,16 +365,29 @@ export default function MatriculaPage() {
 
   const colegioDestinoNombre = useMemo(() => {
     if (activeScope.tipo === 'colegio') {
-      return activeColegio?.nombre_corto || activeColegio?.nombre || 'Colegio activo';
+      return (
+        activeColegio?.nombre_corto ||
+        activeColegio?.nombre ||
+        'Colegio activo'
+      );
     }
 
     if (!colegioDestinoId) return 'Por seleccionar';
-    const colegio = colegios.find((item) => item.id_colegio === colegioDestinoId);
+
+    const colegio = colegios.find(
+      (item) => item.id_colegio === colegioDestinoId,
+    );
+
     return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado';
   }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
 
   const niveles = useMemo(
-    () => Array.from(new Set(secciones.map((s) => s.grado?.nivel?.nombre_nivel).filter(Boolean))) as string[],
+    () =>
+      Array.from(
+        new Set(
+          secciones.map((s) => s.grado?.nivel?.nombre_nivel).filter(Boolean),
+        ),
+      ) as string[],
     [secciones],
   );
 
@@ -237,7 +396,10 @@ export default function MatriculaPage() {
       Array.from(
         new Set(
           secciones
-            .filter((s) => !nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro)
+            .filter(
+              (s) =>
+                !nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro,
+            )
             .map((s) => s.grado?.nombre_grado)
             .filter(Boolean),
         ),
@@ -262,17 +424,28 @@ export default function MatriculaPage() {
 
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
+
+    const estadosBloqueantes = ['Activo', 'Pre-matriculado'];
+
     if (activeScope.tipo === 'colegio') {
       return estudiante.matriculas.find(
-        (m) => m.estado_matricula === 'Activo' && m.id_colegio === activeScope.id_colegio,
+        (m) =>
+          estadosBloqueantes.includes(m.estado_matricula) &&
+          m.id_colegio === activeScope.id_colegio,
       );
     }
+
     if (colegioDestinoId) {
       return estudiante.matriculas.find(
-        (m) => m.estado_matricula === 'Activo' && m.id_colegio === colegioDestinoId,
+        (m) =>
+          estadosBloqueantes.includes(m.estado_matricula) &&
+          m.id_colegio === colegioDestinoId,
       );
     }
-    return estudiante.matriculas.find((m) => m.estado_matricula === 'Activo');
+
+    return estudiante.matriculas.find((m) =>
+      estadosBloqueantes.includes(m.estado_matricula),
+    );
   }, [activeScope, colegioDestinoId, estudiante?.matriculas]);
 
   const alertaEdad = useMemo(() => {
@@ -281,16 +454,36 @@ export default function MatriculaPage() {
     const edad = edadNumero(alumno.fecha_nacimiento);
     if (edad === null) return null;
 
-    const nivel = seccionSeleccionada.grado?.nivel?.nombre_nivel?.toLowerCase() || '';
-    if (nivel.includes('primaria') && edad < 6) return 'El alumno parece menor para Primaria.';
-    if (nivel.includes('secundaria') && edad < 11) return 'El alumno parece menor para Secundaria.';
-    if (nivel.includes('inicial') && edad > 6) return 'El alumno parece mayor para Inicial.';
+    if (edad < 0) {
+      return 'La fecha de nacimiento del alumno es futura o inválida.';
+    }
+
+    const nivel =
+      seccionSeleccionada.grado?.nivel?.nombre_nivel?.toLowerCase() || '';
+
+    if (nivel.includes('primaria') && edad < 6) {
+      return 'El alumno parece menor para Primaria.';
+    }
+
+    if (nivel.includes('secundaria') && edad < 11) {
+      return 'El alumno parece menor para Secundaria.';
+    }
+
+    if (nivel.includes('inicial') && edad > 6) {
+      return 'El alumno parece mayor para Inicial.';
+    }
+
     return null;
   }, [alumno, seccionSeleccionada]);
 
   useEffect(() => {
-    if (activeScope.tipo === 'colegio' && activeScope.id_colegio) setColegioDestinoId(activeScope.id_colegio);
-    if (activeScope.tipo === 'todos') setColegioDestinoId('');
+    if (activeScope.tipo === 'colegio' && activeScope.id_colegio) {
+      setColegioDestinoId(activeScope.id_colegio);
+    }
+
+    if (activeScope.tipo === 'todos') {
+      setColegioDestinoId('');
+    }
 
     setAlumno(null);
     setApoderados([]);
@@ -311,6 +504,7 @@ export default function MatriculaPage() {
     if (!token) return;
 
     setLoadingBase(true);
+
     try {
       const [ultimasRes, aniosRes] = await Promise.all([
         axios.get(`/api/academicos/matriculas/ultimas${colegioDestinoQuery}`, {
@@ -322,11 +516,17 @@ export default function MatriculaPage() {
       ]);
 
       const aniosData: Anio[] = aniosRes.data || [];
-      setUltimas(ultimasRes.data || []);
+
+      setUltimas((ultimasRes.data || []).slice(0, 5));
       setAnios(aniosData);
 
-      const activo = aniosData.find((a) => a.estado === 'Activo') || aniosData[0];
+      const activo =
+        aniosData.find((a) => a.estado === 'Activo') ||
+        aniosData.find((a) => a.estado === 'Abierto') ||
+        aniosData[0];
+
       const resolved = activo?.id_anio || '';
+
       setAnioId((current) => current || resolved);
 
       if (resolved) await fetchSecciones(Number(resolved));
@@ -348,10 +548,69 @@ export default function MatriculaPage() {
       const res = await axios.get(`/api/academicos/secciones${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setSecciones(res.data || []);
     } catch {
       setSecciones([]);
     }
+  };
+
+  const abrirDetalleMatricula = async (idMatricula: number) => {
+    if (!token) return;
+
+    setDetalleOpen(true);
+    setDetalleLoading(true);
+    setDetalleMatricula(null);
+    setCronogramaOpen(false);
+
+    try {
+      const res = await axios.get(
+        `/api/academicos/matriculas/${idMatricula}/detalle${colegioDestinoQuery}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      setDetalleMatricula(res.data);
+    } catch (error: any) {
+      setMensaje(
+        error.response?.data?.message ||
+          'No se pudo cargar el detalle de matrícula.',
+      );
+      setDetalleOpen(false);
+    } finally {
+      setDetalleLoading(false);
+    }
+  };
+
+  const imprimirDetalleMatricula = () => {
+    window.print();
+  };
+
+  const apoderadosDesdeAlumno = (alumnoData: Alumno): Apoderado[] => {
+    const estudianteData = alumnoData.estudiantes?.[0];
+
+    if (!estudianteData?.apoderados?.length) return [];
+
+    return estudianteData.apoderados.map((relacion) => ({
+      id_persona: relacion.apoderado.id_persona,
+      dni: relacion.apoderado.persona.dni,
+      nombres: relacion.apoderado.persona.nombres,
+      apellido_paterno: relacion.apoderado.persona.apellido_paterno,
+      apellido_materno: relacion.apoderado.persona.apellido_materno,
+      telefono: relacion.apoderado.persona.telefono,
+      correo: relacion.apoderado.persona.correo,
+      direccion: relacion.apoderado.persona.direccion,
+      pais: relacion.apoderado.persona.pais,
+      departamento: relacion.apoderado.persona.departamento,
+      provincia: relacion.apoderado.persona.provincia,
+      distrito: relacion.apoderado.persona.distrito,
+      apoderado: {
+        id_persona: relacion.apoderado.id_persona,
+        ocupacion: relacion.apoderado.ocupacion,
+      },
+      parentesco: relacion.parentesco,
+    }));
   };
 
   const buscarAlumno = async () => {
@@ -362,17 +621,38 @@ export default function MatriculaPage() {
     setApoderados([]);
 
     try {
-      const query = colegioDestinoQuery ? `&${colegioDestinoQuery.replace('?', '')}` : '';
-      const res = await axios.get(`/api/academicos/alumnos/buscar?dni=${dni.trim()}${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const query = colegioDestinoQuery
+        ? `&${colegioDestinoQuery.replace('?', '')}`
+        : '';
+
+      const res = await axios.get(
+        `/api/academicos/alumnos/buscar?dni=${dni.trim()}${query}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
       setAlumno(res.data);
+      setApoderados(apoderadosDesdeAlumno(res.data));
     } catch (err: any) {
       setAlumno(null);
       setMensaje(err.response?.data?.message || 'No se encontró el alumno.');
     } finally {
       setBuscandoAlumno(false);
     }
+  };
+
+  const formatMatriculaActiva = (matricula: any) => {
+    if (!matricula) return '';
+
+    const colegio = matricula.colegio?.nombre || 'colegio registrado';
+    const anio = matricula.anio?.nombre_anio || 'año lectivo';
+    const grado = matricula.seccion?.grado?.nombre_grado || 'grado';
+    const letra = matricula.seccion?.letra || '-';
+    const nivel = matricula.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
+    const estado = matricula.estado_matricula || 'matriculado';
+
+    return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
   };
 
   const buscarApoderado = async () => {
@@ -382,9 +662,13 @@ export default function MatriculaPage() {
     setMensaje(null);
 
     try {
-      const res = await axios.get(`/api/academicos/apoderados/buscar?dni=${apoderadoDni.trim()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `/api/academicos/apoderados/buscar?dni=${apoderadoDni.trim()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
       setApoderadoEncontrado(res.data);
     } catch (err: any) {
       setApoderadoEncontrado(null);
@@ -394,16 +678,49 @@ export default function MatriculaPage() {
     }
   };
 
-  const agregarApoderado = (apoderado: Apoderado) => {
-    if (apoderados.some((a) => a.id_persona === apoderado.id_persona)) {
-      setMensaje('Este apoderado ya está vinculado.');
+  const agregarApoderado = async (apoderado: Apoderado) => {
+    if (!estudiante?.id_persona || !token) {
+      setMensaje('Primero debes buscar o registrar un alumno.');
       return;
     }
 
-    setApoderados([...apoderados, { ...apoderado, parentesco }]);
-    setApoderadoEncontrado(null);
-    setApoderadoDni('');
-    setParentesco('Madre');
+    if (apoderados.some((item) => item.id_persona === apoderado.id_persona)) {
+      setMensaje('Este apoderado ya está vinculado al alumno.');
+      return;
+    }
+
+    const parentescoSeleccionado =
+      apoderado.parentesco || parentesco || 'Apoderado';
+
+    try {
+      await axios.post(
+        `/api/academicos/alumnos/${estudiante.id_persona}/apoderados`,
+        {
+          id_apoderado: apoderado.id_persona,
+          parentesco: parentescoSeleccionado,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      setApoderados([
+        ...apoderados,
+        {
+          ...apoderado,
+          parentesco: parentescoSeleccionado,
+        },
+      ]);
+
+      setMensaje('Apoderado vinculado correctamente.');
+      setApoderadoEncontrado(null);
+      setApoderadoDni('');
+      setParentesco('Madre');
+    } catch (error: any) {
+      setMensaje(
+        error.response?.data?.message || 'No se pudo vincular el apoderado.',
+      );
+    }
   };
 
   const crearPersona = async (tipo: 'alumno' | 'apoderado') => {
@@ -411,14 +728,23 @@ export default function MatriculaPage() {
 
     const form = tipo === 'alumno' ? formAlumno : formApoderado;
 
-    if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) {
+    if (
+      !form.dni ||
+      !form.nombres ||
+      !form.apellido_paterno ||
+      !form.apellido_materno
+    ) {
       setErrorPersona('Completa DNI, nombres y apellidos.');
       return;
     }
 
-    if (tipo === 'alumno' && !form.fecha_nacimiento) {
-      setErrorPersona('Completa la fecha de nacimiento.');
-      return;
+    if (tipo === 'alumno') {
+      const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento);
+
+      if (errorFecha) {
+        setErrorPersona(errorFecha);
+        return;
+      }
     }
 
     setSavingPersona(true);
@@ -426,7 +752,9 @@ export default function MatriculaPage() {
 
     try {
       await axios.post(
-        tipo === 'alumno' ? '/api/academicos/alumnos' : '/api/academicos/apoderados',
+        tipo === 'alumno'
+          ? '/api/academicos/alumnos'
+          : '/api/academicos/apoderados',
         {
           ...form,
           pais: form.pais || 'Perú',
@@ -446,18 +774,34 @@ export default function MatriculaPage() {
         setTimeout(() => buscarApoderado(), 150);
       }
     } catch (err: any) {
-      setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.');
+      setErrorPersona(
+        err.response?.data?.message || 'No se pudo guardar el registro.',
+      );
     } finally {
       setSavingPersona(false);
     }
   };
 
   const revisarMatricula = () => {
-    if (!alumno || !estudiante) return setMensaje('Primero busca o registra un alumno.');
-    if (!anioId || !seccionId) return setMensaje('Selecciona año lectivo y sección.');
-    if (activeScope.tipo === 'todos' && !colegioDestinoId) return setMensaje('Selecciona un colegio destino.');
-    if (!apoderados.length) return setMensaje('Debes vincular al menos un apoderado.');
-    if (matriculaActiva) return setMensaje('Este alumno ya tiene matrícula activa en este contexto.');
+    if (!alumno || !estudiante) {
+      return setMensaje('Primero busca o registra un alumno.');
+    }
+
+    if (!anioId || !seccionId) {
+      return setMensaje('Selecciona año lectivo y sección.');
+    }
+
+    if (activeScope.tipo === 'todos' && !colegioDestinoId) {
+      return setMensaje('Selecciona un colegio destino.');
+    }
+
+    if (!apoderados.length) {
+      return setMensaje('Debes vincular al menos un apoderado.');
+    }
+
+    if (matriculaActiva) {
+      return setMensaje(formatMatriculaActiva(matriculaActiva));
+    }
 
     setConfirmOpen(true);
   };
@@ -484,13 +828,16 @@ export default function MatriculaPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setMensaje('Matrícula registrada correctamente.');
+      setMensaje('Pre-matrícula registrada correctamente.');
       setConfirmOpen(false);
       setApoderados([]);
+
       await fetchBase();
       await buscarAlumno();
     } catch (err: any) {
-      setMensaje(err.response?.data?.message || 'No se pudo registrar la matrícula.');
+      setMensaje(
+        err.response?.data?.message || 'No se pudo registrar la matrícula.',
+      );
       setConfirmOpen(false);
     } finally {
       setMatriculando(false);
@@ -502,7 +849,7 @@ export default function MatriculaPage() {
       <PageHeader
         eyebrow="Gestión académica"
         title="Gestión de Matrícula"
-        description="Busca alumnos, vincula apoderados y confirma la matrícula en el colegio seleccionado."
+        description="Busca alumnos, vincula apoderados y confirma la pre-matrícula en el colegio seleccionado."
         icon={GraduationCap}
         meta={[
           { label: 'Contexto activo', value: scopeLabel },
@@ -512,14 +859,20 @@ export default function MatriculaPage() {
 
       <div className="grid gap-5 xl:grid-cols-[0.92fr_1.65fr]">
         <section className="space-y-5">
-          <Card icon={Search} title="Buscar alumno" subtitle="Ingresa el DNI para revisar su ficha.">
+          <Card
+            icon={Search}
+            title="Buscar alumno"
+            subtitle="Ingresa el DNI para revisar su ficha."
+          >
             {activeScope.tipo === 'todos' && puedeVerConsolidado && (
               <label className="mb-4 block">
                 <Label>Colegio destino</Label>
                 <select
                   value={colegioDestinoId}
                   onChange={(e) => {
-                    setColegioDestinoId(e.target.value ? Number(e.target.value) : '');
+                    setColegioDestinoId(
+                      e.target.value ? Number(e.target.value) : '',
+                    );
                     setAlumno(null);
                     setApoderados([]);
                     setSeccionId('');
@@ -529,7 +882,9 @@ export default function MatriculaPage() {
                 >
                   <option value="">Selecciona colegio</option>
                   {colegios.map((c) => (
-                    <option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>
+                    <option key={c.id_colegio} value={c.id_colegio}>
+                      {c.nombre}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -543,8 +898,18 @@ export default function MatriculaPage() {
                 placeholder="DNI del alumno"
                 className={inputClass}
               />
-              <button type="button" onClick={buscarAlumno} disabled={!dni || buscandoAlumno} className={darkButtonClass}>
-                {buscandoAlumno ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+
+              <button
+                type="button"
+                onClick={buscarAlumno}
+                disabled={!dni || buscandoAlumno}
+                className={darkButtonClass}
+              >
+                {buscandoAlumno ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Search size={16} />
+                )}
                 Buscar
               </button>
             </div>
@@ -563,21 +928,78 @@ export default function MatriculaPage() {
             </button>
           </Card>
 
-          <Card icon={Clock} title="Últimas matrículas hoy" subtitle="Registros recientes según el colegio activo.">
+          <Card
+            icon={Clock}
+            title="Últimos registros"
+            subtitle="Últimas 5 pre-matrículas y matrículas registradas."
+            action={
+              <button
+                type="button"
+                onClick={() => navigate('/matricula/historial')}
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-500 ring-1 ring-slate-100 transition hover:bg-slate-50"
+              >
+                Ver todas
+              </button>
+            }
+          >
             {loadingBase ? (
               <div className="space-y-3">
-                {[...Array(3)].map((_, i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-slate-100" />)}
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-14 animate-pulse rounded-2xl bg-slate-100"
+                  />
+                ))}
               </div>
             ) : ultimas.length === 0 ? (
-              <Empty text="Sin matrículas hoy" />
+              <Empty text="Sin registros recientes" />
             ) : (
               <div className="space-y-3">
-                {ultimas.map((m) => (
-                  <div key={m.id_matricula} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <p className="text-sm font-black text-slate-800">{m.estudiante.persona.nombres} {m.estudiante.persona.apellido_paterno}</p>
-                    <p className="mt-1 text-xs text-slate-400">{m.seccion.grado.nombre_grado} "{m.seccion.letra}" · {fechaCorta(m.fecha_matricula)}</p>
-                  </div>
-                ))}
+                {ultimas.slice(0, 5).map((matricula) => {
+                  const registrador = matricula.registrado_por?.persona
+                    ? `${matricula.registrado_por.persona.nombres} ${matricula.registrado_por.persona.apellido_paterno}`
+                    : 'No registrado';
+
+                  return (
+                    <button
+                      key={matricula.id_matricula}
+                      type="button"
+                      onClick={() =>
+                        abrirDetalleMatricula(matricula.id_matricula)
+                      }
+                      className="w-full rounded-2xl bg-slate-50/80 p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-800">
+                            #{matricula.id_matricula} ·{' '}
+                            {matricula.estudiante.persona.nombres}{' '}
+                            {matricula.estudiante.persona.apellido_paterno}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            {matricula.seccion.grado.nombre_grado} "
+                            {matricula.seccion.letra}" ·{' '}
+                            {matricula.seccion.grado.nivel?.nombre_nivel ||
+                              'Nivel'}
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-slate-400">
+                            {formatFechaHora(matricula.fecha_matricula)}
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            Registrado por: {registrador}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-slate-500 ring-1 ring-slate-100">
+                          {matricula.estado_matricula || 'Registrado'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -588,41 +1010,86 @@ export default function MatriculaPage() {
             {!alumno ? (
               <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
                 <Users size={32} className="text-slate-300" />
-                <h3 className="mt-4 text-base font-black text-slate-800">Busca un alumno por DNI</h3>
-                <p className="mt-2 max-w-md text-sm text-slate-400">Al encontrarlo podrás vincular apoderados y registrar matrícula.</p>
+                <h3 className="mt-4 text-base font-black text-slate-800">
+                  Busca un alumno por DNI
+                </h3>
+                <p className="mt-2 max-w-md text-sm text-slate-400">
+                  Al encontrarlo podrás vincular apoderados y registrar la
+                  pre-matrícula.
+                </p>
               </div>
             ) : (
               <div className="space-y-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <h3 className="text-xl font-black text-slate-950">{alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}</h3>
+                    <h3 className="text-xl font-black text-slate-950">
+                      {alumno.nombres} {alumno.apellido_paterno}{' '}
+                      {alumno.apellido_materno}
+                    </h3>
+
                     <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-slate-400">
-                      <span className="rounded-full bg-slate-50 px-3 py-1 ring-1 ring-slate-100">DNI: {alumno.dni}</span>
-                      <span className="rounded-full bg-slate-50 px-3 py-1 ring-1 ring-slate-100">Código: {estudiante?.codigo_estudiante || '—'}</span>
+                      <span className="rounded-full bg-slate-50 px-3 py-1 ring-1 ring-slate-100">
+                        DNI: {alumno.dni}
+                      </span>
+                      <span className="rounded-full bg-slate-50 px-3 py-1 ring-1 ring-slate-100">
+                        Código: {estudiante?.codigo_estudiante || '—'}
+                      </span>
                     </div>
                   </div>
+
                   {matriculaActiva ? (
-                    <Badge tone="emerald">Matrícula activa</Badge>
+                    <Badge tone="emerald">
+                      {matriculaActiva.estado_matricula}
+                    </Badge>
                   ) : (
                     <Badge tone="amber">Sin matrícula en este contexto</Badge>
                   )}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <Info icon={CalendarDays} label="Edad" value={edadTexto(alumno.fecha_nacimiento)} />
-                  <Info icon={Users} label="Género" value={generoTexto(alumno.genero)} />
-                  <Info icon={Phone} label="Teléfono" value={alumno.telefono || '—'} />
-                  <Info icon={MapPin} label="Distrito" value={alumno.distrito || '—'} />
+                  <Info
+                    icon={CalendarDays}
+                    label="Edad"
+                    value={edadTexto(alumno.fecha_nacimiento)}
+                  />
+                  <Info
+                    icon={Users}
+                    label="Género"
+                    value={generoTexto(alumno.genero)}
+                  />
+                  <Info
+                    icon={Phone}
+                    label="Teléfono"
+                    value={alumno.telefono || '—'}
+                  />
+                  <Info
+                    icon={MapPin}
+                    label="Distrito"
+                    value={alumno.distrito || '—'}
+                  />
                 </div>
 
                 {estudiante?.matriculas?.length > 0 && (
                   <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Historial visible</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      Historial visible
+                    </p>
+
                     <div className="mt-3 space-y-2">
                       {estudiante.matriculas.map((m) => (
-                        <div key={m.id_matricula} className="rounded-2xl bg-white p-3 text-sm ring-1 ring-slate-100">
-                          <b>{m.seccion?.grado?.nombre_grado || 'Grado'} "{m.seccion?.letra || '-'}"</b>
-                          <p className="text-xs text-slate-400">{m.colegio?.nombre || 'Colegio'} · {m.anio?.nombre_anio || 'Año lectivo'} · {m.estado_matricula}</p>
+                        <div
+                          key={m.id_matricula}
+                          className="rounded-2xl bg-white p-3 text-sm ring-1 ring-slate-100"
+                        >
+                          <b>
+                            {m.seccion?.grado?.nombre_grado || 'Grado'} "
+                            {m.seccion?.letra || '-'}"
+                          </b>
+                          <p className="text-xs text-slate-400">
+                            {m.colegio?.nombre || 'Colegio'} ·{' '}
+                            {m.anio?.nombre_anio || 'Año lectivo'} ·{' '}
+                            {m.estado_matricula}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -634,14 +1101,42 @@ export default function MatriculaPage() {
 
           {alumno && (
             <>
-              <Card icon={ShieldCheck} title="Apoderados" subtitle="Debes vincular al menos un apoderado.">
+              <Card
+                icon={ShieldCheck}
+                title="Apoderados"
+                subtitle="Debes vincular al menos un apoderado."
+              >
                 <div className="grid gap-3 lg:grid-cols-[1fr_180px_auto]">
-                  <input value={apoderadoDni} onChange={(e) => setApoderadoDni(e.target.value)} placeholder="DNI del apoderado" className={inputClass} />
-                  <select value={parentesco} onChange={(e) => setParentesco(e.target.value)} className={selectClass}>
-                    {parentescos.map((p) => <option key={p} value={p}>{p}</option>)}
+                  <input
+                    value={apoderadoDni}
+                    onChange={(e) => setApoderadoDni(e.target.value)}
+                    placeholder="DNI del apoderado"
+                    className={inputClass}
+                  />
+
+                  <select
+                    value={parentesco}
+                    onChange={(e) => setParentesco(e.target.value)}
+                    className={selectClass}
+                  >
+                    {parentescos.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
                   </select>
-                  <button type="button" onClick={buscarApoderado} disabled={!apoderadoDni || buscandoApoderado} className={darkButtonClass}>
-                    {buscandoApoderado ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+
+                  <button
+                    type="button"
+                    onClick={buscarApoderado}
+                    disabled={!apoderadoDni || buscandoApoderado}
+                    className={darkButtonClass}
+                  >
+                    {buscandoApoderado ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Search size={16} />
+                    )}
                     Buscar
                   </button>
                 </div>
@@ -649,7 +1144,10 @@ export default function MatriculaPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setFormApoderado({ ...emptyApoderado, dni: apoderadoDni });
+                    setFormApoderado({
+                      ...emptyApoderado,
+                      dni: apoderadoDni,
+                    });
                     setErrorPersona(null);
                     setModalApoderado(true);
                   }}
@@ -663,10 +1161,29 @@ export default function MatriculaPage() {
                   <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-sm font-black text-slate-800">{apoderadoEncontrado.nombres} {apoderadoEncontrado.apellido_paterno} {apoderadoEncontrado.apellido_materno}</p>
-                        <p className="mt-1 text-xs text-slate-400">DNI {apoderadoEncontrado.dni} · {apoderadoEncontrado.telefono || 'Sin teléfono'} · {apoderadoEncontrado.distrito || 'Sin distrito'}</p>
+                        <p className="text-sm font-black text-slate-800">
+                          {apoderadoEncontrado.nombres}{' '}
+                          {apoderadoEncontrado.apellido_paterno}{' '}
+                          {apoderadoEncontrado.apellido_materno}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          DNI {apoderadoEncontrado.dni} ·{' '}
+                          {apoderadoEncontrado.telefono || 'Sin teléfono'} ·{' '}
+                          {apoderadoEncontrado.distrito || 'Sin distrito'}
+                        </p>
                       </div>
-                      <button type="button" onClick={() => agregarApoderado(apoderadoEncontrado)} className="h-10 rounded-2xl bg-accent-500 px-4 text-xs font-black text-white">
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          agregarApoderado({
+                            ...apoderadoEncontrado,
+                            parentesco,
+                          })
+                        }
+                        className="h-10 rounded-2xl bg-accent-500 px-4 text-xs font-black text-white"
+                      >
                         Agregar como {parentesco}
                       </button>
                     </div>
@@ -675,13 +1192,38 @@ export default function MatriculaPage() {
 
                 {apoderados.length > 0 && (
                   <div className="mt-4 space-y-2">
+                    <div className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
+                      Apoderados cargados desde la ficha del alumno
+                    </div>
+
                     {apoderados.map((a) => (
-                      <div key={a.id_persona} className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between">
+                      <div
+                        key={a.id_persona}
+                        className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between"
+                      >
                         <div>
-                          <p className="text-sm font-black text-slate-800">{a.nombres} {a.apellido_paterno} {a.apellido_materno}</p>
-                          <p className="mt-1 text-xs text-slate-400">{a.parentesco} · DNI {a.dni} · {a.telefono || 'Sin teléfono'}</p>
+                          <p className="text-sm font-black text-slate-800">
+                            {a.nombres} {a.apellido_paterno}{' '}
+                            {a.apellido_materno}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            {a.parentesco} · DNI {a.dni} ·{' '}
+                            {a.telefono || 'Sin teléfono'}
+                          </p>
                         </div>
-                        <button type="button" onClick={() => setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona))} className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-rose-600 ring-1 ring-rose-100">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setApoderados(
+                              apoderados.filter(
+                                (x) => x.id_persona !== a.id_persona,
+                              ),
+                            )
+                          }
+                          className="h-9 rounded-xl bg-white px-3 text-xs font-bold text-rose-600 ring-1 ring-rose-100"
+                        >
                           Quitar
                         </button>
                       </div>
@@ -690,27 +1232,66 @@ export default function MatriculaPage() {
                 )}
               </Card>
 
-              <Card icon={GraduationCap} title="Registrar matrícula" subtitle="Filtra por nivel y grado para elegir sección.">
+              <Card
+                icon={GraduationCap}
+                title="Registrar pre-matrícula"
+                subtitle="Filtra por nivel y grado para elegir sección."
+              >
                 <div className="grid gap-4 xl:grid-cols-3">
                   <label>
                     <Label>Año lectivo</Label>
-                    <select value={anioId} onChange={(e) => setAnioId(e.target.value ? Number(e.target.value) : '')} className={selectClass}>
+                    <select
+                      value={anioId}
+                      onChange={(e) =>
+                        setAnioId(e.target.value ? Number(e.target.value) : '')
+                      }
+                      className={selectClass}
+                    >
                       <option value="">Selecciona año</option>
-                      {anios.map((a) => <option key={a.id_anio} value={a.id_anio}>{a.nombre_anio} · {a.estado}</option>)}
+                      {anios.map((a) => (
+                        <option key={a.id_anio} value={a.id_anio}>
+                          {a.nombre_anio} · {a.estado}
+                        </option>
+                      ))}
                     </select>
                   </label>
+
                   <label>
                     <Label>Nivel</Label>
-                    <select value={nivelFiltro} onChange={(e) => { setNivelFiltro(e.target.value); setGradoFiltro(''); setSeccionId(''); }} className={selectClass}>
+                    <select
+                      value={nivelFiltro}
+                      onChange={(e) => {
+                        setNivelFiltro(e.target.value);
+                        setGradoFiltro('');
+                        setSeccionId('');
+                      }}
+                      className={selectClass}
+                    >
                       <option value="">Todos</option>
-                      {niveles.map((n) => <option key={n} value={n}>{n}</option>)}
+                      {niveles.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
                     </select>
                   </label>
+
                   <label>
                     <Label>Grado</Label>
-                    <select value={gradoFiltro} onChange={(e) => { setGradoFiltro(e.target.value); setSeccionId(''); }} className={selectClass}>
+                    <select
+                      value={gradoFiltro}
+                      onChange={(e) => {
+                        setGradoFiltro(e.target.value);
+                        setSeccionId('');
+                      }}
+                      className={selectClass}
+                    >
                       <option value="">Todos</option>
-                      {grados.map((g) => <option key={g} value={g}>{g}</option>)}
+                      {grados.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -719,35 +1300,68 @@ export default function MatriculaPage() {
                   {seccionesFiltradas.map((s) => {
                     const selected = s.id_seccion === seccionId;
                     const sinCupos = s.disponibles <= 0;
+                    const porcentaje =
+                      s.capacidad > 0
+                        ? Math.min(
+                            100,
+                            Math.round((s.matriculados / s.capacidad) * 100),
+                          )
+                        : 0;
+
                     return (
                       <button
                         key={s.id_seccion}
                         type="button"
                         disabled={sinCupos}
-                        onClick={() => setSeccionId(selected ? '' : s.id_seccion)}
+                        onClick={() =>
+                          setSeccionId(selected ? '' : s.id_seccion)
+                        }
                         className={cx(
                           'rounded-2xl border p-4 text-left transition',
-                          selected ? 'border-accent-300 bg-accent-50 ring-4 ring-accent-100' : 'border-slate-100 bg-slate-50 hover:bg-white',
+                          selected
+                            ? 'border-accent-300 bg-accent-50 ring-4 ring-accent-100'
+                            : 'border-slate-100 bg-slate-50 hover:bg-white',
                           sinCupos && 'cursor-not-allowed opacity-50',
                         )}
                       >
                         <div className="flex justify-between gap-3">
                           <div>
-                            <p className="text-sm font-black text-slate-800">{s.grado.nombre_grado} "{s.letra}"</p>
-                            <p className="mt-1 text-xs font-semibold text-slate-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p>
+                            <p className="text-sm font-black text-slate-800">
+                              {s.grado.nombre_grado} "{s.letra}"
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-slate-400">
+                              {s.grado.nivel?.nombre_nivel || 'Nivel'} ·{' '}
+                              {s.capacidad} cupos
+                            </p>
                           </div>
-                          {selected && <CheckCircle2 size={18} className="text-accent-600" />}
+
+                          {selected && (
+                            <CheckCircle2
+                              size={18}
+                              className="text-accent-600"
+                            />
+                          )}
                         </div>
+
                         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                          <div className="h-full rounded-full bg-accent-500" style={{ width: `${Math.min(100, Math.round((s.matriculados / s.capacidad) * 100))}%` }} />
+                          <div
+                            className="h-full rounded-full bg-accent-500"
+                            style={{ width: `${porcentaje}%` }}
+                          />
                         </div>
-                        <p className="mt-2 text-xs font-bold text-slate-400">{s.matriculados} matriculados · {s.disponibles} disponibles</p>
+
+                        <p className="mt-2 text-xs font-bold text-slate-400">
+                          {s.matriculados} registrados · {s.disponibles}{' '}
+                          disponibles
+                        </p>
                       </button>
                     );
                   })}
                 </div>
 
-                {seccionesFiltradas.length === 0 && <Empty text="Sin secciones disponibles" />}
+                {seccionesFiltradas.length === 0 && (
+                  <Empty text="Sin secciones disponibles" />
+                )}
 
                 {mensaje && (
                   <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600 ring-1 ring-slate-100">
@@ -755,9 +1369,13 @@ export default function MatriculaPage() {
                   </div>
                 )}
 
-                <button type="button" onClick={revisarMatricula} className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white shadow-lg shadow-accent-500/20 transition hover:bg-accent-600">
+                <button
+                  type="button"
+                  onClick={revisarMatricula}
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white shadow-lg shadow-accent-500/20 transition hover:bg-accent-600"
+                >
                   <ArrowRight size={16} />
-                  Revisar y registrar matrícula
+                  Revisar y registrar pre-matrícula
                 </button>
               </Card>
             </>
@@ -768,7 +1386,12 @@ export default function MatriculaPage() {
       {confirmOpen && alumno && seccionSeleccionada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
-            <ModalHead title="Revisar matrícula" subtitle="Verifica los datos antes de guardar." onClose={() => setConfirmOpen(false)} />
+            <ModalHead
+              title="Revisar pre-matrícula"
+              subtitle="Verifica los datos antes de guardar."
+              onClose={() => setConfirmOpen(false)}
+            />
+
             <div className="space-y-4 p-6">
               {alertaEdad && (
                 <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
@@ -776,26 +1399,67 @@ export default function MatriculaPage() {
                   {alertaEdad}
                 </div>
               )}
+
               <div className="grid gap-3 sm:grid-cols-2">
-                <Summary label="Alumno" value={`${alumno.nombres} ${alumno.apellido_paterno} ${alumno.apellido_materno}`} detail={`DNI ${alumno.dni} · ${edadTexto(alumno.fecha_nacimiento)}`} />
-                <Summary label="Destino" value={colegioDestinoNombre} detail={`${seccionSeleccionada.grado.nombre_grado} "${seccionSeleccionada.letra}" · ${seccionSeleccionada.grado.nivel?.nombre_nivel || ''}`} />
+                <Summary
+                  label="Alumno"
+                  value={`${alumno.nombres} ${alumno.apellido_paterno} ${alumno.apellido_materno}`}
+                  detail={`DNI ${alumno.dni} · ${edadTexto(
+                    alumno.fecha_nacimiento,
+                  )}`}
+                />
+
+                <Summary
+                  label="Destino"
+                  value={colegioDestinoNombre}
+                  detail={`${seccionSeleccionada.grado.nombre_grado} "${
+                    seccionSeleccionada.letra
+                  }" · ${
+                    seccionSeleccionada.grado.nivel?.nombre_nivel || ''
+                  }`}
+                />
               </div>
+
               <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Apoderados</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  Apoderados
+                </p>
+
                 <div className="mt-3 space-y-2">
                   {apoderados.map((a) => (
-                    <div key={a.id_persona} className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-100">
-                      {a.parentesco}: {a.nombres} {a.apellido_paterno} · DNI {a.dni}
+                    <div
+                      key={a.id_persona}
+                      className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-100"
+                    >
+                      {a.parentesco}: {a.nombres} {a.apellido_paterno} · DNI{' '}
+                      {a.dni}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+
             <div className="flex flex-col-reverse gap-3 border-t border-slate-100 p-6 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setConfirmOpen(false)} className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600">Corregir</button>
-              <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50">
-                {matriculando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                Confirmar matrícula
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600"
+              >
+                Corregir
+              </button>
+
+              <button
+                type="button"
+                onClick={registrarMatricula}
+                disabled={matriculando}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50"
+              >
+                {matriculando ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={16} />
+                )}
+                Confirmar pre-matrícula
               </button>
             </div>
           </div>
@@ -803,40 +1467,350 @@ export default function MatriculaPage() {
       )}
 
       {modalAlumno && (
-        <PersonaModal title="Nuevo alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => setModalAlumno(false)} onSave={() => crearPersona('alumno')} alumno />
+        <PersonaModal
+          title="Nuevo alumno"
+          form={formAlumno}
+          setForm={setFormAlumno}
+          error={errorPersona}
+          loading={savingPersona}
+          onClose={() => setModalAlumno(false)}
+          onSave={() => crearPersona('alumno')}
+          alumno
+        />
       )}
 
       {modalApoderado && (
-        <PersonaModal title="Nuevo apoderado" form={formApoderado} setForm={setFormApoderado} error={errorPersona} loading={savingPersona} onClose={() => setModalApoderado(false)} onSave={() => crearPersona('apoderado')} apoderado />
+        <PersonaModal
+          title="Nuevo apoderado"
+          form={formApoderado}
+          setForm={setFormApoderado}
+          error={errorPersona}
+          loading={savingPersona}
+          onClose={() => setModalApoderado(false)}
+          onSave={() => crearPersona('apoderado')}
+          apoderado
+        />
+      )}
+
+      {detalleOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-bold text-accent-600 ring-1 ring-accent-100">
+                  Detalle de matrícula
+                </div>
+
+                <h3 className="mt-3 text-xl font-black text-slate-950">
+                  {detalleMatricula?.estudiante?.persona
+                    ? `${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
+                    : 'Cargando matrícula'}
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  Información académica, apoderados y cronograma generado.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={imprimirDetalleMatricula}
+                  className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                >
+                  Imprimir / PDF
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDetalleOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100 transition hover:bg-slate-100"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[72vh] overflow-y-auto p-6">
+              {detalleLoading ? (
+                <div className="flex min-h-[260px] items-center justify-center text-sm font-bold text-slate-500">
+                  Cargando detalle...
+                </div>
+              ) : detalleMatricula ? (
+                <div className="space-y-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <DetailBox
+                      label="Estado"
+                      value={detalleMatricula.estado_matricula}
+                    />
+                    <DetailBox
+                      label="Fecha"
+                      value={formatFechaHora(detalleMatricula.fecha_matricula)}
+                    />
+                    <DetailBox
+                      label="Registrado por"
+                      value={
+                        detalleMatricula.registrado_por?.persona
+                          ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
+                          : 'No registrado'
+                      }
+                    />
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">
+                      Datos académicos
+                    </h4>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <DetailBox
+                        label="Colegio"
+                        value={detalleMatricula.colegio?.nombre || '—'}
+                        white
+                      />
+                      <DetailBox
+                        label="Nivel"
+                        value={
+                          detalleMatricula.seccion?.grado?.nivel
+                            ?.nombre_nivel || '—'
+                        }
+                        white
+                      />
+                      <DetailBox
+                        label="Grado"
+                        value={
+                          detalleMatricula.seccion?.grado?.nombre_grado || '—'
+                        }
+                        white
+                      />
+                      <DetailBox
+                        label="Sección"
+                        value={detalleMatricula.seccion?.letra || '—'}
+                        white
+                      />
+                      <DetailBox
+                        label="Año lectivo"
+                        value={detalleMatricula.anio?.nombre_anio || '—'}
+                        white
+                      />
+                      <DetailBox
+                        label="Aula"
+                        value={detalleMatricula.seccion?.aula?.nombre_aula || '—'}
+                        white
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">
+                      Apoderados
+                    </h4>
+
+                    <div className="mt-3 space-y-3">
+                      {detalleMatricula.estudiante?.apoderados?.length ? (
+                        detalleMatricula.estudiante.apoderados.map(
+                          (relacion: any) => (
+                            <div
+                              key={relacion.id_apoderado}
+                              className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
+                            >
+                              <p className="text-sm font-black text-slate-800">
+                                {relacion.parentesco}:{' '}
+                                {relacion.apoderado.persona.nombres}{' '}
+                                {relacion.apoderado.persona.apellido_paterno}
+                              </p>
+
+                              <div className="mt-3 grid gap-2 text-xs font-bold text-slate-500 md:grid-cols-2">
+                                <p>
+                                  <span className="text-slate-400">DNI:</span>{' '}
+                                  {relacion.apoderado.persona.dni || '—'}
+                                </p>
+                                <p>
+                                  <span className="text-slate-400">
+                                    Número:
+                                  </span>{' '}
+                                  {relacion.apoderado.persona.telefono || '—'}
+                                </p>
+                                <p>
+                                  <span className="text-slate-400">
+                                    Correo:
+                                  </span>{' '}
+                                  {relacion.apoderado.persona.correo || '—'}
+                                </p>
+                                <p>
+                                  <span className="text-slate-400">
+                                    Distrito:
+                                  </span>{' '}
+                                  {relacion.apoderado.persona.distrito || '—'}
+                                </p>
+                                <p>
+                                  <span className="text-slate-400">
+                                    Departamento:
+                                  </span>{' '}
+                                  {relacion.apoderado.persona.departamento ||
+                                    '—'}
+                                </p>
+                                <p>
+                                  <span className="text-slate-400">
+                                    Dirección:
+                                  </span>{' '}
+                                  {relacion.apoderado.persona.direccion || '—'}
+                                </p>
+                              </div>
+                            </div>
+                          ),
+                        )
+                      ) : (
+                        <p className="text-sm font-bold text-slate-400">
+                          Sin apoderados vinculados.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">
+                      Resumen financiero
+                    </h4>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
+                      <DetailBox
+                        label="Pago matrícula"
+                        value={
+                          detalleMatricula.resumen_financiero
+                            ?.estado_pago_matricula || 'No generado'
+                        }
+                        white
+                      />
+                      <DetailBox
+                        label="Programado"
+                        value={formatMoney(
+                          detalleMatricula.resumen_financiero
+                            ?.total_programado,
+                        )}
+                        white
+                      />
+                      <DetailBox
+                        label="Pagado"
+                        value={formatMoney(
+                          detalleMatricula.resumen_financiero?.total_pagado,
+                        )}
+                        white
+                      />
+                      <DetailBox
+                        label="Saldo"
+                        value={formatMoney(
+                          detalleMatricula.resumen_financiero?.saldo,
+                        )}
+                        white
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setCronogramaOpen(!cronogramaOpen)}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900">
+                          Cronograma de pagos
+                        </h4>
+                        <p className="mt-1 text-xs font-bold text-slate-400">
+                          {detalleMatricula.cronogramas?.length || 0} conceptos
+                          generados
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+                        {cronogramaOpen ? 'Ocultar' : 'Ver detalle'}
+                      </span>
+                    </button>
+
+                    {cronogramaOpen && (
+                      <div className="mt-4 space-y-2">
+                        {detalleMatricula.cronogramas?.length ? (
+                          detalleMatricula.cronogramas.map((item: any) => (
+                            <div
+                              key={item.id_cronograma}
+                              className="flex flex-col gap-2 rounded-2xl bg-white p-3 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div>
+                                <p className="text-sm font-black text-slate-800">
+                                  {item.concepto.nombre_concepto}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                  Vencimiento:{' '}
+                                  {new Date(
+                                    item.fecha_vencimiento,
+                                  ).toLocaleDateString('es-PE')}{' '}
+                                  · Monto:{' '}
+                                  {formatMoney(item.concepto.monto_base)}
+                                </p>
+                              </div>
+
+                              <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+                                {item.estado_pago}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm font-bold text-slate-400">
+                            No hay conceptos generados.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-const inputClass =
-  'h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
-const selectClass = inputClass;
-const darkButtonClass =
-  'inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50';
-const outlineButtonClass =
-  'mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50';
-
 function Label({ children }: { children: string }) {
-  return <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">{children}</span>;
+  return (
+    <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+      {children}
+    </span>
+  );
 }
 
-function Card({ icon: Icon, title, subtitle, children }: any) {
+function Card({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+  action,
+}: {
+  icon: any;
+  title: string;
+  subtitle: string;
+  children: any;
+  action?: any;
+}) {
   return (
     <div className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
-          <Icon size={18} />
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+            <Icon size={18} />
+          </div>
+
+          <div>
+            <h2 className="text-sm font-black text-slate-900">{title}</h2>
+            <p className="text-xs text-slate-400">{subtitle}</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-sm font-black text-slate-900">{title}</h2>
-          <p className="text-xs text-slate-400">{subtitle}</p>
-        </div>
+
+        {action}
       </div>
+
       {children}
     </div>
   );
@@ -855,29 +1829,93 @@ function Info({ icon: Icon, label, value }: any) {
     <div className="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
       <div className="flex items-center gap-2 text-slate-400">
         <Icon size={15} />
-        <p className="text-[11px] font-black uppercase tracking-[0.14em]">{label}</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.14em]">
+          {label}
+        </p>
       </div>
-      <p className="mt-2 truncate text-lg font-black text-slate-900">{value}</p>
+
+      <p className="mt-2 truncate text-lg font-black text-slate-900">
+        {value}
+      </p>
     </div>
   );
 }
 
-function Badge({ tone, children }: { tone: 'emerald' | 'amber'; children: string }) {
-  const cls = tone === 'emerald' ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100';
-  return <span className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-black ring-1 ${cls}`}>{children}</span>;
+function Badge({
+  tone,
+  children,
+}: {
+  tone: 'emerald' | 'amber';
+  children: string;
+}) {
+  const cls =
+    tone === 'emerald'
+      ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+      : 'bg-amber-50 text-amber-700 ring-amber-100';
+
+  return (
+    <span
+      className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-black ring-1 ${cls}`}
+    >
+      {children}
+    </span>
+  );
 }
 
-function Summary({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Summary({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
   return (
     <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+
       <p className="mt-2 text-sm font-black text-slate-900">{value}</p>
+
       <p className="mt-1 text-xs text-slate-400">{detail}</p>
     </div>
   );
 }
 
-function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: string; onClose: () => void }) {
+function DetailBox({
+  label,
+  value,
+  white = false,
+}: {
+  label: string;
+  value: string;
+  white?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl p-4 ring-1 ring-slate-100 ${
+        white ? 'bg-white' : 'bg-slate-50'
+      }`}
+    >
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function ModalHead({
+  title,
+  subtitle,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
       <div>
@@ -885,57 +1923,187 @@ function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: stri
           <UserPlus size={13} />
           Registro
         </div>
+
         <h3 className="mt-3 text-xl font-black text-slate-950">{title}</h3>
+
         <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
       </div>
-      <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100">
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100"
+      >
         <X size={18} />
       </button>
     </div>
   );
 }
 
-function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, alumno, apoderado }: any) {
-  const set = (key: keyof PersonaForm, value: string) => setForm({ ...form, [key]: value });
+function PersonaModal({
+  title,
+  form,
+  setForm,
+  error,
+  loading,
+  onClose,
+  onSave,
+  alumno,
+  apoderado,
+}: {
+  title: string;
+  form: PersonaForm;
+  setForm: (form: PersonaForm) => void;
+  error: string | null;
+  loading: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  alumno?: boolean;
+  apoderado?: boolean;
+}) {
+  const set = (key: keyof PersonaForm, value: string) =>
+    setForm({ ...form, [key]: value });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
       <div className="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
-        <ModalHead title={title} subtitle="Registra datos básicos y ubicación." onClose={onClose} />
+        <ModalHead
+          title={title}
+          subtitle="Registra datos básicos y ubicación."
+          onClose={onClose}
+        />
+
         <div className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="DNI" value={form.dni} onChange={(v: string) => set('dni', v)} />
-            {alumno && <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento || ''} onChange={(v: string) => set('fecha_nacimiento', v)} />}
-            <Field label="Nombres" value={form.nombres} onChange={(v: string) => set('nombres', v)} />
-            <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v: string) => set('apellido_paterno', v)} />
-            <Field label="Apellido materno" value={form.apellido_materno} onChange={(v: string) => set('apellido_materno', v)} />
+            <Field
+              label="DNI"
+              value={form.dni}
+              onChange={(v: string) => set('dni', v)}
+            />
+
+            {alumno && (
+              <Field
+                label="Fecha de nacimiento"
+                type="date"
+                value={form.fecha_nacimiento || ''}
+                onChange={(v: string) => set('fecha_nacimiento', v)}
+              />
+            )}
+
+            <Field
+              label="Nombres"
+              value={form.nombres}
+              onChange={(v: string) => set('nombres', v)}
+            />
+
+            <Field
+              label="Apellido paterno"
+              value={form.apellido_paterno}
+              onChange={(v: string) => set('apellido_paterno', v)}
+            />
+
+            <Field
+              label="Apellido materno"
+              value={form.apellido_materno}
+              onChange={(v: string) => set('apellido_materno', v)}
+            />
+
             {alumno && (
               <label>
                 <Label>Género</Label>
-                <select value={form.genero || ''} onChange={(e) => set('genero', e.target.value)} className={selectClass}>
+                <select
+                  value={form.genero || ''}
+                  onChange={(e) => set('genero', e.target.value)}
+                  className={selectClass}
+                >
                   <option value="">Selecciona</option>
                   <option value="F">Femenino</option>
                   <option value="M">Masculino</option>
                 </select>
               </label>
             )}
-            {apoderado && <Field label="Ocupación" value={form.ocupacion || ''} onChange={(v: string) => set('ocupacion', v)} />}
-            <Field label="Teléfono" value={form.telefono} onChange={(v: string) => set('telefono', v)} />
-            <Field label="Correo" type="email" value={form.correo} onChange={(v: string) => set('correo', v)} />
-            <Field label="País" value={form.pais} onChange={(v: string) => set('pais', v)} />
-            <Field label="Departamento" value={form.departamento} onChange={(v: string) => set('departamento', v)} />
-            <Field label="Provincia" value={form.provincia} onChange={(v: string) => set('provincia', v)} />
-            <Field label="Distrito" value={form.distrito} onChange={(v: string) => set('distrito', v)} />
+
+            {apoderado && (
+              <Field
+                label="Ocupación"
+                value={form.ocupacion || ''}
+                onChange={(v: string) => set('ocupacion', v)}
+              />
+            )}
+
+            <Field
+              label="Teléfono"
+              value={form.telefono}
+              onChange={(v: string) => set('telefono', v)}
+            />
+
+            <Field
+              label="Correo"
+              type="email"
+              value={form.correo}
+              onChange={(v: string) => set('correo', v)}
+            />
+
+            <Field
+              label="País"
+              value={form.pais}
+              onChange={(v: string) => set('pais', v)}
+            />
+
+            <Field
+              label="Departamento"
+              value={form.departamento}
+              onChange={(v: string) => set('departamento', v)}
+            />
+
+            <Field
+              label="Provincia"
+              value={form.provincia}
+              onChange={(v: string) => set('provincia', v)}
+            />
+
+            <Field
+              label="Distrito"
+              value={form.distrito}
+              onChange={(v: string) => set('distrito', v)}
+            />
+
             <div className="md:col-span-2">
-              <Field label="Dirección" value={form.direccion} onChange={(v: string) => set('direccion', v)} />
+              <Field
+                label="Dirección"
+                value={form.direccion}
+                onChange={(v: string) => set('direccion', v)}
+              />
             </div>
           </div>
-          {error && <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">{error}</div>}
+
+          {error && (
+            <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
+              {error}
+            </div>
+          )}
         </div>
+
         <div className="flex flex-col-reverse gap-3 border-t border-slate-100 p-6 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onClose} className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600">Cancelar</button>
-          <button type="button" onClick={onSave} disabled={loading} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50">
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={loading}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <UserPlus size={16} />
+            )}
             Guardar
           </button>
         </div>
@@ -944,11 +2112,26 @@ function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, a
   );
 }
 
-function Field({ label, value, onChange, type = 'text' }: any) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
   return (
     <label>
       <Label>{label}</Label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      />
     </label>
   );
 }

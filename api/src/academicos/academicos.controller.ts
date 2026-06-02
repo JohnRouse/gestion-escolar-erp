@@ -41,16 +41,27 @@ export class AcademicosController {
     const existente = await this.prisma.nivel.findFirst({
       where: { nombre_nivel: body.nombre_nivel },
     });
+
     if (existente) throw new BadRequestException('El nivel ya existe');
-    return this.prisma.nivel.create({ data: { nombre_nivel: body.nombre_nivel } });
+
+    return this.prisma.nivel.create({
+      data: { nombre_nivel: body.nombre_nivel },
+    });
   }
 
   @Put('niveles/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async updateNivel(@Param('id') id: string, @Body() body: { nombre_nivel: string }) {
-    const nivel = await this.prisma.nivel.findUnique({ where: { id_nivel: Number(id) } });
+  async updateNivel(
+    @Param('id') id: string,
+    @Body() body: { nombre_nivel: string },
+  ) {
+    const nivel = await this.prisma.nivel.findUnique({
+      where: { id_nivel: Number(id) },
+    });
+
     if (!nivel) throw new NotFoundException('Nivel no encontrado');
+
     return this.prisma.nivel.update({
       where: { id_nivel: Number(id) },
       data: { nombre_nivel: body.nombre_nivel },
@@ -61,15 +72,25 @@ export class AcademicosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async deleteNivel(@Param('id') id: string) {
-    const nivel = await this.prisma.nivel.findUnique({ where: { id_nivel: Number(id) } });
+    const nivel = await this.prisma.nivel.findUnique({
+      where: { id_nivel: Number(id) },
+    });
+
     if (!nivel) throw new NotFoundException('Nivel no encontrado');
 
-    const grados = await this.prisma.grado.count({ where: { id_nivel: Number(id) } });
+    const grados = await this.prisma.grado.count({
+      where: { id_nivel: Number(id) },
+    });
+
     if (grados > 0) {
-      throw new BadRequestException('No se puede eliminar un nivel con grados asignados');
+      throw new BadRequestException(
+        'No se puede eliminar un nivel con grados asignados',
+      );
     }
 
-    return this.prisma.nivel.delete({ where: { id_nivel: Number(id) } });
+    return this.prisma.nivel.delete({
+      where: { id_nivel: Number(id) },
+    });
   }
 
   // ── GRADOS ───────────────────────────────────────────
@@ -85,10 +106,14 @@ export class AcademicosController {
     const nivel = await this.prisma.nivel.findUnique({
       where: { id_nivel: body.id_nivel },
     });
+
     if (!nivel) throw new NotFoundException('Nivel no encontrado');
 
     return this.prisma.grado.create({
-      data: { nombre_grado: body.nombre_grado, id_nivel: body.id_nivel },
+      data: {
+        nombre_grado: body.nombre_grado,
+        id_nivel: body.id_nivel,
+      },
     });
   }
 
@@ -99,20 +124,30 @@ export class AcademicosController {
     @Param('id') id: string,
     @Body() body: { nombre_grado: string; id_nivel?: number },
   ) {
-    const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
+    const grado = await this.prisma.grado.findUnique({
+      where: { id_grado: Number(id) },
+    });
+
     if (!grado) throw new NotFoundException('Grado no encontrado');
 
     const data: any = { nombre_grado: body.nombre_grado };
+
     if (body.id_nivel) data.id_nivel = body.id_nivel;
 
-    return this.prisma.grado.update({ where: { id_grado: Number(id) }, data });
+    return this.prisma.grado.update({
+      where: { id_grado: Number(id) },
+      data,
+    });
   }
 
   @Delete('grados/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async deleteGrado(@Param('id') id: string) {
-    const grado = await this.prisma.grado.findUnique({ where: { id_grado: Number(id) } });
+    const grado = await this.prisma.grado.findUnique({
+      where: { id_grado: Number(id) },
+    });
+
     if (!grado) throw new NotFoundException('Grado no encontrado');
 
     const secciones = await this.prisma.seccion.count({
@@ -120,10 +155,14 @@ export class AcademicosController {
     });
 
     if (secciones > 0) {
-      throw new BadRequestException('No se puede eliminar un grado con secciones asignadas');
+      throw new BadRequestException(
+        'No se puede eliminar un grado con secciones asignadas',
+      );
     }
 
-    return this.prisma.grado.delete({ where: { id_grado: Number(id) } });
+    return this.prisma.grado.delete({
+      where: { id_grado: Number(id) },
+    });
   }
 
   // ── SECCIONES ────────────────────────────────────────
@@ -162,6 +201,7 @@ export class AcademicosController {
     const grado = await this.prisma.grado.findUnique({
       where: { id_grado: body.id_grado },
     });
+
     if (!grado) throw new NotFoundException('Grado no encontrado');
 
     return this.prisma.seccion.create({
@@ -185,6 +225,7 @@ export class AcademicosController {
     const seccion = await this.prisma.seccion.findUnique({
       where: { id_seccion: Number(id) },
     });
+
     if (!seccion) throw new NotFoundException('Sección no encontrada');
 
     return this.prisma.seccion.update({
@@ -200,17 +241,25 @@ export class AcademicosController {
     const seccion = await this.prisma.seccion.findUnique({
       where: { id_seccion: Number(id) },
     });
+
     if (!seccion) throw new NotFoundException('Sección no encontrada');
 
     const matriculas = await this.prisma.matricula.count({
-      where: { id_seccion: Number(id), estado_matricula: 'Activo' },
+      where: {
+        id_seccion: Number(id),
+        estado_matricula: 'Activo',
+      },
     });
 
     if (matriculas > 0) {
-      throw new BadRequestException('No se puede eliminar una sección con alumnos matriculados');
+      throw new BadRequestException(
+        'No se puede eliminar una sección con alumnos matriculados',
+      );
     }
 
-    return this.prisma.seccion.delete({ where: { id_seccion: Number(id) } });
+    return this.prisma.seccion.delete({
+      where: { id_seccion: Number(id) },
+    });
   }
 
   @Get('anios')
@@ -260,6 +309,7 @@ export class AcademicosController {
     const anio = await this.prisma.anioLectivo.findUnique({
       where: { id_anio: Number(id) },
     });
+
     if (!anio) throw new NotFoundException('Año lectivo no encontrado');
 
     return this.prisma.anioLectivo.update({
@@ -307,6 +357,20 @@ export class AcademicosController {
     return this.academicosService.buscarApoderado(dni);
   }
 
+  @Post('alumnos/:idEstudiante/apoderados')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  vincularApoderadoAlumno(
+    @Param('idEstudiante') idEstudiante: string,
+    @Body() body: { id_apoderado: number; parentesco?: string },
+  ) {
+    return this.academicosService.vincularApoderadoAlumno({
+      idEstudiante: Number(idEstudiante),
+      idApoderado: Number(body.id_apoderado),
+      parentesco: body.parentesco || 'Apoderado',
+    });
+  }
+
   // ── MATRÍCULAS ───────────────────────────────────────
   @Post('matriculas')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -342,6 +406,36 @@ export class AcademicosController {
     });
   }
 
+  @Get('matriculas/buscar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  async buscarMatriculas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('q') q?: string,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('registrado_por') registradoPor?: string,
+    @Query('estado') estado?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.academicosService.buscarMatriculas({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      q,
+      desde,
+      hasta,
+      registradoPor,
+      estado,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
   @Get('matriculas/count')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')
@@ -360,12 +454,32 @@ export class AcademicosController {
     });
   }
 
+  @Get('matriculas/:id/detalle')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getDetalleMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getDetalleMatricula({
+      idMatricula: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   // ── DOCENTES ─────────────────────────────────────────
   @Get('docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
   async getDocentes() {
-    return this.prisma.docente.findMany({ include: { persona: true } });
+    return this.prisma.docente.findMany({
+      include: { persona: true },
+    });
   }
 
   @Get('docentes/count')
@@ -378,7 +492,10 @@ export class AcademicosController {
   // ── ASISTENCIA ───────────────────────────────────────
   @Get('asistencia')
   @UseGuards(AuthGuard('jwt'))
-  async getAsistencia(@Query('seccion_id') seccionId: string, @Query('fecha') fecha: string) {
+  async getAsistencia(
+    @Query('seccion_id') seccionId: string,
+    @Query('fecha') fecha: string,
+  ) {
     return this.academicosService.getAsistencia(Number(seccionId), fecha);
   }
 
@@ -401,7 +518,11 @@ export class AcademicosController {
     @Query('desde') desde: string,
     @Query('hasta') hasta: string,
   ) {
-    return this.academicosService.getAsistenciaAlumno(Number(alumnoId), desde, hasta);
+    return this.academicosService.getAsistenciaAlumno(
+      Number(alumnoId),
+      desde,
+      hasta,
+    );
   }
 
   @Get('docente/secciones')
@@ -409,10 +530,17 @@ export class AcademicosController {
   async getSeccionesDocente(@Request() req) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: req.user.userId },
-      include: { persona: { include: { docentes: true } } },
+      include: {
+        persona: {
+          include: {
+            docentes: true,
+          },
+        },
+      },
     });
 
     const docente = usuario?.persona?.docentes?.[0];
+
     if (!docente) throw new NotFoundException('No se encontró docente');
 
     return this.academicosService.getSeccionesDocente(docente.id_persona, 1);
@@ -431,10 +559,17 @@ export class AcademicosController {
   async getHijosApoderado(@Request() req) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: req.user.userId },
-      include: { persona: { include: { apoderados: true } } },
+      include: {
+        persona: {
+          include: {
+            apoderados: true,
+          },
+        },
+      },
     });
 
     const apoderado = usuario?.persona?.apoderados?.[0];
+
     if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
 
     return this.academicosService.getHijosApoderado(apoderado.id_persona);
@@ -477,7 +612,9 @@ export class AcademicosController {
   // ── ÁREAS Y CURSOS ───────────────────────────────────
   @Get('areas')
   async getAreas() {
-    return this.prisma.areaCurricular.findMany({ orderBy: { nombre_area: 'asc' } });
+    return this.prisma.areaCurricular.findMany({
+      orderBy: { nombre_area: 'asc' },
+    });
   }
 
   @Get('cursos')
@@ -502,7 +639,10 @@ export class AcademicosController {
   @Roles('Admin')
   async createCurso(@Body() body: { nombre_curso: string; id_area: number }) {
     return this.prisma.curso.create({
-      data: { nombre_curso: body.nombre_curso, id_area: body.id_area },
+      data: {
+        nombre_curso: body.nombre_curso,
+        id_area: body.id_area,
+      },
     });
   }
 
@@ -513,26 +653,38 @@ export class AcademicosController {
     @Param('id') id: string,
     @Body() body: { nombre_curso: string; id_area?: number },
   ) {
-    const curso = await this.prisma.curso.findUnique({ where: { id_curso: Number(id) } });
+    const curso = await this.prisma.curso.findUnique({
+      where: { id_curso: Number(id) },
+    });
+
     if (!curso) throw new NotFoundException('Curso no encontrado');
 
     const data: any = { nombre_curso: body.nombre_curso };
+
     if (body.id_area) data.id_area = body.id_area;
 
-    return this.prisma.curso.update({ where: { id_curso: Number(id) }, data });
+    return this.prisma.curso.update({
+      where: { id_curso: Number(id) },
+      data,
+    });
   }
 
   @Delete('cursos/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async deleteCurso(@Param('id') id: string) {
-    return this.prisma.curso.delete({ where: { id_curso: Number(id) } });
+    return this.prisma.curso.delete({
+      where: { id_curso: Number(id) },
+    });
   }
 
   @Put('areas/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async updateArea(@Param('id') id: string, @Body() body: { nombre_area: string }) {
+  async updateArea(
+    @Param('id') id: string,
+    @Body() body: { nombre_area: string },
+  ) {
     return this.prisma.areaCurricular.update({
       where: { id_area: Number(id) },
       data: { nombre_area: body.nombre_area },
@@ -543,7 +695,9 @@ export class AcademicosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async deleteArea(@Param('id') id: string) {
-    return this.prisma.areaCurricular.delete({ where: { id_area: Number(id) } });
+    return this.prisma.areaCurricular.delete({
+      where: { id_area: Number(id) },
+    });
   }
 
   @Get('docente/asignaciones')
@@ -551,15 +705,33 @@ export class AcademicosController {
   async getAsignacionesDocente(@Request() req) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: req.user.userId },
-      include: { persona: { include: { docentes: true } }, rol: true },
+      include: {
+        persona: {
+          include: {
+            docentes: true,
+          },
+        },
+        rol: true,
+      },
     });
 
-    if (usuario?.rol?.nombre_rol === 'Admin' || usuario?.rol?.nombre_rol === 'Director') {
+    if (
+      usuario?.rol?.nombre_rol === 'Admin' ||
+      usuario?.rol?.nombre_rol === 'Director'
+    ) {
       const asignaciones = await this.prisma.asignacionDocente.findMany({
         where: { id_anio: 1 },
         include: {
           curso: true,
-          seccion: { include: { grado: { include: { nivel: true } } } },
+          seccion: {
+            include: {
+              grado: {
+                include: {
+                  nivel: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -571,13 +743,25 @@ export class AcademicosController {
     }
 
     const docente = usuario?.persona?.docentes?.[0];
+
     if (!docente) throw new NotFoundException('No se encontró docente');
 
     const asignaciones = await this.prisma.asignacionDocente.findMany({
-      where: { id_docente: docente.id_persona, id_anio: 1 },
+      where: {
+        id_docente: docente.id_persona,
+        id_anio: 1,
+      },
       include: {
         curso: true,
-        seccion: { include: { grado: { include: { nivel: true } } } },
+        seccion: {
+          include: {
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -600,7 +784,11 @@ export class AcademicosController {
       include: {
         bimestres: {
           orderBy: { numero: 'asc' },
-          include: { unidades: { orderBy: { numero: 'asc' } } },
+          include: {
+            unidades: {
+              orderBy: { numero: 'asc' },
+            },
+          },
         },
       },
     });
@@ -614,7 +802,9 @@ export class AcademicosController {
       fecha_fin: anio.fecha_fin,
       estado: anio.estado,
       bimestres: anio.bimestres.map((bimestre) => {
-        const tieneUnidadAbierta = bimestre.unidades.some((unidad) => unidad.estado_abierto);
+        const tieneUnidadAbierta = bimestre.unidades.some(
+          (unidad) => unidad.estado_abierto,
+        );
 
         return {
           id_bimestre: bimestre.id_bimestre,
@@ -648,8 +838,14 @@ export class AcademicosController {
     if (!bimestre) throw new NotFoundException('Bimestre no encontrado');
 
     const data: any = {};
-    if (body.fecha_inicio !== undefined) data.fecha_inicio = new Date(body.fecha_inicio);
-    if (body.fecha_fin !== undefined) data.fecha_fin = new Date(body.fecha_fin);
+
+    if (body.fecha_inicio !== undefined) {
+      data.fecha_inicio = new Date(body.fecha_inicio);
+    }
+
+    if (body.fecha_fin !== undefined) {
+      data.fecha_fin = new Date(body.fecha_fin);
+    }
 
     return this.prisma.bimestre.update({
       where: { id_bimestre: Number(id) },
@@ -671,8 +867,14 @@ export class AcademicosController {
     if (!unidad) throw new NotFoundException('Unidad no encontrada');
 
     const data: any = {};
-    if (body.fecha_inicio !== undefined) data.fecha_inicio = new Date(body.fecha_inicio);
-    if (body.fecha_fin !== undefined) data.fecha_fin = new Date(body.fecha_fin);
+
+    if (body.fecha_inicio !== undefined) {
+      data.fecha_inicio = new Date(body.fecha_inicio);
+    }
+
+    if (body.fecha_fin !== undefined) {
+      data.fecha_fin = new Date(body.fecha_fin);
+    }
 
     return this.prisma.unidad.update({
       where: { id_unidad: Number(id) },
@@ -693,17 +895,27 @@ export class AcademicosController {
 
     await this.prisma.$transaction(async (tx) => {
       await tx.unidad.updateMany({
-        where: { bimestre: { id_anio: unidad.bimestre.id_anio } },
-        data: { estado_abierto: false },
+        where: {
+          bimestre: {
+            id_anio: unidad.bimestre.id_anio,
+          },
+        },
+        data: {
+          estado_abierto: false,
+        },
       });
 
       await tx.unidad.update({
         where: { id_unidad: unidad.id_unidad },
-        data: { estado_abierto: true },
+        data: {
+          estado_abierto: true,
+        },
       });
     });
 
-    return { message: `Unidad ${unidad.numero} abierta correctamente` };
+    return {
+      message: `Unidad ${unidad.numero} abierta correctamente`,
+    };
   }
 
   @Put('unidades/:id/cerrar')
@@ -718,9 +930,13 @@ export class AcademicosController {
 
     await this.prisma.unidad.update({
       where: { id_unidad: Number(id) },
-      data: { estado_abierto: false },
+      data: {
+        estado_abierto: false,
+      },
     });
 
-    return { message: `Unidad ${unidad.numero} cerrada correctamente` };
+    return {
+      message: `Unidad ${unidad.numero} cerrada correctamente`,
+    };
   }
 }
