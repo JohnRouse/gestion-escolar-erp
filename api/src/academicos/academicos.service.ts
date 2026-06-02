@@ -52,9 +52,7 @@ export class AcademicosService {
     const nacimiento = new Date(fecha);
 
     if (Number.isNaN(nacimiento.getTime())) {
-      throw new BadRequestException(
-        'La fecha de nacimiento no es válida.',
-      );
+      throw new BadRequestException('La fecha de nacimiento no es válida.');
     }
 
     const hoy = new Date();
@@ -94,9 +92,7 @@ export class AcademicosService {
           );
         }
 
-        throw new BadRequestException(
-          'Ya existe un registro con estos datos.',
-        );
+        throw new BadRequestException('Ya existe un registro con estos datos.');
       }
 
       if (error.code === 'P2000') {
@@ -109,9 +105,7 @@ export class AcademicosService {
     throw error;
   }
 
-  private async resolveScope(
-    params: ScopeParams,
-  ): Promise<MatriculaScope> {
+  private async resolveScope(params: ScopeParams): Promise<MatriculaScope> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: params.userId },
       include: {
@@ -124,8 +118,7 @@ export class AcademicosService {
       },
     });
 
-    if (!usuario)
-      throw new UnauthorizedException('Usuario no encontrado');
+    if (!usuario) throw new UnauthorizedException('Usuario no encontrado');
 
     const colegiosPermitidos = usuario.colegios.map((acceso) => ({
       id_colegio: acceso.colegio.id_colegio,
@@ -155,9 +148,7 @@ export class AcademicosService {
       );
 
       if (!colegio) {
-        throw new UnauthorizedException(
-          'No tienes acceso a este colegio',
-        );
+        throw new UnauthorizedException('No tienes acceso a este colegio');
       }
 
       return {
@@ -173,9 +164,7 @@ export class AcademicosService {
       return {
         tipo: 'todos',
         tenantId: colegiosPermitidos[0].id_tenant,
-        colegioIds: colegiosPermitidos.map(
-          (item) => item.id_colegio,
-        ),
+        colegioIds: colegiosPermitidos.map((item) => item.id_colegio),
         colegios: colegiosPermitidos,
         puedeVerConsolidado,
       };
@@ -198,10 +187,7 @@ export class AcademicosService {
       : { id_colegio: -1 };
   }
 
-  private async resolveAnioActivo(
-    scope: MatriculaScope,
-    idAnio?: number,
-  ) {
+  private async resolveAnioActivo(scope: MatriculaScope, idAnio?: number) {
     if (!scope.colegioIds.length) return null;
 
     if (idAnio) {
@@ -244,13 +230,9 @@ export class AcademicosService {
   }
 
   async getSecciones(
-    params: ScopeParams & {
-      gradoId?: number;
-      anioId?: number;
-    },
+    params: ScopeParams & { gradoId?: number; anioId?: number },
   ) {
     const scope = await this.resolveScope(params);
-
     const where: any = {
       ...this.colegioWhere(scope),
     };
@@ -293,21 +275,15 @@ export class AcademicosService {
       aula: sec.aula,
       matriculas: sec.matriculas || [],
       capacidad: sec.aula.capacidad,
-      matriculados: Array.isArray(sec.matriculas)
-        ? sec.matriculas.length
-        : 0,
+      matriculados: Array.isArray(sec.matriculas) ? sec.matriculas.length : 0,
       disponibles:
         sec.aula.capacidad -
-        (Array.isArray(sec.matriculas)
-          ? sec.matriculas.length
-          : 0),
+        (Array.isArray(sec.matriculas) ? sec.matriculas.length : 0),
       label: `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel}`,
     }));
   }
 
-  async buscarAlumno(
-    params: ScopeParams & { dni: string },
-  ) {
+  async buscarAlumno(params: ScopeParams & { dni: string }) {
     const scope = await this.resolveScope(params);
 
     const persona = await this.prisma.persona.findFirst({
@@ -371,11 +347,7 @@ export class AcademicosService {
     const scope = await this.resolveScope(params);
 
     const page = Math.max(Number(params.page || 1), 1);
-    const limit = Math.min(
-      Math.max(Number(params.limit || 10), 5),
-      50,
-    );
-
+    const limit = Math.min(Math.max(Number(params.limit || 10), 5), 50);
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -408,9 +380,7 @@ export class AcademicosService {
       const numericId = Number(q);
 
       where.OR = [
-        Number.isFinite(numericId)
-          ? { id_matricula: numericId }
-          : undefined,
+        Number.isFinite(numericId) ? { id_matricula: numericId } : undefined,
         {
           estudiante: {
             persona: {
@@ -519,31 +489,24 @@ export class AcademicosService {
     idApoderado: number;
     parentesco?: string;
   }) {
-    const parentesco =
-      params.parentesco?.trim() || 'Apoderado';
+    const parentesco = params.parentesco?.trim() || 'Apoderado';
 
-    const estudiante =
-      await this.prisma.estudiante.findUnique({
-        where: { id_persona: params.idEstudiante },
-        include: { persona: true },
-      });
+    const estudiante = await this.prisma.estudiante.findUnique({
+      where: { id_persona: params.idEstudiante },
+      include: { persona: true },
+    });
 
     if (!estudiante) {
-      throw new NotFoundException(
-        'No se encontró el alumno seleccionado.',
-      );
+      throw new NotFoundException('No se encontró el alumno seleccionado.');
     }
 
-    const apoderado =
-      await this.prisma.apoderado.findUnique({
-        where: { id_persona: params.idApoderado },
-        include: { persona: true },
-      });
+    const apoderado = await this.prisma.apoderado.findUnique({
+      where: { id_persona: params.idApoderado },
+      include: { persona: true },
+    });
 
     if (!apoderado) {
-      throw new NotFoundException(
-        'No se encontró el apoderado seleccionado.',
-      );
+      throw new NotFoundException('No se encontró el apoderado seleccionado.');
     }
 
     await this.prisma.apoderadoEstudiante.upsert({
@@ -603,6 +566,8 @@ export class AcademicosService {
     };
   }
 
+  // ── CREAR ALUMNO ──────────────────────────────────────
+
   async createAlumno(dto: CreateAlumnoDto) {
     const existente = await this.prisma.persona.findUnique({
       where: { dni: dto.dni },
@@ -628,10 +593,7 @@ export class AcademicosService {
           nombres: dto.nombres.trim(),
           apellido_paterno: dto.apellido_paterno.trim(),
           apellido_materno: dto.apellido_materno.trim(),
-          fecha_nacimiento:
-            this.validarFechaNacimiento(
-              dto.fecha_nacimiento,
-            ),
+          fecha_nacimiento: this.validarFechaNacimiento(dto.fecha_nacimiento),
           genero: this.normalizeGenero(dto.genero),
           direccion: this.normalizeEmpty(dto.direccion),
           pais: this.normalizeEmpty(dto.pais) || 'Perú',
@@ -643,23 +605,22 @@ export class AcademicosService {
         },
       });
 
-      const codigo = `ALU${String(
-        persona.id_persona,
-      ).padStart(6, '0')}`;
+      const codigo = `ALU${String(persona.id_persona).padStart(6, '0')}`;
 
-      const estudiante =
-        await this.prisma.estudiante.create({
-          data: {
-            id_persona: persona.id_persona,
-            codigo_estudiante: codigo,
-          },
-        });
+      const estudiante = await this.prisma.estudiante.create({
+        data: {
+          id_persona: persona.id_persona,
+          codigo_estudiante: codigo,
+        },
+      });
 
       return { persona, estudiante };
     } catch (error) {
       this.handlePersonaPrismaError(error);
     }
   }
+
+  // ── CREAR APODERADO ───────────────────────────────────
 
   async createApoderado(dto: CreateApoderadoDto) {
     const existente = await this.prisma.persona.findUnique({
@@ -697,27 +658,20 @@ export class AcademicosService {
         },
       });
 
-      const apoderado =
-        await this.prisma.apoderado.create({
-          data: {
-            id_persona: persona.id_persona,
-            ocupacion: this.normalizeEmpty(
-              dto.ocupacion,
-            ),
-          },
-        });
+      const apoderado = await this.prisma.apoderado.create({
+        data: {
+          id_persona: persona.id_persona,
+          ocupacion: this.normalizeEmpty(dto.ocupacion),
+        },
+      });
 
       if (dto.username && dto.password) {
-        const rolApoderado =
-          await this.prisma.rol.findUnique({
-            where: { nombre_rol: 'Apoderado' },
-          });
+        const rolApoderado = await this.prisma.rol.findUnique({
+          where: { nombre_rol: 'Apoderado' },
+        });
 
         if (rolApoderado) {
-          const hashed = await bcrypt.hash(
-            dto.password,
-            10,
-          );
+          const hashed = await bcrypt.hash(dto.password, 10);
 
           await this.prisma.usuario.create({
             data: {
@@ -735,6 +689,409 @@ export class AcademicosService {
     } catch (error) {
       this.handlePersonaPrismaError(error);
     }
+  }
+
+  // ── CREAR MATRÍCULA ───────────────────────────────────
+
+  async createMatricula(params: {
+    dto: CreateMatriculaDto & { id_colegio?: number };
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+  }) {
+    const scope = await this.resolveScope({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId || params.dto.id_colegio,
+    });
+
+    if (scope.tipo === 'todos' || scope.colegioIds.length !== 1) {
+      throw new BadRequestException(
+        'Selecciona un colegio específico para matricular',
+      );
+    }
+
+    const idColegio = scope.colegioIds[0];
+    const idTenant = scope.tenantId;
+
+    const estudiante = await this.prisma.estudiante.findUnique({
+      where: { id_persona: params.dto.id_estudiante },
+    });
+
+    if (!estudiante) throw new NotFoundException('Estudiante no encontrado');
+
+    const anio = await this.prisma.anioLectivo.findFirst({
+      where: {
+        id_anio: params.dto.id_anio,
+        id_colegio: idColegio,
+      },
+    });
+
+    if (!anio) {
+      throw new BadRequestException(
+        'El año lectivo no pertenece al colegio seleccionado',
+      );
+    }
+
+    const seccion = await this.prisma.seccion.findFirst({
+      where: {
+        id_seccion: params.dto.id_seccion,
+        id_colegio: idColegio,
+      },
+      include: { aula: true },
+    });
+
+    if (!seccion) {
+      throw new BadRequestException(
+        'La sección no pertenece al colegio seleccionado',
+      );
+    }
+
+    const existente = await this.prisma.matricula.findFirst({
+      where: {
+        id_estudiante: params.dto.id_estudiante,
+        id_anio: params.dto.id_anio,
+        id_colegio: idColegio,
+        estado_matricula: {
+          in: ['Activo', 'Pre-matriculado'],
+        },
+      },
+    });
+
+    if (existente) {
+      const matriculaExistente = await this.prisma.matricula.findUnique({
+        where: { id_matricula: existente.id_matricula },
+        include: {
+          colegio: true,
+          anio: true,
+          seccion: {
+            include: {
+              grado: {
+                include: { nivel: true },
+              },
+            },
+          },
+        },
+      });
+
+      const colegioNombre =
+        matriculaExistente?.colegio?.nombre || 'este colegio';
+      const anioNombre =
+        matriculaExistente?.anio?.nombre_anio ||
+        'el año lectivo seleccionado';
+      const gradoNombre =
+        matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
+      const nivelNombre =
+        matriculaExistente?.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
+      const letra = matriculaExistente?.seccion?.letra || '-';
+      const estado = matriculaExistente?.estado_matricula || 'matriculado';
+
+      throw new BadRequestException(
+        `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}.`,
+      );
+    }
+
+    const matriculados = await this.prisma.matricula.count({
+      where: {
+        id_seccion: params.dto.id_seccion,
+        id_anio: params.dto.id_anio,
+        id_colegio: idColegio,
+        estado_matricula: {
+          in: ['Activo', 'Pre-matriculado'],
+        },
+      },
+    });
+
+    if (matriculados >= seccion.aula.capacidad) {
+      throw new BadRequestException('La sección está llena');
+    }
+
+    /**
+     * Validación obligatoria de apoderados
+     * antes de crear la matrícula.
+     */
+    if (!params.dto.apoderados || params.dto.apoderados.length === 0) {
+      throw new BadRequestException(
+        'Debes vincular al menos un apoderado para matricular al alumno.',
+      );
+    }
+
+    for (const apoderado of params.dto.apoderados) {
+      const existeApoderado = await this.prisma.apoderado.findUnique({
+        where: { id_persona: apoderado.id_apoderado },
+      });
+
+      if (!existeApoderado) {
+        throw new BadRequestException(
+          'Uno de los apoderados seleccionados no existe.',
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const matricula = await tx.matricula.create({
+        data: {
+          id_tenant: idTenant,
+          id_colegio: idColegio,
+          id_estudiante: params.dto.id_estudiante,
+          id_seccion: params.dto.id_seccion,
+          id_anio: params.dto.id_anio,
+          estado_matricula: 'Pre-matriculado',
+          id_usuario_registro: params.userId,
+        },
+      });
+
+      /**
+       * Vinculación de apoderados con el estudiante.
+       * Se conserva el upsert solicitado.
+       */
+      for (const ap of params.dto.apoderados) {
+        await tx.apoderadoEstudiante.upsert({
+          where: {
+            id_apoderado_id_estudiante: {
+              id_apoderado: ap.id_apoderado,
+              id_estudiante: params.dto.id_estudiante,
+            },
+          },
+          update: { parentesco: ap.parentesco },
+          create: {
+            id_apoderado: ap.id_apoderado,
+            id_estudiante: params.dto.id_estudiante,
+            parentesco: ap.parentesco,
+          },
+        });
+      }
+
+      const conceptos = await tx.conceptoPago.findMany({
+        where: {
+          id_anio: params.dto.id_anio,
+          OR: [{ id_colegio: idColegio }, { id_colegio: null }],
+          es_pension: false,
+          es_extraordinario: false,
+          nombre_concepto: {
+            contains: 'Matrícula',
+          },
+        },
+        orderBy: [{ id_concepto: 'asc' }],
+      });
+
+      if (!conceptos.length) {
+        throw new BadRequestException(
+          'No existe un concepto de matrícula configurado para este colegio y año lectivo.',
+        );
+      }
+
+      for (const concepto of conceptos) {
+        const fechaVenc = new Date();
+        fechaVenc.setDate(fechaVenc.getDate() + 1);
+
+        await tx.cronogramaPagos.create({
+          data: {
+            id_matricula: matricula.id_matricula,
+            id_concepto: concepto.id_concepto,
+            fecha_vencimiento: fechaVenc,
+            estado_pago: 'Pendiente',
+          },
+        });
+      }
+
+      return matricula;
+    });
+  }
+
+  // ── ASISTENCIA ────────────────────────────────────────
+
+  async getSeccionesDocente(docenteId: number, anioId: number) {
+    const asignaciones = await this.prisma.asignacionDocente.findMany({
+      where: { id_docente: docenteId, id_anio: anioId },
+      distinct: ['id_seccion'],
+      select: { seccion: true },
+    });
+
+    return asignaciones.map((a) => a.seccion);
+  }
+
+  async getAsistencia(seccionId: number, fecha: string) {
+    const matriculas = await this.prisma.matricula.findMany({
+      where: { id_seccion: seccionId, estado_matricula: 'Activo' },
+      include: {
+        estudiante: { include: { persona: true } },
+        asistencias: { where: { fecha: new Date(fecha) } },
+      },
+    });
+
+    return matriculas.map((m) => ({
+      id_matricula: m.id_matricula,
+      alumno: `${m.estudiante.persona.nombres} ${m.estudiante.persona.apellido_paterno}`,
+      estado: m.asistencias.length > 0 ? m.asistencias[0].estado : 'Presente',
+    }));
+  }
+
+  async saveAsistencia(
+    seccionId: number,
+    fecha: string,
+    asistencias: { id_matricula: number; estado: string }[],
+  ) {
+    const fechaAsistencia = new Date(fecha);
+
+    if (fechaAsistencia.getDay() === 0 || fechaAsistencia.getDay() === 6) {
+      throw new BadRequestException(
+        'No se puede registrar asistencia en fines de semana',
+      );
+    }
+
+    const data = asistencias.map((a) => ({
+      id_matricula: a.id_matricula,
+      fecha: new Date(fecha),
+      estado: a.estado,
+    }));
+
+    for (const item of data) {
+      await this.prisma.asistencia.upsert({
+        where: {
+          id_matricula_fecha: {
+            id_matricula: item.id_matricula,
+            fecha: item.fecha,
+          },
+        },
+        update: { estado: item.estado },
+        create: item,
+      });
+    }
+
+    return { message: 'Asistencia guardada correctamente', total: data.length };
+  }
+
+  async getAsistenciaAlumno(estudianteId: number, desde: string, hasta: string) {
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_estudiante: estudianteId,
+        estado_matricula: 'Activo',
+      },
+      include: {
+        asistencias: {
+          where: {
+            fecha: {
+              gte: new Date(desde),
+              lte: new Date(hasta),
+            },
+          },
+          orderBy: { fecha: 'asc' },
+        },
+      },
+    });
+
+    return matriculas.flatMap((mat) =>
+      mat.asistencias.map((asist) => ({
+        fecha: asist.fecha.toISOString().split('T')[0],
+        estado: asist.estado,
+      })),
+    );
+  }
+
+  async getHijosApoderado(apoderadoId: number) {
+    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+      where: { id_apoderado: apoderadoId },
+      include: {
+        estudiante: {
+          include: {
+            persona: true,
+            matriculas: {
+              where: { estado_matricula: 'Activo' },
+              include: {
+                seccion: {
+                  include: {
+                    grado: {
+                      include: { nivel: true },
+                    },
+                  },
+                },
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    return relaciones.map((r) => {
+      const matricula = r.estudiante.matriculas[0];
+      const seccion = matricula?.seccion;
+      const gradoNombre = seccion?.grado?.nombre_grado || '';
+      const nivelNombre = seccion?.grado?.nivel?.nombre_nivel || '';
+
+      return {
+        id_estudiante: r.id_estudiante,
+        nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
+        grado: seccion
+          ? `${gradoNombre} ${seccion.letra} · ${nivelNombre}`
+          : 'Sin matrícula activa',
+        avatar_url: r.estudiante.avatar_url,
+      };
+    });
+  }
+
+  async getHorarioAlumno(alumnoId: number) {
+    const matriculaActiva = await this.prisma.matricula.findFirst({
+      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      include: { seccion: true },
+    });
+
+    if (!matriculaActiva) {
+      throw new NotFoundException('No se encontró matrícula activa');
+    }
+
+    const horarios = await this.prisma.horario.findMany({
+      where: { id_seccion: matriculaActiva.id_seccion },
+      orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+      include: { curso: true, docente: { include: { persona: true } } },
+    });
+
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    const resultado: any = {};
+
+    for (const h of horarios) {
+      const diaNombre = dias[h.dia_semana - 1];
+      if (!resultado[diaNombre]) resultado[diaNombre] = [];
+
+      resultado[diaNombre].push({
+        hora_inicio: h.hora_inicio,
+        hora_fin: h.hora_fin,
+        curso: h.curso.nombre_curso,
+        docente: `${h.docente.persona.nombres} ${h.docente.persona.apellido_paterno}`,
+      });
+    }
+
+    return resultado;
+  }
+
+  async getTotalMatriculados(params: ScopeParams & { anioId: number }) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.matricula.count({
+      where: {
+        id_anio: params.anioId,
+        estado_matricula: 'Activo',
+        ...this.colegioWhere(scope),
+      },
+    });
+  }
+
+  async getTotalDocentes() {
+    return this.prisma.docente.count();
+  }
+
+  async getAnios(params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.anioLectivo.findMany({
+      where: {
+        ...this.colegioWhere(scope),
+      },
+      orderBy: { fecha_inicio: 'desc' },
+    });
   }
 
   async getUltimasMatriculas(params: ScopeParams) {
@@ -763,5 +1120,271 @@ export class AcademicosService {
       orderBy: { fecha_matricula: 'desc' },
       take: 5,
     });
+  }
+
+  async getDetalleMatricula(params: ScopeParams & { idMatricula: number }) {
+    const scope = await this.resolveScope(params);
+
+    const matricula = await this.prisma.matricula.findFirst({
+      where: {
+        id_matricula: params.idMatricula,
+        ...this.colegioWhere(scope),
+      },
+      include: {
+        tenant: true,
+        colegio: true,
+        anio: true,
+        registrado_por: {
+          include: {
+            persona: true,
+            rol: true,
+          },
+        },
+        estudiante: {
+          include: {
+            persona: true,
+            apoderados: {
+              include: {
+                apoderado: {
+                  include: {
+                    persona: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        seccion: {
+          include: {
+            aula: true,
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
+        cronogramas: {
+          include: {
+            concepto: true,
+            pagos: {
+              include: {
+                apoderado: {
+                  include: {
+                    persona: true,
+                  },
+                },
+                cajero: {
+                  include: {
+                    persona: true,
+                    rol: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            fecha_vencimiento: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!matricula) {
+      throw new NotFoundException('No se encontró la matrícula solicitada.');
+    }
+
+    const cronogramaMatricula =
+      matricula.cronogramas.find((item) =>
+        item.concepto.nombre_concepto.toLowerCase().includes('matr'),
+      ) || null;
+
+    const cronogramasPensiones = matricula.cronogramas.filter(
+      (item) => item.concepto.es_pension,
+    );
+
+    const cronogramasExtraordinarios = matricula.cronogramas.filter(
+      (item) => item.concepto.es_extraordinario,
+    );
+
+    const cronogramasIniciales = matricula.cronogramas.filter(
+      (item) => !item.concepto.es_pension && !item.concepto.es_extraordinario,
+    );
+
+    const totalProgramado = matricula.cronogramas.reduce(
+      (acc, item) => acc + Number(item.concepto.monto_base),
+      0,
+    );
+
+    const totalPagado = matricula.cronogramas.reduce((acc, item) => {
+      const pagadoConcepto = item.pagos.reduce(
+        (sum, pago) => sum + Number(pago.monto_pagado),
+        0,
+      );
+
+      return acc + pagadoConcepto;
+    }, 0);
+
+    return {
+      ...matricula,
+      resumen_financiero: {
+        total_programado: totalProgramado,
+        total_pagado: totalPagado,
+        saldo: totalProgramado - totalPagado,
+        concepto_matricula: cronogramaMatricula,
+        estado_pago_matricula:
+          cronogramaMatricula?.estado_pago || 'No generado',
+      },
+      clasificacion_cronogramas: {
+        iniciales: cronogramasIniciales,
+        pensiones: cronogramasPensiones,
+        extraordinarios: cronogramasExtraordinarios,
+      },
+    };
+  }
+
+  async getDirectorioStaff(usuarioId: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: usuarioId },
+      include: { persona: { include: { apoderados: true } } },
+    });
+
+    const apoderadoId = usuario?.persona?.apoderados?.[0]?.id_persona;
+    if (!apoderadoId) throw new NotFoundException('Apoderado no encontrado');
+
+    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
+      where: { id_apoderado: apoderadoId },
+      select: { id_estudiante: true },
+    });
+
+    const estudianteIds = relaciones.map((r) => r.id_estudiante);
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_estudiante: { in: estudianteIds },
+        estado_matricula: 'Activo',
+      },
+      select: { id_seccion: true },
+    });
+
+    const seccionIds = [...new Set(matriculas.map((m) => m.id_seccion))];
+
+    const staffPorSeccion = await this.prisma.staff.findMany({
+      where: {
+        OR: [
+          { id_seccion: { in: seccionIds } },
+          { area: 'administrativa' },
+          { area: 'salud' },
+          { area: 'servicios' },
+          { area: 'academica', id_seccion: null },
+        ],
+      },
+      include: {
+        persona: true,
+        seccion: { include: { grado: { include: { nivel: true } } } },
+      },
+    });
+
+    const resultado: any[] = [];
+
+    for (const staff of staffPorSeccion) {
+      const item: any = {
+        id_staff: staff.id_staff,
+        id_persona: staff.id_persona,
+        nombre: `${staff.persona.nombres} ${staff.persona.apellido_paterno}`,
+        cargo: staff.cargo,
+        area: staff.area,
+        telefono: staff.persona.telefono,
+        permite_citas: staff.permite_citas,
+        avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
+          staff.persona.nombres,
+        )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
+      };
+
+      if (
+        staff.cargo === 'Docente' ||
+        staff.cargo === 'Tutor' ||
+        staff.cargo === 'Profesor de Taller' ||
+        staff.cargo === 'Auxiliar de Educación'
+      ) {
+        const docente = await this.prisma.docente.findUnique({
+          where: { id_persona: staff.id_persona },
+          include: {
+            asignaciones: {
+              where: { id_seccion: { in: seccionIds } },
+              include: { curso: true },
+            },
+            horarios: {
+              include: { curso: true },
+              orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+            },
+          },
+        });
+
+        if (docente) {
+          item.cursos = [
+            ...new Set(
+              docente.asignaciones.map((a) => a.curso.nombre_curso),
+            ),
+          ];
+
+          const diasSemana = [
+            'Lunes',
+            'Martes',
+            'Miércoles',
+            'Jueves',
+            'Viernes',
+          ];
+
+          const horarioPorDia: Record<
+            string,
+            { hora_inicio: string; hora_fin: string; curso: string }[]
+          > = {};
+
+          for (const h of docente.horarios) {
+            const dia = diasSemana[h.dia_semana - 1];
+            if (!horarioPorDia[dia]) horarioPorDia[dia] = [];
+
+            horarioPorDia[dia].push({
+              hora_inicio: h.hora_inicio,
+              hora_fin: h.hora_fin,
+              curso: h.curso.nombre_curso,
+            });
+          }
+
+          item.horario = horarioPorDia;
+        }
+      }
+
+      resultado.push(item);
+    }
+
+    return resultado;
+  }
+
+  async getSeccionAlumno(alumnoId: number) {
+    const matricula = await this.prisma.matricula.findFirst({
+      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      select: {
+        id_seccion: true,
+        seccion: {
+          select: {
+            letra: true,
+            grado: {
+              select: {
+                nombre_grado: true,
+                nivel: { select: { nombre_nivel: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!matricula) {
+      throw new NotFoundException('No se encontró matrícula activa');
+    }
+
+    return matricula;
   }
 }

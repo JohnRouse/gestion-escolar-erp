@@ -44,7 +44,7 @@ const menuAcademico: NavItem[] = [
     title: 'Matrícula',
     icon: UserPlus,
     path: '/matricula',
-    roles: ['Admin', 'Secretaria'],
+    roles: ['Admin', 'Secretaria', 'Director']
   },
   {
     title: 'Notas',
