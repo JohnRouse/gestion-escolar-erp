@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import {
   createContext,
-  ReactNode,
   useCallback,
   useContext,
   useMemo,
   useState,
 } from 'react';
+import { type ReactNode } from 'react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -25,6 +25,7 @@ type ToastInput = {
 type ToastItem = ToastInput & {
   id: number;
   type: ToastType;
+  exiting?: boolean;
 };
 
 type ToastContextValue = {
@@ -51,19 +52,48 @@ const iconClass: Record<ToastType, string> = {
 function ToastIcon({ type }: { type: ToastType }) {
   const className = `flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ring-1 ${iconClass[type]}`;
 
-  if (type === 'success') return <span className={className}><CheckCircle2 size={18} /></span>;
-  if (type === 'error') return <span className={className}><AlertCircle size={18} /></span>;
-  if (type === 'warning') return <span className={className}><AlertCircle size={18} /></span>;
+  if (type === 'success') {
+    return (
+      <span className={className}>
+        <CheckCircle2 size={18} />
+      </span>
+    );
+  }
 
-  return <span className={className}><Info size={18} /></span>;
+  if (type === 'error' || type === 'warning') {
+    return (
+      <span className={className}>
+        <AlertCircle size={18} />
+      </span>
+    );
+  }
+
+  return (
+    <span className={className}>
+      <Info size={18} />
+    </span>
+  );
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const dismissToast = useCallback((id: number) => {
+  const removeToast = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
+
+  const dismissToast = useCallback(
+    (id: number) => {
+      setToasts((current) =>
+        current.map((toast) =>
+          toast.id === id ? { ...toast, exiting: true } : toast,
+        ),
+      );
+
+      window.setTimeout(() => removeToast(id), 180);
+    },
+    [removeToast],
+  );
 
   const showToast = useCallback(
     (toast: ToastInput) => {
@@ -78,6 +108,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           id,
           type,
           duration,
+          exiting: false,
         },
       ]);
 
@@ -104,7 +135,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-start gap-3 rounded-[22px] border p-4 shadow-2xl backdrop-blur-xl transition ${toneClass[toast.type]}`}
+            className={`flex items-start gap-3 rounded-[22px] border p-4 shadow-2xl backdrop-blur-xl transition ${toast.exiting ? 'animate-toast-out' : 'animate-toast-in'} ${toneClass[toast.type]}`}
           >
             <ToastIcon type={toast.type} />
 

@@ -6,6 +6,7 @@ import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
 import { useToast } from '../contexts/ToastContext';
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
   CalendarDays,
@@ -477,6 +478,13 @@ export default function MatriculaPage() {
 
   const estudiante = alumno?.estudiantes?.[0] || null;
 
+  const estadosMatriculaBloqueantes = [
+    'Activo',
+    'Pre-matriculado',
+    'Reserva',
+    'Pendiente',
+  ];
+
   const colegioDestinoQuery = useMemo(() => {
     if (activeScope.tipo === 'colegio') return queryString;
     if (colegioDestinoId) return `?colegio_id=${colegioDestinoId}`;
@@ -818,12 +826,10 @@ export default function MatriculaPage() {
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
 
-    const estadosBloqueantes = ['Activo', 'Pre-matriculado'];
-
     if (activeScope.tipo === 'colegio') {
       return estudiante.matriculas.find(
         (m) =>
-          estadosBloqueantes.includes(m.estado_matricula) &&
+          estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
           m.id_colegio === activeScope.id_colegio,
       );
     }
@@ -831,13 +837,13 @@ export default function MatriculaPage() {
     if (colegioDestinoId) {
       return estudiante.matriculas.find(
         (m) =>
-          estadosBloqueantes.includes(m.estado_matricula) &&
+          estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
           m.id_colegio === colegioDestinoId,
       );
     }
 
     return estudiante.matriculas.find((m) =>
-      estadosBloqueantes.includes(m.estado_matricula),
+      estadosMatriculaBloqueantes.includes(m.estado_matricula),
     );
   }, [activeScope, colegioDestinoId, estudiante?.matriculas]);
 
@@ -889,6 +895,13 @@ export default function MatriculaPage() {
       };
     }
 
+    if (matriculaActiva) {
+      return {
+        tipo: 'warning' as const,
+        texto: formatMatriculaActiva(matriculaActiva),
+      };
+    }
+
     if (!apoderados.length) {
       return {
         tipo: 'warning' as const,
@@ -936,6 +949,7 @@ export default function MatriculaPage() {
   }, [
     colegioDestinoRequerido,
     alumno,
+    matriculaActiva,
     apoderados.length,
     anioId,
     seccionId,
@@ -1123,6 +1137,35 @@ export default function MatriculaPage() {
 
       setAlumno(res.data);
       setApoderados(apoderadosDesdeAlumno(res.data));
+      setSeccionId('');
+      setNivelFiltro('');
+      setGradoFiltro('');
+      setMensaje(null);
+
+      const estudianteEncontrado = res.data?.estudiantes?.[0];
+
+      const matriculaBloqueante = estudianteEncontrado?.matriculas?.find((m: any) => {
+        if (!estadosMatriculaBloqueantes.includes(m.estado_matricula)) return false;
+
+        if (activeScope.tipo === 'colegio') {
+          return m.id_colegio === activeScope.id_colegio;
+        }
+
+        if (colegioDestinoId) {
+          return m.id_colegio === colegioDestinoId;
+        }
+
+        return true;
+      });
+
+      if (matriculaBloqueante) {
+        showToast({
+          type: 'warning',
+          title: 'Matrícula existente',
+          message: formatMatriculaActiva(matriculaBloqueante),
+          duration: 6500,
+        });
+      }
     } catch (err: any) {
       setAlumno(null);
       setMensaje(err.response?.data?.message || 'No se encontró el alumno.');
@@ -1457,7 +1500,7 @@ export default function MatriculaPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 animate-page-soft">
       <PageHeader
         eyebrow="Gestión académica"
         title="Gestión de Matrícula"
@@ -1652,11 +1695,11 @@ export default function MatriculaPage() {
                   </div>
 
                   {matriculaActiva ? (
-                    <Badge tone="emerald">
+                    <Badge tone="amber">
                       {matriculaActiva.estado_matricula}
                     </Badge>
                   ) : (
-                    <Badge tone="amber">Sin matrícula en este contexto</Badge>
+                    <Badge tone="emerald">Disponible para registro</Badge>
                   )}
                 </div>
 
@@ -1713,7 +1756,42 @@ export default function MatriculaPage() {
             )}
           </div>
 
-          {alumno && (
+          {alumno && matriculaActiva && (
+            <Card
+              icon={AlertCircle}
+              title="Matrícula existente"
+              subtitle="Este alumno ya tiene un registro vigente en el contexto seleccionado."
+            >
+              <div className="rounded-3xl bg-amber-50 p-5 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
+                {formatMatriculaActiva(matriculaActiva)}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/matricula/historial')}
+                  className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800"
+                >
+                  Ver historial de matrículas
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDni('');
+                    setAlumno(null);
+                    setApoderados([]);
+                    setMensaje(null);
+                  }}
+                  className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Buscar otro alumno
+                </button>
+              </div>
+            </Card>
+          )}
+
+          {alumno && !matriculaActiva && (
             <>
               {activeScope.tipo === 'todos' && puedeVerConsolidado && (
                 <Card
@@ -2180,8 +2258,8 @@ export default function MatriculaPage() {
       </div>
 
       {confirmOpen && alumno && seccionSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm animate-modal-overlay-in">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200 animate-modal-panel-in">
             <ModalHead
               title="Revisar pre-matrícula"
               subtitle="Verifica los datos antes de guardar."
@@ -2313,8 +2391,8 @@ export default function MatriculaPage() {
       )}
 
       {detalleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm animate-modal-overlay-in">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200 animate-modal-panel-in">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-bold text-accent-600 ring-1 ring-accent-100">
@@ -2619,7 +2697,7 @@ function Card({
   action?: any;
 }) {
   return (
-    <div className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
+    <div className="animate-content-soft rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
@@ -2780,8 +2858,8 @@ function PersonaModal({
     setForm({ ...form, [key]: value });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm animate-modal-overlay-in">
+      <div className="w-full max-w-3xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200 animate-modal-panel-in">
         <ModalHead
           title={title}
           subtitle="Registra datos básicos y ubicación."
