@@ -326,6 +326,131 @@ export class AcademicosService {
     return valor;
   }
 
+  // ── HELPERS PARA PAGO DE MATRÍCULA Y ACTIVACIÓN ───────
+
+  private esConceptoMatricula(nombre?: string | null) {
+    return String(nombre || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .includes('matric');
+  }
+
+  private getMesDesdeConcepto(nombre?: string | null) {
+    const text = String(nombre || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const meses: Record<string, number> = {
+      enero: 0,
+      febrero: 1,
+      marzo: 2,
+      abril: 3,
+      mayo: 4,
+      junio: 5,
+      julio: 6,
+      agosto: 7,
+      septiembre: 8,
+      setiembre: 8,
+      octubre: 9,
+      noviembre: 10,
+      diciembre: 11,
+    };
+
+    for (const [mes, index] of Object.entries(meses)) {
+      if (text.includes(mes)) return index;
+    }
+
+    return null;
+  }
+
+  private getAnioDesdeAnioLectivo(anio: { fecha_inicio?: Date | string | null; nombre_anio?: string | null }) {
+    if (anio.fecha_inicio) {
+      const fecha = new Date(anio.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    const match = String(anio.nombre_anio || '').match(/\d{4}/);
+    return match ? Number(match[0]) : new Date().getFullYear();
+  }
+
+  private calcularFechaVencimientoConcepto(
+    concepto: { nombre_concepto: string },
+    anio: { fecha_inicio?: Date | string | null; nombre_anio?: string | null },
+    index: number,
+  ) {
+    const year = this.getAnioDesdeAnioLectivo(anio);
+    const mesDetectado = this.getMesDesdeConcepto(concepto.nombre_concepto);
+
+    if (mesDetectado !== null) {
+      return new Date(year, mesDetectado, 5);
+    }
+
+    const fechaInicio = anio.fecha_inicio ? new Date(anio.fecha_inicio) : new Date(year, 2, 1);
+    const fecha = new Date(fechaInicio);
+    fecha.setMonth(fecha.getMonth() + index);
+    fecha.setDate(5);
+    return fecha;
+  }
+
+  private async generarPensionesMatricula(
+    tx: Prisma.TransactionClient,
+    matricula: {
+      id_matricula: number;
+      id_anio: number;
+      id_colegio: number | null;
+      anio: { fecha_inicio?: Date | string | null; nombre_anio?: string | null };
+    },
+  ) {
+    const conceptosPension = await tx.conceptoPago.findMany({
+      where: {
+        id_anio: matricula.id_anio,
+        OR: [
+          { id_colegio: matricula.id_colegio || undefined },
+          { id_colegio: null },
+        ],
+        es_pension: true,
+        es_extraordinario: false,
+      },
+      orderBy: [{ id_concepto: 'asc' }],
+    });
+
+    let creados = 0;
+
+    for (let i = 0; i < conceptosPension.length; i++) {
+      const concepto = conceptosPension[i];
+
+      const existente = await tx.cronogramaPagos.findUnique({
+        where: {
+          id_matricula_id_concepto: {
+            id_matricula: matricula.id_matricula,
+            id_concepto: concepto.id_concepto,
+          },
+        },
+      });
+
+      if (existente) continue;
+
+      await tx.cronogramaPagos.create({
+        data: {
+          id_matricula: matricula.id_matricula,
+          id_concepto: concepto.id_concepto,
+          fecha_vencimiento: this.calcularFechaVencimientoConcepto(
+            concepto,
+            matricula.anio,
+            i,
+          ),
+          estado_pago: 'Pendiente',
+        },
+      });
+
+      creados++;
+    }
+
+    return creados;
+  }
+
   // ── FIN HELPERS ──────────────────────────────────────
 
   private handlePersonaPrismaError(error: unknown): never {
@@ -2148,7 +2273,259 @@ export class AcademicosService {
     };
   }
 
-  // ── FIN REVISIÓN ────────────────────────────────────
+  // ── PAGO DE MATRÍCULA Y ACTIVACIÓN ──────────────────
+
+  async registrarPagoMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+      idApoderado: number;
+      montoPagado: number;
+      metodoPago?: string;
+      nroOperacion?: string;
+      activarAutomaticamente?: boolean;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    if (!params.idApoderado) {
+      throw new BadRequestException('Selecciona el apoderado que realiza el pago.');
+    }
+
+    const monto = Number(params.montoPagado);
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      throw new BadRequestException('El monto pagado debe ser mayor a cero.');
+    }
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const matricula = await tx.matricula.findFirst({
+        where: {
+          id_matricula: params.idMatricula,
+          ...this.colegioWhere(scope),
+        },
+        include: {
+          anio: true,
+          estudiante: {
+            include: {
+              apoderados: true,
+            },
+          },
+          cronogramas: {
+            include: {
+              concepto: true,
+              pagos: true,
+            },
+          },
+        },
+      });
+
+      if (!matricula) {
+        throw new NotFoundException('No se encontró la matrícula solicitada.');
+      }
+
+      if (matricula.estado_revision !== 'Aprobado') {
+        throw new BadRequestException(
+          'Solo se puede registrar el pago de matrícula cuando la revisión está aprobada.',
+        );
+      }
+
+      if (matricula.estado_matricula === 'Activo') {
+        throw new BadRequestException('La matrícula ya está activa.');
+      }
+
+      const apoderadoVinculado = matricula.estudiante.apoderados.some(
+        (rel) => rel.id_apoderado === params.idApoderado,
+      );
+
+      if (!apoderadoVinculado) {
+        throw new BadRequestException(
+          'El apoderado seleccionado no está vinculado al alumno.',
+        );
+      }
+
+      const cronogramaMatricula = matricula.cronogramas.find((item) =>
+        this.esConceptoMatricula(item.concepto.nombre_concepto),
+      );
+
+      if (!cronogramaMatricula) {
+        throw new BadRequestException(
+          'No existe un cronograma de matrícula para esta pre-matrícula.',
+        );
+      }
+
+      if (cronogramaMatricula.estado_pago === 'Pagado') {
+        throw new BadRequestException('El pago de matrícula ya fue registrado.');
+      }
+
+      const montoBase = Number(cronogramaMatricula.concepto.monto_base);
+      const pagadoActual = cronogramaMatricula.pagos.reduce(
+        (acc, pago) => acc + Number(pago.monto_pagado),
+        0,
+      );
+      const saldo = montoBase - pagadoActual;
+
+      if (monto > saldo) {
+        throw new BadRequestException(
+          `El monto ingresado excede el saldo pendiente de matrícula. Saldo: S/ ${saldo.toFixed(2)}.`,
+        );
+      }
+
+      await tx.pagoTransaccion.create({
+        data: {
+          id_cronograma: cronogramaMatricula.id_cronograma,
+          id_apoderado: params.idApoderado,
+          id_usuario_cajero: params.userId,
+          monto_pagado: monto,
+          metodo_pago: this.normalizeEmpty(params.metodoPago),
+          nro_operacion: this.normalizeEmpty(params.nroOperacion),
+        },
+      });
+
+      const nuevoTotalPagado = pagadoActual + monto;
+      const pagoCompleto = nuevoTotalPagado >= montoBase;
+
+      await tx.cronogramaPagos.update({
+        where: { id_cronograma: cronogramaMatricula.id_cronograma },
+        data: {
+          estado_pago: pagoCompleto ? 'Pagado' : 'Parcial',
+        },
+      });
+
+      let activada = false;
+      let pensionesCreadas = 0;
+
+      if (pagoCompleto && params.activarAutomaticamente !== false) {
+        await tx.matricula.update({
+          where: { id_matricula: matricula.id_matricula },
+          data: {
+            estado_matricula: 'Activo',
+          },
+        });
+
+        pensionesCreadas = await this.generarPensionesMatricula(tx, {
+          id_matricula: matricula.id_matricula,
+          id_anio: matricula.id_anio,
+          id_colegio: matricula.id_colegio,
+          anio: matricula.anio,
+        });
+
+        activada = true;
+      }
+
+      return {
+        pagoCompleto,
+        activada,
+        pensionesCreadas,
+      };
+    });
+
+    const detalle = await this.getDetalleMatricula({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId,
+      idMatricula: params.idMatricula,
+    });
+
+    return {
+      message: resultado.activada
+        ? 'Pago de matrícula registrado. La matrícula fue activada correctamente.'
+        : resultado.pagoCompleto
+          ? 'Pago de matrícula registrado. La matrícula está lista para activarse.'
+          : 'Pago parcial registrado correctamente.',
+      ...resultado,
+      matricula: detalle,
+    };
+  }
+
+  async activarMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const matricula = await tx.matricula.findFirst({
+        where: {
+          id_matricula: params.idMatricula,
+          ...this.colegioWhere(scope),
+        },
+        include: {
+          anio: true,
+          cronogramas: {
+            include: {
+              concepto: true,
+              pagos: true,
+            },
+          },
+        },
+      });
+
+      if (!matricula) {
+        throw new NotFoundException('No se encontró la matrícula solicitada.');
+      }
+
+      if (matricula.estado_revision !== 'Aprobado') {
+        throw new BadRequestException(
+          'La matrícula debe estar aprobada administrativamente antes de activarse.',
+        );
+      }
+
+      if (matricula.estado_matricula === 'Activo') {
+        return {
+          activada: false,
+          pensionesCreadas: 0,
+          message: 'La matrícula ya estaba activa.',
+        };
+      }
+
+      const cronogramaMatricula = matricula.cronogramas.find((item) =>
+        this.esConceptoMatricula(item.concepto.nombre_concepto),
+      );
+
+      if (!cronogramaMatricula || cronogramaMatricula.estado_pago !== 'Pagado') {
+        throw new BadRequestException(
+          'No se puede activar la matrícula hasta que el pago de matrícula figure como Pagado.',
+        );
+      }
+
+      await tx.matricula.update({
+        where: { id_matricula: matricula.id_matricula },
+        data: {
+          estado_matricula: 'Activo',
+        },
+      });
+
+      const pensionesCreadas = await this.generarPensionesMatricula(tx, {
+        id_matricula: matricula.id_matricula,
+        id_anio: matricula.id_anio,
+        id_colegio: matricula.id_colegio,
+        anio: matricula.anio,
+      });
+
+      return {
+        activada: true,
+        pensionesCreadas,
+        message: 'Matrícula activada correctamente.',
+      };
+    });
+
+    const detalle = await this.getDetalleMatricula({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId,
+      idMatricula: params.idMatricula,
+    });
+
+    return {
+      ...resultado,
+      matricula: detalle,
+    };
+  }
+
+  // ── FIN PAGO Y ACTIVACIÓN ───────────────────────────
 
   async getDirectorioStaff(usuarioId: number) {
     const usuario = await this.prisma.usuario.findUnique({

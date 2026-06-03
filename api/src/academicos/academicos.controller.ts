@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Query,
@@ -611,6 +612,55 @@ export class AcademicosController {
       colegioId: colegioId ? Number(colegioId) : undefined,
       estadoRevision: body.estado_revision,
       observacionRevision: body.observacion_revision,
+    });
+  }
+
+  @Post('matriculas/:id/pago-matricula')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  registrarPagoMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      id_apoderado: number;
+      monto_pagado: number;
+      metodo_pago?: string;
+      nro_operacion?: string;
+      activar_automaticamente?: boolean;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.registrarPagoMatricula({
+      idMatricula: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idApoderado: Number(body.id_apoderado),
+      montoPagado: Number(body.monto_pagado),
+      metodoPago: body.metodo_pago,
+      nroOperacion: body.nro_operacion,
+      activarAutomaticamente: body.activar_automaticamente,
+    });
+  }
+
+  @Post('matriculas/:id/activar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  activarMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.activarMatricula({
+      idMatricula: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
     });
   }
   

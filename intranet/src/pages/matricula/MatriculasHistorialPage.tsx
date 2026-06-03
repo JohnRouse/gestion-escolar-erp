@@ -159,6 +159,14 @@ export default function MatriculasHistorialPage() {
   const [savingRevision, setSavingRevision] = useState(false);
   const [mensajeRevision, setMensajeRevision] = useState<string | null>(null);
 
+  // ─── NUEVOS ESTADOS DE PAGO Y ACTIVACIÓN ──────────────
+  const [pagoApoderadoId, setPagoApoderadoId] = useState('');
+  const [pagoMonto, setPagoMonto] = useState('');
+  const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
+  const [pagoOperacion, setPagoOperacion] = useState('');
+  const [savingPago, setSavingPago] = useState(false);
+  const [mensajePago, setMensajePago] = useState<string | null>(null);
+
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
 
@@ -216,6 +224,34 @@ export default function MatriculasHistorialPage() {
     return codigoColegio?.codigo || matricula.estudiante.codigo_estudiante || 'Sin código';
   };
 
+  // ─── HELPERS DE PAGO ──────────────────────────────────
+  const getCronogramaMatricula = (detalle: any) => {
+    return (
+      detalle?.cronogramas?.find((item: any) =>
+        String(item.concepto?.nombre_concepto || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .includes('matric'),
+      ) || null
+    );
+  };
+
+  const getSaldoMatricula = (detalle: any) => {
+    const cronograma = getCronogramaMatricula(detalle);
+
+    if (!cronograma) return 0;
+
+    const montoBase = Number(cronograma.concepto?.monto_base || 0);
+    const pagado = (cronograma.pagos || []).reduce(
+      (acc: number, pago: any) => acc + Number(pago.monto_pagado || 0),
+      0,
+    );
+
+    return Math.max(montoBase - pagado, 0);
+  };
+
+  // ─── FUNCIONES DE DETALLE Y REVISIÓN ──────────────────
   const abrirDetalleMatricula = async (idMatricula: number) => {
     if (!token) return;
 
@@ -234,6 +270,16 @@ export default function MatriculasHistorialPage() {
       setRevisionEstado(res.data?.estado_revision || 'Aprobado');
       setRevisionObservacion(res.data?.observacion_revision || '');
       setMensajeRevision(null);
+
+      // Inicializar campos de pago
+      const apoderadoDefault = res.data?.estudiante?.apoderados?.[0]?.id_apoderado;
+      const saldoMatricula = getSaldoMatricula(res.data);
+
+      setPagoApoderadoId(apoderadoDefault ? String(apoderadoDefault) : '');
+      setPagoMonto(saldoMatricula ? String(saldoMatricula.toFixed(2)) : '');
+      setPagoMetodo('Efectivo');
+      setPagoOperacion('');
+      setMensajePago(null);
     } catch {
       setDetalleOpen(false);
     } finally {
@@ -264,6 +310,59 @@ export default function MatriculasHistorialPage() {
       setMensajeRevision(error.response?.data?.message || 'No se pudo actualizar la revisión.');
     } finally {
       setSavingRevision(false);
+    }
+  };
+
+  // ─── FUNCIONES DE PAGO Y ACTIVACIÓN ───────────────────
+  const registrarPagoMatricula = async () => {
+    if (!token || !detalleMatricula?.id_matricula) return;
+
+    setSavingPago(true);
+    setMensajePago(null);
+
+    try {
+      const res = await axios.post(
+        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/pago-matricula${queryString}`,
+        {
+          id_apoderado: Number(pagoApoderadoId),
+          monto_pagado: Number(pagoMonto),
+          metodo_pago: pagoMetodo,
+          nro_operacion: pagoOperacion,
+          activar_automaticamente: true,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setDetalleMatricula(res.data?.matricula || detalleMatricula);
+      setMensajePago(res.data?.message || 'Pago registrado correctamente.');
+      await fetchMatriculas();
+    } catch (error: any) {
+      setMensajePago(error.response?.data?.message || 'No se pudo registrar el pago.');
+    } finally {
+      setSavingPago(false);
+    }
+  };
+
+  const activarMatricula = async () => {
+    if (!token || !detalleMatricula?.id_matricula) return;
+
+    setSavingPago(true);
+    setMensajePago(null);
+
+    try {
+      const res = await axios.post(
+        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/activar${queryString}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setDetalleMatricula(res.data?.matricula || detalleMatricula);
+      setMensajePago(res.data?.message || 'Matrícula activada correctamente.');
+      await fetchMatriculas();
+    } catch (error: any) {
+      setMensajePago(error.response?.data?.message || 'No se pudo activar la matrícula.');
+    } finally {
+      setSavingPago(false);
     }
   };
 
@@ -712,6 +811,7 @@ export default function MatriculasHistorialPage() {
                     )}
                   </div>
 
+                  {/* Resumen financiero */}
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
                     <h4 className="text-sm font-black text-slate-900">
                       Resumen financiero
@@ -751,6 +851,132 @@ export default function MatriculasHistorialPage() {
                     </div>
                   </div>
 
+                  {/* Pago de matrícula y activación */}
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">
+                      Pago de matrícula y activación
+                    </h4>
+
+                    {(() => {
+                      const cronogramaMatricula = getCronogramaMatricula(detalleMatricula);
+                      const saldoMatricula = getSaldoMatricula(detalleMatricula);
+                      const revisionAprobada = detalleMatricula.estado_revision === 'Aprobado';
+                      const pagoPagado = cronogramaMatricula?.estado_pago === 'Pagado';
+                      const matriculaActiva = detalleMatricula.estado_matricula === 'Activo';
+
+                      if (matriculaActiva) {
+                        return (
+                          <p className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
+                            La matrícula ya está activa. Las pensiones del año deben estar generadas en el cronograma.
+                          </p>
+                        );
+                      }
+
+                      if (!revisionAprobada) {
+                        return (
+                          <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
+                            Primero debes aprobar la revisión administrativa para poder registrar el pago y activar la matrícula.
+                          </p>
+                        );
+                      }
+
+                      if (pagoPagado) {
+                        return (
+                          <div className="mt-4 space-y-3">
+                            <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
+                              El pago de matrícula figura como pagado. Puedes activar la matrícula.
+                            </p>
+
+                            <button
+                              type="button"
+                              onClick={activarMatricula}
+                              disabled={savingPago}
+                              className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              {savingPago ? 'Activando...' : 'Activar matrícula'}
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="mt-4 space-y-3">
+                          <div className="grid gap-3 md:grid-cols-4">
+                            <label>
+                              <Label>Apoderado pagador</Label>
+                              <select
+                                value={pagoApoderadoId}
+                                onChange={(e) => setPagoApoderadoId(e.target.value)}
+                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                              >
+                                <option value="">Seleccionar</option>
+                                {detalleMatricula.estudiante?.apoderados?.map((relacion: any) => (
+                                  <option key={relacion.id_apoderado} value={relacion.id_apoderado}>
+                                    {relacion.parentesco}: {relacion.apoderado.persona.nombres} {relacion.apoderado.persona.apellido_paterno}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label>
+                              <Label>Monto</Label>
+                              <input
+                                value={pagoMonto}
+                                onChange={(e) => setPagoMonto(e.target.value)}
+                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                              />
+                            </label>
+
+                            <label>
+                              <Label>Método</Label>
+                              <select
+                                value={pagoMetodo}
+                                onChange={(e) => setPagoMetodo(e.target.value)}
+                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                              >
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Yape">Yape</option>
+                                <option value="Plin">Plin</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                              </select>
+                            </label>
+
+                            <label>
+                              <Label>N° operación</Label>
+                              <input
+                                value={pagoOperacion}
+                                onChange={(e) => setPagoOperacion(e.target.value)}
+                                placeholder="Opcional"
+                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                              />
+                            </label>
+                          </div>
+
+                          <p className="text-xs font-bold text-slate-400">
+                            Saldo de matrícula: {formatMoney(saldoMatricula)}
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={registrarPagoMatricula}
+                            disabled={savingPago}
+                            className="h-12 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50"
+                          >
+                            {savingPago ? 'Registrando...' : 'Registrar pago y activar'}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {mensajePago && (
+                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                        {mensajePago}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cronograma de pagos */}
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
                     <button
                       type="button"
