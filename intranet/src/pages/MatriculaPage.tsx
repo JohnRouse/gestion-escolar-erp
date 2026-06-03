@@ -140,8 +140,15 @@ type ReglaEdad = {
   label: string;
 };
 
+type CodigoColegio = {
+  id_estudiante: number;
+  id_colegio: number;
+  codigo: string;
+};
+
 interface UltimaMatricula {
   id_matricula: number;
+  id_colegio?: number | null;
   fecha_matricula: string;
   estado_matricula?: string;
   colegio?: { nombre: string; codigo?: string | null };
@@ -156,6 +163,8 @@ interface UltimaMatricula {
     };
   } | null;
   estudiante: {
+    codigo_estudiante?: string;
+    codigos_colegio?: CodigoColegio[];
     persona: {
       dni?: string;
       nombres: string;
@@ -288,6 +297,30 @@ const formatFechaHora = (value: string) =>
 const formatMoney = (value: number | string | null | undefined) =>
   `S/ ${Number(value || 0).toFixed(2)}`;
 
+const getCodigoInstitucional = (matricula: {
+  id_colegio?: number | null;
+  estudiante?: {
+    codigo_estudiante?: string | null;
+    codigos_colegio?: CodigoColegio[];
+  };
+}) => {
+  const codigoColegio = matricula.estudiante?.codigos_colegio?.find(
+    (item) => item.id_colegio === matricula.id_colegio,
+  );
+
+  return codigoColegio?.codigo || matricula.estudiante?.codigo_estudiante || 'Sin código';
+};
+
+const getCodigoDetalleMatricula = (detalle: any) => {
+  if (!detalle) return 'Sin código';
+
+  const codigoColegio = detalle.estudiante?.codigos_colegio?.find(
+    (item: CodigoColegio) => item.id_colegio === detalle.id_colegio,
+  );
+
+  return codigoColegio?.codigo || detalle.estudiante?.codigo_estudiante || 'Sin código';
+};
+
 const validarFechaNacimientoFrontend = (fecha?: string) => {
   if (!fecha) return 'Ingresa la fecha de nacimiento.';
 
@@ -416,6 +449,47 @@ export default function MatriculaPage() {
     return edad;
   };
 
+  const niveles = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          secciones.map((s) => s.grado?.nivel?.nombre_nivel).filter(Boolean),
+        ),
+      ) as string[],
+    [secciones],
+  );
+
+  const grados = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          secciones
+            .filter(
+              (s) =>
+                !nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro,
+            )
+            .map((s) => s.grado?.nombre_grado)
+            .filter(Boolean),
+        ),
+      ) as string[],
+    [nivelFiltro, secciones],
+  );
+
+  const seccionesFiltradas = useMemo(
+    () =>
+      secciones.filter(
+        (s) =>
+          (!nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro) &&
+          (!gradoFiltro || s.grado?.nombre_grado === gradoFiltro),
+      ),
+    [gradoFiltro, nivelFiltro, secciones],
+  );
+
+  const seccionSeleccionada = useMemo(
+    () => secciones.find((s) => s.id_seccion === seccionId) || null,
+    [seccionId, secciones],
+  );
+
   const reglaEdadSeleccionada = (): ReglaEdad | null => {
     if (!seccionSeleccionada) return null;
 
@@ -462,10 +536,7 @@ export default function MatriculaPage() {
 
     return null;
   };
-  const seccionSeleccionada = useMemo(
-    () => secciones.find((s) => s.id_seccion === seccionId) || null,
-    [seccionId, secciones],
-  );
+
   const errorEdadNormativa = useMemo(() => {
     if (!alumno || !seccionSeleccionada) return null;
 
@@ -504,44 +575,6 @@ export default function MatriculaPage() {
 
     return null;
   }, [formAlumno.fecha_nacimiento, anioId]);
-
-  const niveles = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          secciones.map((s) => s.grado?.nivel?.nombre_nivel).filter(Boolean),
-        ),
-      ) as string[],
-    [secciones],
-  );
-
-  const grados = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          secciones
-            .filter(
-              (s) =>
-                !nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro,
-            )
-            .map((s) => s.grado?.nombre_grado)
-            .filter(Boolean),
-        ),
-      ) as string[],
-    [nivelFiltro, secciones],
-  );
-
-  const seccionesFiltradas = useMemo(
-    () =>
-      secciones.filter(
-        (s) =>
-          (!nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro) &&
-          (!gradoFiltro || s.grado?.nombre_grado === gradoFiltro),
-      ),
-    [gradoFiltro, nivelFiltro, secciones],
-  );
-
-  
 
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
@@ -1136,7 +1169,7 @@ export default function MatriculaPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-black text-slate-800">
-                            #{matricula.id_matricula} ·{' '}
+                            {getCodigoInstitucional(matricula)} ·{' '}
                             {matricula.estudiante.persona.nombres}{' '}
                             {matricula.estudiante.persona.apellido_paterno}
                           </p>
@@ -1744,7 +1777,7 @@ export default function MatriculaPage() {
 
                 <h3 className="mt-3 text-xl font-black text-slate-950">
                   {detalleMatricula?.estudiante?.persona
-                    ? `${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
+                    ? `${getCodigoDetalleMatricula(detalleMatricula)} · ${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
                     : 'Cargando matrícula'}
                 </h3>
 
@@ -1779,7 +1812,11 @@ export default function MatriculaPage() {
                 </div>
               ) : detalleMatricula ? (
                 <div className="space-y-5">
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <DetailBox
+                      label="Código"
+                      value={getCodigoDetalleMatricula(detalleMatricula)}
+                    />
                     <DetailBox
                       label="Estado"
                       value={detalleMatricula.estado_matricula}
