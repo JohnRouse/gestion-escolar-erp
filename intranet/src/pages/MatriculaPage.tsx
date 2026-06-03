@@ -117,7 +117,11 @@ type Apoderado = {
 
 type Anio = {
   id_anio: number;
+  id_tenant?: number | null;
+  id_colegio?: number | null;
   nombre_anio: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
   estado: string;
 };
 
@@ -250,6 +254,72 @@ const buildQuery = (
 
   const query = params.toString();
   return query ? `?${query}` : '';
+};
+
+const normalizarFechaLocal = (value: string | Date) => {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  return new Date(`${String(value).slice(0, 10)}T00:00:00`);
+};
+
+const calcularEdadDetallada = (
+  fechaNacimiento?: string | null,
+  fechaCorte?: Date,
+) => {
+  if (!fechaNacimiento || !fechaCorte) return null;
+
+  const nacimiento = normalizarFechaLocal(fechaNacimiento);
+  const corte = normalizarFechaLocal(fechaCorte);
+
+  if (
+    Number.isNaN(nacimiento.getTime()) ||
+    Number.isNaN(corte.getTime()) ||
+    nacimiento > corte
+  ) {
+    return null;
+  }
+
+  let anios = corte.getFullYear() - nacimiento.getFullYear();
+  let meses = corte.getMonth() - nacimiento.getMonth();
+  let dias = corte.getDate() - nacimiento.getDate();
+
+  if (dias < 0) {
+    meses -= 1;
+
+    const ultimoDiaMesAnterior = new Date(
+      corte.getFullYear(),
+      corte.getMonth(),
+      0,
+    ).getDate();
+
+    dias += ultimoDiaMesAnterior;
+  }
+
+  if (meses < 0) {
+    anios -= 1;
+    meses += 12;
+  }
+
+  const partes = [];
+
+  partes.push(`${anios} ${anios === 1 ? 'año' : 'años'}`);
+
+  if (meses > 0) {
+    partes.push(`${meses} ${meses === 1 ? 'mes' : 'meses'}`);
+  }
+
+  return {
+    anios,
+    meses,
+    dias,
+    totalMeses: anios * 12 + meses,
+    texto:
+      partes.length === 1
+        ? partes[0]
+        : `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`,
+  };
 };
 
 const edadNumero = (fecha?: string | null) => {
@@ -481,7 +551,7 @@ export default function MatriculaPage() {
         bloquea: true,
         tipo: 'error',
         texto:
-          'El año lectivo seleccionado está cerrado o vencido. No puedes registrar nuevas matrículas en este periodo.',
+          'El año lectivo seleccionado está cerrado o vencido. Selecciona un año lectivo vigente o crea uno nuevo en Configuración > Años lectivos. Recuerda: la fecha de fin del año lectivo debe ser el fin del año escolar, no el cierre de matrícula.',
       };
     }
 
@@ -491,7 +561,7 @@ export default function MatriculaPage() {
           bloquea: true,
           tipo: 'warning',
           texto:
-            'El año lectivo está en planificación. Solo puedes registrar reservas para este periodo.',
+            'Este año lectivo todavía está en planificación. Para este periodo solo puedes registrar reservas. Cambia el tipo de ingreso a Reserva o cambia el estado del año a Matrícula abierta si ya iniciarán el proceso.',
         };
       }
 
@@ -499,7 +569,7 @@ export default function MatriculaPage() {
         bloquea: false,
         tipo: 'info',
         texto:
-          'Se registrará como reserva. No se generará cobro ni activación hasta abrir la matrícula.',
+          'Se registrará como reserva. No se generará cobro ni activación hasta que el año lectivo pase a Matrícula abierta o En curso.',
       };
     }
 
@@ -513,7 +583,7 @@ export default function MatriculaPage() {
           bloquea: true,
           tipo: 'warning',
           texto:
-            'La matrícula regular ya está cerrada para este año lectivo. En periodo en curso solo se permiten Traslado, Reingreso o Regularización autorizada.',
+            'La matrícula regular de este año ya está cerrada. En periodo en curso solo se permiten Traslado, Reingreso o Regularización autorizada. Si deseas reservar para el próximo año, crea/selecciona el año lectivo siguiente y usa tipo de ingreso Reserva.',
         };
       }
 
@@ -521,7 +591,7 @@ export default function MatriculaPage() {
         bloquea: false,
         tipo: 'info',
         texto:
-          'Periodo en curso: se permitirá continuar porque el tipo de ingreso corresponde a traslado, reingreso o regularización.',
+          'Periodo en curso: se permitirá continuar porque el tipo de ingreso corresponde a traslado, reingreso o regularización autorizada.',
       };
     }
 
@@ -530,7 +600,7 @@ export default function MatriculaPage() {
         bloquea: true,
         tipo: 'warning',
         texto:
-          'El tipo Reserva solo debe usarse para años en planificación o futuros. Para matrícula regular usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+          'El tipo Reserva debe usarse para años futuros o en planificación. Para el año en curso usa Traslado, Reingreso o Regularización autorizada.',
       };
     }
 
@@ -540,20 +610,10 @@ export default function MatriculaPage() {
   const edadAl31Marzo = (fecha?: string | null) => {
     if (!fecha) return null;
 
-    const nacimiento = new Date(fecha);
-    if (Number.isNaN(nacimiento.getTime())) return null;
-
     const anioCorte = getAnioCorteFrontend();
     const corte = new Date(`${anioCorte}-03-31T23:59:59`);
 
-    let edad = corte.getFullYear() - nacimiento.getFullYear();
-    const mes = corte.getMonth() - nacimiento.getMonth();
-
-    if (mes < 0 || (mes === 0 && corte.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-
-    return edad;
+    return calcularEdadDetallada(fecha, corte);
   };
 
   const niveles = useMemo(
@@ -651,33 +711,26 @@ export default function MatriculaPage() {
     const regla = reglaEdadSeleccionada();
     const anioCorte = getAnioCorteFrontend();
 
-    if (!regla || edadCorte === null) return null;
+    if (!regla || !edadCorte) return null;
 
-    if (edadCorte >= regla.edad) return null;
+    if (edadCorte.anios >= regla.edad) return null;
 
     if (regla.permiteExcepcionTraslado && excepcionTraslado) return null;
 
-    return `No cumple la edad para ${regla.label}. Debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadCorte} años.`;
+    return `El alumno no cumple la edad para ${regla.label}. Para este año lectivo debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadCorte.texto}.`;
   }, [alumno, seccionSeleccionada, anioId, excepcionTraslado]);
 
   const avisoEdadFichaAlumno = useMemo(() => {
     if (!formAlumno.fecha_nacimiento) return null;
 
-    const nacimiento = new Date(`${formAlumno.fecha_nacimiento}T00:00:00`);
-    if (Number.isNaN(nacimiento.getTime())) return null;
-
     const anioCorte = getAnioCorteFrontend();
     const corte = new Date(`${anioCorte}-03-31T23:59:59`);
+    const edad = calcularEdadDetallada(formAlumno.fecha_nacimiento, corte);
 
-    let edad = corte.getFullYear() - nacimiento.getFullYear();
-    const mes = corte.getMonth() - nacimiento.getMonth();
+    if (!edad) return null;
 
-    if (mes < 0 || (mes === 0 && corte.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-
-    if (edad < 3) {
-      return `Aviso: para el año lectivo ${anioCorte}, el alumno tendría ${edad} años al 31 de marzo. Puedes guardar la ficha como prospecto/reserva, pero no podrá matricularse en Inicial 3 años de ese año.`;
+    if (edad.anios < 3) {
+      return `Aviso: para el año lectivo ${anioCorte}, el alumno tendría ${edad.texto} al 31 de marzo. Puedes guardar su ficha como prospecto, pero no podrá matricularse en Inicial 3 años de ese periodo.`;
     }
 
     return null;
@@ -736,6 +789,80 @@ export default function MatriculaPage() {
 
     return null;
   }, [alumno, seccionSeleccionada]);
+
+  const colegioDestinoRequerido = useMemo(() => {
+    return activeScope.tipo === 'todos' && !colegioDestinoId;
+  }, [activeScope.tipo, colegioDestinoId]);
+
+  const mensajeValidacionMatricula = useMemo(() => {
+    if (colegioDestinoRequerido) {
+      return {
+        tipo: 'info' as const,
+        texto:
+          'Primero selecciona el colegio destino. Estás trabajando con el grupo o con más de un colegio, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
+      };
+    }
+
+    if (!alumno) {
+      return {
+        tipo: 'info' as const,
+        texto: 'Busca o registra primero al alumno que deseas matricular.',
+      };
+    }
+
+    if (!apoderados.length) {
+      return {
+        tipo: 'warning' as const,
+        texto:
+          'El alumno debe tener al menos un apoderado vinculado antes de registrar la matrícula.',
+      };
+    }
+
+    if (!anioId) {
+      return {
+        tipo: 'info' as const,
+        texto: 'Selecciona el año lectivo de la matrícula.',
+      };
+    }
+
+    if (!seccionId) {
+      return {
+        tipo: 'info' as const,
+        texto: 'Selecciona el grado y sección donde se registrará al alumno.',
+      };
+    }
+
+    if (avisoPeriodoMatricula?.bloquea) {
+      return {
+        tipo: avisoPeriodoMatricula.tipo as 'error' | 'warning' | 'info',
+        texto: avisoPeriodoMatricula.texto,
+      };
+    }
+
+    if (errorEdadNormativa) {
+      return {
+        tipo: 'error' as const,
+        texto: errorEdadNormativa,
+      };
+    }
+
+    if (avisoPeriodoMatricula) {
+      return {
+        tipo: avisoPeriodoMatricula.tipo as 'error' | 'warning' | 'info',
+        texto: avisoPeriodoMatricula.texto,
+      };
+    }
+
+    return null;
+  }, [
+    colegioDestinoRequerido,
+    alumno,
+    apoderados.length,
+    anioId,
+    seccionId,
+    avisoPeriodoMatricula,
+    errorEdadNormativa,
+  ]);
 
   useEffect(() => {
     if (activeScope.tipo === 'colegio' && activeScope.id_colegio) {
@@ -1108,12 +1235,25 @@ export default function MatriculaPage() {
       return setMensaje('Primero busca o registra un alumno.');
     }
 
-    if (!anioId || !seccionId) {
-      return setMensaje('Selecciona año lectivo y sección.');
+    if (colegioDestinoRequerido) {
+      setMensaje(
+        'Primero selecciona el colegio destino. Estás trabajando con el grupo o con más de un colegio, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
+      );
+      return;
     }
 
-    if (activeScope.tipo === 'todos' && !colegioDestinoId) {
-      return setMensaje('Selecciona un colegio destino.');
+    if (mensajeValidacionMatricula) {
+      if (
+        mensajeValidacionMatricula.tipo === 'error' ||
+        mensajeValidacionMatricula.tipo === 'warning'
+      ) {
+        setMensaje(mensajeValidacionMatricula.texto);
+        return;
+      }
+    }
+
+    if (!anioId || !seccionId) {
+      return setMensaje('Selecciona año lectivo y sección.');
     }
 
     if (!apoderados.length) {
@@ -1122,15 +1262,6 @@ export default function MatriculaPage() {
 
     if (matriculaActiva) {
       return setMensaje(formatMatriculaActiva(matriculaActiva));
-    }
-
-    if (errorEdadNormativa) {
-      return setMensaje(errorEdadNormativa);
-    }
-
-    if (avisoPeriodoMatricula?.bloquea) {
-      setMensaje(avisoPeriodoMatricula.texto);
-      return;
     }
 
     setConfirmOpen(true);
@@ -1827,24 +1958,18 @@ export default function MatriculaPage() {
                   </label>
                 )}
 
-                {errorEdadNormativa && (
-                  <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
-                    {errorEdadNormativa}
-                  </div>
-                )}
-
-                {avisoPeriodoMatricula && (
+                {mensajeValidacionMatricula && (
                   <div
                     className={cx(
                       'mt-4 rounded-2xl px-4 py-3 text-sm font-bold ring-1',
-                      avisoPeriodoMatricula.tipo === 'error'
+                      mensajeValidacionMatricula.tipo === 'error'
                         ? 'bg-rose-50 text-rose-700 ring-rose-100'
-                        : avisoPeriodoMatricula.tipo === 'warning'
+                        : mensajeValidacionMatricula.tipo === 'warning'
                           ? 'bg-amber-50 text-amber-700 ring-amber-100'
                           : 'bg-sky-50 text-sky-700 ring-sky-100',
                     )}
                   >
-                    {avisoPeriodoMatricula.texto}
+                    {mensajeValidacionMatricula.texto}
                   </div>
                 )}
 
@@ -1859,8 +1984,9 @@ export default function MatriculaPage() {
                   onClick={revisarMatricula}
                   className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white shadow-lg shadow-accent-500/20 transition hover:bg-accent-600"
                 >
-                  <ArrowRight size={16} />
-                  Revisar y registrar pre-matrícula
+                  {tipoIngreso === 'Reserva'
+                    ? 'Revisar y registrar reserva'
+                    : 'Revisar y registrar pre-matrícula'}
                 </button>
               </Card>
             </>

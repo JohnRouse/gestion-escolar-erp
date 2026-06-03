@@ -287,16 +287,49 @@ export class AcademicosController {
       nombre_anio: string;
       fecha_inicio: string;
       fecha_fin: string;
+      estado?: string;
       id_tenant?: number;
       id_colegio?: number;
     },
   ) {
+    if (!body.nombre_anio?.trim()) {
+      throw new BadRequestException('Ingresa el nombre del año lectivo.');
+    }
+
+    if (!body.id_colegio) {
+      throw new BadRequestException('Selecciona el colegio del año lectivo.');
+    }
+
+    const fechaInicio = new Date(`${body.fecha_inicio}T00:00:00`);
+    const fechaFin = new Date(`${body.fecha_fin}T00:00:00`);
+
+    if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+      throw new BadRequestException('Las fechas del año lectivo no son válidas.');
+    }
+
+    if (fechaFin <= fechaInicio) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
+    }
+
+    const duplicado = await this.prisma.anioLectivo.findFirst({
+      where: {
+        id_colegio: body.id_colegio,
+        nombre_anio: body.nombre_anio.trim(),
+      },
+    });
+
+    if (duplicado) {
+      throw new BadRequestException(
+        'Ya existe un año lectivo con ese nombre para el colegio seleccionado.',
+      );
+    }
+
     return this.prisma.anioLectivo.create({
       data: {
-        nombre_anio: body.nombre_anio,
-        fecha_inicio: new Date(body.fecha_inicio),
-        fecha_fin: new Date(body.fecha_fin),
-        estado: 'Planificación',
+        nombre_anio: body.nombre_anio.trim(),
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        estado: body.estado || 'Planificación',
         id_tenant: body.id_tenant,
         id_colegio: body.id_colegio,
       },
@@ -307,15 +340,68 @@ export class AcademicosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async updateAnio(@Param('id') id: string, @Body() body: any) {
+    const anioId = Number(id);
+
     const anio = await this.prisma.anioLectivo.findUnique({
-      where: { id_anio: Number(id) },
+      where: { id_anio: anioId },
     });
 
     if (!anio) throw new NotFoundException('Año lectivo no encontrado');
 
+    const data: any = {};
+
+    if (body.nombre_anio !== undefined) {
+      if (!body.nombre_anio?.trim()) {
+        throw new BadRequestException('Ingresa el nombre del año lectivo.');
+      }
+
+      const duplicado = await this.prisma.anioLectivo.findFirst({
+        where: {
+          id_anio: { not: anioId },
+          id_colegio: body.id_colegio ?? anio.id_colegio,
+          nombre_anio: body.nombre_anio.trim(),
+        },
+      });
+
+      if (duplicado) {
+        throw new BadRequestException(
+          'Ya existe un año lectivo con ese nombre para el colegio seleccionado.',
+        );
+      }
+
+      data.nombre_anio = body.nombre_anio.trim();
+    }
+
+    if (body.fecha_inicio !== undefined) {
+      const fecha = new Date(`${body.fecha_inicio}T00:00:00`);
+      if (Number.isNaN(fecha.getTime())) {
+        throw new BadRequestException('La fecha de inicio no es válida.');
+      }
+      data.fecha_inicio = fecha;
+    }
+
+    if (body.fecha_fin !== undefined) {
+      const fecha = new Date(`${body.fecha_fin}T00:00:00`);
+      if (Number.isNaN(fecha.getTime())) {
+        throw new BadRequestException('La fecha de fin no es válida.');
+      }
+      data.fecha_fin = fecha;
+    }
+
+    const fechaInicioFinal = data.fecha_inicio || anio.fecha_inicio;
+    const fechaFinFinal = data.fecha_fin || anio.fecha_fin;
+
+    if (fechaFinFinal <= fechaInicioFinal) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
+    }
+
+    if (body.estado !== undefined) data.estado = body.estado;
+    if (body.id_tenant !== undefined) data.id_tenant = body.id_tenant;
+    if (body.id_colegio !== undefined) data.id_colegio = body.id_colegio;
+
     return this.prisma.anioLectivo.update({
-      where: { id_anio: Number(id) },
-      data: body,
+      where: { id_anio: anioId },
+      data,
     });
   }
 
@@ -663,7 +749,7 @@ export class AcademicosController {
       colegioId: colegioId ? Number(colegioId) : undefined,
     });
   }
-  
+
   // ── DOCENTES ─────────────────────────────────────────
   @Get('docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

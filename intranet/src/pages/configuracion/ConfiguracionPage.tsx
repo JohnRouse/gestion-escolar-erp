@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   BookOpenCheck,
   Building2,
+  CalendarDays,
   CreditCard,
   GraduationCap,
   Layers3,
@@ -15,8 +16,10 @@ import CursosTab from './CursosTab';
 import ConceptosPagoTab from './ConceptosPagoTab';
 import EscalaTab from './EscalaTab';
 import TiposEvalTab from './TiposEvalTab';
+import AniosLectivosTab from './AniosLectivosTab';
 
 const TABS = [
+  { key: 'anios', label: 'Años lectivos', icon: CalendarDays },
   { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap },
   { key: 'secciones', label: 'Secciones', icon: Building2 },
   { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck },
@@ -27,7 +30,7 @@ const TABS = [
 
 export default function ConfiguracionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabActivo = searchParams.get('tab') || 'niveles';
+  const tabActivo = searchParams.get('tab') || 'anios';
 
   const setTab = (key: string) => {
     setSearchParams({ tab: key });
@@ -77,6 +80,7 @@ export default function ConfiguracionPage() {
         </div>
 
         <div className="p-5">
+          {tabActivo === 'anios' && <AniosLectivosTab />}
           {tabActivo === 'niveles' && <NivelesGradosTab />}
           {tabActivo === 'secciones' && <SeccionesTab />}
           {tabActivo === 'cursos' && <CursosTab />}

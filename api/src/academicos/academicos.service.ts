@@ -88,6 +88,45 @@ export class AcademicosService {
     return edad;
   }
 
+  private calcularEdadDetalladaAlCorte(fechaNacimiento: Date, fechaCorte: Date) {
+    let anios = fechaCorte.getFullYear() - fechaNacimiento.getFullYear();
+    let meses = fechaCorte.getMonth() - fechaNacimiento.getMonth();
+    let dias = fechaCorte.getDate() - fechaNacimiento.getDate();
+
+    if (dias < 0) {
+      meses -= 1;
+
+      const ultimoDiaMesAnterior = new Date(
+        fechaCorte.getFullYear(),
+        fechaCorte.getMonth(),
+        0,
+      ).getDate();
+
+      dias += ultimoDiaMesAnterior;
+    }
+
+    if (meses < 0) {
+      anios -= 1;
+      meses += 12;
+    }
+
+    const partes = [`${anios} ${anios === 1 ? 'año' : 'años'}`];
+
+    if (meses > 0) {
+      partes.push(`${meses} ${meses === 1 ? 'mes' : 'meses'}`);
+    }
+
+    return {
+      anios,
+      meses,
+      dias,
+      texto:
+        partes.length === 1
+          ? partes[0]
+          : `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`,
+    };
+  }
+
   private extraerPrimerNumero(texto?: string | null) {
     const match = String(texto || '').match(/\d+/);
     return match ? Number(match[0]) : null;
@@ -187,6 +226,12 @@ export class AcademicosService {
     const anioCorte = this.getAnioCorte(anio);
     const edadAlCorte = this.calcularEdadAlCorte(fechaNacimiento, anioCorte);
 
+    const fechaCorte = new Date(`${anioCorte}-03-31T23:59:59.999-05:00`);
+    const edadDetallada = this.calcularEdadDetalladaAlCorte(
+      fechaNacimiento,
+      fechaCorte,
+    );
+
     const regla = this.getEdadRequerida(
       seccion.grado?.nivel?.nombre_nivel,
       seccion.grado?.nombre_grado,
@@ -219,7 +264,7 @@ export class AcademicosService {
     }
 
     throw new BadRequestException(
-      `No cumple la edad normativa para ${regla.motivo}. Debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadAlCorte} años.`,
+      `El alumno no cumple la edad para ${regla.motivo}. Para este año lectivo debe tener ${regla.edad} años cumplidos al 31 de marzo de ${anioCorte}. Edad al corte: ${edadDetallada.texto}.`,
     );
   }
 
