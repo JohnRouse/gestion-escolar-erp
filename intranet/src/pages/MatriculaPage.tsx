@@ -519,6 +519,25 @@ export default function MatriculaPage() {
     return anio?.estado || 'Planificación';
   };
 
+  const esAnioDisponibleParaRegistro = (anio?: Anio | null) => {
+    if (!anio) return false;
+
+    const estadoOperativo = getEstadoOperativoAnioFrontend(anio);
+
+    if (estadoOperativo === 'Cerrado' || estadoOperativo === 'Archivado') {
+      return false;
+    }
+
+    if (anio.fecha_fin) {
+      const fechaFin = new Date(`${String(anio.fecha_fin).slice(0, 10)}T23:59:59`);
+      if (!Number.isNaN(fechaFin.getTime()) && fechaFin < new Date()) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const getAnioCorteFrontend = () => {
     const desdeNombre = anioSeleccionado?.nombre_anio?.match(/\d{4}/)?.[0];
 
@@ -531,6 +550,64 @@ export default function MatriculaPage() {
 
     return new Date().getFullYear();
   };
+
+  const aniosDisponibles = useMemo(
+    () => anios.filter((anio) => esAnioDisponibleParaRegistro(anio)),
+    [anios],
+  );
+
+  const tiposIngresoPermitidos = useMemo(() => {
+    if (!anioSeleccionado || !esAnioDisponibleParaRegistro(anioSeleccionado)) {
+      return [];
+    }
+
+    const estadoOperativo = getEstadoOperativoAnioFrontend(anioSeleccionado);
+
+    if (estadoOperativo === 'Planificación') {
+      return ['Reserva'];
+    }
+
+    const anioCorte = getAnioCorteFrontend();
+    const corteRegular = new Date(`${anioCorte}-03-31T23:59:59`);
+    const hoy = new Date();
+
+    const fechaInicio = anioSeleccionado.fecha_inicio
+      ? new Date(`${String(anioSeleccionado.fecha_inicio).slice(0, 10)}T00:00:00`)
+      : null;
+
+    const fechaFin = anioSeleccionado.fecha_fin
+      ? new Date(`${String(anioSeleccionado.fecha_fin).slice(0, 10)}T23:59:59`)
+      : null;
+
+    const estaEnCurso =
+      fechaInicio && fechaFin && hoy >= fechaInicio && hoy <= fechaFin;
+
+    const pasoCorteRegular = hoy > corteRegular;
+
+    if (estadoOperativo === 'En curso' || (estaEnCurso && pasoCorteRegular)) {
+      return ['Traslado', 'Reingreso', 'Regularización'];
+    }
+
+    if (estadoOperativo === 'Matrícula abierta') {
+      return ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
+    }
+
+    return ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
+  }, [anioSeleccionado, anioId, anios]);
+
+  useEffect(() => {
+    if (!anioId) return;
+
+    if (!tiposIngresoPermitidos.length) {
+      setTipoIngreso('');
+      return;
+    }
+
+    if (!tiposIngresoPermitidos.includes(tipoIngreso)) {
+      setTipoIngreso(tiposIngresoPermitidos[0]);
+      setExcepcionTraslado(false);
+    }
+  }, [anioId, tiposIngresoPermitidos, tipoIngreso]);
 
   const avisoPeriodoMatricula = useMemo(() => {
     if (!anioSeleccionado) return null;
@@ -799,7 +876,7 @@ export default function MatriculaPage() {
       return {
         tipo: 'info' as const,
         texto:
-          'Primero selecciona el colegio destino. Estás trabajando con el grupo o con más de un colegio, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
+          'Selecciona el colegio destino en el bloque derecho. Estás trabajando con todos los colegios, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
       };
     }
 
@@ -914,20 +991,28 @@ export default function MatriculaPage() {
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '');
 
-      const activo =
-        aniosData.find((a) => estadoNormalizado(a.estado).includes('matricula')) ||
-        aniosData.find((a) => estadoNormalizado(a.estado) === 'abierto') ||
-        aniosData.find((a) => estadoNormalizado(a.estado).includes('curso')) ||
-        aniosData.find((a) => estadoNormalizado(a.estado) === 'activo') ||
-        aniosData.find((a) => estadoNormalizado(a.estado).includes('planificacion')) ||
-        aniosData.find(
-          (a) =>
-            !['cerrado', 'archivado'].includes(estadoNormalizado(a.estado)) &&
-            (!a.fecha_fin || new Date(a.fecha_fin) >= new Date()),
-        ) ||
-        aniosData[0];
+      const fechaNoVencida = (a: Anio) => {
+        if (!a.fecha_fin) return true;
 
-      const resolved = activo?.id_anio || '';
+        const fechaFin = new Date(`${String(a.fecha_fin).slice(0, 10)}T23:59:59`);
+        return Number.isNaN(fechaFin.getTime()) || fechaFin >= new Date();
+      };
+
+      const aniosRegistrables = aniosData.filter((a) => {
+        const estado = estadoNormalizado(a.estado);
+        return !['cerrado', 'archivado'].includes(estado) && fechaNoVencida(a);
+      });
+
+      const activo =
+        aniosRegistrables.find((a) => estadoNormalizado(a.estado).includes('matricula')) ||
+        aniosRegistrables.find((a) => estadoNormalizado(a.estado) === 'abierto') ||
+        aniosRegistrables.find((a) => estadoNormalizado(a.estado).includes('curso')) ||
+        aniosRegistrables.find((a) => estadoNormalizado(a.estado) === 'activo') ||
+        aniosRegistrables.find((a) => estadoNormalizado(a.estado).includes('planificacion')) ||
+        aniosRegistrables[0] ||
+        '';
+
+      const resolved = activo ? activo.id_anio : '';
 
       setAnioId((current) => current || resolved);
 
@@ -1237,7 +1322,7 @@ export default function MatriculaPage() {
 
     if (colegioDestinoRequerido) {
       setMensaje(
-        'Primero selecciona el colegio destino. Estás trabajando con el grupo o con más de un colegio, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
+        'Selecciona el colegio destino en el bloque derecho. Estás trabajando con todos los colegios, por eso el sistema necesita saber en qué sede se registrará la matrícula.',
       );
       return;
     }
@@ -1332,32 +1417,6 @@ export default function MatriculaPage() {
             title="Buscar alumno"
             subtitle="Ingresa el DNI para revisar su ficha."
           >
-            {activeScope.tipo === 'todos' && puedeVerConsolidado && (
-              <label className="mb-4 block">
-                <Label>Colegio destino</Label>
-                <select
-                  value={colegioDestinoId}
-                  onChange={(e) => {
-                    setColegioDestinoId(
-                      e.target.value ? Number(e.target.value) : '',
-                    );
-                    setAlumno(null);
-                    setApoderados([]);
-                    setSeccionId('');
-                    setAnioId('');
-                  }}
-                  className={selectClass}
-                >
-                  <option value="">Selecciona colegio</option>
-                  {colegios.map((c) => (
-                    <option key={c.id_colegio} value={c.id_colegio}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
             <div className="flex gap-2">
               <input
                 value={dni}
@@ -1597,6 +1656,48 @@ export default function MatriculaPage() {
 
           {alumno && (
             <>
+              {activeScope.tipo === 'todos' && puedeVerConsolidado && (
+                <Card
+                  icon={MapPin}
+                  title="Colegio destino"
+                  subtitle="Selecciona la sede donde se registrará la matrícula."
+                >
+                  <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                    <label>
+                      <Label>Sede de matrícula</Label>
+                      <select
+                        value={colegioDestinoId}
+                        onChange={(e) => {
+                          setColegioDestinoId(e.target.value ? Number(e.target.value) : '');
+                          setSeccionId('');
+                          setAnioId('');
+                          setExcepcionTraslado(false);
+                          setMensaje(null);
+                        }}
+                        className={selectClass}
+                      >
+                        <option value="">Selecciona colegio destino</option>
+                        {colegios.map((c) => (
+                          <option key={c.id_colegio} value={c.id_colegio}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                      {colegioDestinoId ? colegioDestinoNombre : 'Pendiente'}
+                    </div>
+                  </div>
+
+                  {!colegioDestinoId && (
+                    <p className="mt-3 rounded-2xl bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 ring-1 ring-sky-100">
+                      Selecciona primero la sede para cargar los años lectivos y secciones disponibles de ese colegio.
+                    </p>
+                  )}
+                </Card>
+              )}
+
               <Card
                 icon={ShieldCheck}
                 title="Apoderados"
@@ -1757,12 +1858,18 @@ export default function MatriculaPage() {
                       className={selectClass}
                     >
                       <option value="">Selecciona año</option>
-                      {anios.map((a) => (
+                      {aniosDisponibles.map((a) => (
                         <option key={a.id_anio} value={a.id_anio}>
                           {a.nombre_anio} · {a.estado}
                         </option>
                       ))}
                     </select>
+                    {aniosDisponibles.length === 0 && (
+                      <p className="mt-2 text-xs font-bold text-rose-500">
+                        No hay años lectivos disponibles para registrar matrícula en este colegio.
+                        Crea o abre un año desde Configuración &gt; Años lectivos.
+                      </p>
+                    )}
                   </label>
 
                   <label>
@@ -1886,14 +1993,27 @@ export default function MatriculaPage() {
                         value={tipoIngreso}
                         onChange={(e) => setTipoIngreso(e.target.value)}
                         className={selectClass}
+                        disabled={tiposIngresoPermitidos.length === 0}
                       >
-                        <option value="Nuevo">Nuevo</option>
-                        <option value="Traslado">Traslado</option>
-                        <option value="Reingreso">Reingreso</option>
-                        <option value="Continuidad interna">Continuidad interna</option>
-                        <option value="Regularización">Regularización</option>
-                        <option value="Reserva">Reserva</option>
+                        {tiposIngresoPermitidos.length === 0 ? (
+                          <option value="">Sin opciones disponibles</option>
+                        ) : (
+                          tiposIngresoPermitidos.map((tipo) => (
+                            <option key={tipo} value={tipo}>
+                              {tipo}
+                            </option>
+                          ))
+                        )}
                       </select>
+                      {anioSeleccionado && (
+                        <p className="mt-2 text-xs font-bold text-slate-400">
+                          {getEstadoOperativoAnioFrontend(anioSeleccionado) === 'Planificación'
+                            ? 'Año en planificación: solo permite reservas.'
+                            : getEstadoOperativoAnioFrontend(anioSeleccionado) === 'En curso'
+                              ? 'Año en curso: solo permite traslado, reingreso o regularización.'
+                              : 'Matrícula abierta: permite ingreso regular.'}
+                        </p>
+                      )}
                     </label>
 
                     {(tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso') && (
@@ -1982,7 +2102,8 @@ export default function MatriculaPage() {
                 <button
                   type="button"
                   onClick={revisarMatricula}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white shadow-lg shadow-accent-500/20 transition hover:bg-accent-600"
+                  disabled={aniosDisponibles.length === 0}
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white shadow-lg shadow-accent-500/20 transition hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {tipoIngreso === 'Reserva'
                     ? 'Revisar y registrar reserva'
