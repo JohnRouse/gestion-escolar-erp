@@ -421,14 +421,12 @@ export class AcademicosService {
     for (let i = 0; i < conceptosPension.length; i++) {
       const concepto = conceptosPension[i];
 
-      const existente = await tx.cronogramaPagos.findUnique({
-        where: {
-          id_matricula_id_concepto: {
-            id_matricula: matricula.id_matricula,
-            id_concepto: concepto.id_concepto,
-          },
-        },
-      });
+      const existente = await tx.cronogramaPagos.findFirst({
+  where: {
+    id_matricula: matricula.id_matricula,
+    id_concepto: concepto.id_concepto,
+  },
+});
 
       if (existente) continue;
 
