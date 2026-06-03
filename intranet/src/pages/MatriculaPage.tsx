@@ -397,7 +397,6 @@ export default function MatriculaPage() {
   const [modalEditarAlumno, setModalEditarAlumno] = useState(false);
   const [excepcionTraslado, setExcepcionTraslado] = useState(false);
 
-  // ─── NUEVOS ESTADOS DE PROCEDENCIA ──────────────────
   const [tipoIngreso, setTipoIngreso] = useState('Nuevo');
   const [colegioProcedencia, setColegioProcedencia] = useState('');
   const [codigoModularProcedencia, setCodigoModularProcedencia] = useState('');
@@ -430,12 +429,113 @@ export default function MatriculaPage() {
     return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado';
   }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
 
-  const getAnioCorteFrontend = () => {
-    const anio = anios.find((item) => item.id_anio === anioId);
-    const desdeNombre = anio?.nombre_anio?.match(/\d{4}/)?.[0];
+  const anioSeleccionado = useMemo(
+    () => anios.find((item) => item.id_anio === anioId) || null,
+    [anioId, anios],
+  );
 
-    return desdeNombre ? Number(desdeNombre) : new Date().getFullYear();
+  const getEstadoOperativoAnioFrontend = (anio?: Anio | null) => {
+    const estado = String(anio?.estado || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (['cerrado', 'archivado'].includes(estado)) return 'Cerrado';
+    if (estado.includes('planificacion')) return 'Planificación';
+    if (estado.includes('matricula') || estado === 'abierto') return 'Matrícula abierta';
+    if (estado === 'activo' || estado.includes('curso')) return 'En curso';
+
+    return anio?.estado || 'Planificación';
   };
+
+  const getAnioCorteFrontend = () => {
+    const desdeNombre = anioSeleccionado?.nombre_anio?.match(/\d{4}/)?.[0];
+
+    if (desdeNombre) return Number(desdeNombre);
+
+    if (anioSeleccionado?.fecha_inicio) {
+      const fecha = new Date(anioSeleccionado.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    return new Date().getFullYear();
+  };
+
+  const avisoPeriodoMatricula = useMemo(() => {
+    if (!anioSeleccionado) return null;
+
+    const estadoOperativo = getEstadoOperativoAnioFrontend(anioSeleccionado);
+    const hoy = new Date();
+    const fechaInicio = anioSeleccionado.fecha_inicio
+      ? new Date(anioSeleccionado.fecha_inicio)
+      : null;
+    const fechaFin = anioSeleccionado.fecha_fin
+      ? new Date(anioSeleccionado.fecha_fin)
+      : null;
+    const anioCorte = getAnioCorteFrontend();
+    const corteRegular = new Date(`${anioCorte}-03-31T23:59:59`);
+
+    if (estadoOperativo === 'Cerrado' || (fechaFin && hoy > fechaFin)) {
+      return {
+        bloquea: true,
+        tipo: 'error',
+        texto:
+          'El año lectivo seleccionado está cerrado o vencido. No puedes registrar nuevas matrículas en este periodo.',
+      };
+    }
+
+    if (estadoOperativo === 'Planificación') {
+      if (tipoIngreso !== 'Reserva') {
+        return {
+          bloquea: true,
+          tipo: 'warning',
+          texto:
+            'El año lectivo está en planificación. Solo puedes registrar reservas para este periodo.',
+        };
+      }
+
+      return {
+        bloquea: false,
+        tipo: 'info',
+        texto:
+          'Se registrará como reserva. No se generará cobro ni activación hasta abrir la matrícula.',
+      };
+    }
+
+    const tiposPermitidosEnCurso = ['Traslado', 'Reingreso', 'Regularización'];
+    const estaEnCurso = fechaInicio && fechaFin && hoy >= fechaInicio && hoy <= fechaFin;
+    const pasoCorteRegular = hoy > corteRegular;
+
+    if (estadoOperativo === 'En curso' || (estaEnCurso && pasoCorteRegular)) {
+      if (!tiposPermitidosEnCurso.includes(tipoIngreso)) {
+        return {
+          bloquea: true,
+          tipo: 'warning',
+          texto:
+            'La matrícula regular ya está cerrada para este año lectivo. En periodo en curso solo se permiten Traslado, Reingreso o Regularización autorizada.',
+        };
+      }
+
+      return {
+        bloquea: false,
+        tipo: 'info',
+        texto:
+          'Periodo en curso: se permitirá continuar porque el tipo de ingreso corresponde a traslado, reingreso o regularización.',
+      };
+    }
+
+    if (tipoIngreso === 'Reserva') {
+      return {
+        bloquea: true,
+        tipo: 'warning',
+        texto:
+          'El tipo Reserva solo debe usarse para años en planificación o futuros. Para matrícula regular usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+      };
+    }
+
+    return null;
+  }, [anioSeleccionado, tipoIngreso, anioId]);
 
   const edadAl31Marzo = (fecha?: string | null) => {
     if (!fecha) return null;
@@ -681,9 +781,23 @@ export default function MatriculaPage() {
       setUltimas((ultimasRes.data || []).slice(0, 5));
       setAnios(aniosData);
 
+      const estadoNormalizado = (estado?: string) =>
+        String(estado || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+
       const activo =
-        aniosData.find((a) => a.estado === 'Activo') ||
-        aniosData.find((a) => a.estado === 'Abierto') ||
+        aniosData.find((a) => estadoNormalizado(a.estado).includes('matricula')) ||
+        aniosData.find((a) => estadoNormalizado(a.estado) === 'abierto') ||
+        aniosData.find((a) => estadoNormalizado(a.estado).includes('curso')) ||
+        aniosData.find((a) => estadoNormalizado(a.estado) === 'activo') ||
+        aniosData.find((a) => estadoNormalizado(a.estado).includes('planificacion')) ||
+        aniosData.find(
+          (a) =>
+            !['cerrado', 'archivado'].includes(estadoNormalizado(a.estado)) &&
+            (!a.fecha_fin || new Date(a.fecha_fin) >= new Date()),
+        ) ||
         aniosData[0];
 
       const resolved = activo?.id_anio || '';
@@ -1012,6 +1126,11 @@ export default function MatriculaPage() {
 
     if (errorEdadNormativa) {
       return setMensaje(errorEdadNormativa);
+    }
+
+    if (avisoPeriodoMatricula?.bloquea) {
+      setMensaje(avisoPeriodoMatricula.texto);
+      return;
     }
 
     setConfirmOpen(true);
@@ -1641,6 +1760,8 @@ export default function MatriculaPage() {
                         <option value="Traslado">Traslado</option>
                         <option value="Reingreso">Reingreso</option>
                         <option value="Continuidad interna">Continuidad interna</option>
+                        <option value="Regularización">Regularización</option>
+                        <option value="Reserva">Reserva</option>
                       </select>
                     </label>
 
@@ -1709,6 +1830,21 @@ export default function MatriculaPage() {
                 {errorEdadNormativa && (
                   <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
                     {errorEdadNormativa}
+                  </div>
+                )}
+
+                {avisoPeriodoMatricula && (
+                  <div
+                    className={cx(
+                      'mt-4 rounded-2xl px-4 py-3 text-sm font-bold ring-1',
+                      avisoPeriodoMatricula.tipo === 'error'
+                        ? 'bg-rose-50 text-rose-700 ring-rose-100'
+                        : avisoPeriodoMatricula.tipo === 'warning'
+                          ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                          : 'bg-sky-50 text-sky-700 ring-sky-100',
+                    )}
+                  >
+                    {avisoPeriodoMatricula.texto}
                   </div>
                 )}
 

@@ -302,15 +302,40 @@ export class AcademicosService {
 
   private normalizarTipoIngreso(value?: string | null) {
     const valor = this.normalizeEmpty(value) || 'Nuevo';
-    const permitidos = ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
 
-    if (!permitidos.includes(valor)) {
+    const alias: Record<string, string> = {
+      nuevo: 'Nuevo',
+      traslado: 'Traslado',
+      reingreso: 'Reingreso',
+      'continuidad interna': 'Continuidad interna',
+      continuidad: 'Continuidad interna',
+      regularizacion: 'Regularización',
+      regularización: 'Regularización',
+      reserva: 'Reserva',
+    };
+
+    const key = valor
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const normalizado = alias[key] || valor;
+    const permitidos = [
+      'Nuevo',
+      'Traslado',
+      'Reingreso',
+      'Continuidad interna',
+      'Regularización',
+      'Reserva',
+    ];
+
+    if (!permitidos.includes(normalizado)) {
       throw new BadRequestException(
-        'Tipo de ingreso inválido. Usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+        'Tipo de ingreso inválido. Usa Nuevo, Traslado, Reingreso, Continuidad interna, Regularización o Reserva.',
       );
     }
 
-    return valor;
+    return normalizado;
   }
 
   private normalizarEstadoRevision(value?: string | null) {
@@ -324,6 +349,107 @@ export class AcademicosService {
     }
 
     return valor;
+  }
+
+  private getEstadoOperativoAnio(anio: {
+    estado?: string | null;
+    fecha_inicio?: Date | string | null;
+    fecha_fin?: Date | string | null;
+  }) {
+    const estado = String(anio.estado || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (['cerrado', 'archivado'].includes(estado)) return 'Cerrado';
+    if (estado.includes('planificacion')) return 'Planificación';
+    if (estado.includes('matricula') || estado === 'abierto') {
+      return 'Matrícula abierta';
+    }
+    if (estado === 'activo' || estado.includes('curso')) return 'En curso';
+
+    return anio.estado || 'Planificación';
+  }
+
+  private getFechaCorteMatriculaRegular(anio: {
+    fecha_inicio?: Date | string | null;
+    nombre_anio?: string | null;
+  }) {
+    const year = this.getAnioCorte(anio);
+    return new Date(`${year}-03-31T23:59:59.999-05:00`);
+  }
+
+  private validarPeriodoAnioParaMatricula(
+    anio: {
+      estado?: string | null;
+      fecha_inicio?: Date | string | null;
+      fecha_fin?: Date | string | null;
+      nombre_anio?: string | null;
+    },
+    tipoIngresoRaw?: string | null,
+  ) {
+    const tipoIngreso = this.normalizarTipoIngreso(tipoIngresoRaw);
+    const estadoOperativo = this.getEstadoOperativoAnio(anio);
+
+    const hoy = new Date();
+    const fechaInicio = anio.fecha_inicio ? new Date(anio.fecha_inicio) : null;
+    const fechaFin = anio.fecha_fin ? new Date(anio.fecha_fin) : null;
+    const corteMatriculaRegular = this.getFechaCorteMatriculaRegular(anio);
+
+    if (
+      estadoOperativo === 'Cerrado' ||
+      estadoOperativo === 'Archivado' ||
+      (fechaFin && hoy > fechaFin)
+    ) {
+      throw new BadRequestException(
+        'El año lectivo seleccionado está cerrado o vencido. No se pueden registrar nuevas matrículas en este periodo.',
+      );
+    }
+
+    if (estadoOperativo === 'Planificación') {
+      if (tipoIngreso !== 'Reserva') {
+        throw new BadRequestException(
+          'El año lectivo está en planificación. Solo puedes registrar reservas para este periodo.',
+        );
+      }
+
+      return {
+        tipoIngreso,
+        estadoMatricula: 'Reserva',
+        generaCobroMatricula: false,
+      };
+    }
+
+    const tiposPermitidosEnCurso = ['Traslado', 'Reingreso', 'Regularización'];
+
+    const estaEnCursoPorFecha =
+      fechaInicio && fechaFin && hoy >= fechaInicio && hoy <= fechaFin;
+
+    const pasoCorteRegular = hoy > corteMatriculaRegular;
+
+    if (
+      estadoOperativo === 'En curso' ||
+      (estaEnCursoPorFecha && pasoCorteRegular)
+    ) {
+      if (!tiposPermitidosEnCurso.includes(tipoIngreso)) {
+        throw new BadRequestException(
+          'La matrícula regular ya está cerrada para este año lectivo. En periodo en curso solo se permiten Traslado, Reingreso o Regularización autorizada.',
+        );
+      }
+    }
+
+    if (tipoIngreso === 'Reserva') {
+      throw new BadRequestException(
+        'El tipo Reserva solo debe usarse para años lectivos en planificación o futuros. Para el periodo abierto usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+      );
+    }
+
+    return {
+      tipoIngreso,
+      estadoMatricula: 'Pre-matriculado',
+      generaCobroMatricula: true,
+    };
   }
 
   // ── HELPERS PARA PAGO DE MATRÍCULA Y ACTIVACIÓN ───────
@@ -406,10 +532,9 @@ export class AcademicosService {
     const conceptosPension = await tx.conceptoPago.findMany({
       where: {
         id_anio: matricula.id_anio,
-        OR: [
-          { id_colegio: matricula.id_colegio || undefined },
-          { id_colegio: null },
-        ],
+        OR: matricula.id_colegio
+          ? [{ id_colegio: matricula.id_colegio }, { id_colegio: null }]
+          : [{ id_colegio: null }],
         es_pension: true,
         es_extraordinario: false,
       },
@@ -422,11 +547,11 @@ export class AcademicosService {
       const concepto = conceptosPension[i];
 
       const existente = await tx.cronogramaPagos.findFirst({
-  where: {
-    id_matricula: matricula.id_matricula,
-    id_concepto: concepto.id_concepto,
-  },
-});
+        where: {
+          id_matricula: matricula.id_matricula,
+          id_concepto: concepto.id_concepto,
+        },
+      });
 
       if (existente) continue;
 
@@ -628,7 +753,7 @@ export class AcademicosService {
               where: {
                 id_anio: params.anioId,
                 estado_matricula: {
-                  in: ['Activo', 'Pre-matriculado'],
+                  in: ['Activo', 'Pre-matriculado', 'Reserva'],
                 },
                 ...this.colegioWhere(scope),
               },
@@ -1224,6 +1349,11 @@ export class AcademicosService {
       );
     }
 
+    const validacionPeriodo = this.validarPeriodoAnioParaMatricula(
+      anio,
+      (params.dto as any).tipo_ingreso,
+    );
+
     const seccion = await this.prisma.seccion.findFirst({
       where: {
         id_seccion: params.dto.id_seccion,
@@ -1244,7 +1374,7 @@ export class AcademicosService {
         id_anio: params.dto.id_anio,
         id_colegio: idColegio,
         estado_matricula: {
-          in: ['Activo', 'Pre-matriculado'],
+          in: ['Activo', 'Pre-matriculado', 'Reserva'],
         },
       },
     });
@@ -1288,7 +1418,7 @@ export class AcademicosService {
         id_anio: params.dto.id_anio,
         id_colegio: idColegio,
         estado_matricula: {
-          in: ['Activo', 'Pre-matriculado'],
+          in: ['Activo', 'Pre-matriculado', 'Reserva'],
         },
       },
     });
@@ -1330,9 +1460,9 @@ export class AcademicosService {
           id_estudiante: params.dto.id_estudiante,
           id_seccion: params.dto.id_seccion,
           id_anio: params.dto.id_anio,
-          estado_matricula: 'Pre-matriculado',
+          estado_matricula: validacionPeriodo.estadoMatricula,
           id_usuario_registro: params.userId,
-          tipo_ingreso: this.normalizarTipoIngreso((params.dto as any).tipo_ingreso),
+          tipo_ingreso: validacionPeriodo.tipoIngreso,
           colegio_procedencia: this.normalizeEmpty((params.dto as any).colegio_procedencia),
           codigo_modular_procedencia: this.normalizeEmpty((params.dto as any).codigo_modular_procedencia),
           grado_procedencia: this.normalizeEmpty((params.dto as any).grado_procedencia),
@@ -1364,37 +1494,39 @@ export class AcademicosService {
         });
       }
 
-      const conceptos = await tx.conceptoPago.findMany({
-        where: {
-          id_anio: params.dto.id_anio,
-          OR: [{ id_colegio: idColegio }, { id_colegio: null }],
-          es_pension: false,
-          es_extraordinario: false,
-          nombre_concepto: {
-            contains: 'Matrícula',
+      if (validacionPeriodo.generaCobroMatricula) {
+        const conceptos = await tx.conceptoPago.findMany({
+          where: {
+            id_anio: params.dto.id_anio,
+            OR: [{ id_colegio: idColegio }, { id_colegio: null }],
+            es_pension: false,
+            es_extraordinario: false,
+            nombre_concepto: {
+              contains: 'Matrícula',
+            },
           },
-        },
-        orderBy: [{ id_concepto: 'asc' }],
-      });
-
-      if (!conceptos.length) {
-        throw new BadRequestException(
-          'No existe un concepto de matrícula configurado para este colegio y año lectivo.',
-        );
-      }
-
-      for (const concepto of conceptos) {
-        const fechaVenc = new Date();
-        fechaVenc.setDate(fechaVenc.getDate() + 1);
-
-        await tx.cronogramaPagos.create({
-          data: {
-            id_matricula: matricula.id_matricula,
-            id_concepto: concepto.id_concepto,
-            fecha_vencimiento: fechaVenc,
-            estado_pago: 'Pendiente',
-          },
+          orderBy: [{ id_concepto: 'asc' }],
         });
+
+        if (!conceptos.length) {
+          throw new BadRequestException(
+            'No existe un concepto de matrícula configurado para este colegio y año lectivo.',
+          );
+        }
+
+        for (const concepto of conceptos) {
+          const fechaVenc = new Date();
+          fechaVenc.setDate(fechaVenc.getDate() + 1);
+
+          await tx.cronogramaPagos.create({
+            data: {
+              id_matricula: matricula.id_matricula,
+              id_concepto: concepto.id_concepto,
+              fecha_vencimiento: fechaVenc,
+              estado_pago: 'Pendiente',
+            },
+          });
+        }
       }
 
       return matricula;
@@ -1843,7 +1975,7 @@ export class AcademicosService {
           matriculas: {
             none: {
               id_colegio: { in: scope.colegioIds },
-              estado_matricula: { in: ['Activo', 'Pre-matriculado'] },
+              estado_matricula: { in: ['Activo', 'Pre-matriculado', 'Reserva'] },
             },
           },
         });
