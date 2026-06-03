@@ -64,6 +64,20 @@ interface MatriculaItem {
       nivel?: { nombre_nivel: string };
     };
   };
+  tipo_ingreso?: string;
+  colegio_procedencia?: string | null;
+  codigo_modular_procedencia?: string | null;
+  grado_procedencia?: string | null;
+  observacion_procedencia?: string | null;
+  estado_revision?: string;
+  fecha_revision?: string | null;
+  observacion_revision?: string | null;
+  revisado_por?: {
+    persona?: {
+      nombres: string;
+      apellido_paterno: string;
+    };
+  } | null;
 }
 
 const formatFechaHora = (value: string) =>
@@ -105,6 +119,15 @@ const DetailBox = ({
   </div>
 );
 
+const Info = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+      {label}
+    </p>
+    <p className="mt-2 text-sm font-black text-slate-900">{value}</p>
+  </div>
+);
+
 export default function MatriculasHistorialPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
@@ -117,6 +140,7 @@ export default function MatriculasHistorialPage() {
   const [hasta, setHasta] = useState('');
   const [registradoPor, setRegistradoPor] = useState('');
   const [estado, setEstado] = useState('Todos');
+  const [estadoRevision, setEstadoRevision] = useState('Todos');
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({
     total: 0,
@@ -130,6 +154,11 @@ export default function MatriculasHistorialPage() {
   const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
 
+  const [revisionEstado, setRevisionEstado] = useState('Aprobado');
+  const [revisionObservacion, setRevisionObservacion] = useState('');
+  const [savingRevision, setSavingRevision] = useState(false);
+  const [mensajeRevision, setMensajeRevision] = useState<string | null>(null);
+
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
 
@@ -138,12 +167,13 @@ export default function MatriculasHistorialPage() {
     if (hasta) search.set('hasta', hasta);
     if (registradoPor.trim()) search.set('registrado_por', registradoPor.trim());
     if (estado !== 'Todos') search.set('estado', estado);
+    if (estadoRevision !== 'Todos') search.set('estado_revision', estadoRevision);
     search.set('page', String(page));
     search.set('limit', '10');
 
     const query = search.toString();
     return query ? `?${query}` : '';
-  }, [desde, estado, hasta, page, q, queryString, registradoPor]);
+  }, [desde, estado, estadoRevision, hasta, page, q, queryString, registradoPor]);
 
   useEffect(() => {
     fetchMatriculas();
@@ -174,6 +204,7 @@ export default function MatriculasHistorialPage() {
     setHasta('');
     setRegistradoPor('');
     setEstado('Todos');
+    setEstadoRevision('Todos');
     setPage(1);
   };
 
@@ -200,10 +231,39 @@ export default function MatriculasHistorialPage() {
       );
 
       setDetalleMatricula(res.data);
+      setRevisionEstado(res.data?.estado_revision || 'Aprobado');
+      setRevisionObservacion(res.data?.observacion_revision || '');
+      setMensajeRevision(null);
     } catch {
       setDetalleOpen(false);
     } finally {
       setDetalleLoading(false);
+    }
+  };
+
+  const guardarRevision = async () => {
+    if (!token || !detalleMatricula?.id_matricula) return;
+
+    setSavingRevision(true);
+    setMensajeRevision(null);
+
+    try {
+      const res = await axios.patch(
+        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/revision${queryString}`,
+        {
+          estado_revision: revisionEstado,
+          observacion_revision: revisionObservacion,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setDetalleMatricula(res.data?.matricula || detalleMatricula);
+      setMensajeRevision(res.data?.message || 'Revisión actualizada.');
+      await fetchMatriculas();
+    } catch (error: any) {
+      setMensajeRevision(error.response?.data?.message || 'No se pudo actualizar la revisión.');
+    } finally {
+      setSavingRevision(false);
     }
   };
 
@@ -221,7 +281,7 @@ export default function MatriculasHistorialPage() {
       />
 
       <div className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-        <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
+        <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -277,6 +337,21 @@ export default function MatriculasHistorialPage() {
             <option value="Pre-matriculado">Pre-matriculado</option>
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
+          </select>
+
+          <select
+            value={estadoRevision}
+            onChange={(event) => {
+              setPage(1);
+              setEstadoRevision(event.target.value);
+            }}
+            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+          >
+            <option value="Todos">Revisión: todos</option>
+            <option value="Por revisar">Por revisar</option>
+            <option value="Aprobado">Aprobado</option>
+            <option value="Observado">Observado</option>
+            <option value="Rechazado">Rechazado</option>
           </select>
 
           <button
@@ -353,6 +428,9 @@ export default function MatriculasHistorialPage() {
                     <span className="mt-2 inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
                       {matricula.estado_matricula}
                     </span>
+                    <span className="mt-2 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                      {matricula.estado_revision || 'Por revisar'}
+                    </span>
                   </div>
 
                   <button
@@ -396,7 +474,7 @@ export default function MatriculasHistorialPage() {
         </div>
       </div>
 
-      {/* Modal de detalle de matrícula (reutilizado de MatriculaPage) */}
+      {/* Modal de detalle de matrícula */}
       {detalleOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
@@ -413,7 +491,7 @@ export default function MatriculasHistorialPage() {
                 </h3>
 
                 <p className="mt-1 text-sm text-slate-400">
-                  Información académica, apoderados y cronograma generado.
+                  Información académica, apoderados, procedencia y cronograma.
                 </p>
               </div>
 
@@ -561,6 +639,77 @@ export default function MatriculasHistorialPage() {
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Procedencia */}
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">Procedencia</h4>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <Info label="Tipo de ingreso" value={detalleMatricula.tipo_ingreso || 'Nuevo'} />
+                      <Info label="Colegio procedencia" value={detalleMatricula.colegio_procedencia || '—'} />
+                      <Info label="Código modular" value={detalleMatricula.codigo_modular_procedencia || '—'} />
+                      <Info label="Grado procedencia" value={detalleMatricula.grado_procedencia || '—'} />
+                    </div>
+                    {detalleMatricula.observacion_procedencia && (
+                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                        {detalleMatricula.observacion_procedencia}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Revisión administrativa */}
+                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <h4 className="text-sm font-black text-slate-900">Revisión administrativa</h4>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <Info label="Estado revisión" value={detalleMatricula.estado_revision || 'Por revisar'} />
+                      <Info
+                        label="Revisado por"
+                        value={
+                          detalleMatricula.revisado_por?.persona
+                            ? `${detalleMatricula.revisado_por.persona.nombres} ${detalleMatricula.revisado_por.persona.apellido_paterno}`
+                            : '—'
+                        }
+                      />
+                      <Info
+                        label="Fecha revisión"
+                        value={detalleMatricula.fecha_revision ? formatFechaHora(detalleMatricula.fecha_revision) : '—'}
+                      />
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
+                      <select
+                        value={revisionEstado}
+                        onChange={(e) => setRevisionEstado(e.target.value)}
+                        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                      >
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Observado">Observado</option>
+                        <option value="Rechazado">Rechazado</option>
+                        <option value="Por revisar">Por revisar</option>
+                      </select>
+
+                      <input
+                        value={revisionObservacion}
+                        onChange={(e) => setRevisionObservacion(e.target.value)}
+                        placeholder="Observación de revisión"
+                        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={guardarRevision}
+                        disabled={savingRevision}
+                        className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
+                      >
+                        {savingRevision ? 'Guardando...' : 'Guardar revisión'}
+                      </button>
+                    </div>
+
+                    {mensajeRevision && (
+                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                        {mensajeRevision}
+                      </p>
+                    )}
                   </div>
 
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">

@@ -537,6 +537,8 @@ export class AcademicosController {
     @Query('estado') estado?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('estado_revision') estadoRevision?: string,
+    @Query('tipo_ingreso') tipoIngreso?: string,
   ) {
     return this.academicosService.buscarMatriculas({
       userId: req.user.userId,
@@ -548,6 +550,8 @@ export class AcademicosController {
       hasta,
       registradoPor,
       estado,
+      estadoRevision,
+      tipoIngreso,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });
@@ -589,6 +593,27 @@ export class AcademicosController {
     });
   }
 
+  @Patch('matriculas/:id/revision')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  revisarMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { estado_revision: string; observacion_revision?: string },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.revisarMatricula({
+      idMatricula: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      estadoRevision: body.estado_revision,
+      observacionRevision: body.observacion_revision,
+    });
+  }
+  
   // ── DOCENTES ─────────────────────────────────────────
   @Get('docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

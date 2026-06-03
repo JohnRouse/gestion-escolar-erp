@@ -36,4 +36,24 @@ export class CreateMatriculaDto {
   @IsOptional()
   @IsString()
   motivo_excepcion_edad?: string;
+
+  @IsOptional()
+  @IsString()
+  tipo_ingreso?: string;
+
+  @IsOptional()
+  @IsString()
+  colegio_procedencia?: string;
+
+  @IsOptional()
+  @IsString()
+  codigo_modular_procedencia?: string;
+
+  @IsOptional()
+  @IsString()
+  grado_procedencia?: string;
+
+  @IsOptional()
+  @IsString()
+  observacion_procedencia?: string;
 }

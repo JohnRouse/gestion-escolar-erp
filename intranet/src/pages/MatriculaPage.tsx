@@ -397,6 +397,13 @@ export default function MatriculaPage() {
   const [modalEditarAlumno, setModalEditarAlumno] = useState(false);
   const [excepcionTraslado, setExcepcionTraslado] = useState(false);
 
+  // ─── NUEVOS ESTADOS DE PROCEDENCIA ──────────────────
+  const [tipoIngreso, setTipoIngreso] = useState('Nuevo');
+  const [colegioProcedencia, setColegioProcedencia] = useState('');
+  const [codigoModularProcedencia, setCodigoModularProcedencia] = useState('');
+  const [gradoProcedencia, setGradoProcedencia] = useState('');
+  const [observacionProcedencia, setObservacionProcedencia] = useState('');
+
   const estudiante = alumno?.estudiantes?.[0] || null;
 
   const colegioDestinoQuery = useMemo(() => {
@@ -974,6 +981,14 @@ export default function MatriculaPage() {
     }
   };
 
+  const resetProcedencia = () => {
+    setTipoIngreso('Nuevo');
+    setColegioProcedencia('');
+    setCodigoModularProcedencia('');
+    setGradoProcedencia('');
+    setObservacionProcedencia('');
+  };
+
   const revisarMatricula = () => {
     if (!alumno || !estudiante) {
       return setMensaje('Primero busca o registra un alumno.');
@@ -1021,6 +1036,11 @@ export default function MatriculaPage() {
             parentesco: a.parentesco || 'Apoderado',
           })),
           excepcion_traslado: excepcionTraslado,
+          tipo_ingreso: tipoIngreso,
+          colegio_procedencia: colegioProcedencia,
+          codigo_modular_procedencia: codigoModularProcedencia,
+          grado_procedencia: gradoProcedencia,
+          observacion_procedencia: observacionProcedencia,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -1028,6 +1048,7 @@ export default function MatriculaPage() {
       setMensaje('Pre-matrícula registrada correctamente.');
       setConfirmOpen(false);
       setApoderados([]);
+      resetProcedencia();
 
       await fetchBase();
       await buscarAlumno();
@@ -1602,6 +1623,74 @@ export default function MatriculaPage() {
                   <Empty text="Sin secciones disponibles" />
                 )}
 
+                {/* ─── BLOQUE DE PROCEDENCIA ───────────────── */}
+                <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                    Procedencia del alumno
+                  </p>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label>
+                      <Label>Tipo de ingreso</Label>
+                      <select
+                        value={tipoIngreso}
+                        onChange={(e) => setTipoIngreso(e.target.value)}
+                        className={selectClass}
+                      >
+                        <option value="Nuevo">Nuevo</option>
+                        <option value="Traslado">Traslado</option>
+                        <option value="Reingreso">Reingreso</option>
+                        <option value="Continuidad interna">Continuidad interna</option>
+                      </select>
+                    </label>
+
+                    {(tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso') && (
+                      <>
+                        <label>
+                          <Label>Colegio de procedencia</Label>
+                          <input
+                            value={colegioProcedencia}
+                            onChange={(e) => setColegioProcedencia(e.target.value)}
+                            placeholder="Nombre del colegio anterior"
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label>
+                          <Label>Código modular</Label>
+                          <input
+                            value={codigoModularProcedencia}
+                            onChange={(e) => setCodigoModularProcedencia(e.target.value)}
+                            placeholder="Opcional"
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label>
+                          <Label>Grado procedencia</Label>
+                          <input
+                            value={gradoProcedencia}
+                            onChange={(e) => setGradoProcedencia(e.target.value)}
+                            placeholder="Ej. Inicial 4 años, 2do primaria"
+                            className={inputClass}
+                          />
+                        </label>
+                      </>
+                    )}
+
+                    <label className="md:col-span-2">
+                      <Label>Observación</Label>
+                      <textarea
+                        value={observacionProcedencia}
+                        onChange={(e) => setObservacionProcedencia(e.target.value)}
+                        placeholder="Información adicional sobre ingreso, traslado o continuidad"
+                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                      />
+                    </label>
+                  </div>
+                </div>
+                {/* ─── FIN BLOQUE DE PROCEDENCIA ──────────── */}
+
                 {seccionSeleccionada && reglaEdadSeleccionada()?.permiteExcepcionTraslado && (
                   <label className="mt-4 flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
                     <input
@@ -1677,6 +1766,16 @@ export default function MatriculaPage() {
                   }" · ${
                     seccionSeleccionada.grado.nivel?.nombre_nivel || ''
                   }`}
+                />
+
+                <Summary
+                  label="Procedencia"
+                  value={tipoIngreso}
+                  detail={
+                    tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso'
+                      ? colegioProcedencia || 'Colegio de procedencia no indicado'
+                      : 'Sin colegio de procedencia'
+                  }
                 />
               </div>
 

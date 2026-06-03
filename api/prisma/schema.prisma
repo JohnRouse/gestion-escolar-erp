@@ -66,7 +66,8 @@ model Usuario {
   tenants                UsuarioTenant[]
   colegios               UsuarioColegio[]
   pagos_cajero           PagoTransaccion[]
-  matriculas_registradas Matricula[]       @relation("UsuarioMatriculasRegistradas")
+  matriculas_registradas Matricula[]         @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas   Matricula[]         @relation("UsuarioMatriculasRevisadas")
   circulares             Circular[]
   notificaciones         Notificacion[]
   tokensFCM              TokenFCM[]
@@ -390,6 +391,15 @@ model Matricula {
   fecha_matricula     DateTime @default(now())
   estado_matricula    String   @default("Pre-matriculado") @db.VarChar(20)
   id_usuario_registro Int?
+  tipo_ingreso                String    @default("Nuevo") @db.VarChar(30)
+  colegio_procedencia         String?   @db.VarChar(150)
+  codigo_modular_procedencia  String?   @db.VarChar(30)
+  grado_procedencia           String?   @db.VarChar(80)
+  observacion_procedencia     String?   @db.VarChar(500)
+  estado_revision             String    @default("Por revisar") @db.VarChar(30)
+  id_usuario_revision         Int?
+  fecha_revision              DateTime?
+  observacion_revision        String?   @db.VarChar(500)
 
   tenant         Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
   colegio        Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
@@ -397,6 +407,7 @@ model Matricula {
   seccion        Seccion     @relation(fields: [id_seccion], references: [id_seccion])
   anio           AnioLectivo @relation(fields: [id_anio], references: [id_anio])
   registrado_por Usuario?   @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
+  revisado_por   Usuario?   @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
 
   notas                  NotaAlumno[]
   asistencias            Asistencia[]
@@ -409,6 +420,9 @@ model Matricula {
   @@index([id_tenant])
   @@index([id_colegio])
   @@index([id_usuario_registro])
+  @@index([estado_revision])
+  @@index([tipo_ingreso])
+  @@index([id_usuario_revision])
 }
 
 // ======================================================
@@ -883,7 +897,6 @@ model PlantillaEvaluacionDetalle {
   @@index([id_plantilla])
   @@index([id_tipo_eval])
 }
-
 
 model EstudianteCodigoColegio {
   id_estudiante Int

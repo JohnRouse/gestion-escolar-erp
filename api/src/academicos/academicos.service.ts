@@ -298,6 +298,34 @@ export class AcademicosService {
     throw new BadRequestException('No se pudo generar un código único para el alumno.');
   }
 
+  // ── HELPERS DE NORMALIZACIÓN PARA PROCEDENCIA Y REVISIÓN ──
+
+  private normalizarTipoIngreso(value?: string | null) {
+    const valor = this.normalizeEmpty(value) || 'Nuevo';
+    const permitidos = ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
+
+    if (!permitidos.includes(valor)) {
+      throw new BadRequestException(
+        'Tipo de ingreso inválido. Usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+      );
+    }
+
+    return valor;
+  }
+
+  private normalizarEstadoRevision(value?: string | null) {
+    const valor = this.normalizeEmpty(value) || 'Por revisar';
+    const permitidos = ['Por revisar', 'Aprobado', 'Observado', 'Rechazado'];
+
+    if (!permitidos.includes(valor)) {
+      throw new BadRequestException(
+        'Estado de revisión inválido. Usa Por revisar, Aprobado, Observado o Rechazado.',
+      );
+    }
+
+    return valor;
+  }
+
   // ── FIN HELPERS ──────────────────────────────────────
 
   private handlePersonaPrismaError(error: unknown): never {
@@ -567,6 +595,8 @@ export class AcademicosService {
       hasta?: string;
       registradoPor?: string;
       estado?: string;
+      estadoRevision?: string;
+      tipoIngreso?: string;
       page?: number;
       limit?: number;
     },
@@ -583,6 +613,14 @@ export class AcademicosService {
 
     if (params.estado && params.estado !== 'Todos') {
       where.estado_matricula = params.estado;
+    }
+
+    if (params.estadoRevision && params.estadoRevision !== 'Todos') {
+      where.estado_revision = params.estadoRevision;
+    }
+
+    if (params.tipoIngreso && params.tipoIngreso !== 'Todos') {
+      where.tipo_ingreso = params.tipoIngreso;
     }
 
     if (params.desde || params.hasta) {
@@ -678,6 +716,12 @@ export class AcademicosService {
           colegio: true,
           anio: true,
           registrado_por: {
+            include: {
+              persona: true,
+              rol: true,
+            },
+          },
+          revisado_por: {
             include: {
               persona: true,
               rol: true,
@@ -1165,6 +1209,12 @@ export class AcademicosService {
           id_anio: params.dto.id_anio,
           estado_matricula: 'Pre-matriculado',
           id_usuario_registro: params.userId,
+          tipo_ingreso: this.normalizarTipoIngreso((params.dto as any).tipo_ingreso),
+          colegio_procedencia: this.normalizeEmpty((params.dto as any).colegio_procedencia),
+          codigo_modular_procedencia: this.normalizeEmpty((params.dto as any).codigo_modular_procedencia),
+          grado_procedencia: this.normalizeEmpty((params.dto as any).grado_procedencia),
+          observacion_procedencia: this.normalizeEmpty((params.dto as any).observacion_procedencia),
+          estado_revision: 'Por revisar',
         },
       });
 
@@ -1437,6 +1487,12 @@ export class AcademicosService {
             rol: true,
           },
         },
+        revisado_por: {
+          include: {
+            persona: true,
+            rol: true,
+          },
+        },
         estudiante: {
           include: {
             persona: true,
@@ -1467,6 +1523,12 @@ export class AcademicosService {
         colegio: true,
         anio: true,
         registrado_por: {
+          include: {
+            persona: true,
+            rol: true,
+          },
+        },
+        revisado_por: {
           include: {
             persona: true,
             rol: true,
@@ -1750,6 +1812,9 @@ export class AcademicosService {
             registrado_por: {
               include: { persona: true, rol: true },
             },
+            revisado_por: {
+              include: { persona: true, rol: true },
+            },
             cronogramas: {
               include: { concepto: true, pagos: true },
             },
@@ -2010,7 +2075,80 @@ export class AcademicosService {
     }
   }
 
-  // ── FIN COMUNIDAD ESCOLAR ────────────────────────────
+  // ── REVISIÓN ADMINISTRATIVA DE MATRÍCULA ─────────────
+
+  async revisarMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+      estadoRevision: string;
+      observacionRevision?: string;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+    const estadoRevision = this.normalizarEstadoRevision(params.estadoRevision);
+
+    const matricula = await this.prisma.matricula.findFirst({
+      where: {
+        id_matricula: params.idMatricula,
+        ...this.colegioWhere(scope),
+      },
+    });
+
+    if (!matricula) {
+      throw new NotFoundException('No se encontró la matrícula solicitada.');
+    }
+
+    if (estadoRevision === 'Observado' && !this.normalizeEmpty(params.observacionRevision)) {
+      throw new BadRequestException('Para observar una matrícula debes ingresar una observación.');
+    }
+
+    const actualizada = await this.prisma.matricula.update({
+      where: { id_matricula: params.idMatricula },
+      data: {
+        estado_revision: estadoRevision,
+        id_usuario_revision: params.userId,
+        fecha_revision: new Date(),
+        observacion_revision: this.normalizeEmpty(params.observacionRevision),
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        registrado_por: { include: { persona: true, rol: true } },
+        revisado_por: { include: { persona: true, rol: true } },
+        estudiante: {
+          include: {
+            persona: true,
+            codigos_colegio: true,
+            apoderados: {
+              include: {
+                apoderado: { include: { persona: true } },
+              },
+            },
+          },
+        },
+        seccion: {
+          include: {
+            aula: true,
+            grado: { include: { nivel: true } },
+          },
+        },
+        cronogramas: {
+          include: {
+            concepto: true,
+            pagos: true,
+          },
+          orderBy: { fecha_vencimiento: 'asc' },
+        },
+      },
+    });
+
+    return {
+      message: `Matrícula marcada como ${estadoRevision}.`,
+      matricula: actualizada,
+    };
+  }
+
+  // ── FIN REVISIÓN ────────────────────────────────────
 
   async getDirectorioStaff(usuarioId: number) {
     const usuario = await this.prisma.usuario.findUnique({
