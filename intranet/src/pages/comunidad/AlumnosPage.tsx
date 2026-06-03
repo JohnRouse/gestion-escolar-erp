@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Edit3, Eye, Loader2, Search, UserRound, User
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 
 type CodigoColegio = { id_colegio: number; codigo: string };
 type Meta = { total: number; page: number; limit: number; totalPages: number };
@@ -55,6 +56,7 @@ const toForm = (detalle: AlumnoItem): AlumnoForm => ({
 export default function AlumnosPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
 
   const [data, setData] = useState<AlumnoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -131,8 +133,19 @@ export default function AlumnosPage() {
       await abrirDetalle(detalle.id_persona);
       await fetchAlumnos();
       setMensaje('Datos del alumno actualizados correctamente.');
+      showToast({
+        type: 'success',
+        title: 'Alumno actualizado',
+        message: 'Los datos del alumno se actualizaron correctamente.',
+      });
     } catch (error: any) {
-      setMensaje(error.response?.data?.message || 'No se pudo actualizar el alumno.');
+      const errorMessage = error.response?.data?.message || 'No se pudo actualizar el alumno.';
+      setMensaje(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar',
+        message: errorMessage,
+      });
     } finally {
       setSaving(false);
     }

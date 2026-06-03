@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
+import { useToast } from '../contexts/ToastContext';
 import {
   AlertTriangle,
   ArrowRight,
@@ -425,6 +426,7 @@ export default function MatriculaPage() {
   } = useSchool();
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [colegioDestinoId, setColegioDestinoId] = useState<number | ''>('');
   const [dni, setDni] = useState('');
@@ -1199,7 +1201,13 @@ export default function MatriculaPage() {
         },
       ]);
 
-      setMensaje('Apoderado vinculado correctamente.');
+      setMensaje(null);
+      showToast({
+        type: 'success',
+        title: 'Apoderado vinculado',
+        message: `${parentescoSeleccionado} agregado correctamente a la ficha del alumno.`,
+      });
+
       setApoderadoEncontrado(null);
       setApoderadoDni('');
       setParentesco('Madre');
@@ -1253,11 +1261,25 @@ export default function MatriculaPage() {
         setDni(form.dni);
         setModalAlumno(false);
         setFormAlumno(emptyAlumno);
+
+        showToast({
+          type: 'success',
+          title: 'Alumno registrado',
+          message: 'La ficha del alumno se guardó correctamente.',
+        });
+
         setTimeout(() => buscarAlumno(), 150);
       } else {
         setApoderadoDni(form.dni);
         setModalApoderado(false);
         setFormApoderado(emptyApoderado);
+
+        showToast({
+          type: 'success',
+          title: 'Apoderado registrado',
+          message: 'La ficha del apoderado se guardó correctamente.',
+        });
+
         setTimeout(() => buscarApoderado(), 150);
       }
     } catch (err: any) {
@@ -1297,7 +1319,12 @@ export default function MatriculaPage() {
       setAlumno(res.data);
       setApoderados(apoderadosDesdeAlumno(res.data));
       setModalEditarAlumno(false);
-      setMensaje('Datos del alumno actualizados correctamente.');
+      setMensaje(null);
+      showToast({
+        type: 'success',
+        title: 'Alumno actualizado',
+        message: 'Los datos del alumno se actualizaron correctamente.',
+      });
     } catch (err: any) {
       setErrorPersona(
         err.response?.data?.message || 'No se pudo actualizar el alumno.',
@@ -1313,6 +1340,21 @@ export default function MatriculaPage() {
     setCodigoModularProcedencia('');
     setGradoProcedencia('');
     setObservacionProcedencia('');
+  };
+
+  const limpiarFlujoMatricula = () => {
+    setDni('');
+    setAlumno(null);
+    setApoderados([]);
+    setApoderadoDni('');
+    setApoderadoEncontrado(null);
+    setParentesco('Madre');
+    setSeccionId('');
+    setNivelFiltro('');
+    setGradoFiltro('');
+    setExcepcionTraslado(false);
+    setMensaje(null);
+    resetProcedencia();
   };
 
   const revisarMatricula = () => {
@@ -1359,7 +1401,7 @@ export default function MatriculaPage() {
     setMensaje(null);
 
     try {
-      await axios.post(
+      const res = await axios.post(
         `/api/academicos/matriculas${colegioDestinoQuery}`,
         {
           id_estudiante: estudiante.id_persona,
@@ -1380,17 +1422,34 @@ export default function MatriculaPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setMensaje('Pre-matrícula registrada correctamente.');
+      const estadoGuardado = res.data?.estado_matricula || tipoIngreso;
+
+      showToast({
+        type: 'success',
+        title:
+          estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva'
+            ? 'Reserva registrada'
+            : 'Pre-matrícula registrada',
+        message:
+          estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva'
+            ? 'La reserva se guardó correctamente.'
+            : 'La pre-matrícula se guardó correctamente.',
+      });
+
       setConfirmOpen(false);
-      setApoderados([]);
-      resetProcedencia();
+      limpiarFlujoMatricula();
 
       await fetchBase();
-      await buscarAlumno();
     } catch (err: any) {
-      setMensaje(
-        err.response?.data?.message || 'No se pudo registrar la matrícula.',
-      );
+      const errorMessage =
+        err.response?.data?.message || 'No se pudo registrar la matrícula.';
+
+      setMensaje(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'No se pudo registrar',
+        message: errorMessage,
+      });
       setConfirmOpen(false);
     } finally {
       setMatriculando(false);
@@ -1824,7 +1883,12 @@ export default function MatriculaPage() {
                               );
 
                               setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona));
-                              setMensaje('Apoderado desvinculado correctamente.');
+                              setMensaje(null);
+                              showToast({
+                                type: 'success',
+                                title: 'Apoderado desvinculado',
+                                message: 'El apoderado fue retirado de la ficha del alumno.',
+                              });
                             } catch (err: any) {
                               setMensaje(
                                 err.response?.data?.message || 'No se pudo desvincular el apoderado.',

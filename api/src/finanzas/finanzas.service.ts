@@ -117,13 +117,17 @@ export class FinanzasService {
       : { id_colegio: -1 };
   }
 
+  private estadosAnioOperativos() {
+    return ['Activo', 'Abierto', 'Matrícula abierta', 'En curso', 'Planificación'];
+  }
+
   private async getAniosActivos(scope: FinanzasScope) {
     if (!scope.colegioIds.length) return [];
 
     const anios = await this.prisma.anioLectivo.findMany({
       where: {
         id_colegio: { in: scope.colegioIds },
-        estado: { in: ['Activo', 'Abierto'] },
+        estado: { in: this.estadosAnioOperativos() },
       },
       orderBy: { id_anio: 'asc' },
     });
@@ -496,7 +500,7 @@ export class FinanzasService {
     const anios = await this.prisma.anioLectivo.findMany({
       where: {
         id_colegio: { in: targetColegioIds },
-        estado: { in: ['Activo', 'Abierto'] },
+        estado: { in: this.estadosAnioOperativos() },
       },
       orderBy: { id_anio: 'asc' },
     });
@@ -639,7 +643,7 @@ export class FinanzasService {
     const anio = await this.prisma.anioLectivo.findFirst({
       where: {
         id_colegio: colegioId,
-        estado: { in: ['Activo', 'Abierto'] },
+        estado: { in: this.estadosAnioOperativos() },
       },
       orderBy: { id_anio: 'asc' },
     });

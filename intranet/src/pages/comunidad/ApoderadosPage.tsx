@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Edit3, Eye, Loader2, Search, ShieldCheck, X 
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 
 type Meta = { total: number; page: number; limit: number; totalPages: number };
 
@@ -54,6 +55,7 @@ const toForm = (d: ApoderadoItem): ApoderadoForm => ({
 export default function ApoderadosPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
 
   const [data, setData] = useState<ApoderadoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -127,8 +129,19 @@ export default function ApoderadosPage() {
       await abrirDetalle(detalle.id_persona);
       await fetchApoderados();
       setMensaje('Datos del apoderado actualizados correctamente.');
+      showToast({
+        type: 'success',
+        title: 'Apoderado actualizado',
+        message: 'Los datos del apoderado se actualizaron correctamente.',
+      });
     } catch (error: any) {
-      setMensaje(error.response?.data?.message || 'No se pudo actualizar el apoderado.');
+      const errorMessage = error.response?.data?.message || 'No se pudo actualizar el apoderado.';
+      setMensaje(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar',
+        message: errorMessage,
+      });
     } finally {
       setSaving(false);
     }

@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import PageHeader from '../../components/PageHeader';
+import { useToast } from '../../contexts/ToastContext';
 
 interface CodigoColegio {
   id_estudiante: number;
@@ -132,6 +133,7 @@ export default function MatriculasHistorialPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [data, setData] = useState<MatriculaItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -304,10 +306,26 @@ export default function MatriculasHistorialPage() {
       );
 
       setDetalleMatricula(res.data?.matricula || detalleMatricula);
-      setMensajeRevision(res.data?.message || 'Revisión actualizada.');
+      const successMessage = res.data?.message || 'Revisión actualizada.';
+
+      setMensajeRevision(successMessage);
+      showToast({
+        type: 'success',
+        title: 'Revisión guardada',
+        message: successMessage,
+      });
+
       await fetchMatriculas();
     } catch (error: any) {
-      setMensajeRevision(error.response?.data?.message || 'No se pudo actualizar la revisión.');
+      const errorMessage =
+        error.response?.data?.message || 'No se pudo actualizar la revisión.';
+
+      setMensajeRevision(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Error en revisión',
+        message: errorMessage,
+      });
     } finally {
       setSavingRevision(false);
     }
@@ -334,10 +352,27 @@ export default function MatriculasHistorialPage() {
       );
 
       setDetalleMatricula(res.data?.matricula || detalleMatricula);
-      setMensajePago(res.data?.message || 'Pago registrado correctamente.');
+      const successMessage =
+        res.data?.message || 'Pago registrado correctamente.';
+
+      setMensajePago(successMessage);
+      showToast({
+        type: 'success',
+        title: 'Pago registrado',
+        message: successMessage,
+      });
+
       await fetchMatriculas();
     } catch (error: any) {
-      setMensajePago(error.response?.data?.message || 'No se pudo registrar el pago.');
+      const errorMessage =
+        error.response?.data?.message || 'No se pudo registrar el pago.';
+
+      setMensajePago(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Error al registrar pago',
+        message: errorMessage,
+      });
     } finally {
       setSavingPago(false);
     }
@@ -357,10 +392,27 @@ export default function MatriculasHistorialPage() {
       );
 
       setDetalleMatricula(res.data?.matricula || detalleMatricula);
-      setMensajePago(res.data?.message || 'Matrícula activada correctamente.');
+      const successMessage =
+        res.data?.message || 'Matrícula activada correctamente.';
+
+      setMensajePago(successMessage);
+      showToast({
+        type: 'success',
+        title: 'Matrícula activada',
+        message: successMessage,
+      });
+
       await fetchMatriculas();
     } catch (error: any) {
-      setMensajePago(error.response?.data?.message || 'No se pudo activar la matrícula.');
+      const errorMessage =
+        error.response?.data?.message || 'No se pudo activar la matrícula.';
+
+      setMensajePago(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Error al activar matrícula',
+        message: errorMessage,
+      });
     } finally {
       setSavingPago(false);
     }

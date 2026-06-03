@@ -16,9 +16,11 @@ import PerfilPage from './pages/PerfilPage';
 import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage';
 import ReportesPage from './pages/ReportesPage';
 import { SchoolProvider } from './contexts/SchoolContext';
+import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
 import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
+
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -68,9 +70,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
