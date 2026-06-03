@@ -343,6 +343,49 @@ export class AcademicosController {
     return this.academicosService.createAlumno(dto);
   }
 
+  // ── NUEVOS ENDPOINTS DE ALUMNOS ──────────────────────
+  @Get('alumnos/listado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarAlumnos(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('q') q?: string,
+    @Query('estado') estado?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.academicosService.listarAlumnos({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      q,
+      estado,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Get('alumnos/:id/detalle')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  getDetalleAlumno(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getDetalleAlumno({
+      idEstudiante: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   @Put('alumnos/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria')
@@ -358,6 +401,57 @@ export class AcademicosController {
   @Roles('Admin', 'Secretaria')
   createApoderado(@Body() dto: CreateApoderadoDto) {
     return this.academicosService.createApoderado(dto);
+  }
+
+  // ── NUEVOS ENDPOINTS DE APODERADOS ───────────────────
+  @Get('apoderados/listado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarApoderados(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.academicosService.listarApoderados({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      q,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Get('apoderados/:id/detalle')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  getDetalleApoderado(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getDetalleApoderado({
+      idApoderado: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Put('apoderados/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria')
+  updateApoderado(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateApoderadoDto>,
+  ) {
+    return this.academicosService.updateApoderado(Number(id), dto);
   }
 
   @Get('apoderados/buscar')

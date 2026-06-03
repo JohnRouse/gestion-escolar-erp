@@ -80,6 +80,19 @@ const menuAcademico: NavItem[] = [
   },
 ];
 
+const menuComunidad: NavItem[] = [
+  {
+    title: 'Comunidad escolar',
+    icon: Users,
+    path: '/comunidad/alumnos',
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
+      { title: 'Alumnos', path: '/comunidad/alumnos' },
+      { title: 'Apoderados', path: '/comunidad/apoderados' },
+    ],
+  },
+];
+
 const menuPersonal: NavItem[] = [
   {
     title: 'Docentes',
@@ -173,6 +186,7 @@ export default function AppSidebar() {
     return [
       { titulo: 'Principal', items: filterByRole(menuPrincipal) },
       { titulo: 'Académico', items: filterByRole(menuAcademico) },
+      { titulo: 'Comunidad escolar', items: filterByRole(menuComunidad) },
       { titulo: 'Personal', items: filterByRole(menuPersonal) },
       { titulo: 'Bienestar', items: filterByRole(menuBienestar) },
       { titulo: 'Comunicación', items: filterByRole(menuComunicacion) },

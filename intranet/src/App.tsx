@@ -17,6 +17,8 @@ import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage
 import ReportesPage from './pages/ReportesPage';
 import { SchoolProvider } from './contexts/SchoolContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
+import AlumnosPage from './pages/comunidad/AlumnosPage';
+import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +57,8 @@ function AppRoutes() {
 <Route path="/reportes" element={<ReportesPage />} />
 <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
 <Route path="/matricula/historial" element={<MatriculasHistorialPage />} />
+<Route path="/comunidad/alumnos" element={<AlumnosPage />} />
+<Route path="/comunidad/apoderados" element={<ApoderadosPage />} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>
