@@ -1,5 +1,3 @@
-//ACADEMICOS CONTROLLER:
-
 import {
   Controller,
   Get,
@@ -691,8 +689,14 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
+    const idMatricula = Number(id);
+
+    if (!Number.isInteger(idMatricula) || idMatricula <= 0) {
+      throw new BadRequestException('El ID de matrícula no es válido.');
+    }
+
     return this.academicosService.getDetalleMatricula({
-      idMatricula: Number(id),
+      idMatricula,
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
@@ -700,7 +704,7 @@ export class AcademicosController {
     });
   }
 
-    @Post('matriculas/:id/generar-cobro-matricula')
+  @Post('matriculas/:id/generar-cobro-matricula')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')
   generarCobroMatricula(

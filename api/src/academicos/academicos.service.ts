@@ -877,6 +877,52 @@ export class AcademicosService {
       : { id_colegio: -1 };
   }
 
+  private usuarioPublicoSelect() {
+    return {
+      id_usuario: true,
+      username: true,
+      estado: true,
+      avatar_url: true,
+      persona: {
+        select: {
+          id_persona: true,
+          dni: true,
+          nombres: true,
+          apellido_paterno: true,
+          apellido_materno: true,
+          telefono: true,
+          correo: true,
+        },
+      },
+      rol: {
+        select: {
+          id_rol: true,
+          nombre_rol: true,
+        },
+      },
+    };
+  }
+
+  private personaBasicaSelect() {
+    return {
+      id_persona: true,
+      dni: true,
+      nombres: true,
+      apellido_paterno: true,
+      apellido_materno: true,
+      fecha_nacimiento: true,
+      genero: true,
+      direccion: true,
+      pais: true,
+      departamento: true,
+      provincia: true,
+      distrito: true,
+      telefono: true,
+      correo: true,
+      created_at: true,
+    };
+  }
+
   private async resolveAnioActivo(scope: MatriculaScope, idAnio?: number) {
     if (!scope.colegioIds.length) return null;
 
@@ -1311,26 +1357,24 @@ export class AcademicosService {
           colegio: true,
           anio: true,
           registrado_por: {
-            include: {
-              persona: true,
-              rol: true,
-            },
+            select: this.usuarioPublicoSelect(),
           },
           revisado_por: {
-            include: {
-              persona: true,
-              rol: true,
-            },
+            select: this.usuarioPublicoSelect(),
           },
           estudiante: {
             include: {
-              persona: true,
+              persona: {
+                select: this.personaBasicaSelect(),
+              },
               codigos_colegio: true,
               apoderados: {
                 include: {
                   apoderado: {
                     include: {
-                      persona: true,
+                      persona: {
+                        select: this.personaBasicaSelect(),
+                      },
                     },
                   },
                 },
@@ -2080,20 +2124,16 @@ export class AcademicosService {
         colegio: true,
         anio: true,
         registrado_por: {
-          include: {
-            persona: true,
-            rol: true,
-          },
+          select: this.usuarioPublicoSelect(),
         },
         revisado_por: {
-          include: {
-            persona: true,
-            rol: true,
-          },
+          select: this.usuarioPublicoSelect(),
         },
         estudiante: {
           include: {
-            persona: true,
+            persona: {
+              select: this.personaBasicaSelect(),
+            },
             codigos_colegio: true,
           },
         },
@@ -2121,26 +2161,24 @@ export class AcademicosService {
         colegio: true,
         anio: true,
         registrado_por: {
-          include: {
-            persona: true,
-            rol: true,
-          },
+          select: this.usuarioPublicoSelect(),
         },
         revisado_por: {
-          include: {
-            persona: true,
-            rol: true,
-          },
+          select: this.usuarioPublicoSelect(),
         },
         estudiante: {
           include: {
-            persona: true,
+            persona: {
+              select: this.personaBasicaSelect(),
+            },
             codigos_colegio: true,
             apoderados: {
               include: {
                 apoderado: {
                   include: {
-                    persona: true,
+                    persona: {
+                      select: this.personaBasicaSelect(),
+                    },
                   },
                 },
               },
@@ -2164,14 +2202,13 @@ export class AcademicosService {
               include: {
                 apoderado: {
                   include: {
-                    persona: true,
+                    persona: {
+                      select: this.personaBasicaSelect(),
+                    },
                   },
                 },
                 cajero: {
-                  include: {
-                    persona: true,
-                    rol: true,
-                  },
+                  select: this.usuarioPublicoSelect(),
                 },
               },
             },
@@ -2445,12 +2482,18 @@ export class AcademicosService {
         ],
       },
       include: {
-        persona: true,
+        persona: {
+          select: this.personaBasicaSelect(),
+        },
         codigos_colegio: true,
         apoderados: {
           include: {
             apoderado: {
-              include: { persona: true },
+              include: {
+                persona: {
+                  select: this.personaBasicaSelect(),
+                },
+              },
             },
           },
         },
@@ -2462,10 +2505,10 @@ export class AcademicosService {
               include: { grado: { include: { nivel: true } } },
             },
             registrado_por: {
-              include: { persona: true, rol: true },
+              select: this.usuarioPublicoSelect(),
             },
             revisado_por: {
-              include: { persona: true, rol: true },
+              select: this.usuarioPublicoSelect(),
             },
             cronogramas: {
               include: { concepto: true, pagos: true },
@@ -2765,15 +2808,27 @@ export class AcademicosService {
       include: {
         colegio: true,
         anio: true,
-        registrado_por: { include: { persona: true, rol: true } },
-        revisado_por: { include: { persona: true, rol: true } },
+        registrado_por: {
+          select: this.usuarioPublicoSelect(),
+        },
+        revisado_por: {
+          select: this.usuarioPublicoSelect(),
+        },
         estudiante: {
           include: {
-            persona: true,
+            persona: {
+              select: this.personaBasicaSelect(),
+            },
             codigos_colegio: true,
             apoderados: {
               include: {
-                apoderado: { include: { persona: true } },
+                apoderado: {
+                  include: {
+                    persona: {
+                      select: this.personaBasicaSelect(),
+                    },
+                  },
+                },
               },
             },
           },
@@ -2787,7 +2842,20 @@ export class AcademicosService {
         cronogramas: {
           include: {
             concepto: true,
-            pagos: true,
+            pagos: {
+              include: {
+                apoderado: {
+                  include: {
+                    persona: {
+                      select: this.personaBasicaSelect(),
+                    },
+                  },
+                },
+                cajero: {
+                  select: this.usuarioPublicoSelect(),
+                },
+              },
+            },
           },
           orderBy: { fecha_vencimiento: 'asc' },
         },
@@ -3201,4 +3269,3 @@ export class AcademicosService {
     return matricula;
   }
 }
-
