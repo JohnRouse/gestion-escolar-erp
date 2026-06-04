@@ -798,10 +798,24 @@ export class AcademicosService {
     idEstudiante: number;
     idTenant: number | null;
   }) {
+    const whereTenantGrupo = params.idTenant
+      ? {
+          OR: [
+            { id_tenant: params.idTenant },
+            { id_tenant: null },
+            {
+              colegio: {
+                id_tenant: params.idTenant,
+              },
+            },
+          ],
+        }
+      : {};
+
     const matriculas = await this.prisma.matricula.findMany({
       where: {
         id_estudiante: params.idEstudiante,
-        ...(params.idTenant ? { id_tenant: params.idTenant } : {}),
+        ...whereTenantGrupo,
         estado_matricula: {
           in: ['Activo', 'Pre-matriculado', 'Reserva', 'Pendiente'],
         },
@@ -826,6 +840,7 @@ export class AcademicosService {
       ) || null
     );
   }
+
 
   private mensajeMatriculaExistenteGrupo(matriculaExistente: any) {
     const colegioNombre =

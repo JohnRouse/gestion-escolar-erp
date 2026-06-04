@@ -929,7 +929,7 @@ export default function MatriculaPage() {
     }
 
     if (estado === 'Activo') {
-      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Para cambiarlo de sede o sección debe usarse un movimiento de matrícula.`;
+      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Para cambiarlo de sede, sección o año debe usarse un proceso controlado de movimiento, promoción o reserva del siguiente año.`;
     }
 
     return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
