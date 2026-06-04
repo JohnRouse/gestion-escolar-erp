@@ -761,6 +761,75 @@ export class AcademicosService {
     };
   }
 
+  // ── NUEVOS HELPERS PARA EVITAR MATRÍCULA DUPLICADA EN EL MISMO AÑO ESCOLAR ──
+  private async buscarMatriculaBloqueanteMismoAnioEscolar(params: {
+    idEstudiante: number;
+    idTenant: number | null;
+    anioDestino: {
+      id_anio: number;
+      nombre_anio?: string | null;
+      fecha_inicio?: Date | string | null;
+    };
+  }) {
+    const anioCorte = this.getAnioCorte(params.anioDestino);
+
+    const aniosMismoPeriodo = await this.prisma.anioLectivo.findMany({
+      where: params.idTenant ? { id_tenant: params.idTenant } : {},
+      select: {
+        id_anio: true,
+        id_colegio: true,
+        nombre_anio: true,
+        fecha_inicio: true,
+      },
+    });
+
+    const idsMismoAnioEscolar = aniosMismoPeriodo
+      .filter((item) => this.getAnioCorte(item) === anioCorte)
+      .map((item) => item.id_anio);
+
+    const idsBusqueda = idsMismoAnioEscolar.length
+      ? idsMismoAnioEscolar
+      : [params.anioDestino.id_anio];
+
+    return this.prisma.matricula.findFirst({
+      where: {
+        id_estudiante: params.idEstudiante,
+        id_anio: { in: idsBusqueda },
+        estado_matricula: {
+          in: ['Activo', 'Pre-matriculado', 'Reserva', 'Pendiente'],
+        },
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        seccion: {
+          include: {
+            grado: {
+              include: { nivel: true },
+            },
+          },
+        },
+      },
+      orderBy: { id_matricula: 'desc' },
+    });
+  }
+
+  private mensajeMatriculaExistente(matriculaExistente: any) {
+    const colegioNombre =
+      matriculaExistente?.colegio?.nombre || 'este colegio';
+    const anioNombre =
+      matriculaExistente?.anio?.nombre_anio ||
+      'el año lectivo seleccionado';
+    const gradoNombre =
+      matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
+    const nivelNombre =
+      matriculaExistente?.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
+    const letra = matriculaExistente?.seccion?.letra || '-';
+    const estado = matriculaExistente?.estado_matricula || 'matriculado';
+
+    return `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Si corresponde cambiarlo de sede o sección, usa el flujo de traslado/movimiento de matrícula, no una nueva matrícula.`;
+  }
+
   // ── FIN HELPERS ──────────────────────────────────────
 
   private handlePersonaPrismaError(error: unknown): never {
@@ -1759,47 +1828,17 @@ export class AcademicosService {
       );
     }
 
-    const existente = await this.prisma.matricula.findFirst({
-      where: {
-        id_estudiante: params.dto.id_estudiante,
-        id_anio: params.dto.id_anio,
-        id_colegio: idColegio,
-        estado_matricula: {
-          in: ['Activo', 'Pre-matriculado', 'Reserva'],
-        },
-      },
-    });
-
-    if (existente) {
-      const matriculaExistente = await this.prisma.matricula.findUnique({
-        where: { id_matricula: existente.id_matricula },
-        include: {
-          colegio: true,
-          anio: true,
-          seccion: {
-            include: {
-              grado: {
-                include: { nivel: true },
-              },
-            },
-          },
-        },
+    // VALIDACIÓN DE MATRÍCULA EXISTENTE EN EL MISMO AÑO ESCOLAR
+    const matriculaExistente =
+      await this.buscarMatriculaBloqueanteMismoAnioEscolar({
+        idEstudiante: params.dto.id_estudiante,
+        idTenant,
+        anioDestino: anio,
       });
 
-      const colegioNombre =
-        matriculaExistente?.colegio?.nombre || 'este colegio';
-      const anioNombre =
-        matriculaExistente?.anio?.nombre_anio ||
-        'el año lectivo seleccionado';
-      const gradoNombre =
-        matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
-      const nivelNombre =
-        matriculaExistente?.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
-      const letra = matriculaExistente?.seccion?.letra || '-';
-      const estado = matriculaExistente?.estado_matricula || 'matriculado';
-
+    if (matriculaExistente) {
       throw new BadRequestException(
-        `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}.`,
+        this.mensajeMatriculaExistente(matriculaExistente),
       );
     }
 

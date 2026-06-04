@@ -561,6 +561,19 @@ export default function MatriculaPage() {
     return new Date().getFullYear();
   };
 
+  const getAnioCorteMatriculaFrontend = (matricula: any) => {
+    const desdeNombre = matricula?.anio?.nombre_anio?.match(/\d{4}/)?.[0];
+
+    if (desdeNombre) return Number(desdeNombre);
+
+    if (matricula?.anio?.fecha_inicio) {
+      const fecha = new Date(matricula.anio.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    return null;
+  };
+
   const aniosDisponibles = useMemo(
     () => anios.filter((anio) => esAnioDisponibleParaRegistro(anio)),
     [anios],
@@ -826,26 +839,41 @@ export default function MatriculaPage() {
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
 
+    const matriculasBloqueantes = estudiante.matriculas.filter((m) =>
+      estadosMatriculaBloqueantes.includes(m.estado_matricula),
+    );
+
+    if (!matriculasBloqueantes.length) return null;
+
+    if (anioId) {
+      const anioCorteDestino = getAnioCorteFrontend();
+
+      const mismaGestion = matriculasBloqueantes.find((m) => {
+        const anioCorteMatricula = getAnioCorteMatriculaFrontend(m);
+        return anioCorteMatricula === anioCorteDestino;
+      });
+
+      if (mismaGestion) return mismaGestion;
+    }
+
     if (activeScope.tipo === 'colegio') {
-      return estudiante.matriculas.find(
-        (m) =>
-          estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
-          m.id_colegio === activeScope.id_colegio,
+      const mismaSede = matriculasBloqueantes.find(
+        (m) => m.id_colegio === activeScope.id_colegio,
       );
+
+      if (mismaSede) return mismaSede;
     }
 
     if (colegioDestinoId) {
-      return estudiante.matriculas.find(
-        (m) =>
-          estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
-          m.id_colegio === colegioDestinoId,
+      const mismaSedeDestino = matriculasBloqueantes.find(
+        (m) => m.id_colegio === colegioDestinoId,
       );
+
+      if (mismaSedeDestino) return mismaSedeDestino;
     }
 
-    return estudiante.matriculas.find((m) =>
-      estadosMatriculaBloqueantes.includes(m.estado_matricula),
-    );
-  }, [activeScope, colegioDestinoId, estudiante?.matriculas]);
+    return null;
+  }, [activeScope, colegioDestinoId, estudiante?.matriculas, anioId]);
 
   const alertaEdad = useMemo(() => {
     if (!alumno || !seccionSeleccionada) return null;
@@ -879,20 +907,6 @@ export default function MatriculaPage() {
     return activeScope.tipo === 'todos' && !colegioDestinoId;
   }, [activeScope.tipo, colegioDestinoId]);
 
-  // Helper para navegar al detalle de una matrícula activa
-  function irADetalleMatriculaActiva(matricula: any) {
-    if (!matricula?.id_matricula) return;
-
-    const params = new URLSearchParams();
-    params.set('matricula_id', String(matricula.id_matricula));
-
-    if (matricula.id_colegio) {
-      params.set('colegio_id', String(matricula.id_colegio));
-    }
-
-    navigate(`/matricula/historial?${params.toString()}`);
-  }
-
   function formatMatriculaActiva(matricula: any) {
     if (!matricula) return '';
 
@@ -916,6 +930,19 @@ export default function MatriculaPage() {
     }
 
     return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+  }
+
+  function irADetalleMatriculaActiva(matricula: any) {
+    if (!matricula?.id_matricula) return;
+
+    const params = new URLSearchParams();
+    params.set('matricula_id', String(matricula.id_matricula));
+
+    if (matricula.id_colegio) {
+      params.set('colegio_id', String(matricula.id_colegio));
+    }
+
+    navigate(`/matricula/historial?${params.toString()}`);
   }
 
   const mensajeValidacionMatricula = useMemo(() => {
@@ -1156,9 +1183,11 @@ export default function MatriculaPage() {
     setApoderados([]);
 
     try {
-      const query = colegioDestinoQuery
-        ? `&${colegioDestinoQuery.replace('?', '')}`
-        : '';
+      const query = puedeVerConsolidado
+        ? '&scope=all'
+        : colegioDestinoQuery
+          ? `&${colegioDestinoQuery.replace('?', '')}`
+          : '';
 
       const res = await axios.get(
         `/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`,

@@ -383,13 +383,22 @@ export default function MatriculasHistorialPage() {
     }
   };
 
+  // Efecto seguro para abrir automáticamente
   useEffect(() => {
     if (!token) return;
 
     const matriculaIdParam = searchParams.get('matricula_id');
+
+    if (!matriculaIdParam) {
+      if (autoOpenedMatriculaId !== null) {
+        setAutoOpenedMatriculaId(null);
+      }
+      return;
+    }
+
     const matriculaId = Number(matriculaIdParam);
 
-    if (!matriculaIdParam || !Number.isInteger(matriculaId) || matriculaId <= 0) {
+    if (!Number.isInteger(matriculaId) || matriculaId <= 0) {
       return;
     }
 
@@ -400,15 +409,19 @@ export default function MatriculasHistorialPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, searchParams, autoOpenedMatriculaId]);
 
+  // Cierre seguro del modal: limpia URL, luego cierra
   const cerrarDetalle = () => {
-    setDetalleOpen(false);
-    setDetalleMatricula(null);
-    setAutoOpenedMatriculaId(null);
-
     const next = new URLSearchParams(searchParams);
     next.delete('matricula_id');
     next.delete('colegio_id');
+
     setSearchParams(next, { replace: true });
+
+    setDetalleOpen(false);
+    setDetalleMatricula(null);
+    setCronogramaOpen(false);
+    setMensajeRevision(null);
+    setMensajePago(null);
   };
 
   const guardarRevision = async () => {
