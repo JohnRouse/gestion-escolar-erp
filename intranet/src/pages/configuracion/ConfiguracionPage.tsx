@@ -10,6 +10,7 @@ import {
   Settings,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import { useSchool } from '../../contexts/SchoolContext';
 import NivelesGradosTab from './NivelesGradosTab';
 import SeccionesTab from './SeccionesTab';
 import CursosTab from './CursosTab';
@@ -30,7 +31,14 @@ const TABS = [
 
 export default function ConfiguracionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { activeScope, scopeLabel } = useSchool();
+
   const tabActivo = searchParams.get('tab') || 'anios';
+
+  const contextKey =
+    activeScope.tipo === 'colegio'
+      ? `colegio-${activeScope.id_colegio}`
+      : 'todos';
 
   const setTab = (key: string) => {
     setSearchParams({ tab: key });
@@ -49,6 +57,10 @@ export default function ConfiguracionPage() {
           {
             label: 'Módulo activo',
             value: tabActual.label,
+          },
+          {
+            label: 'Contexto',
+            value: scopeLabel,
           },
         ]}
       />
@@ -79,7 +91,7 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
-        <div className="p-5">
+        <div key={`${contextKey}-${tabActivo}`} className="p-5">
           {tabActivo === 'anios' && <AniosLectivosTab />}
           {tabActivo === 'niveles' && <NivelesGradosTab />}
           {tabActivo === 'secciones' && <SeccionesTab />}

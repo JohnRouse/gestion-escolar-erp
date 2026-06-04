@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
   BookOpen,
@@ -42,6 +44,14 @@ const actionButtonClass =
 
 export default function NivelesGradosTab() {
   const { token } = useAuth();
+  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioConfigId =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : null;
+
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [grados, setGrados] = useState<Record<number, Grado[]>>({});
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -67,7 +77,7 @@ export default function NivelesGradosTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get('/api/academicos/niveles', authHeader);
+      const res = await axios.get(`/api/academicos/niveles${queryString}`, authHeader);
       setNiveles(res.data);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' });
@@ -87,9 +97,11 @@ export default function NivelesGradosTab() {
   };
 
   useEffect(() => {
+    setExpanded(null);
+    setGrados({});
     fetchNiveles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, queryString]);
 
   const toggleExpand = (nivelId: number) => {
     if (expanded === nivelId) {
@@ -137,7 +149,15 @@ export default function NivelesGradosTab() {
             authHeader
           );
         } else {
-          await axios.post('/api/academicos/niveles', { nombre_nivel: cleanName }, authHeader);
+          await axios.post(
+            `/api/academicos/niveles${queryString}`,
+            {
+              nombre_nivel: cleanName,
+              id_colegio: colegioConfigId || undefined,
+              id_tenant: tenant?.id_tenant || undefined,
+            },
+            authHeader,
+          );
         }
         await fetchNiveles();
       } else {
@@ -161,6 +181,11 @@ export default function NivelesGradosTab() {
       setModal(null);
       setNombre('');
       setMensaje({ type: 'success', text: 'Cambios guardados correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Configuración guardada',
+        message: `Cambios aplicados para ${scopeLabel}.`,
+      });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
     } finally {
@@ -212,7 +237,9 @@ export default function NivelesGradosTab() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Niveles educativos</h3>
-          <p className="mt-1 text-sm text-gray-500">Ordena Inicial, Primaria y Secundaria con sus grados respectivos.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Ordena Inicial, Primaria y Secundaria con sus grados respectivos. Contexto: {scopeLabel}.
+          </p>
         </div>
         <button
           type="button"

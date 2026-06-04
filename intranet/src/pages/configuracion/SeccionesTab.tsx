@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
   Building2,
@@ -35,6 +37,15 @@ interface Nivel {
   nombre_nivel: string;
 }
 
+interface AnioLectivo {
+  id_anio: number;
+  id_colegio?: number | null;
+  nombre_anio: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  estado: string;
+}
+
 type ModalState =
   | { mode: 'create' }
   | { mode: 'edit'; seccion: Seccion };
@@ -46,6 +57,14 @@ const iconButtonClass =
 
 export default function SeccionesTab() {
   const { token } = useAuth();
+  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioConfigId =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : null;
+
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [grados, setGrados] = useState<Grado[]>([]);
   const [nivelSeleccionado, setNivelSeleccionado] = useState<number | null>(null);
@@ -56,6 +75,10 @@ export default function SeccionesTab() {
   const [letra, setLetra] = useState('');
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [anios, setAnios] = useState<AnioLectivo[]>([]);
+  const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
+  const [capacidad, setCapacidad] = useState('30');
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -68,14 +91,59 @@ export default function SeccionesTab() {
   const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
   const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
 
+  // Cargar niveles
   useEffect(() => {
     if (!token) return;
     axios
-      .get('/api/academicos/niveles', authHeader)
+      .get(`/api/academicos/niveles${queryString}`, authHeader)
       .then((res) => setNiveles(res.data))
       .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' }));
-  }, [token, authHeader]);
+  }, [token, authHeader, queryString]);
 
+  // Cargar años lectivos
+  useEffect(() => {
+    if (!token) return;
+
+    axios
+      .get(`/api/academicos/anios${queryString}`, authHeader)
+      .then((res) => {
+        const data: AnioLectivo[] = res.data || [];
+        setAnios(data);
+
+        const disponibles = data.filter((item) => {
+          const estado = String(item.estado || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+          return !['cerrado', 'archivado'].includes(estado);
+        });
+
+        const preferido =
+          disponibles.find((item) =>
+            String(item.estado || '').toLowerCase().includes('curso'),
+          ) ||
+          disponibles.find((item) =>
+            String(item.estado || '').toLowerCase().includes('matr'),
+          ) ||
+          disponibles[0];
+
+        setAnioSeleccionado(preferido?.id_anio || null);
+      })
+      .catch(() =>
+        setMensaje({ type: 'error', text: 'No se pudieron cargar los años lectivos.' }),
+      );
+  }, [token, authHeader, queryString]);
+
+  // Resetear al cambiar de colegio/contexto
+  useEffect(() => {
+    setNivelSeleccionado(null);
+    setGradoSeleccionado(null);
+    setSecciones([]);
+    setGrados([]);
+  }, [queryString]);
+
+  // Cargar grados cuando cambia el nivel
   useEffect(() => {
     if (!token || !nivelSeleccionado) {
       setGrados([]);
@@ -95,11 +163,11 @@ export default function SeccionesTab() {
   }, [nivelSeleccionado, token, authHeader]);
 
   const cargarSecciones = async () => {
-    if (!token || !gradoSeleccionado) return;
+    if (!token || !gradoSeleccionado || !anioSeleccionado) return;
     setLoading(true);
     try {
       const res = await axios.get(
-        `/api/academicos/secciones?grado_id=${gradoSeleccionado}&anio_id=1`,
+        `/api/academicos/secciones${queryString ? `${queryString}&` : '?'}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
         authHeader
       );
       setSecciones(res.data);
@@ -114,11 +182,12 @@ export default function SeccionesTab() {
   useEffect(() => {
     cargarSecciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gradoSeleccionado, token]);
+  }, [gradoSeleccionado, anioSeleccionado, token, queryString]);
 
   const openCreate = () => {
     setModal({ mode: 'create' });
     setLetra('');
+    setCapacidad('30');
     setMensaje(null);
   };
 
@@ -154,13 +223,15 @@ export default function SeccionesTab() {
         );
       } else {
         await axios.post(
-          '/api/academicos/secciones',
+          `/api/academicos/secciones${queryString}`,
           {
             letra: cleanLetter,
             id_grado: gradoSeleccionado,
-            id_aula: 1,
+            id_colegio: colegioConfigId || undefined,
+            id_tenant: tenant?.id_tenant || undefined,
+            capacidad: Number(capacidad) || 30,
           },
-          authHeader
+          authHeader,
         );
       }
 
@@ -168,6 +239,11 @@ export default function SeccionesTab() {
       setModal(null);
       setLetra('');
       setMensaje({ type: 'success', text: 'Sección guardada correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Sección guardada',
+        message: `Sección guardada para ${scopeLabel}.`,
+      });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar la sección.' });
     } finally {
@@ -196,7 +272,7 @@ export default function SeccionesTab() {
         <button
           type="button"
           onClick={openCreate}
-          disabled={!gradoSeleccionado}
+          disabled={!gradoSeleccionado || !anioSeleccionado || !colegioConfigId}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
         >
           <Plus size={17} /> Nueva sección
@@ -204,7 +280,7 @@ export default function SeccionesTab() {
       </div>
 
       <div className={`${panelClass} p-4`}>
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nivel educativo</label>
             <select
@@ -233,6 +309,22 @@ export default function SeccionesTab() {
               {grados.map((grado) => (
                 <option key={grado.id_grado} value={grado.id_grado}>
                   {grado.nombre_grado}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-500">Año lectivo</label>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
+              value={anioSeleccionado || ''}
+              onChange={(event) => setAnioSeleccionado(event.target.value ? Number(event.target.value) : null)}
+            >
+              <option value="">Seleccionar año</option>
+              {anios.map((anio) => (
+                <option key={anio.id_anio} value={anio.id_anio}>
+                  {anio.nombre_anio} · {anio.estado}
                 </option>
               ))}
             </select>
@@ -382,8 +474,20 @@ export default function SeccionesTab() {
                   maxLength={3}
                   autoFocus
                 />
-                <p className="mt-2 text-xs text-gray-400">El aula se asigna con el valor por defecto actual del sistema.</p>
               </div>
+
+              {modal.mode === 'create' && (
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Capacidad del aula</label>
+                  <input
+                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
+                    value={capacidad}
+                    inputMode="numeric"
+                    onChange={(event) => setCapacidad(event.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="30"
+                  />
+                </div>
+              )}
 
               {mensaje && modal && (
                 <div

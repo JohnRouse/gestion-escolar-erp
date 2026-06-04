@@ -83,7 +83,7 @@ function formatCurrency(value: number) {
 
 export default function ConceptosPagoTab() {
   const { token } = useAuth();
-  const { colegios, activeColegio, activeScope, tenant, queryString } = useSchool();
+  const { colegios, activeColegio, activeScope, tenant, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioDefault =
@@ -107,6 +107,13 @@ export default function ConceptosPagoTab() {
   const [anioId, setAnioId] = useState<number | ''>('');
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [loadingAnios, setLoadingAnios] = useState(false);
+
+  // Sincronizar colegioId al cambiar el contexto global
+  useEffect(() => {
+    setColegioId(colegioDefault);
+    setAnioId('');
+    setMensaje(null);
+  }, [colegioDefault]);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -326,7 +333,9 @@ export default function ConceptosPagoTab() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Conceptos de pago</h3>
-          <p className="mt-1 text-sm text-gray-500">Define pensiones, matrícula y otros cobros base del colegio.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Define pensiones, matrícula y otros cobros base por colegio y año lectivo. Contexto: {scopeLabel}.
+          </p>
         </div>
         <button
           type="button"

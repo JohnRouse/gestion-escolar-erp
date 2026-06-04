@@ -31,22 +31,40 @@ export class AcademicosController {
 
   // ── NIVELES ──────────────────────────────────────────
   @Get('niveles')
-  getNiveles() {
-    return this.academicosService.getNiveles();
+  @UseGuards(AuthGuard('jwt'))
+  getNiveles(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getNiveles({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
   }
 
   @Post('niveles')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async createNivel(@Body() body: { nombre_nivel: string }) {
-    const existente = await this.prisma.nivel.findFirst({
-      where: { nombre_nivel: body.nombre_nivel },
-    });
-
-    if (existente) throw new BadRequestException('El nivel ya existe');
-
-    return this.prisma.nivel.create({
-      data: { nombre_nivel: body.nombre_nivel },
+  async createNivel(
+    @Request() req,
+    @Body()
+    body: {
+      nombre_nivel: string;
+      id_colegio?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearNivelConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      nombreNivel: body.nombre_nivel,
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
     });
   }
 
@@ -190,29 +208,29 @@ export class AcademicosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async createSeccion(
+    @Request() req,
     @Body()
     body: {
       letra: string;
       id_grado: number;
-      id_aula: number;
+      id_aula?: number;
       id_tenant?: number;
       id_colegio?: number;
+      capacidad?: number;
     },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
   ) {
-    const grado = await this.prisma.grado.findUnique({
-      where: { id_grado: body.id_grado },
-    });
-
-    if (!grado) throw new NotFoundException('Grado no encontrado');
-
-    return this.prisma.seccion.create({
-      data: {
-        letra: body.letra,
-        id_grado: body.id_grado,
-        id_aula: body.id_aula,
-        id_tenant: body.id_tenant,
-        id_colegio: body.id_colegio,
-      },
+    return this.academicosService.crearSeccionConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      letra: body.letra,
+      idGrado: Number(body.id_grado),
+      idAula: body.id_aula ? Number(body.id_aula) : undefined,
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+      capacidad: body.capacidad ? Number(body.capacidad) : undefined,
     });
   }
 
