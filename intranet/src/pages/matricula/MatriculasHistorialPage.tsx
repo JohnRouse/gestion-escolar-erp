@@ -229,13 +229,17 @@ export default function MatriculasHistorialPage() {
   // ─── HELPERS DE PAGO ──────────────────────────────────
   const getCronogramaMatricula = (detalle: any) => {
     return (
-      detalle?.cronogramas?.find((item: any) =>
-        String(item.concepto?.nombre_concepto || '')
+      detalle?.cronogramas?.find((item: any) => {
+        const tipo = item.concepto?.tipo_concepto;
+
+        if (tipo) return tipo === 'MATRICULA';
+
+        return String(item.concepto?.nombre_concepto || '')
           .toLowerCase()
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
-          .includes('matric'),
-      ) || null
+          .includes('matric');
+      }) || null
     );
   };
 
@@ -253,6 +257,52 @@ export default function MatriculasHistorialPage() {
     return Math.max(montoBase - pagado, 0);
   };
 
+  // ─── GENERAR COBRO DE MATRÍCULA ──────────────────────
+  const generarCobroMatricula = async () => {
+    if (!token || !detalleMatricula?.id_matricula) return;
+
+    setSavingPago(true);
+    setMensajePago(null);
+
+    try {
+      const res = await axios.post(
+        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/generar-cobro-matricula${queryString}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const detalleActualizado = res.data?.matricula || detalleMatricula;
+      const saldo = getSaldoMatricula(detalleActualizado);
+
+      setDetalleMatricula(detalleActualizado);
+      setPagoMonto(saldo ? String(saldo.toFixed(2)) : '');
+
+      const successMessage =
+        res.data?.message || 'Cobro de matrícula generado correctamente.';
+
+      setMensajePago(successMessage);
+      showToast({
+        type: 'success',
+        title: 'Cobro generado',
+        message: successMessage,
+      });
+
+      await fetchMatriculas();
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'No se pudo generar el cobro de matrícula.';
+
+      setMensajePago(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'No se pudo generar cobro',
+        message: errorMessage,
+      });
+    } finally {
+      setSavingPago(false);
+    }
+  };
+
   // ─── FUNCIONES DE DETALLE Y REVISIÓN ──────────────────
   const abrirDetalleMatricula = async (idMatricula: number) => {
     if (!token) return;
@@ -268,14 +318,45 @@ export default function MatriculasHistorialPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setDetalleMatricula(res.data);
-      setRevisionEstado(res.data?.estado_revision || 'Aprobado');
-      setRevisionObservacion(res.data?.observacion_revision || '');
+      let detalle = res.data;
+
+      if (
+        detalle?.estado_matricula === 'Reserva' &&
+        !getCronogramaMatricula(detalle)
+      ) {
+        try {
+          const cobroRes = await axios.post(
+            `/api/academicos/matriculas/${idMatricula}/generar-cobro-matricula${queryString}`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+
+          detalle = cobroRes.data?.matricula || detalle;
+
+          showToast({
+            type: 'success',
+            title: 'Cobro generado',
+            message: 'Se generó el cobro de matrícula para esta reserva.',
+          });
+        } catch (error: any) {
+          showToast({
+            type: 'warning',
+            title: 'Reserva sin cobro',
+            message:
+              error.response?.data?.message ||
+              'No se pudo generar el cobro de matrícula. Verifica el concepto de pago del año lectivo.',
+            duration: 6500,
+          });
+        }
+      }
+
+      setDetalleMatricula(detalle);
+      setRevisionEstado(detalle?.estado_revision || 'Aprobado');
+      setRevisionObservacion(detalle?.observacion_revision || '');
       setMensajeRevision(null);
 
-      // Inicializar campos de pago
-      const apoderadoDefault = res.data?.estudiante?.apoderados?.[0]?.id_apoderado;
-      const saldoMatricula = getSaldoMatricula(res.data);
+      const apoderadoDefault = detalle?.estudiante?.apoderados?.[0]?.id_apoderado;
+      const saldoMatricula = getSaldoMatricula(detalle);
 
       setPagoApoderadoId(apoderadoDefault ? String(apoderadoDefault) : '');
       setPagoMonto(saldoMatricula ? String(saldoMatricula.toFixed(2)) : '');
@@ -351,7 +432,11 @@ export default function MatriculasHistorialPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setDetalleMatricula(res.data?.matricula || detalleMatricula);
+      const detalleActualizado = res.data?.matricula || detalleMatricula;
+      setDetalleMatricula(detalleActualizado);
+      const saldo = getSaldoMatricula(detalleActualizado);
+      setPagoMonto(saldo ? String(saldo.toFixed(2)) : '');
+
       const successMessage =
         res.data?.message || 'Pago registrado correctamente.';
 
@@ -908,6 +993,20 @@ export default function MatriculasHistorialPage() {
                     <h4 className="text-sm font-black text-slate-900">
                       Pago de matrícula y activación
                     </h4>
+
+                    {detalleMatricula && !getCronogramaMatricula(detalleMatricula) && (
+                      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
+                        Esta matrícula todavía no tiene cobro de matrícula generado.
+                        <button
+                          type="button"
+                          onClick={generarCobroMatricula}
+                          disabled={savingPago}
+                          className="mt-3 inline-flex h-10 items-center justify-center rounded-2xl bg-amber-500 px-4 text-sm font-black text-white transition hover:bg-amber-600 disabled:opacity-50"
+                        >
+                          Generar cobro de matrícula
+                        </button>
+                      </div>
+                    )}
 
                     {(() => {
                       const cronogramaMatricula = getCronogramaMatricula(detalleMatricula);

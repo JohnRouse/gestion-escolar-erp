@@ -552,9 +552,6 @@ export class AcademicosService {
 
   // ── HELPERS PARA PAGO DE MATRÍCULA Y ACTIVACIÓN ───────
 
-  // (Se eliminó el antiguo método esConceptoMatricula basado en string.
-  // Ahora se usan los nuevos helpers definidos más arriba.)
-
   private getMesDesdeConcepto(nombre?: string | null) {
     const text = String(nombre || '')
       .toLowerCase()
@@ -664,6 +661,104 @@ export class AcademicosService {
     }
 
     return creados;
+  }
+
+  // ── ASEGURAR CRONOGRAMA DE MATRÍCULA ─────────────────
+  private async asegurarCronogramaMatricula(
+    tx: Prisma.TransactionClient,
+    matricula: {
+      id_matricula: number;
+      id_anio: number;
+      id_colegio: number | null;
+      estado_matricula?: string | null;
+    },
+  ) {
+    const existente = await tx.cronogramaPagos.findFirst({
+      where: {
+        id_matricula: matricula.id_matricula,
+        concepto: {
+          tipo_concepto: 'MATRICULA',
+        },
+      },
+      include: {
+        concepto: true,
+        pagos: true,
+      },
+    });
+
+    if (existente) {
+      return {
+        cronograma: existente,
+        creado: false,
+      };
+    }
+
+    const conceptos = await tx.conceptoPago.findMany({
+      where: {
+        id_anio: matricula.id_anio,
+        OR: matricula.id_colegio
+          ? [{ id_colegio: matricula.id_colegio }, { id_colegio: null }]
+          : [{ id_colegio: null }],
+        tipo_concepto: 'MATRICULA',
+      },
+      orderBy: [{ id_colegio: 'desc' }, { id_concepto: 'asc' }],
+    });
+
+    if (!conceptos.length) {
+      throw new BadRequestException(
+        'No existe un concepto de tipo MATRÍCULA configurado para este colegio y año lectivo. Créalo en Configuración > Conceptos de pago.',
+      );
+    }
+
+    let primerCronograma: any = null;
+
+    for (const concepto of conceptos) {
+      const yaExiste = await tx.cronogramaPagos.findFirst({
+        where: {
+          id_matricula: matricula.id_matricula,
+          id_concepto: concepto.id_concepto,
+        },
+        include: {
+          concepto: true,
+          pagos: true,
+        },
+      });
+
+      if (yaExiste) {
+        primerCronograma = primerCronograma || yaExiste;
+        continue;
+      }
+
+      const fechaVenc = new Date();
+      fechaVenc.setDate(fechaVenc.getDate() + 1);
+
+      const creado = await tx.cronogramaPagos.create({
+        data: {
+          id_matricula: matricula.id_matricula,
+          id_concepto: concepto.id_concepto,
+          fecha_vencimiento: fechaVenc,
+          estado_pago: 'Pendiente',
+        },
+        include: {
+          concepto: true,
+          pagos: true,
+        },
+      });
+
+      primerCronograma = primerCronograma || creado;
+    }
+
+    if (matricula.estado_matricula === 'Reserva') {
+      await tx.matricula.update({
+        where: { id_matricula: matricula.id_matricula },
+        data: { estado_matricula: 'Pre-matriculado' },
+      });
+    }
+
+    return {
+      cronograma: primerCronograma,
+      creado: true,
+    };
   }
 
   // ── FIN HELPERS ──────────────────────────────────────
@@ -2141,6 +2236,60 @@ export class AcademicosService {
     };
   }
 
+  // ── GENERAR COBRO DE MATRÍCULA (Para reservas que ya tienen concepto) ──
+  async generarCobroMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    await this.prisma.$transaction(async (tx) => {
+      const matricula = await tx.matricula.findFirst({
+        where: {
+          id_matricula: params.idMatricula,
+          ...this.colegioWhere(scope),
+        },
+        include: {
+          cronogramas: {
+            include: {
+              concepto: true,
+              pagos: true,
+            },
+          },
+        },
+      });
+
+      if (!matricula) {
+        throw new NotFoundException('No se encontró la matrícula solicitada.');
+      }
+
+      if (matricula.estado_matricula === 'Activo') {
+        throw new BadRequestException('La matrícula ya está activa.');
+      }
+
+      await this.asegurarCronogramaMatricula(tx, {
+        id_matricula: matricula.id_matricula,
+        id_anio: matricula.id_anio,
+        id_colegio: matricula.id_colegio,
+        estado_matricula: matricula.estado_matricula,
+      });
+    });
+
+    const detalle = await this.getDetalleMatricula({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId,
+      idMatricula: params.idMatricula,
+    });
+
+    return {
+      message: 'Cobro de matrícula generado correctamente.',
+      matricula: detalle,
+    };
+  }
+
   // ── COMUNIDAD ESCOLAR: ALUMNOS Y APODERADOS ──────────
 
   async listarAlumnos(
@@ -2721,15 +2870,13 @@ export class AcademicosService {
         );
       }
 
-      const cronogramaMatricula = matricula.cronogramas.find((item) =>
-        this.esConceptoMatricula(item.concepto),
-      );
-
-      if (!cronogramaMatricula) {
-        throw new BadRequestException(
-          'No existe un cronograma de matrícula para esta pre-matrícula.',
-        );
-      }
+      const { cronograma: cronogramaMatricula } =
+        await this.asegurarCronogramaMatricula(tx, {
+          id_matricula: matricula.id_matricula,
+          id_anio: matricula.id_anio,
+          id_colegio: matricula.id_colegio,
+          estado_matricula: matricula.estado_matricula,
+        });
 
       if (cronogramaMatricula.estado_pago === 'Pagado') {
         throw new BadRequestException('El pago de matrícula ya fue registrado.');
@@ -2858,9 +3005,13 @@ export class AcademicosService {
         };
       }
 
-      const cronogramaMatricula = matricula.cronogramas.find((item) =>
-        this.esConceptoMatricula(item.concepto),
-      );
+      const { cronograma: cronogramaMatricula } =
+        await this.asegurarCronogramaMatricula(tx, {
+          id_matricula: matricula.id_matricula,
+          id_anio: matricula.id_anio,
+          id_colegio: matricula.id_colegio,
+          estado_matricula: matricula.estado_matricula,
+        });
 
       if (!cronogramaMatricula || cronogramaMatricula.estado_pago !== 'Pagado') {
         throw new BadRequestException(
@@ -3050,3 +3201,4 @@ export class AcademicosService {
     return matricula;
   }
 }
+

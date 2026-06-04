@@ -700,6 +700,24 @@ export class AcademicosController {
     });
   }
 
+  @Post('matriculas/:id/generar-cobro-matricula')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  generarCobroMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.generarCobroMatricula({
+      idMatricula: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   @Patch('matriculas/:id/revision')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')

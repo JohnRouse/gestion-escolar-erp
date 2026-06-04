@@ -1,5 +1,3 @@
-//MATRICULAS PAGE
-
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -1132,8 +1130,8 @@ export default function MatriculaPage() {
     }));
   };
 
-  const buscarAlumno = async () => {
-    if (!token || !dni.trim()) return;
+  const buscarAlumnoPorDni = async (dniBusqueda: string) => {
+    if (!token || !dniBusqueda.trim()) return;
 
     setBuscandoAlumno(true);
     setMensaje(null);
@@ -1145,7 +1143,7 @@ export default function MatriculaPage() {
         : '';
 
       const res = await axios.get(
-        `/api/academicos/alumnos/buscar?dni=${dni.trim()}${query}`,
+        `/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -1190,28 +1188,34 @@ export default function MatriculaPage() {
     }
   };
 
-  const buscarApoderado = async () => {
-    if (!token || !apoderadoDni.trim()) return;
+  const buscarAlumno = () => buscarAlumnoPorDni(dni);
+
+  const buscarApoderadoPorDni = async (dniBusqueda: string) => {
+    if (!token || !dniBusqueda.trim()) return;
 
     setBuscandoApoderado(true);
     setMensaje(null);
 
     try {
       const res = await axios.get(
-        `/api/academicos/apoderados/buscar?dni=${apoderadoDni.trim()}`,
+        `/api/academicos/apoderados/buscar?dni=${dniBusqueda.trim()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
 
       setApoderadoEncontrado(res.data);
+      return res.data;
     } catch (err: any) {
       setApoderadoEncontrado(null);
       setMensaje(err.response?.data?.message || 'No se encontró el apoderado.');
+      return null;
     } finally {
       setBuscandoApoderado(false);
     }
   };
+
+  const buscarApoderado = () => buscarApoderadoPorDni(apoderadoDni);
 
   const agregarApoderado = async (apoderado: Apoderado) => {
     if (!estudiante?.id_persona || !token) {
@@ -1292,7 +1296,7 @@ export default function MatriculaPage() {
     setErrorPersona(null);
 
     try {
-      await axios.post(
+      const res = await axios.post(
         tipo === 'alumno'
           ? '/api/academicos/alumnos'
           : '/api/academicos/apoderados',
@@ -1314,8 +1318,30 @@ export default function MatriculaPage() {
           message: 'La ficha del alumno se guardó correctamente.',
         });
 
-        setTimeout(() => buscarAlumno(), 150);
+        await buscarAlumnoPorDni(form.dni);
       } else {
+        const parentescoNuevo = parentesco || 'Apoderado';
+
+        const apoderadoCreado: Apoderado = {
+          id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona,
+          dni: res.data?.persona?.dni || form.dni,
+          nombres: res.data?.persona?.nombres || form.nombres,
+          apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno,
+          apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno,
+          telefono: res.data?.persona?.telefono || form.telefono,
+          correo: res.data?.persona?.correo || form.correo,
+          direccion: res.data?.persona?.direccion || form.direccion,
+          pais: res.data?.persona?.pais || form.pais,
+          departamento: res.data?.persona?.departamento || form.departamento,
+          provincia: res.data?.persona?.provincia || form.provincia,
+          distrito: res.data?.persona?.distrito || form.distrito,
+          parentesco: parentescoNuevo,
+          apoderado: {
+            id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona,
+            ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion,
+          },
+        };
+
         setApoderadoDni(form.dni);
         setModalApoderado(false);
         setFormApoderado(emptyApoderado);
@@ -1326,7 +1352,11 @@ export default function MatriculaPage() {
           message: 'La ficha del apoderado se guardó correctamente.',
         });
 
-        setTimeout(() => buscarApoderado(), 150);
+        if (estudiante?.id_persona) {
+          await agregarApoderado(apoderadoCreado);
+        } else {
+          setApoderadoEncontrado(apoderadoCreado);
+        }
       }
     } catch (err: any) {
       setErrorPersona(
@@ -1638,19 +1668,8 @@ export default function MatriculaPage() {
         </section>
 
         <section className="space-y-5">
-          <div className="rounded-[30px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-            {!alumno ? (
-              <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
-                <Users size={32} className="text-slate-300" />
-                <h3 className="mt-4 text-base font-black text-slate-800">
-                  Busca un alumno por DNI
-                </h3>
-                <p className="mt-2 max-w-md text-sm text-slate-400">
-                  Al encontrarlo podrás vincular apoderados y registrar la
-                  pre-matrícula.
-                </p>
-              </div>
-            ) : (
+          {alumno ? (
+            <div className="animate-content-soft rounded-[30px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
               <div className="space-y-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
@@ -1756,8 +1775,21 @@ export default function MatriculaPage() {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-[30px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
+              <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
+                <Users size={32} className="text-slate-300" />
+                <h3 className="mt-4 text-base font-black text-slate-800">
+                  Busca un alumno por DNI
+                </h3>
+                <p className="mt-2 max-w-md text-sm text-slate-400">
+                  Al encontrarlo podrás vincular apoderados y registrar la
+                  pre-matrícula.
+                </p>
+              </div>
+            </div>
+          )}
 
           {alumno && matriculaActiva && (
             <Card
@@ -1895,7 +1927,7 @@ export default function MatriculaPage() {
                 </button>
 
                 {apoderadoEncontrado && (
-                  <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                  <div className="animate-content-soft mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-black text-slate-800">
@@ -2390,6 +2422,8 @@ export default function MatriculaPage() {
           onClose={() => setModalApoderado(false)}
           onSave={() => crearPersona('apoderado')}
           apoderado
+          parentesco={parentesco}
+          onParentescoChange={setParentesco}
         />
       )}
 
@@ -2856,6 +2890,8 @@ function PersonaModal({
   alumno,
   apoderado,
   aviso,
+  parentesco,
+  onParentescoChange,
 }: any) {
   const set = (key: keyof PersonaForm, value: string) =>
     setForm({ ...form, [key]: value });
@@ -2884,6 +2920,23 @@ function PersonaModal({
                 value={form.fecha_nacimiento || ''}
                 onChange={(v: string) => set('fecha_nacimiento', v)}
               />
+            )}
+
+            {apoderado && onParentescoChange && (
+              <label>
+                <Label>Vínculo con el alumno</Label>
+                <select
+                  value={parentesco || 'Madre'}
+                  onChange={(event) => onParentescoChange(event.target.value)}
+                  className={selectClass}
+                >
+                  {parentescos.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
 
             <Field
@@ -2919,7 +2972,15 @@ function PersonaModal({
               </label>
             )}
 
-            {apoderado && (
+            {apoderado && !onParentescoChange && (
+              <Field
+                label="Ocupación"
+                value={form.ocupacion || ''}
+                onChange={(v: string) => set('ocupacion', v)}
+              />
+            )}
+
+            {apoderado && onParentescoChange && (
               <Field
                 label="Ocupación"
                 value={form.ocupacion || ''}
@@ -3036,4 +3097,4 @@ function Field({
       />
     </label>
   );
-}	
+}
