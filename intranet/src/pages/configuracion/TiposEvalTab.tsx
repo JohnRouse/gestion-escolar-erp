@@ -1,6 +1,10 @@
+//TIPOSEVALTAB
+
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
   CheckCircle2,
@@ -31,6 +35,14 @@ const iconButtonClass =
 
 export default function TiposEvalTab() {
   const { token } = useAuth();
+  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioConfigId =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : null;
+
   const [tipos, setTipos] = useState<TipoEval[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -52,7 +64,7 @@ export default function TiposEvalTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get('/api/calificaciones/tipos-evaluacion', authHeader);
+      const res = await axios.get(`/api/calificaciones/tipos-evaluacion${queryString}`, authHeader);
       setTipos(res.data);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los tipos de evaluación.' });
@@ -64,7 +76,7 @@ export default function TiposEvalTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, queryString]);
 
   const openCreate = () => {
     setModal({ mode: 'create' });
@@ -99,17 +111,34 @@ export default function TiposEvalTab() {
       if (modal.mode === 'edit') {
         await axios.put(
           `/api/calificaciones/tipos-evaluacion/${modal.tipo.id_tipo_eval}`,
-          { nombre_tipo: cleanName },
+          {
+            nombre_tipo: cleanName,
+            id_tenant: tenant?.id_tenant || undefined,
+            id_colegio: colegioConfigId || undefined,
+          },
           authHeader
         );
       } else {
-        await axios.post('/api/calificaciones/tipos-evaluacion', { nombre_tipo: cleanName }, authHeader);
+        await axios.post(
+          `/api/calificaciones/tipos-evaluacion${queryString}`,
+          {
+            nombre_tipo: cleanName,
+            id_tenant: tenant?.id_tenant || undefined,
+            id_colegio: colegioConfigId || undefined,
+          },
+          authHeader,
+        );
       }
 
       await loadData();
       setModal(null);
       setNombre('');
       setMensaje({ type: 'success', text: 'Tipo de evaluación guardado correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Tipo guardado',
+        message: `Tipo de evaluación guardado para ${scopeLabel}.`,
+      });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
     } finally {

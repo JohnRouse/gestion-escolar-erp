@@ -1,3 +1,5 @@
+//MATRICULAS PAGE
+
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -879,6 +881,20 @@ export default function MatriculaPage() {
     return activeScope.tipo === 'todos' && !colegioDestinoId;
   }, [activeScope.tipo, colegioDestinoId]);
 
+  // Function declaration moved here so it's hoisted and can be used in mensajeValidacionMatricula
+  function formatMatriculaActiva(matricula: any) {
+    if (!matricula) return '';
+
+    const colegio = matricula.colegio?.nombre || 'colegio registrado';
+    const anio = matricula.anio?.nombre_anio || 'año lectivo';
+    const grado = matricula.seccion?.grado?.nombre_grado || 'grado';
+    const letra = matricula.seccion?.letra || '-';
+    const nivel = matricula.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
+    const estado = matricula.estado_matricula || 'matriculado';
+
+    return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+  }
+
   const mensajeValidacionMatricula = useMemo(() => {
     if (colegioDestinoRequerido) {
       return {
@@ -1172,19 +1188,6 @@ export default function MatriculaPage() {
     } finally {
       setBuscandoAlumno(false);
     }
-  };
-
-  const formatMatriculaActiva = (matricula: any) => {
-    if (!matricula) return '';
-
-    const colegio = matricula.colegio?.nombre || 'colegio registrado';
-    const anio = matricula.anio?.nombre_anio || 'año lectivo';
-    const grado = matricula.seccion?.grado?.nombre_grado || 'grado';
-    const letra = matricula.seccion?.letra || '-';
-    const nivel = matricula.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
-    const estado = matricula.estado_matricula || 'matriculado';
-
-    return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
   };
 
   const buscarApoderado = async () => {
@@ -3033,4 +3036,4 @@ function Field({
       />
     </label>
   );
-}
+}	

@@ -1,6 +1,10 @@
+//CURSOSTAB
+
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
   BookOpenCheck,
@@ -17,6 +21,8 @@ import {
 interface Area {
   id_area: number;
   nombre_area: string;
+  id_tenant?: number | null;
+  id_colegio?: number | null;
 }
 
 interface Curso {
@@ -39,6 +45,14 @@ const iconButtonClass =
 
 export default function CursosTab() {
   const { token } = useAuth();
+  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioConfigId =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : null;
+
   const [areas, setAreas] = useState<Area[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,8 +71,8 @@ export default function CursosTab() {
     setLoading(true);
     try {
       const [areasRes, cursosRes] = await Promise.all([
-        axios.get('/api/academicos/areas', authHeader),
-        axios.get('/api/academicos/cursos', authHeader),
+        axios.get(`/api/academicos/areas${queryString}`, authHeader),
+        axios.get(`/api/academicos/cursos${queryString}`, authHeader),
       ]);
       setAreas(areasRes.data);
       setCursos(cursosRes.data);
@@ -72,7 +86,7 @@ export default function CursosTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, queryString]);
 
   const cursosPorArea = (area: Area) =>
     cursos.filter((curso) => curso.id_area === area.id_area || curso.area?.id_area === area.id_area || curso.area?.nombre_area === area.nombre_area);
@@ -109,7 +123,15 @@ export default function CursosTab() {
         if (modal.mode === 'edit') {
           await axios.put(`/api/academicos/areas/${modal.area.id_area}`, { nombre_area: cleanName }, authHeader);
         } else {
-          await axios.post('/api/academicos/areas', { nombre_area: cleanName }, authHeader);
+          await axios.post(
+            `/api/academicos/areas${queryString}`,
+            {
+              nombre_area: cleanName,
+              id_tenant: tenant?.id_tenant || undefined,
+              id_colegio: colegioConfigId || undefined,
+            },
+            authHeader,
+          );
         }
       } else if (modal.mode === 'edit') {
         await axios.put(
@@ -119,8 +141,13 @@ export default function CursosTab() {
         );
       } else {
         await axios.post(
-          '/api/academicos/cursos',
-          { nombre_curso: cleanName, id_area: modal.area.id_area },
+          `/api/academicos/cursos${queryString}`,
+          {
+            nombre_curso: cleanName,
+            id_area: modal.area.id_area,
+            id_tenant: tenant?.id_tenant || undefined,
+            id_colegio: colegioConfigId || modal.area.id_colegio || undefined,
+          },
           authHeader
         );
       }
@@ -129,6 +156,11 @@ export default function CursosTab() {
       setModal(null);
       setNombre('');
       setMensaje({ type: 'success', text: 'Cambios guardados correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Configuración guardada',
+        message: `Cursos actualizados para ${scopeLabel}.`,
+      });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
     } finally {
@@ -177,7 +209,9 @@ export default function CursosTab() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Áreas curriculares y cursos</h3>
-          <p className="mt-1 text-sm text-gray-500">Agrupa los cursos por área para mantener el plan académico claro.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Agrupa los cursos por área para mantener el plan académico claro. Contexto: {scopeLabel}.
+          </p>
         </div>
         <button
           type="button"

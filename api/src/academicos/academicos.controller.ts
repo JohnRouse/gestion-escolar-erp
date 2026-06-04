@@ -1,3 +1,5 @@
+//ACADEMICOS CONTROLLER:
+
 import {
   Controller,
   Get,
@@ -906,17 +908,78 @@ export class AcademicosController {
   }
 
   // ── ÁREAS Y CURSOS ───────────────────────────────────
+
+  private async resolveColegioConfig(
+    req: any,
+    scope?: string,
+    colegioId?: string,
+    bodyColegioId?: number,
+  ) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: req.user.userId },
+      include: {
+        colegios: {
+          where: { estado: 'Activo' },
+          include: { colegio: true },
+          orderBy: { es_principal: 'desc' },
+        },
+      },
+    });
+
+    const colegios = usuario?.colegios || [];
+    const permitidoIds = colegios.map((item) => item.id_colegio);
+
+    const targetId =
+      bodyColegioId ||
+      (colegioId ? Number(colegioId) : undefined) ||
+      (scope === 'all' ? undefined : permitidoIds[0]);
+
+    if (targetId && !permitidoIds.includes(targetId)) {
+      throw new BadRequestException('No tienes acceso al colegio seleccionado.');
+    }
+
+    const colegio = targetId
+      ? colegios.find((item) => item.id_colegio === targetId)?.colegio
+      : null;
+
+    return {
+      colegioId: targetId,
+      tenantId: colegio?.id_tenant || colegios[0]?.colegio?.id_tenant || null,
+      permitidoIds,
+    };
+  }
+
   @Get('areas')
-  async getAreas() {
+  @UseGuards(AuthGuard('jwt'))
+  async getAreas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const config = await this.resolveColegioConfig(req, scope, colegioId);
+
     return this.prisma.areaCurricular.findMany({
+      where: config.colegioId
+        ? { id_colegio: config.colegioId }
+        : { id_colegio: { in: config.permitidoIds } },
       orderBy: { nombre_area: 'asc' },
     });
   }
 
   @Get('cursos')
-  async getCursos() {
+  @UseGuards(AuthGuard('jwt'))
+  async getCursos(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const config = await this.resolveColegioConfig(req, scope, colegioId);
+
     return this.prisma.curso.findMany({
-      include: { area: true },
+      where: config.colegioId
+        ? { id_colegio: config.colegioId }
+        : { id_colegio: { in: config.permitidoIds } },
+      include: { area: true, colegio: true },
       orderBy: { nombre_curso: 'asc' },
     });
   }
@@ -924,20 +987,70 @@ export class AcademicosController {
   @Post('areas')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async createArea(@Body() body: { nombre_area: string }) {
+  async createArea(
+    @Request() req,
+    @Body() body: { nombre_area: string; id_colegio?: number; id_tenant?: number },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const config = await this.resolveColegioConfig(
+      req,
+      scope,
+      colegioId,
+      body.id_colegio ? Number(body.id_colegio) : undefined,
+    );
+
+    if (!config.colegioId) {
+      throw new BadRequestException('Selecciona el colegio del área.');
+    }
+
     return this.prisma.areaCurricular.create({
-      data: { nombre_area: body.nombre_area },
+      data: {
+        nombre_area: body.nombre_area,
+        id_tenant: body.id_tenant || config.tenantId,
+        id_colegio: config.colegioId,
+      },
     });
   }
 
   @Post('cursos')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async createCurso(@Body() body: { nombre_curso: string; id_area: number }) {
+  async createCurso(
+    @Request() req,
+    @Body()
+    body: {
+      nombre_curso: string;
+      id_area: number;
+      id_colegio?: number;
+      id_tenant?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const area = await this.prisma.areaCurricular.findUnique({
+      where: { id_area: Number(body.id_area) },
+    });
+
+    if (!area) throw new NotFoundException('Área no encontrada');
+
+    const config = await this.resolveColegioConfig(
+      req,
+      scope,
+      colegioId,
+      body.id_colegio ? Number(body.id_colegio) : area.id_colegio || undefined,
+    );
+
+    if (!config.colegioId) {
+      throw new BadRequestException('Selecciona el colegio del curso.');
+    }
+
     return this.prisma.curso.create({
       data: {
         nombre_curso: body.nombre_curso,
-        id_area: body.id_area,
+        id_area: Number(body.id_area),
+        id_tenant: body.id_tenant || area.id_tenant || config.tenantId,
+        id_colegio: config.colegioId,
       },
     });
   }
@@ -947,7 +1060,13 @@ export class AcademicosController {
   @Roles('Admin')
   async updateCurso(
     @Param('id') id: string,
-    @Body() body: { nombre_curso: string; id_area?: number },
+    @Body()
+    body: {
+      nombre_curso: string;
+      id_area?: number;
+      id_colegio?: number;
+      id_tenant?: number;
+    },
   ) {
     const curso = await this.prisma.curso.findUnique({
       where: { id_curso: Number(id) },
@@ -957,7 +1076,17 @@ export class AcademicosController {
 
     const data: any = { nombre_curso: body.nombre_curso };
 
-    if (body.id_area) data.id_area = body.id_area;
+    if (body.id_area) {
+      const area = await this.prisma.areaCurricular.findUnique({
+        where: { id_area: Number(body.id_area) },
+      });
+
+      if (!area) throw new NotFoundException('Área no encontrada');
+
+      data.id_area = Number(body.id_area);
+      data.id_tenant = body.id_tenant || area.id_tenant || curso.id_tenant;
+      data.id_colegio = body.id_colegio || area.id_colegio || curso.id_colegio;
+    }
 
     return this.prisma.curso.update({
       where: { id_curso: Number(id) },

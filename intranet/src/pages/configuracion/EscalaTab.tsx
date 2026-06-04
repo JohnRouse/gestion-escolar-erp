@@ -1,6 +1,10 @@
+//ESCALATAB
+
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import { AlertCircle, CheckCircle2, Gauge, Loader2, Save, ShieldCheck } from 'lucide-react';
 
 const panelClass =
@@ -13,6 +17,14 @@ function toInt(value: string | number) {
 
 export default function EscalaTab() {
   const { token } = useAuth();
+  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioConfigId =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : null;
+
   const [minima, setMinima] = useState(0);
   const [maxima, setMaxima] = useState(20);
   const [aprobatoria, setAprobatoria] = useState(11);
@@ -33,7 +45,7 @@ export default function EscalaTab() {
   useEffect(() => {
     if (!token) return;
     axios
-      .get('/api/calificaciones/escala', authHeader)
+      .get(`/api/calificaciones/escala${queryString}`, authHeader)
       .then((res) => {
         if (res.data) {
           setMinima(Number(res.data.nota_minima));
@@ -43,7 +55,7 @@ export default function EscalaTab() {
       })
       .catch(() => setMensaje({ type: 'error', text: 'No se pudo cargar la escala de calificación.' }))
       .finally(() => setLoading(false));
-  }, [token, authHeader]);
+  }, [token, authHeader, queryString]);
 
   const handleSave = async () => {
     setMensaje(null);
@@ -61,15 +73,22 @@ export default function EscalaTab() {
     setSaving(true);
     try {
       await axios.put(
-        '/api/calificaciones/escala',
+        `/api/calificaciones/escala${queryString}`,
         {
           nota_minima: Number(minima),
           nota_maxima: Number(maxima),
           nota_aprobatoria: Number(aprobatoria),
+          id_tenant: tenant?.id_tenant || undefined,
+          id_colegio: colegioConfigId || undefined,
         },
         authHeader
       );
       setMensaje({ type: 'success', text: 'Escala actualizada correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Escala guardada',
+        message: `Escala actualizada para ${scopeLabel}.`,
+      });
     } catch {
       setMensaje({ type: 'error', text: 'No se pudo guardar la escala.' });
     } finally {

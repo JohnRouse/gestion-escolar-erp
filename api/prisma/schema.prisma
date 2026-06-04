@@ -96,6 +96,10 @@ model Tenant {
   staff        Staff[]
   albumes      Album[]
   plantillas   PlantillaEvaluacion[]
+  areas        AreaCurricular[]
+  cursos       Curso[]
+  escalas      EscalaCalificacion[]
+  tipos_eval   TipoEvaluacion[]
 }
 
 model Colegio {
@@ -126,6 +130,10 @@ model Colegio {
   staff        Staff[]
   albumes      Album[]
   plantillas   PlantillaEvaluacion[]
+  areas        AreaCurricular[]
+  cursos       Curso[]
+  escalas      EscalaCalificacion[]
+  tipos_eval   TipoEvaluacion[]
   codigos_estudiantes EstudianteCodigoColegio[]
 
   @@unique([id_tenant, codigo])
@@ -236,24 +244,38 @@ model Seccion {
 
 model AreaCurricular {
   id_area     Int    @id @default(autoincrement())
+  id_tenant   Int?
+  id_colegio  Int?
   nombre_area String @db.VarChar(100)
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
 
   cursos         Curso[]
   especialidades DocenteEspecialidad[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model Curso {
   id_curso     Int    @id @default(autoincrement())
+  id_tenant    Int?
+  id_colegio   Int?
   nombre_curso String @db.VarChar(100)
   id_area      Int
 
-  area AreaCurricular @relation(fields: [id_area], references: [id_area])
+  tenant  Tenant?        @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?       @relation(fields: [id_colegio], references: [id_colegio])
+  area    AreaCurricular @relation(fields: [id_area], references: [id_area])
 
   asignaciones AsignacionDocente[]
   horarios     Horario[]
   plantillas   PlantillaEvaluacion[]
 
   @@index([id_area])
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 // ======================================================
@@ -456,10 +478,18 @@ model AsignacionDocente {
 
 model TipoEvaluacion {
   id_tipo_eval Int    @id @default(autoincrement())
+  id_tenant    Int?
+  id_colegio   Int?
   nombre_tipo  String @db.VarChar(50)
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
 
   evaluaciones      EvaluacionDetalle[]
   detallesPlantilla PlantillaEvaluacionDetalle[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model EvaluacionDetalle {
@@ -483,11 +513,19 @@ model EvaluacionDetalle {
 
 model EscalaCalificacion {
   id_escala         Int     @id @default(autoincrement())
+  id_tenant         Int?
+  id_colegio        Int?
   nombre_escala     String  @db.VarChar(50)
   nota_minima       Decimal @db.Decimal(4, 2)
   nota_maxima       Decimal @db.Decimal(4, 2)
   nota_aprobatoria  Decimal @db.Decimal(4, 2)
   tipo_calificacion String  @default("Numérica") @db.VarChar(20)
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
+
+  @@index([id_tenant])
+  @@index([id_colegio])
 }
 
 model NotaAlumno {
