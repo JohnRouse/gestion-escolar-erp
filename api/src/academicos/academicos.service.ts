@@ -762,39 +762,46 @@ export class AcademicosService {
   }
 
   // ── NUEVOS HELPERS PARA EVITAR MATRÍCULA DUPLICADA EN EL MISMO AÑO ESCOLAR ──
-  private async buscarMatriculaBloqueanteMismoAnioEscolar(params: {
+
+  private esAnioLectivoBloqueante(anio?: {
+    estado?: string | null;
+    fecha_fin?: Date | string | null;
+  } | null) {
+    if (!anio) return true;
+
+    const estado = String(anio.estado || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (['cerrado', 'archivado'].includes(estado)) {
+      return false;
+    }
+
+    if (anio.fecha_fin) {
+      const fechaFin = new Date(anio.fecha_fin);
+
+      if (!Number.isNaN(fechaFin.getTime())) {
+        const hoy = new Date();
+        const finDelDia = new Date(fechaFin);
+        finDelDia.setHours(23, 59, 59, 999);
+
+        if (hoy > finDelDia) return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async buscarMatriculaBloqueanteVigenteGrupo(params: {
     idEstudiante: number;
     idTenant: number | null;
-    anioDestino: {
-      id_anio: number;
-      nombre_anio?: string | null;
-      fecha_inicio?: Date | string | null;
-    };
   }) {
-    const anioCorte = this.getAnioCorte(params.anioDestino);
-
-    const aniosMismoPeriodo = await this.prisma.anioLectivo.findMany({
-      where: params.idTenant ? { id_tenant: params.idTenant } : {},
-      select: {
-        id_anio: true,
-        id_colegio: true,
-        nombre_anio: true,
-        fecha_inicio: true,
-      },
-    });
-
-    const idsMismoAnioEscolar = aniosMismoPeriodo
-      .filter((item) => this.getAnioCorte(item) === anioCorte)
-      .map((item) => item.id_anio);
-
-    const idsBusqueda = idsMismoAnioEscolar.length
-      ? idsMismoAnioEscolar
-      : [params.anioDestino.id_anio];
-
-    return this.prisma.matricula.findFirst({
+    const matriculas = await this.prisma.matricula.findMany({
       where: {
         id_estudiante: params.idEstudiante,
-        id_anio: { in: idsBusqueda },
+        ...(params.idTenant ? { id_tenant: params.idTenant } : {}),
         estado_matricula: {
           in: ['Activo', 'Pre-matriculado', 'Reserva', 'Pendiente'],
         },
@@ -812,14 +819,20 @@ export class AcademicosService {
       },
       orderBy: { id_matricula: 'desc' },
     });
+
+    return (
+      matriculas.find((matricula) =>
+        this.esAnioLectivoBloqueante(matricula.anio),
+      ) || null
+    );
   }
 
-  private mensajeMatriculaExistente(matriculaExistente: any) {
+  private mensajeMatriculaExistenteGrupo(matriculaExistente: any) {
     const colegioNombre =
       matriculaExistente?.colegio?.nombre || 'este colegio';
     const anioNombre =
       matriculaExistente?.anio?.nombre_anio ||
-      'el año lectivo seleccionado';
+      'el año lectivo registrado';
     const gradoNombre =
       matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
     const nivelNombre =
@@ -827,7 +840,7 @@ export class AcademicosService {
     const letra = matriculaExistente?.seccion?.letra || '-';
     const estado = matriculaExistente?.estado_matricula || 'matriculado';
 
-    return `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Si corresponde cambiarlo de sede o sección, usa el flujo de traslado/movimiento de matrícula, no una nueva matrícula.`;
+    return `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Para cambiarlo de sede o sección, usa el flujo de movimiento/traslado de matrícula, no una nueva matrícula.`;
   }
 
   // ── FIN HELPERS ──────────────────────────────────────
@@ -1828,17 +1841,16 @@ export class AcademicosService {
       );
     }
 
-    // VALIDACIÓN DE MATRÍCULA EXISTENTE EN EL MISMO AÑO ESCOLAR
+    // VALIDACIÓN DE MATRÍCULA EXISTENTE EN EL MISMO GRUPO
     const matriculaExistente =
-      await this.buscarMatriculaBloqueanteMismoAnioEscolar({
+      await this.buscarMatriculaBloqueanteVigenteGrupo({
         idEstudiante: params.dto.id_estudiante,
         idTenant,
-        anioDestino: anio,
       });
 
     if (matriculaExistente) {
       throw new BadRequestException(
-        this.mensajeMatriculaExistente(matriculaExistente),
+        this.mensajeMatriculaExistenteGrupo(matriculaExistente),
       );
     }
 

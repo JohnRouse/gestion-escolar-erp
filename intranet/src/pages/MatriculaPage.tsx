@@ -84,7 +84,7 @@ type Alumno = {
       estado_matricula: string;
       id_colegio?: number;
       colegio?: { nombre: string; codigo?: string | null };
-      anio?: { nombre_anio: string };
+      anio?: { nombre_anio: string; estado?: string; fecha_fin?: string | null };
       seccion?: {
         letra: string;
         grado: {
@@ -561,17 +561,28 @@ export default function MatriculaPage() {
     return new Date().getFullYear();
   };
 
-  const getAnioCorteMatriculaFrontend = (matricula: any) => {
-    const desdeNombre = matricula?.anio?.nombre_anio?.match(/\d{4}/)?.[0];
+  const esAnioLectivoBloqueanteFrontend = (anio: any) => {
+    if (!anio) return true;
 
-    if (desdeNombre) return Number(desdeNombre);
+    const estado = String(anio.estado || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
 
-    if (matricula?.anio?.fecha_inicio) {
-      const fecha = new Date(matricula.anio.fecha_inicio);
-      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    if (['cerrado', 'archivado'].includes(estado)) return false;
+
+    if (anio.fecha_fin) {
+      const fechaFin = new Date(anio.fecha_fin);
+
+      if (!Number.isNaN(fechaFin.getTime())) {
+        fechaFin.setHours(23, 59, 59, 999);
+
+        if (new Date() > fechaFin) return false;
+      }
     }
 
-    return null;
+    return true;
   };
 
   const aniosDisponibles = useMemo(
@@ -839,22 +850,14 @@ export default function MatriculaPage() {
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
 
-    const matriculasBloqueantes = estudiante.matriculas.filter((m) =>
-      estadosMatriculaBloqueantes.includes(m.estado_matricula),
-    );
+    const matriculasBloqueantes = estudiante.matriculas.filter((m) => {
+      return (
+        estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
+        esAnioLectivoBloqueanteFrontend(m.anio)
+      );
+    });
 
     if (!matriculasBloqueantes.length) return null;
-
-    if (anioId) {
-      const anioCorteDestino = getAnioCorteFrontend();
-
-      const mismaGestion = matriculasBloqueantes.find((m) => {
-        const anioCorteMatricula = getAnioCorteMatriculaFrontend(m);
-        return anioCorteMatricula === anioCorteDestino;
-      });
-
-      if (mismaGestion) return mismaGestion;
-    }
 
     if (activeScope.tipo === 'colegio') {
       const mismaSede = matriculasBloqueantes.find(
@@ -872,8 +875,8 @@ export default function MatriculaPage() {
       if (mismaSedeDestino) return mismaSedeDestino;
     }
 
-    return null;
-  }, [activeScope, colegioDestinoId, estudiante?.matriculas, anioId]);
+    return matriculasBloqueantes[0];
+  }, [activeScope, colegioDestinoId, estudiante?.matriculas]);
 
   const alertaEdad = useMemo(() => {
     if (!alumno || !seccionSeleccionada) return null;
@@ -926,7 +929,7 @@ export default function MatriculaPage() {
     }
 
     if (estado === 'Activo') {
-      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Para cambiarlo de sede o sección debe usarse un movimiento de matrícula.`;
     }
 
     return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
