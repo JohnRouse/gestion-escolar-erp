@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import PageHeader from '../../components/PageHeader';
@@ -133,6 +133,7 @@ export default function MatriculasHistorialPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
   const [data, setData] = useState<MatriculaItem[]>([]);
@@ -169,6 +170,8 @@ export default function MatriculasHistorialPage() {
   const [savingPago, setSavingPago] = useState(false);
   const [mensajePago, setMensajePago] = useState<string | null>(null);
 
+  const [autoOpenedMatriculaId, setAutoOpenedMatriculaId] = useState<number | null>(null);
+
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
 
@@ -184,6 +187,16 @@ export default function MatriculasHistorialPage() {
     const query = search.toString();
     return query ? `?${query}` : '';
   }, [desde, estado, estadoRevision, hasta, page, q, queryString, registradoPor]);
+
+  const detalleQueryString = useMemo(() => {
+    const colegioIdUrl = searchParams.get('colegio_id');
+
+    if (colegioIdUrl) {
+      return `?colegio_id=${colegioIdUrl}`;
+    }
+
+    return queryString;
+  }, [queryString, searchParams]);
 
   useEffect(() => {
     fetchMatriculas();
@@ -266,7 +279,7 @@ export default function MatriculasHistorialPage() {
 
     try {
       const res = await axios.post(
-        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/generar-cobro-matricula${queryString}`,
+        `/api/academicos/matriculas/${detalleMatricula.id_matricula}/generar-cobro-matricula${detalleQueryString}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -314,7 +327,7 @@ export default function MatriculasHistorialPage() {
 
     try {
       const res = await axios.get(
-        `/api/academicos/matriculas/${idMatricula}/detalle${queryString}`,
+        `/api/academicos/matriculas/${idMatricula}/detalle${detalleQueryString}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -326,7 +339,7 @@ export default function MatriculasHistorialPage() {
       ) {
         try {
           const cobroRes = await axios.post(
-            `/api/academicos/matriculas/${idMatricula}/generar-cobro-matricula${queryString}`,
+            `/api/academicos/matriculas/${idMatricula}/generar-cobro-matricula${detalleQueryString}`,
             {},
             { headers: { Authorization: `Bearer ${token}` } },
           );
@@ -368,6 +381,34 @@ export default function MatriculasHistorialPage() {
     } finally {
       setDetalleLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+
+    const matriculaIdParam = searchParams.get('matricula_id');
+    const matriculaId = Number(matriculaIdParam);
+
+    if (!matriculaIdParam || !Number.isInteger(matriculaId) || matriculaId <= 0) {
+      return;
+    }
+
+    if (autoOpenedMatriculaId === matriculaId) return;
+
+    setAutoOpenedMatriculaId(matriculaId);
+    abrirDetalleMatricula(matriculaId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, searchParams, autoOpenedMatriculaId]);
+
+  const cerrarDetalle = () => {
+    setDetalleOpen(false);
+    setDetalleMatricula(null);
+    setAutoOpenedMatriculaId(null);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('matricula_id');
+    next.delete('colegio_id');
+    setSearchParams(next, { replace: true });
   };
 
   const guardarRevision = async () => {
@@ -712,8 +753,8 @@ export default function MatriculasHistorialPage() {
 
       {/* Modal de detalle de matrícula */}
       {detalleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm animate-modal-overlay-in">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200 animate-modal-panel-in">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-bold text-accent-600 ring-1 ring-accent-100">
@@ -733,7 +774,7 @@ export default function MatriculasHistorialPage() {
 
               <button
                 type="button"
-                onClick={() => setDetalleOpen(false)}
+                onClick={cerrarDetalle}
                 className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100 transition hover:bg-slate-100"
               >
                 <X size={18} />

@@ -879,7 +879,20 @@ export default function MatriculaPage() {
     return activeScope.tipo === 'todos' && !colegioDestinoId;
   }, [activeScope.tipo, colegioDestinoId]);
 
-  // Function declaration moved here so it's hoisted and can be used in mensajeValidacionMatricula
+  // Helper para navegar al detalle de una matrícula activa
+  function irADetalleMatriculaActiva(matricula: any) {
+    if (!matricula?.id_matricula) return;
+
+    const params = new URLSearchParams();
+    params.set('matricula_id', String(matricula.id_matricula));
+
+    if (matricula.id_colegio) {
+      params.set('colegio_id', String(matricula.id_colegio));
+    }
+
+    navigate(`/matricula/historial?${params.toString()}`);
+  }
+
   function formatMatriculaActiva(matricula: any) {
     if (!matricula) return '';
 
@@ -889,6 +902,18 @@ export default function MatriculaPage() {
     const letra = matricula.seccion?.letra || '-';
     const nivel = matricula.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
     const estado = matricula.estado_matricula || 'matriculado';
+
+    if (estado === 'Reserva') {
+      return `Este alumno ya tiene una reserva registrada en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Puedes revisar el detalle para continuar el proceso.`;
+    }
+
+    if (estado === 'Pre-matriculado') {
+      return `Este alumno ya está pre-matriculado en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Puedes revisar el detalle para aprobar, registrar pago o activar la matrícula.`;
+    }
+
+    if (estado === 'Activo') {
+      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+    }
 
     return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
   }
@@ -909,13 +934,7 @@ export default function MatriculaPage() {
       };
     }
 
-    if (matriculaActiva) {
-      return {
-        tipo: 'warning' as const,
-        texto: formatMatriculaActiva(matriculaActiva),
-      };
-    }
-
+    // La tarjeta visual ya informa que existe matrícula, no es necesario duplicar aquí
     if (!apoderados.length) {
       return {
         tipo: 'warning' as const,
@@ -963,7 +982,6 @@ export default function MatriculaPage() {
   }, [
     colegioDestinoRequerido,
     alumno,
-    matriculaActiva,
     apoderados.length,
     anioId,
     seccionId,
@@ -1156,30 +1174,7 @@ export default function MatriculaPage() {
       setGradoFiltro('');
       setMensaje(null);
 
-      const estudianteEncontrado = res.data?.estudiantes?.[0];
-
-      const matriculaBloqueante = estudianteEncontrado?.matriculas?.find((m: any) => {
-        if (!estadosMatriculaBloqueantes.includes(m.estado_matricula)) return false;
-
-        if (activeScope.tipo === 'colegio') {
-          return m.id_colegio === activeScope.id_colegio;
-        }
-
-        if (colegioDestinoId) {
-          return m.id_colegio === colegioDestinoId;
-        }
-
-        return true;
-      });
-
-      if (matriculaBloqueante) {
-        showToast({
-          type: 'warning',
-          title: 'Matrícula existente',
-          message: formatMatriculaActiva(matriculaBloqueante),
-          duration: 6500,
-        });
-      }
+      // La tarjeta visual informa si tiene matrícula bloqueante, no mostramos toast.
     } catch (err: any) {
       setAlumno(null);
       setMensaje(err.response?.data?.message || 'No se encontró el alumno.');
@@ -1464,7 +1459,9 @@ export default function MatriculaPage() {
     }
 
     if (matriculaActiva) {
-      return setMensaje(formatMatriculaActiva(matriculaActiva));
+      // La tarjeta informativa ya indica que hay una matrícula, no bloqueamos.
+      setConfirmOpen(true);
+      return;
     }
 
     setConfirmOpen(true);
@@ -1792,38 +1789,48 @@ export default function MatriculaPage() {
           )}
 
           {alumno && matriculaActiva && (
-            <Card
-              icon={AlertCircle}
-              title="Matrícula existente"
-              subtitle="Este alumno ya tiene un registro vigente en el contexto seleccionado."
-            >
-              <div className="rounded-3xl bg-amber-50 p-5 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
-                {formatMatriculaActiva(matriculaActiva)}
-              </div>
+            <div className="animate-content-soft">
+              <Card
+                icon={AlertCircle}
+                title={
+                  matriculaActiva.estado_matricula === 'Reserva'
+                    ? 'Alumno con reserva registrada'
+                    : matriculaActiva.estado_matricula === 'Pre-matriculado'
+                      ? 'Alumno pre-matriculado'
+                      : matriculaActiva.estado_matricula === 'Activo'
+                        ? 'Alumno con matrícula activa'
+                        : 'Matrícula existente'
+                }
+                subtitle="No es necesario iniciar una nueva matrícula para este alumno."
+              >
+                <div className="rounded-3xl bg-amber-50 p-5 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
+                  {formatMatriculaActiva(matriculaActiva)}
+                </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/matricula/historial')}
-                  className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800"
-                >
-                  Ver historial de matrículas
-                </button>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => irADetalleMatriculaActiva(matriculaActiva)}
+                    className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800"
+                  >
+                    Ver detalle
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDni('');
-                    setAlumno(null);
-                    setApoderados([]);
-                    setMensaje(null);
-                  }}
-                  className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
-                >
-                  Buscar otro alumno
-                </button>
-              </div>
-            </Card>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDni('');
+                      setAlumno(null);
+                      setApoderados([]);
+                      setMensaje(null);
+                    }}
+                    className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Buscar otro alumno
+                  </button>
+                </div>
+              </Card>
+            </div>
           )}
 
           {alumno && !matriculaActiva && (
