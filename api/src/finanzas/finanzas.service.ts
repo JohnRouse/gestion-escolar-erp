@@ -121,6 +121,40 @@ export class FinanzasService {
     return ['Activo', 'Abierto', 'Matrícula abierta', 'En curso', 'Planificación'];
   }
 
+  private normalizarTipoConcepto(value?: string | null) {
+    const raw = String(value || '').trim();
+
+    const normalizado = raw
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const alias: Record<string, string> = {
+      MATRICULA: 'MATRICULA',
+      PENSION: 'PENSION',
+      EXTRAORDINARIO: 'EXTRAORDINARIO',
+      OTRO: 'OTRO',
+      OTROS: 'OTRO',
+    };
+
+    const tipo = alias[normalizado] || '';
+
+    if (!tipo) {
+      throw new BadRequestException(
+        'Tipo de concepto inválido. Usa MATRICULA, PENSION, EXTRAORDINARIO u OTRO.',
+      );
+    }
+
+    return tipo;
+  }
+
+  private flagsDesdeTipoConcepto(tipoConcepto: string) {
+    return {
+      es_pension: tipoConcepto === 'PENSION',
+      es_extraordinario: tipoConcepto === 'EXTRAORDINARIO',
+    };
+  }
+
   private async getAniosActivos(scope: FinanzasScope) {
     if (!scope.colegioIds.length) return [];
 
@@ -671,12 +705,23 @@ export class FinanzasService {
       throw new BadRequestException('Ingresa un monto válido mayor a cero.');
     }
 
+    const tipoConcepto = this.normalizarTipoConcepto(
+      body.tipo_concepto ||
+        (body.es_extraordinario
+          ? 'EXTRAORDINARIO'
+          : body.es_pension
+            ? 'PENSION'
+            : 'MATRICULA'),
+    );
+
+    const flags = this.flagsDesdeTipoConcepto(tipoConcepto);
+
     const duplicado = await this.prisma.conceptoPago.findFirst({
       where: {
         id_anio: anio.id_anio,
         id_colegio: colegioId,
+        tipo_concepto: tipoConcepto,
         nombre_concepto: nombre,
-        es_extraordinario: false,
       },
     });
 
@@ -693,8 +738,9 @@ export class FinanzasService {
         nombre_concepto: nombre,
         monto_base: monto,
         id_anio: anio.id_anio,
-        es_pension: Boolean(body.es_pension),
-        es_extraordinario: Boolean(body.es_extraordinario),
+        es_pension: flags.es_pension,
+        es_extraordinario: flags.es_extraordinario,
+        tipo_concepto: tipoConcepto,
       },
       include: {
         colegio: true,
@@ -713,6 +759,8 @@ export class FinanzasService {
     }
 
     const data: any = {};
+
+    let tipoConceptoFinal: string | undefined;
 
     if (body.nombre_concepto !== undefined) {
       const nombre = String(body.nombre_concepto || '').trim();
@@ -736,20 +784,38 @@ export class FinanzasService {
 
     if (body.es_pension !== undefined) data.es_pension = Boolean(body.es_pension);
     if (body.es_extraordinario !== undefined) data.es_extraordinario = Boolean(body.es_extraordinario);
+
+    if (body.tipo_concepto !== undefined) {
+      tipoConceptoFinal = this.normalizarTipoConcepto(body.tipo_concepto);
+      const flags = this.flagsDesdeTipoConcepto(tipoConceptoFinal);
+
+      data.tipo_concepto = tipoConceptoFinal;
+      data.es_pension = flags.es_pension;
+      data.es_extraordinario = flags.es_extraordinario;
+    }
+
     if (body.id_colegio !== undefined) data.id_colegio = Number(body.id_colegio);
     if (body.id_anio !== undefined) data.id_anio = Number(body.id_anio);
 
     const colegioFinal = data.id_colegio ?? concepto.id_colegio;
     const anioFinal = data.id_anio ?? concepto.id_anio;
     const nombreFinal = data.nombre_concepto ?? concepto.nombre_concepto;
+    const tipoFinal =
+      data.tipo_concepto ??
+      (concepto as any).tipo_concepto ??
+      (concepto.es_extraordinario
+        ? 'EXTRAORDINARIO'
+        : concepto.es_pension
+          ? 'PENSION'
+          : 'MATRICULA');
 
     const duplicado = await this.prisma.conceptoPago.findFirst({
       where: {
         id_concepto: { not: id },
         id_anio: anioFinal,
         id_colegio: colegioFinal,
+        tipo_concepto: tipoFinal,
         nombre_concepto: nombreFinal,
-        es_extraordinario: false,
       },
     });
 

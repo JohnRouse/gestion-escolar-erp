@@ -533,6 +533,7 @@ model ConceptoPago {
   id_anio           Int
   es_pension        Boolean @default(true)
   es_extraordinario Boolean @default(false)
+  tipo_concepto     String  @default("PENSION") @db.VarChar(30)
 
   tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
@@ -543,6 +544,8 @@ model ConceptoPago {
   @@index([id_anio])
   @@index([id_tenant])
   @@index([id_colegio])
+  @@index([tipo_concepto])
+  @@index([id_anio, id_colegio, tipo_concepto])
 }
 
 model CronogramaPagos {

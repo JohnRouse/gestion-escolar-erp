@@ -345,6 +345,59 @@ export class AcademicosService {
 
   // ── HELPERS DE NORMALIZACIÓN PARA PROCEDENCIA Y REVISIÓN ──
 
+  private normalizarTexto(value?: string | null) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  private esConceptoMatricula(concepto?: {
+    tipo_concepto?: string | null;
+    nombre_concepto?: string | null;
+    es_pension?: boolean | null;
+    es_extraordinario?: boolean | null;
+  }) {
+    if (!concepto) return false;
+
+    if (concepto.tipo_concepto) {
+      return concepto.tipo_concepto === 'MATRICULA';
+    }
+
+    return (
+      !concepto.es_pension &&
+      !concepto.es_extraordinario &&
+      this.normalizarTexto(concepto.nombre_concepto).includes('matric')
+    );
+  }
+
+  private esConceptoPension(concepto?: {
+    tipo_concepto?: string | null;
+    es_pension?: boolean | null;
+  }) {
+    if (!concepto) return false;
+
+    if (concepto.tipo_concepto) {
+      return concepto.tipo_concepto === 'PENSION';
+    }
+
+    return Boolean(concepto.es_pension);
+  }
+
+  private esConceptoExtraordinario(concepto?: {
+    tipo_concepto?: string | null;
+    es_extraordinario?: boolean | null;
+  }) {
+    if (!concepto) return false;
+
+    if (concepto.tipo_concepto) {
+      return concepto.tipo_concepto === 'EXTRAORDINARIO';
+    }
+
+    return Boolean(concepto.es_extraordinario);
+  }
+
   private normalizarTipoIngreso(value?: string | null) {
     const valor = this.normalizeEmpty(value) || 'Nuevo';
 
@@ -499,13 +552,8 @@ export class AcademicosService {
 
   // ── HELPERS PARA PAGO DE MATRÍCULA Y ACTIVACIÓN ───────
 
-  private esConceptoMatricula(nombre?: string | null) {
-    return String(nombre || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .includes('matric');
-  }
+  // (Se eliminó el antiguo método esConceptoMatricula basado en string.
+  // Ahora se usan los nuevos helpers definidos más arriba.)
 
   private getMesDesdeConcepto(nombre?: string | null) {
     const text = String(nombre || '')
@@ -580,10 +628,9 @@ export class AcademicosService {
         OR: matricula.id_colegio
           ? [{ id_colegio: matricula.id_colegio }, { id_colegio: null }]
           : [{ id_colegio: null }],
-        es_pension: true,
-        es_extraordinario: false,
+        tipo_concepto: 'PENSION',
       },
-      orderBy: [{ id_concepto: 'asc' }],
+      orderBy: [{ id_colegio: 'desc' }, { id_concepto: 'asc' }],
     });
 
     let creados = 0;
@@ -1544,18 +1591,14 @@ export class AcademicosService {
           where: {
             id_anio: params.dto.id_anio,
             OR: [{ id_colegio: idColegio }, { id_colegio: null }],
-            es_pension: false,
-            es_extraordinario: false,
-            nombre_concepto: {
-              contains: 'Matrícula',
-            },
+            tipo_concepto: 'MATRICULA',
           },
-          orderBy: [{ id_concepto: 'asc' }],
+          orderBy: [{ id_colegio: 'desc' }, { id_concepto: 'asc' }],
         });
 
         if (!conceptos.length) {
           throw new BadRequestException(
-            'No existe un concepto de matrícula configurado para este colegio y año lectivo.',
+            'No existe un concepto de tipo MATRÍCULA configurado para este colegio y año lectivo. Créalo en Configuración > Conceptos de pago.',
           );
         }
 
@@ -1891,19 +1934,19 @@ export class AcademicosService {
 
     const cronogramaMatricula =
       matricula.cronogramas.find((item) =>
-        item.concepto.nombre_concepto.toLowerCase().includes('matr'),
+        this.esConceptoMatricula(item.concepto),
       ) || null;
 
-    const cronogramasPensiones = matricula.cronogramas.filter(
-      (item) => item.concepto.es_pension,
+    const cronogramasPensiones = matricula.cronogramas.filter((item) =>
+      this.esConceptoPension(item.concepto),
     );
 
-    const cronogramasExtraordinarios = matricula.cronogramas.filter(
-      (item) => item.concepto.es_extraordinario,
+    const cronogramasExtraordinarios = matricula.cronogramas.filter((item) =>
+      this.esConceptoExtraordinario(item.concepto),
     );
 
-    const cronogramasIniciales = matricula.cronogramas.filter(
-      (item) => !item.concepto.es_pension && !item.concepto.es_extraordinario,
+    const cronogramasIniciales = matricula.cronogramas.filter((item) =>
+      this.esConceptoMatricula(item.concepto),
     );
 
     const totalProgramado = matricula.cronogramas.reduce(
@@ -2519,7 +2562,7 @@ export class AcademicosService {
       }
 
       const cronogramaMatricula = matricula.cronogramas.find((item) =>
-        this.esConceptoMatricula(item.concepto.nombre_concepto),
+        this.esConceptoMatricula(item.concepto),
       );
 
       if (!cronogramaMatricula) {
@@ -2656,7 +2699,7 @@ export class AcademicosService {
       }
 
       const cronogramaMatricula = matricula.cronogramas.find((item) =>
-        this.esConceptoMatricula(item.concepto.nombre_concepto),
+        this.esConceptoMatricula(item.concepto),
       );
 
       if (!cronogramaMatricula || cronogramaMatricula.estado_pago !== 'Pagado') {

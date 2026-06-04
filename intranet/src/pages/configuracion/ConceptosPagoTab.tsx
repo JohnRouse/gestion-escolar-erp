@@ -24,6 +24,7 @@ interface Concepto {
   nombre_concepto: string;
   monto_base: number;
   es_pension: boolean;
+  tipo_concepto?: string | null;
   id_anio?: number | null;
   id_colegio?: number | null;
   colegio?: {
@@ -96,6 +97,7 @@ export default function ConceptosPagoTab() {
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
   const [esPension, setEsPension] = useState(true);
+  const [tipoConcepto, setTipoConcepto] = useState('MATRICULA');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('todos');
   const [saving, setSaving] = useState(false);
@@ -148,16 +150,21 @@ export default function ConceptosPagoTab() {
     [anios],
   );
 
-  const pensiones = conceptos.filter((concepto) => concepto.es_pension);
-  const otros = conceptos.filter((concepto) => !concepto.es_pension);
+  const pensiones = conceptos.filter(
+    (concepto) => (concepto.tipo_concepto || (concepto.es_pension ? 'PENSION' : 'MATRICULA')) === 'PENSION',
+  );
+  const otros = conceptos.filter(
+    (concepto) => (concepto.tipo_concepto || (concepto.es_pension ? 'PENSION' : 'MATRICULA')) !== 'PENSION',
+  );
   const totalPensiones = pensiones.reduce((total, concepto) => total + Number(concepto.monto_base || 0), 0);
 
   const conceptosFiltrados = conceptos.filter((concepto) => {
     const matchesSearch = concepto.nombre_concepto.toLowerCase().includes(search.trim().toLowerCase());
+    const tipo = concepto.tipo_concepto || (concepto.es_pension ? 'PENSION' : 'MATRICULA');
     const matchesFilter =
       filter === 'todos' ||
-      (filter === 'pension' && concepto.es_pension) ||
-      (filter === 'otros' && !concepto.es_pension);
+      (filter === 'pension' && tipo === 'PENSION') ||
+      (filter === 'otros' && tipo !== 'PENSION');
     return matchesSearch && matchesFilter;
   });
 
@@ -184,6 +191,7 @@ export default function ConceptosPagoTab() {
     setModal({ mode: 'create' });
     setNombre('');
     setMonto('');
+    setTipoConcepto('MATRICULA');
     setEsPension(false);
     setColegioId(colegioDefault);
     setTimeout(() => loadAnios(colegioDefault), 0);
@@ -194,7 +202,13 @@ export default function ConceptosPagoTab() {
     setModal({ mode: 'edit', concepto });
     setNombre(concepto.nombre_concepto);
     setMonto(String(concepto.monto_base));
-    setEsPension(concepto.es_pension);
+
+    const tipo =
+      concepto.tipo_concepto ||
+      (concepto.es_pension ? 'PENSION' : 'MATRICULA');
+
+    setTipoConcepto(tipo);
+    setEsPension(tipo === 'PENSION');
     setColegioId(concepto.id_colegio || colegioDefault);
     setAnioId(concepto.id_anio || '');
 
@@ -240,12 +254,13 @@ export default function ConceptosPagoTab() {
     const data = {
       nombre_concepto: cleanName,
       monto_base: numericAmount,
-      es_pension: esPension,
+      tipo_concepto: tipoConcepto,
+      es_pension: tipoConcepto === 'PENSION',
+      es_extraordinario: tipoConcepto === 'EXTRAORDINARIO',
       id_tenant: tenant?.id_tenant || null,
       id_colegio: Number(colegioId),
       id_anio: Number(anioId),
       scope: activeScope.tipo === 'todos' ? 'all' : undefined,
-      es_extraordinario: false,
     };
 
     setSaving(true);
@@ -439,10 +454,22 @@ export default function ConceptosPagoTab() {
                     <td className="px-4 py-4 text-center">
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          concepto.es_pension ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
+                          concepto.tipo_concepto === 'MATRICULA'
+                            ? 'bg-amber-50 text-amber-700'
+                            : concepto.tipo_concepto === 'PENSION'
+                              ? 'bg-blue-50 text-blue-700'
+                              : concepto.tipo_concepto === 'EXTRAORDINARIO'
+                                ? 'bg-purple-50 text-purple-700'
+                                : 'bg-gray-50 text-gray-700'
                         }`}
                       >
-                        {concepto.es_pension ? 'Pensión' : 'Matrícula / otro'}
+                        {concepto.tipo_concepto === 'MATRICULA'
+                          ? 'Matrícula'
+                          : concepto.tipo_concepto === 'PENSION'
+                            ? 'Pensión'
+                            : concepto.tipo_concepto === 'EXTRAORDINARIO'
+                              ? 'Extraordinario'
+                              : 'Otro'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
@@ -530,12 +557,13 @@ export default function ConceptosPagoTab() {
                       const anio = aniosDisponibles.find((item) => item.id_anio === anioId);
                       const year = anio?.nombre_anio?.match(/\d{4}/)?.[0] || new Date().getFullYear();
                       setNombre(`Matrícula ${year}`);
+                      setTipoConcepto('MATRICULA');
                       setEsPension(false);
                     }}
                     className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100"
                   >
                     <CalendarDays size={13} />
-                    Usar “Matrícula año”
+                    Usar "Matrícula año"
                   </button>
                 </label>
                 <input
@@ -562,23 +590,21 @@ export default function ConceptosPagoTab() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Tipo</label>
-                <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gray-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setEsPension(true)}
-                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${esPension ? 'bg-white text-accent-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                  >
-                    Pensión
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEsPension(false)}
-                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${!esPension ? 'bg-white text-accent-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                  >
-                    Matrícula / otro
-                  </button>
-                </div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Tipo de concepto</label>
+                <select
+                  value={tipoConcepto}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setTipoConcepto(value);
+                    setEsPension(value === 'PENSION');
+                  }}
+                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
+                >
+                  <option value="MATRICULA">Matrícula</option>
+                  <option value="PENSION">Pensión</option>
+                  <option value="EXTRAORDINARIO">Extraordinario</option>
+                  <option value="OTRO">Otro</option>
+                </select>
               </div>
 
               {mensaje && modal && (
