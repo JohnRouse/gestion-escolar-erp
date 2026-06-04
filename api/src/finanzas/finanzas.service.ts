@@ -622,7 +622,7 @@ export class FinanzasService {
         ...this.anioWhere(anioIds),
         ...this.colegioWhere(scope),
       },
-      include: { colegio: true },
+      include: { colegio: true, anio: true },
       orderBy: [{ id_colegio: 'asc' }, { nombre_concepto: 'asc' }],
     });
   }
@@ -640,37 +640,131 @@ export class FinanzasService {
       throw new BadRequestException('Selecciona un colegio válido');
     }
 
+    const anioId = body.id_anio ? Number(body.id_anio) : null;
+
+    if (!anioId) {
+      throw new BadRequestException('Selecciona el año lectivo del concepto.');
+    }
+
     const anio = await this.prisma.anioLectivo.findFirst({
       where: {
+        id_anio: anioId,
         id_colegio: colegioId,
         estado: { in: this.estadosAnioOperativos() },
       },
-      orderBy: { id_anio: 'asc' },
     });
 
-    if (!anio) throw new BadRequestException('No hay año lectivo activo para este colegio');
+    if (!anio) {
+      throw new BadRequestException(
+        'El año lectivo seleccionado no está disponible para registrar conceptos.',
+      );
+    }
+
+    const nombre = String(body.nombre_concepto || '').trim();
+    const monto = Number(body.monto_base);
+
+    if (!nombre) {
+      throw new BadRequestException('Ingresa el nombre del concepto.');
+    }
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      throw new BadRequestException('Ingresa un monto válido mayor a cero.');
+    }
+
+    const duplicado = await this.prisma.conceptoPago.findFirst({
+      where: {
+        id_anio: anio.id_anio,
+        id_colegio: colegioId,
+        nombre_concepto: nombre,
+        es_extraordinario: false,
+      },
+    });
+
+    if (duplicado) {
+      throw new BadRequestException(
+        'Ya existe un concepto con ese nombre para el colegio y año lectivo seleccionado.',
+      );
+    }
 
     return this.prisma.conceptoPago.create({
       data: {
         id_tenant: anio.id_tenant,
         id_colegio: colegioId,
-        nombre_concepto: body.nombre_concepto,
-        monto_base: Number(body.monto_base),
+        nombre_concepto: nombre,
+        monto_base: monto,
         id_anio: anio.id_anio,
         es_pension: Boolean(body.es_pension),
         es_extraordinario: Boolean(body.es_extraordinario),
+      },
+      include: {
+        colegio: true,
+        anio: true,
       },
     });
   }
 
   async updateConcepto(id: number, body: any) {
+    const concepto = await this.prisma.conceptoPago.findUnique({
+      where: { id_concepto: id },
+    });
+
+    if (!concepto) {
+      throw new NotFoundException('Concepto no encontrado');
+    }
+
+    const data: any = {};
+
+    if (body.nombre_concepto !== undefined) {
+      const nombre = String(body.nombre_concepto || '').trim();
+
+      if (!nombre) {
+        throw new BadRequestException('Ingresa el nombre del concepto.');
+      }
+
+      data.nombre_concepto = nombre;
+    }
+
+    if (body.monto_base !== undefined) {
+      const monto = Number(body.monto_base);
+
+      if (!Number.isFinite(monto) || monto <= 0) {
+        throw new BadRequestException('Ingresa un monto válido mayor a cero.');
+      }
+
+      data.monto_base = monto;
+    }
+
+    if (body.es_pension !== undefined) data.es_pension = Boolean(body.es_pension);
+    if (body.es_extraordinario !== undefined) data.es_extraordinario = Boolean(body.es_extraordinario);
+    if (body.id_colegio !== undefined) data.id_colegio = Number(body.id_colegio);
+    if (body.id_anio !== undefined) data.id_anio = Number(body.id_anio);
+
+    const colegioFinal = data.id_colegio ?? concepto.id_colegio;
+    const anioFinal = data.id_anio ?? concepto.id_anio;
+    const nombreFinal = data.nombre_concepto ?? concepto.nombre_concepto;
+
+    const duplicado = await this.prisma.conceptoPago.findFirst({
+      where: {
+        id_concepto: { not: id },
+        id_anio: anioFinal,
+        id_colegio: colegioFinal,
+        nombre_concepto: nombreFinal,
+        es_extraordinario: false,
+      },
+    });
+
+    if (duplicado) {
+      throw new BadRequestException(
+        'Ya existe un concepto con ese nombre para el colegio y año lectivo seleccionado.',
+      );
+    }
+
     return this.prisma.conceptoPago.update({
       where: { id_concepto: id },
-      data: {
-        nombre_concepto: body.nombre_concepto,
-        monto_base: body.monto_base !== undefined ? Number(body.monto_base) : undefined,
-        es_pension: body.es_pension,
-        es_extraordinario: body.es_extraordinario,
+      data,
+      include: {
+        colegio: true,
+        anio: true,
       },
     });
   }

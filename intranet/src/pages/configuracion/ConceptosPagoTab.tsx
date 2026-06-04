@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
+  CalendarDays,
   CheckCircle2,
   CreditCard,
   Loader2,
@@ -21,6 +24,45 @@ interface Concepto {
   nombre_concepto: string;
   monto_base: number;
   es_pension: boolean;
+  id_anio?: number | null;
+  id_colegio?: number | null;
+  colegio?: {
+    nombre?: string;
+    nombre_corto?: string | null;
+  } | null;
+  anio?: {
+    nombre_anio?: string;
+    estado?: string;
+  } | null;
+}
+
+type AnioLectivo = {
+  id_anio: number;
+  id_colegio?: number | null;
+  nombre_anio: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  estado: string;
+};
+
+function estadoNormalizado(value?: string | null) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function esAnioRegistrable(anio: AnioLectivo) {
+  const estado = estadoNormalizado(anio.estado);
+
+  if (['cerrado', 'archivado'].includes(estado)) return false;
+
+  if (anio.fecha_fin) {
+    const fin = new Date(`${String(anio.fecha_fin).slice(0, 10)}T23:59:59`);
+    if (!Number.isNaN(fin.getTime()) && fin < new Date()) return false;
+  }
+
+  return true;
 }
 
 type Filter = 'todos' | 'pension' | 'otros';
@@ -40,6 +82,14 @@ function formatCurrency(value: number) {
 
 export default function ConceptosPagoTab() {
   const { token } = useAuth();
+  const { colegios, activeColegio, activeScope, tenant, queryString } = useSchool();
+  const { showToast } = useToast();
+
+  const colegioDefault =
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+      ? activeColegio.id_colegio
+      : colegios[0]?.id_colegio || '';
+
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -51,9 +101,51 @@ export default function ConceptosPagoTab() {
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const [colegioId, setColegioId] = useState<number | ''>(colegioDefault);
+  const [anioId, setAnioId] = useState<number | ''>('');
+  const [anios, setAnios] = useState<AnioLectivo[]>([]);
+  const [loadingAnios, setLoadingAnios] = useState(false);
+
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
     [token]
+  );
+
+  const loadAnios = async (targetColegioId: number | '') => {
+    if (!token || !targetColegioId) {
+      setAnios([]);
+      setAnioId('');
+      return;
+    }
+
+    setLoadingAnios(true);
+
+    try {
+      const res = await axios.get(`/api/academicos/anios?colegio_id=${targetColegioId}`, authHeader);
+      const data: AnioLectivo[] = res.data || [];
+      const disponibles = data.filter(esAnioRegistrable);
+
+      setAnios(data);
+
+      const preferido =
+        disponibles.find((item) => estadoNormalizado(item.estado).includes('curso')) ||
+        disponibles.find((item) => estadoNormalizado(item.estado).includes('matricula')) ||
+        disponibles.find((item) => estadoNormalizado(item.estado).includes('planificacion')) ||
+        disponibles[0];
+
+      setAnioId(preferido?.id_anio || '');
+    } catch {
+      setAnios([]);
+      setAnioId('');
+      setMensaje({ type: 'error', text: 'No se pudieron cargar los años lectivos del colegio.' });
+    } finally {
+      setLoadingAnios(false);
+    }
+  };
+
+  const aniosDisponibles = useMemo(
+    () => anios.filter(esAnioRegistrable),
+    [anios],
   );
 
   const pensiones = conceptos.filter((concepto) => concepto.es_pension);
@@ -73,7 +165,8 @@ export default function ConceptosPagoTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get('/api/tesoreria/conceptos', authHeader);
+      const query = colegioId ? `?colegio_id=${colegioId}` : queryString;
+      const res = await axios.get(`/api/tesoreria/conceptos${query}`, authHeader);
       setConceptos(res.data);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los conceptos de pago.' });
@@ -85,13 +178,15 @@ export default function ConceptosPagoTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, colegioId]);
 
   const openCreate = () => {
     setModal({ mode: 'create' });
     setNombre('');
     setMonto('');
-    setEsPension(true);
+    setEsPension(false);
+    setColegioId(colegioDefault);
+    setTimeout(() => loadAnios(colegioDefault), 0);
     setMensaje(null);
   };
 
@@ -100,6 +195,13 @@ export default function ConceptosPagoTab() {
     setNombre(concepto.nombre_concepto);
     setMonto(String(concepto.monto_base));
     setEsPension(concepto.es_pension);
+    setColegioId(concepto.id_colegio || colegioDefault);
+    setAnioId(concepto.id_anio || '');
+
+    if (concepto.id_colegio) {
+      setTimeout(() => loadAnios(concepto.id_colegio || colegioDefault), 0);
+    }
+
     setMensaje(null);
   };
 
@@ -115,6 +217,16 @@ export default function ConceptosPagoTab() {
     const cleanName = nombre.trim();
     const numericAmount = Number(String(monto).replace(',', '.'));
 
+    if (!colegioId) {
+      setMensaje({ type: 'error', text: 'Selecciona el colegio del concepto.' });
+      return;
+    }
+
+    if (!anioId) {
+      setMensaje({ type: 'error', text: 'Selecciona el año lectivo del concepto.' });
+      return;
+    }
+
     if (!cleanName) {
       setMensaje({ type: 'error', text: 'Escribe el nombre del concepto.' });
       return;
@@ -129,6 +241,11 @@ export default function ConceptosPagoTab() {
       nombre_concepto: cleanName,
       monto_base: numericAmount,
       es_pension: esPension,
+      id_tenant: tenant?.id_tenant || null,
+      id_colegio: Number(colegioId),
+      id_anio: Number(anioId),
+      scope: activeScope.tipo === 'todos' ? 'all' : undefined,
+      es_extraordinario: false,
     };
 
     setSaving(true);
@@ -144,9 +261,14 @@ export default function ConceptosPagoTab() {
       setModal(null);
       setNombre('');
       setMonto('');
-      setMensaje({ type: 'success', text: 'Concepto guardado correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Concepto guardado',
+        message: `El concepto "${cleanName}" fue guardado correctamente.`,
+      });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar el concepto.' });
+      const errorMsg = err.response?.data?.message || 'No se pudo guardar el concepto.';
+      setMensaje({ type: 'error', text: errorMsg });
     } finally {
       setSaving(false);
     }
@@ -157,9 +279,17 @@ export default function ConceptosPagoTab() {
     try {
       await axios.delete(`/api/tesoreria/conceptos/${concepto.id_concepto}`, authHeader);
       setConceptos((prev) => prev.filter((item) => item.id_concepto !== concepto.id_concepto));
-      setMensaje({ type: 'success', text: 'Concepto eliminado correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Concepto eliminado',
+        message: `"${concepto.nombre_concepto}" fue eliminado correctamente.`,
+      });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el concepto.' });
+      showToast({
+        type: 'error',
+        title: 'Error al eliminar',
+        message: err.response?.data?.message || 'No se pudo eliminar el concepto.',
+      });
     }
   };
 
@@ -278,10 +408,11 @@ export default function ConceptosPagoTab() {
       ) : (
         <div className={`${panelClass} overflow-hidden`}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-gray-50/80">
                 <tr className="border-b border-gray-100">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Nombre</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Año / colegio</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Monto</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Tipo</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Acciones</th>
@@ -297,6 +428,12 @@ export default function ConceptosPagoTab() {
                         </div>
                         <span className="font-semibold text-gray-900">{concepto.nombre_concepto}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-gray-700">{concepto.anio?.nombre_anio || 'Año no identificado'}</p>
+                      <p className="text-xs font-medium text-gray-400">
+                        {concepto.colegio?.nombre_corto || concepto.colegio?.nombre || 'Colegio no identificado'}
+                      </p>
                     </td>
                     <td className="px-4 py-4 text-right font-semibold text-gray-700">{formatCurrency(concepto.monto_base)}</td>
                     <td className="px-4 py-4 text-center">
@@ -329,7 +466,7 @@ export default function ConceptosPagoTab() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative w-full max-w-md rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.7)]">
+          <div className="relative w-full max-w-xl rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.7)]">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-500">Concepto de pago</p>
@@ -344,8 +481,63 @@ export default function ConceptosPagoTab() {
             </div>
 
             <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Colegio</label>
+                  <select
+                    value={colegioId}
+                    onChange={(event) => {
+                      const value = event.target.value ? Number(event.target.value) : '';
+                      setColegioId(value);
+                      setAnioId('');
+                      loadAnios(value);
+                    }}
+                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
+                  >
+                    <option value="">Seleccionar colegio</option>
+                    {colegios.map((colegio) => (
+                      <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                        {colegio.nombre_corto || colegio.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Año lectivo</label>
+                  <select
+                    value={anioId}
+                    onChange={(event) => setAnioId(event.target.value ? Number(event.target.value) : '')}
+                    disabled={loadingAnios}
+                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 disabled:opacity-60"
+                  >
+                    <option value="">{loadingAnios ? 'Cargando...' : 'Seleccionar año'}</option>
+                    {aniosDisponibles.map((anio) => (
+                      <option key={anio.id_anio} value={anio.id_anio}>
+                        {anio.nombre_anio} · {anio.estado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nombre</label>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-500">
+                  Nombre
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const anio = aniosDisponibles.find((item) => item.id_anio === anioId);
+                      const year = anio?.nombre_anio?.match(/\d{4}/)?.[0] || new Date().getFullYear();
+                      setNombre(`Matrícula ${year}`);
+                      setEsPension(false);
+                    }}
+                    className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100"
+                  >
+                    <CalendarDays size={13} />
+                    Usar “Matrícula año”
+                  </button>
+                </label>
                 <input
                   className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
                   value={nombre}
