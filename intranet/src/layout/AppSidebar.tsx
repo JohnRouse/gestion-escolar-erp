@@ -47,6 +47,7 @@ const menuAcademico: NavItem[] = [
     roles: ['Admin', 'Secretaria', 'Director'],
     children: [
       { title: 'Registrar matrícula', path: '/matricula' },
+      { title: 'Renovación / Re-matrícula', path: '/matricula/renovacion' },
       { title: 'Historial de matrículas', path: '/matricula/historial' },
     ],
   },
