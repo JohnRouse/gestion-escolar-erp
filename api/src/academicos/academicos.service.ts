@@ -1588,6 +1588,7 @@ export class AcademicosService {
 
       where.OR = [
         Number.isFinite(numericId) ? { id_matricula: numericId } : undefined,
+        { codigo_matricula: { contains: q } },
         {
           estudiante: {
             persona: {
@@ -1997,6 +1998,98 @@ export class AcademicosService {
     }
   }
 
+  // ── NUEVOS HELPERS DE CÓDIGO DE MATRÍCULA ─────────────
+
+  private limpiarParteCodigo(value?: string | null, fallback = 'MAT') {
+    const limpio = String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    return limpio || fallback;
+  }
+
+  private getPrefijoColegioMatricula(colegio?: {
+    codigo?: string | null;
+    nombre_corto?: string | null;
+    nombre?: string | null;
+    id_colegio?: number;
+  } | null) {
+    if (colegio?.codigo) {
+      return this.limpiarParteCodigo(colegio.codigo, 'COL').slice(0, 6);
+    }
+
+    if (colegio?.nombre_corto) {
+      return this.limpiarParteCodigo(colegio.nombre_corto, 'COL').slice(0, 3);
+    }
+
+    if (colegio?.nombre) {
+      return this.limpiarParteCodigo(colegio.nombre, 'COL').slice(0, 3);
+    }
+
+    return colegio?.id_colegio ? `COL${colegio.id_colegio}` : 'COL';
+  }
+
+  private getPrefijoNivelMatricula(nivel?: { nombre_nivel?: string | null } | null) {
+    const nombre = this.limpiarParteCodigo(nivel?.nombre_nivel, 'NIV');
+
+    if (nombre.includes('INICIAL')) return 'INI';
+    if (nombre.includes('PRIMARIA')) return 'PRI';
+    if (nombre.includes('SECUNDARIA')) return 'SEC';
+
+    return nombre.slice(0, 3);
+  }
+
+  private async generarCodigoMatricula(
+    tx: Prisma.TransactionClient,
+    params: {
+      colegio: {
+        id_colegio?: number;
+        codigo?: string | null;
+        nombre_corto?: string | null;
+        nombre?: string | null;
+      } | null;
+      seccion: any;
+      anio: {
+        id_anio: number;
+        nombre_anio?: string | null;
+        fecha_inicio?: Date | string | null;
+      };
+    },
+  ) {
+    const prefijoColegio = this.getPrefijoColegioMatricula(params.colegio);
+    const prefijoNivel = this.getPrefijoNivelMatricula(
+      params.seccion?.grado?.nivel,
+    );
+    const anioEscolar = this.getAnioCorteDeRegistro(params.anio);
+    const prefijo = `${prefijoColegio}-${prefijoNivel}-${anioEscolar}`;
+
+    const existentes = await tx.matricula.count({
+      where: {
+        codigo_matricula: {
+          startsWith: `${prefijo}-`,
+        },
+      },
+    });
+
+    for (let offset = 1; offset <= 1000; offset += 1) {
+      const correlativo = existentes + offset;
+      const codigo = `${prefijo}-${String(correlativo).padStart(6, '0')}`;
+
+      const yaExiste = await tx.matricula.findFirst({
+        where: { codigo_matricula: codigo },
+        select: { id_matricula: true },
+      });
+
+      if (!yaExiste) return codigo;
+    }
+
+    throw new BadRequestException(
+      'No se pudo generar un código de matrícula disponible. Intenta nuevamente.',
+    );
+  }
+
   // ── CREAR MATRÍCULA ───────────────────────────────────
 
   async createMatricula(params: {
@@ -2051,7 +2144,14 @@ export class AcademicosService {
         id_seccion: params.dto.id_seccion,
         id_colegio: idColegio,
       },
-      include: { aula: true },
+      include: {
+        aula: true,
+        grado: {
+          include: {
+            nivel: true,
+          },
+        },
+      },
     });
 
     if (!seccion) {
@@ -2110,8 +2210,15 @@ export class AcademicosService {
     });
 
     return this.prisma.$transaction(async (tx) => {
+      const codigoMatricula = await this.generarCodigoMatricula(tx, {
+        colegio: scope.colegios[0],
+        seccion,
+        anio,
+      });
+
       const matricula = await tx.matricula.create({
         data: {
+          codigo_matricula: codigoMatricula,
           id_tenant: idTenant,
           id_colegio: idColegio,
           id_estudiante: params.dto.id_estudiante,

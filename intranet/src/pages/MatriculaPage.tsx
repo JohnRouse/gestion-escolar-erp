@@ -81,6 +81,7 @@ type Alumno = {
     }[];
     matriculas: {
       id_matricula: number;
+      codigo_matricula?: string | null;
       estado_matricula: string;
       id_colegio?: number;
       colegio?: { nombre: string; codigo?: string | null };
@@ -160,6 +161,7 @@ type CodigoColegio = {
 
 interface UltimaMatricula {
   id_matricula: number;
+  codigo_matricula?: string | null;
   id_colegio?: number | null;
   fecha_matricula: string;
   estado_matricula?: string;
@@ -387,6 +389,16 @@ const getCodigoInstitucional = (matricula: {
   );
 
   return codigoColegio?.codigo || matricula.estudiante?.codigo_estudiante || 'Sin código';
+};
+
+const getCodigoMatricula = (matricula: {
+  id_matricula: number;
+  codigo_matricula?: string | null;
+}) => {
+  return (
+    matricula.codigo_matricula ||
+    `MAT-${String(matricula.id_matricula).padStart(6, '0')}`
+  );
 };
 
 const getCodigoDetalleMatricula = (detalle: any) => {
@@ -1696,7 +1708,7 @@ export default function MatriculaPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-black text-slate-800">
-                            {getCodigoInstitucional(matricula)} ·{' '}
+                            {getCodigoMatricula(matricula)} ·{' '}
                             {matricula.estudiante.persona.nombres}{' '}
                             {matricula.estudiante.persona.apellido_paterno}
                           </p>
@@ -1706,6 +1718,10 @@ export default function MatriculaPage() {
                             {matricula.seccion.letra}" ·{' '}
                             {matricula.seccion.grado.nivel?.nombre_nivel ||
                               'Nivel'}
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-slate-400">
+                            Código alumno: {getCodigoInstitucional(matricula)}
                           </p>
 
                           <p className="mt-1 text-xs font-bold text-slate-400">

@@ -414,6 +414,7 @@ model DocenteEspecialidad {
 
 model Matricula {
   id_matricula        Int      @id @default(autoincrement())
+  codigo_matricula    String?  @unique @db.VarChar(40)
   id_tenant           Int?
   id_colegio          Int?
   id_estudiante       Int

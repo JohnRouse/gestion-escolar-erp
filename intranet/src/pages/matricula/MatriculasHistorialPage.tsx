@@ -25,6 +25,7 @@ interface CodigoColegio {
 
 interface MatriculaItem {
   id_matricula: number;
+  codigo_matricula?: string | null;
   fecha_matricula: string;
   estado_matricula: string;
   id_colegio?: number | null;
@@ -90,15 +91,18 @@ const formatFechaHora = (value: string) =>
     minute: '2-digit',
   });
 
-  const formatNumeroMatricula = (detalle: any) => {
+const formatNumeroMatricula = (detalle: any) => {
+  if (detalle?.codigo_matricula) return detalle.codigo_matricula;
   if (!detalle?.id_matricula) return '—';
+  return `MAT-${String(detalle.id_matricula).padStart(6, '0')}`;
+};
 
-  const prefijo =
-    detalle?.colegio?.codigo ||
-    detalle?.colegio?.nombre_corto ||
-    'MAT';
+const getCodigoAlumnoDetalle = (detalle: any) => {
+  const codigoColegio = detalle?.estudiante?.codigos_colegio?.find(
+    (item: CodigoColegio) => item.id_colegio === detalle?.id_colegio,
+  );
 
-  return `${prefijo}-${String(detalle.id_matricula).padStart(6, '0')}`;
+  return codigoColegio?.codigo || detalle?.estudiante?.codigo_estudiante || 'Sin código';
 };
 
 const formatMoney = (value: number | string | null | undefined) =>
@@ -777,9 +781,12 @@ export default function MatriculasHistorialPage() {
                 <div key={matricula.id_matricula} className="grid gap-4 p-5 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center">
                   <div>
                     <p className="text-sm font-black text-slate-900">
-                      {getCodigoAlumno(matricula)} · {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
+                      {matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`} · {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
                     </p>
                     <p className="mt-1 text-xs font-bold text-slate-400">DNI alumno: {alumno.dni}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-400">
+                      Código alumno: {getCodigoAlumno(matricula)}
+                    </p>
                     {apoderado && (
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         Apoderado: {apoderado.apoderado.persona.nombres} {apoderado.apoderado.persona.apellido_paterno} · DNI {apoderado.apoderado.persona.dni}
@@ -891,28 +898,23 @@ export default function MatriculasHistorialPage() {
                     </div>
                   )}
 
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-  <DetailBox
-    label="N.º matrícula"
-    value={formatNumeroMatricula(detalleMatricula)}
-  />
-  <DetailBox
-    label="Estado"
-    value={detalleMatricula.estado_matricula}
-  />
-  <DetailBox
-    label="Matriculado el"
-    value={formatFechaHora(detalleMatricula.fecha_matricula)}
-  />
-  <DetailBox
-    label="Registrado por"
-    value={
-      detalleMatricula.registrado_por?.persona
-        ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
-        : 'No registrado'
-    }
-  />
-</div>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+                    <DetailBox label="ID matrícula" value={formatNumeroMatricula(detalleMatricula)} />
+                    <DetailBox label="Código alumno" value={getCodigoAlumnoDetalle(detalleMatricula)} />
+                    <DetailBox label="Estado" value={detalleMatricula.estado_matricula} />
+                    <DetailBox
+                      label="Matriculado el"
+                      value={formatFechaHora(detalleMatricula.fecha_matricula)}
+                    />
+                    <DetailBox
+                      label="Registrado por"
+                      value={
+                        detalleMatricula.registrado_por?.persona
+                          ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
+                          : 'No registrado'
+                      }
+                    />
+                  </div>
 
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
                     <h4 className="text-sm font-black text-slate-900">
