@@ -28,6 +28,11 @@ interface Deuda {
   concepto: string;
   fecha_vencimiento: string;
   monto_base: number | string;
+  monto_base_original?: number | string;
+  descuento_aplicado?: number | string;
+  monto_programado?: number | string;
+  estado_publicacion?: string;
+  visible_apoderado?: boolean;
   total_pagado?: number;
   saldo?: number;
   estado: string;
@@ -213,13 +218,22 @@ export default function TesoreriaPage() {
           { label: 'Vista', value: activeScope.tipo === 'todos' ? 'Consolidada' : 'Por colegio' },
         ]}
         actions={
-          <a
-            href="/tesoreria/pagos-extraordinarios"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
-          >
-            Pago extraordinario
-            <ArrowUpRight size={16} />
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/tesoreria/configuracion"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent-600"
+            >
+              Config. pensiones
+              <ArrowUpRight size={16} />
+            </a>
+            <a
+              href="/tesoreria/pagos-extraordinarios"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Pago extraordinario
+              <ArrowUpRight size={16} />
+            </a>
+          </div>
         }
       />
 
@@ -325,15 +339,29 @@ export default function TesoreriaPage() {
                               <p className="mt-1 text-xs text-slate-400">
                                 Vence: {new Date(deuda.fecha_vencimiento).toLocaleDateString('es-PE')}
                               </p>
+                              {deuda.estado_publicacion && (
+                                <p className="mt-1 text-[11px] font-bold text-slate-400">
+                                  Publicación: {deuda.estado_publicacion}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-sm font-black text-slate-950">{currency(deuda.saldo ?? deuda.monto_base)}</p>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-slate-950">
+                                {currency(deuda.saldo ?? deuda.monto_programado ?? deuda.monto_base)}
+                              </p>
+                              {Number(deuda.descuento_aplicado || 0) > 0 && (
+                                <p className="text-[11px] font-black text-emerald-600">
+                                  Desc. {currency(deuda.descuento_aplicado)}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           {est !== 'Pagado' && (
                             <button
                               type="button"
                               onClick={() => {
                                 setPagoSeleccionado(deuda);
-                                setMontoPago(String(deuda.saldo ?? deuda.monto_base));
+                                setMontoPago(String(deuda.saldo ?? deuda.monto_programado ?? deuda.monto_base));
                                 setShowModal(true);
                               }}
                               className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl bg-slate-950 text-xs font-bold text-white transition hover:bg-slate-800"

@@ -338,7 +338,7 @@ export class FinanzasService {
     const vencidosRaw = await this.prisma.$queryRaw<{ total: string }[]>(
       Prisma.sql`
         SELECT COALESCE(
-          SUM(GREATEST(COALESCE(cp.monto_programado, con.monto_base) - COALESCE(pagos.total_pagado, 0), 0))
+          SUM(GREATEST(COALESCE(cp.monto_programado, con.monto_base) - COALESCE(pagos.total_pagado, 0), 0)),
           0
         ) AS total
         FROM CronogramaPagos cp
@@ -1171,6 +1171,7 @@ export class FinanzasService {
 
     return this.prisma.$transaction(async (tx) => {
       let creados = 0;
+      let existentes = 0;
 
       for (const detalle of plan.detalles) {
         const existe = await tx.cronogramaPagos.findFirst({
@@ -1180,7 +1181,10 @@ export class FinanzasService {
           },
         });
 
-        if (existe) continue;
+        if (existe) {
+          existentes += 1;
+          continue;
+        }
 
         const publicado = detalle.fecha_publicacion <= hoy;
         const descuento = await this.calcularDescuentoGeneral(tx, {
@@ -1219,9 +1223,14 @@ export class FinanzasService {
       }
 
       return {
-        message: 'Cronograma de pensiones generado para la matrícula.',
+        message:
+          creados > 0
+            ? `Cronograma de pensiones generado. Nuevos creados: ${creados}. Ya existentes: ${existentes}.`
+            : `Cronograma revisado correctamente. No se crearon duplicados. Ya existentes: ${existentes}.`,
         id_matricula: matricula.id_matricula,
         total_creados: creados,
+        total_existentes: existentes,
+        total_planificados: plan.detalles.length,
       };
     });
   }

@@ -44,8 +44,24 @@ const navItems: NavItem[] = [
   {
     label: 'Tesorería',
     icon: '💰',
-    path: '/tesoreria',
-    roles: ['Admin', 'Secretaria'],
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
+      {
+        label: 'Estado de cuenta',
+        path: '/tesoreria',
+        roles: ['Admin', 'Secretaria', 'Director'],
+      },
+      {
+        label: 'Config. pensiones',
+        path: '/tesoreria/configuracion',
+        roles: ['Admin', 'Director'],
+      },
+      {
+        label: 'Pagos extraordinarios',
+        path: '/tesoreria/pagos-extraordinarios',
+        roles: ['Admin', 'Secretaria', 'Director'],
+      },
+    ],
   },
   {
     label: 'Circulares',
@@ -113,6 +129,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Matrícula: true,
+    Tesorería: true,
   });
 
   const toggleGroup = (label: string) => {

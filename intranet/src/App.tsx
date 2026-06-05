@@ -20,6 +20,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
 import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
+import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';
 
 
 function AppRoutes() {
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
 <Route path="/matricula" element={<MatriculaPage />} />
 <Route path="/tesoreria" element={<TesoreriaPage />} />
+<Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
 <Route path="/asistencia" element={<AsistenciaPage />} />
 <Route path="/notas" element={<NotasPage />} />
 <Route path="/circulares" element={<CircularesPage />} />

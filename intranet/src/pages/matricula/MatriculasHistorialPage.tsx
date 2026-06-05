@@ -645,6 +645,51 @@ export default function MatriculasHistorialPage() {
     }
   };
 
+  // ─── GENERAR CRONOGRAMA DE PENSIONES ──────────────────
+  const generarPensionesMatricula = async () => {
+    if (!token || !detalleMatricula?.id_matricula) return;
+
+    setSavingPago(true);
+    setMensajePago(null);
+
+    try {
+      const res = await axios.post(
+        `/api/tesoreria/matriculas/${detalleMatricula.id_matricula}/generar-pensiones${queryString}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const message =
+        res.data?.message ||
+        'Se revisó el cronograma de pensiones de la matrícula.';
+
+      showToast({
+        type: 'success',
+        title: 'Cronograma de pensiones',
+        message,
+        duration: 6500,
+      });
+
+      setMensajePago(message);
+      await abrirDetalleMatricula(detalleMatricula.id_matricula);
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        'No se pudo generar el cronograma de pensiones.';
+
+      setMensajePago(message);
+
+      showToast({
+        type: 'error',
+        title: 'No se pudo generar',
+        message,
+        duration: 6500,
+      });
+    } finally {
+      setSavingPago(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -1290,6 +1335,20 @@ export default function MatriculasHistorialPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* Generar cronograma de pensiones */}
+                  {!esMatriculaFinal(detalleMatricula) && (
+                    <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                      <button
+                        type="button"
+                        onClick={generarPensionesMatricula}
+                        disabled={savingPago || esMatriculaFinal(detalleMatricula)}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        Generar cronograma de pensiones
+                      </button>
+                    </div>
+                  )}
 
                   {/* Cronograma de pagos */}
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
