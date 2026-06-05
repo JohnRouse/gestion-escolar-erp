@@ -143,10 +143,11 @@ const menuFinanzas: NavItem[] = [
     title: 'Tesorería',
     icon: Wallet,
     path: '/tesoreria',
-    roles: ['Admin', 'Secretaria'],
+    roles: ['Admin', 'Secretaria', 'Director'],
     children: [
-      { title: 'Estado de Cuenta', path: '/tesoreria' },
-      { title: 'Pagos Extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+      { title: 'Estado de cuenta', path: '/tesoreria' },
+      { title: 'Config. pensiones', path: '/tesoreria/configuracion' },
+      { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
     ],
   },
 ];
@@ -195,7 +196,6 @@ export default function AppSidebar() {
       { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
     ].filter((cat) => cat.items.length > 0);
   }, [user?.rol]);
-
 
   const isRouteActive = (path?: string) => {
     if (!path) return false;
@@ -337,12 +337,12 @@ export default function AppSidebar() {
       )}
 
       <aside
-          className={cx(
-            'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
-            isOpen ? 'translate-x-0' : '-translate-x-full',
-            isCollapsed ? 'w-[88px]' : 'w-[260px]'
-          )}
-        >
+        className={cx(
+          'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          isCollapsed ? 'w-[88px]' : 'w-[260px]'
+        )}
+      >
         <div className="flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl transition-all duration-300">
           {/* Cabecera */}
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100/80 px-3">
