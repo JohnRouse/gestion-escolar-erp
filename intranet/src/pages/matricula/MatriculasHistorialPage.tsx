@@ -90,6 +90,17 @@ const formatFechaHora = (value: string) =>
     minute: '2-digit',
   });
 
+  const formatNumeroMatricula = (detalle: any) => {
+  if (!detalle?.id_matricula) return '—';
+
+  const prefijo =
+    detalle?.colegio?.codigo ||
+    detalle?.colegio?.nombre_corto ||
+    'MAT';
+
+  return `${prefijo}-${String(detalle.id_matricula).padStart(6, '0')}`;
+};
+
 const formatMoney = (value: number | string | null | undefined) =>
   `S/ ${Number(value || 0).toFixed(2)}`;
 
@@ -880,24 +891,28 @@ export default function MatriculasHistorialPage() {
                     </div>
                   )}
 
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <DetailBox
-                      label="Estado"
-                      value={detalleMatricula.estado_matricula}
-                    />
-                    <DetailBox
-                      label="Fecha"
-                      value={formatFechaHora(detalleMatricula.fecha_matricula)}
-                    />
-                    <DetailBox
-                      label="Registrado por"
-                      value={
-                        detalleMatricula.registrado_por?.persona
-                          ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
-                          : 'No registrado'
-                      }
-                    />
-                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+  <DetailBox
+    label="N.º matrícula"
+    value={formatNumeroMatricula(detalleMatricula)}
+  />
+  <DetailBox
+    label="Estado"
+    value={detalleMatricula.estado_matricula}
+  />
+  <DetailBox
+    label="Matriculado el"
+    value={formatFechaHora(detalleMatricula.fecha_matricula)}
+  />
+  <DetailBox
+    label="Registrado por"
+    value={
+      detalleMatricula.registrado_por?.persona
+        ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
+        : 'No registrado'
+    }
+  />
+</div>
 
                   <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
                     <h4 className="text-sm font-black text-slate-900">

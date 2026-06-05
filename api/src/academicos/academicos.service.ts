@@ -3282,12 +3282,7 @@ export class AcademicosService {
           },
         });
 
-        pensionesCreadas = await this.generarPensionesMatricula(tx, {
-          id_matricula: matricula.id_matricula,
-          id_anio: matricula.id_anio,
-          id_colegio: matricula.id_colegio,
-          anio: matricula.anio,
-        });
+        pensionesCreadas = 0;
 
         activada = true;
       }
@@ -3383,12 +3378,7 @@ export class AcademicosService {
         },
       });
 
-      const pensionesCreadas = await this.generarPensionesMatricula(tx, {
-        id_matricula: matricula.id_matricula,
-        id_anio: matricula.id_anio,
-        id_colegio: matricula.id_colegio,
-        anio: matricula.anio,
-      });
+      const pensionesCreadas = 0;
 
       return {
         activada: true,

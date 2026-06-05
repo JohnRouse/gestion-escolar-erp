@@ -338,7 +338,7 @@ export class FinanzasService {
     const vencidosRaw = await this.prisma.$queryRaw<{ total: string }[]>(
       Prisma.sql`
         SELECT COALESCE(
-          SUM(GREATEST(con.monto_base - COALESCE(pagos.total_pagado, 0), 0)),
+          SUM(GREATEST(COALESCE(cp.monto_programado, con.monto_base) - COALESCE(pagos.total_pagado, 0), 0))
           0
         ) AS total
         FROM CronogramaPagos cp
