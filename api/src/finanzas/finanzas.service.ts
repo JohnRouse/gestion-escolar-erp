@@ -155,6 +155,136 @@ export class FinanzasService {
     };
   }
 
+  // ── NUEVOS HELPERS PARA PENSIONES Y DESCUENTOS ──────
+  private readonly mesesEscolares = [
+    { mes: 1, nombre: 'Enero' },
+    { mes: 2, nombre: 'Febrero' },
+    { mes: 3, nombre: 'Marzo' },
+    { mes: 4, nombre: 'Abril' },
+    { mes: 5, nombre: 'Mayo' },
+    { mes: 6, nombre: 'Junio' },
+    { mes: 7, nombre: 'Julio' },
+    { mes: 8, nombre: 'Agosto' },
+    { mes: 9, nombre: 'Setiembre' },
+    { mes: 10, nombre: 'Octubre' },
+    { mes: 11, nombre: 'Noviembre' },
+    { mes: 12, nombre: 'Diciembre' },
+  ];
+
+  private getAnioCorte(anio: { fecha_inicio?: Date | string | null; nombre_anio?: string | null }) {
+    if (anio.fecha_inicio) {
+      const fecha = new Date(anio.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    const match = String(anio.nombre_anio || '').match(/\d{4}/);
+    return match ? Number(match[0]) : new Date().getFullYear();
+  }
+
+  private crearFechaLocal(anio: number, mes: number, dia: number) {
+    const ultimoDiaMes = new Date(anio, mes, 0).getDate();
+    const diaSeguro = Math.min(Math.max(1, dia), ultimoDiaMes);
+    return new Date(anio, mes - 1, diaSeguro);
+  }
+
+  private normalizeEmpty(value?: string | null) {
+    const clean = value?.trim();
+    return clean ? clean : null;
+  }
+
+  private montoProgramadoCronograma(cronograma: any) {
+    return Number(cronograma.monto_programado ?? cronograma.concepto?.monto_base ?? 0);
+  }
+
+  private async calcularDescuentoGeneral(
+    tx: Prisma.TransactionClient,
+    params: {
+      idTenant: number | null;
+      idColegio: number | null;
+      idAnio: number | null;
+      tipoConcepto: string;
+      montoBase: number;
+      fechaReferencia: Date;
+      matricula?: any | null;
+    },
+  ) {
+    const fecha = new Date(
+      params.fechaReferencia.getFullYear(),
+      params.fechaReferencia.getMonth(),
+      params.fechaReferencia.getDate(),
+    );
+
+    const campanas = await tx.campanaDescuento.findMany({
+      where: {
+        estado: 'Activo',
+        fecha_inicio: { lte: fecha },
+        fecha_fin: { gte: fecha },
+        OR: [
+          { id_colegio: params.idColegio || undefined },
+          { id_colegio: null },
+        ],
+        AND: [
+          {
+            OR: [
+              { id_anio: params.idAnio || undefined },
+              { id_anio: null },
+            ],
+          },
+          {
+            OR: [
+              { tipo_concepto_aplica: params.tipoConcepto },
+              { tipo_concepto_aplica: null },
+            ],
+          },
+        ],
+      },
+      orderBy: [{ id_colegio: 'desc' }, { id_anio: 'desc' }, { id_campana_descuento: 'desc' }],
+    });
+
+    const campana = campanas.find((item) => {
+      if (item.solo_alumnos_vigentes && !params.matricula) return false;
+
+      const tipoIngresoAplica = String(item.tipo_ingreso_aplica || '').trim();
+
+      if (!tipoIngresoAplica) return true;
+
+      return tipoIngresoAplica
+        .split(',')
+        .map((value) => value.trim())
+        .includes(params.matricula?.tipo_ingreso || '');
+    });
+
+    if (!campana) {
+      return {
+        montoProgramado: params.montoBase,
+        descuentoAplicado: 0,
+        idCampanaDescuento: null as number | null,
+      };
+    }
+
+    let montoProgramado = params.montoBase;
+
+    if (campana.monto_promocional !== null && campana.monto_promocional !== undefined) {
+      montoProgramado = Number(campana.monto_promocional);
+    } else if (campana.descuento_monto !== null && campana.descuento_monto !== undefined) {
+      montoProgramado = Math.max(params.montoBase - Number(campana.descuento_monto), 0);
+    } else if (
+      campana.descuento_porcentaje !== null &&
+      campana.descuento_porcentaje !== undefined
+    ) {
+      const porcentaje = Number(campana.descuento_porcentaje);
+      montoProgramado = Math.max(params.montoBase - (params.montoBase * porcentaje) / 100, 0);
+    }
+
+    return {
+      montoProgramado,
+      descuentoAplicado: Math.max(params.montoBase - montoProgramado, 0),
+      idCampanaDescuento: campana.id_campana_descuento,
+    };
+  }
+
+  // ── FIN NUEVOS HELPERS ────────────────────────────
+
   private async getAniosActivos(scope: FinanzasScope) {
     if (!scope.colegioIds.length) return [];
 
@@ -284,16 +414,23 @@ export class FinanzasService {
         (total, pago) => total + Number(pago.monto_pagado),
         0,
       );
-      const saldo = Math.max(0, Number(cron.concepto.monto_base) - totalPagado);
+      const montoProgramado = this.montoProgramadoCronograma(cron);
+      const saldo = Math.max(0, montoProgramado - totalPagado);
 
       return {
         id_cronograma: cron.id_cronograma,
         concepto: cron.concepto.nombre_concepto,
         fecha_vencimiento: cron.fecha_vencimiento,
         monto_base: Number(cron.concepto.monto_base),
+        monto_base_original: cron.monto_base_original ? Number(cron.monto_base_original) : Number(cron.concepto.monto_base),
+        descuento_aplicado: Number(cron.descuento_aplicado || 0),
+        monto_programado: montoProgramado,
         total_pagado: totalPagado,
         saldo,
         estado: cron.estado_pago,
+        estado_publicacion: cron.estado_publicacion,
+        visible_apoderado: cron.visible_apoderado,
+        fecha_publicacion: cron.fecha_publicacion,
         pagos: cron.pagos.map((p) => ({
           monto: Number(p.monto_pagado),
           fecha: p.fecha_pago,
@@ -386,7 +523,8 @@ export class FinanzasService {
         (total, pago) => total + Number(pago.monto_pagado),
         0,
       );
-      const saldo = Math.max(0, Number(cronograma.concepto.monto_base) - totalPagado);
+      const montoProgramado = this.montoProgramadoCronograma(cronograma);
+      const saldo = Math.max(0, montoProgramado - totalPagado);
       const montoAPagar = pagoItem.monto_pagado && pagoItem.monto_pagado > 0 ? pagoItem.monto_pagado : saldo;
 
       if (montoAPagar <= 0) throw new BadRequestException('Monto debe ser mayor a 0');
@@ -427,7 +565,18 @@ export class FinanzasService {
       orderBy: { id_matricula: 'desc' },
     });
     if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
-    return this.getEstadoCuenta(matriculaActiva.id_matricula);
+
+    const estado = await this.getEstadoCuenta(matriculaActiva.id_matricula);
+
+    const deudasVisibles = estado.deudas.filter((deuda: any) => deuda.visible_apoderado);
+
+    return {
+      ...estado,
+      deudas: deudasVisibles,
+      total_pendiente: deudasVisibles
+        .filter((deuda: any) => deuda.estado === 'Pendiente' || deuda.estado === 'Vencido')
+        .reduce((sum: number, deuda: any) => sum + deuda.saldo, 0),
+    };
   }
 
   async getPagosPendientesCount(params: ScopeParams) {
@@ -647,6 +796,119 @@ export class FinanzasService {
     };
   }
 
+  // ── PLAN DE PENSIONES ──────────────────────────────
+  async crearPlanPensiones(dto: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    if (scope.tipo !== 'colegio' || scope.colegioIds.length !== 1) {
+      throw new BadRequestException('Selecciona un colegio específico para crear el cronograma de pensiones.');
+    }
+
+    const idColegio = scope.colegioIds[0];
+    const idAnio = Number(dto.id_anio);
+    const montoMensual = Number(dto.monto_mensual);
+    const mesInicio = Number(dto.mes_inicio || 3);
+    const mesFin = Number(dto.mes_fin || 12);
+    const diaPublicacion = Number(dto.dia_publicacion || 1);
+    const diaVencimiento = Number(dto.dia_vencimiento || 5);
+
+    if (!Number.isFinite(montoMensual) || montoMensual <= 0) {
+      throw new BadRequestException('Ingresa un monto mensual válido.');
+    }
+
+    if (mesInicio < 1 || mesFin > 12 || mesInicio > mesFin) {
+      throw new BadRequestException('Rango de meses inválido.');
+    }
+
+    const anio = await this.prisma.anioLectivo.findFirst({
+      where: { id_anio: idAnio, id_colegio: idColegio },
+    });
+
+    if (!anio) {
+      throw new BadRequestException('El año lectivo no pertenece al colegio seleccionado.');
+    }
+
+    const existente = await this.prisma.planPensiones.findFirst({
+      where: {
+        id_colegio: idColegio,
+        id_anio: idAnio,
+        estado: 'Activo',
+      },
+    });
+
+    if (existente) {
+      throw new BadRequestException('Ya existe un cronograma de pensiones activo para este colegio y año.');
+    }
+
+    const anioNumero = this.getAnioCorte(anio);
+    const colegio = scope.colegios[0];
+
+    return this.prisma.$transaction(async (tx) => {
+      const plan = await tx.planPensiones.create({
+        data: {
+          id_tenant: scope.tenantId,
+          id_colegio: idColegio,
+          id_anio: idAnio,
+          nombre: dto.nombre || `Pensiones ${anioNumero}`,
+          monto_mensual: montoMensual,
+          mes_inicio: mesInicio,
+          mes_fin: mesFin,
+          dia_publicacion: diaPublicacion,
+          dia_vencimiento: diaVencimiento,
+          estado: 'Activo',
+        },
+      });
+
+      const detalles: any[] = [];
+
+      for (let mes = mesInicio; mes <= mesFin; mes++) {
+        const mesInfo = this.mesesEscolares.find((item) => item.mes === mes);
+        const nombreMes = mesInfo?.nombre || `Mes ${mes}`;
+        const nombreConcepto = `Pensión ${nombreMes} ${anioNumero}`;
+        const fechaPublicacion = this.crearFechaLocal(anioNumero, mes, diaPublicacion);
+        const fechaVencimiento = this.crearFechaLocal(anioNumero, mes, diaVencimiento);
+
+        const concepto = await tx.conceptoPago.create({
+          data: {
+            id_tenant: scope.tenantId,
+            id_colegio: idColegio,
+            id_anio: idAnio,
+            nombre_concepto: nombreConcepto,
+            monto_base: montoMensual,
+            tipo_concepto: 'PENSION',
+            es_pension: true,
+            es_extraordinario: false,
+          },
+        });
+
+        const detalle = await tx.planPensionesDetalle.create({
+          data: {
+            id_plan_pension: plan.id_plan_pension,
+            id_concepto: concepto.id_concepto,
+            mes,
+            nombre_mes: nombreMes,
+            fecha_publicacion: fechaPublicacion,
+            fecha_vencimiento: fechaVencimiento,
+            monto_base: montoMensual,
+            estado: 'Programado',
+          },
+          include: { concepto: true },
+        });
+
+        detalles.push(detalle);
+      }
+
+      return {
+        message: 'Cronograma base de pensiones creado correctamente.',
+        colegio,
+        anio,
+        plan,
+        detalles,
+      };
+    });
+  }
+
+  // ── CONCEPTOS ──────────────────────────────────────
   async getConceptos(params: ScopeParams) {
     const scope = await this.resolveScope(params);
     const anioIds = await this.getAnioIds(scope);
@@ -841,5 +1103,318 @@ export class FinanzasService {
 
   async procesarPagoExterno(data: any) {
     return { message: 'Pago externo procesado (simulación)' };
+  }
+
+  // ── MÉTODOS ADICIONALES PARA PLANES Y DESCUENTOS ──
+  async listarPlanesPensiones(params: ScopeParams & { idAnio?: number }) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.planPensiones.findMany({
+      where: {
+        ...this.colegioWhere(scope),
+        ...(params.idAnio ? { id_anio: params.idAnio } : {}),
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        detalles: {
+          include: { concepto: true },
+          orderBy: { mes: 'asc' },
+        },
+      },
+      orderBy: [{ id_anio: 'desc' }, { id_plan_pension: 'desc' }],
+    });
+  }
+
+  async generarCronogramaPensionesMatricula(
+    matriculaId: number,
+    params: ScopeParams,
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const matricula = await this.prisma.matricula.findFirst({
+      where: {
+        id_matricula: matriculaId,
+        ...this.colegioWhere(scope),
+      },
+      include: {
+        anio: true,
+        colegio: true,
+      },
+    });
+
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada.');
+
+    if (!['Activo', 'Pre-matriculado'].includes(matricula.estado_matricula)) {
+      throw new BadRequestException('Solo puedes generar cronograma para matrículas activas o pre-matriculadas.');
+    }
+
+    const plan = await this.prisma.planPensiones.findFirst({
+      where: {
+        id_colegio: matricula.id_colegio || undefined,
+        id_anio: matricula.id_anio,
+        estado: 'Activo',
+      },
+      include: {
+        detalles: {
+          include: { concepto: true },
+          orderBy: { mes: 'asc' },
+        },
+      },
+    });
+
+    if (!plan) {
+      throw new BadRequestException('No existe cronograma base de pensiones para este colegio y año.');
+    }
+
+    const hoy = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      let creados = 0;
+
+      for (const detalle of plan.detalles) {
+        const existe = await tx.cronogramaPagos.findFirst({
+          where: {
+            id_matricula: matricula.id_matricula,
+            id_concepto: detalle.id_concepto,
+          },
+        });
+
+        if (existe) continue;
+
+        const publicado = detalle.fecha_publicacion <= hoy;
+        const descuento = await this.calcularDescuentoGeneral(tx, {
+          idTenant: matricula.id_tenant || scope.tenantId,
+          idColegio: matricula.id_colegio,
+          idAnio: matricula.id_anio,
+          tipoConcepto: 'PENSION',
+          montoBase: Number(detalle.monto_base),
+          fechaReferencia: detalle.fecha_publicacion,
+          matricula,
+        });
+
+        await tx.cronogramaPagos.create({
+          data: {
+            id_matricula: matricula.id_matricula,
+            id_concepto: detalle.id_concepto,
+            id_plan_pension_detalle: detalle.id_plan_detalle,
+            fecha_vencimiento: detalle.fecha_vencimiento,
+            estado_pago: publicado
+              ? detalle.fecha_vencimiento < hoy
+                ? 'Vencido'
+                : 'Pendiente'
+              : 'Programado',
+            monto_base_original: Number(detalle.monto_base),
+            descuento_aplicado: descuento.descuentoAplicado,
+            monto_programado: descuento.montoProgramado,
+            id_campana_descuento: descuento.idCampanaDescuento,
+            estado_publicacion: publicado ? 'Publicado' : 'Programado',
+            fecha_publicacion: detalle.fecha_publicacion,
+            fecha_publicado: publicado ? new Date() : null,
+            visible_apoderado: publicado,
+          },
+        });
+
+        creados += 1;
+      }
+
+      return {
+        message: 'Cronograma de pensiones generado para la matrícula.',
+        id_matricula: matricula.id_matricula,
+        total_creados: creados,
+      };
+    });
+  }
+
+  async publicarPensionesMes(
+    params: ScopeParams & {
+      idAnio: number;
+      mes: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    if (scope.tipo !== 'colegio' || scope.colegioIds.length !== 1) {
+      throw new BadRequestException('Selecciona un colegio específico para publicar pensiones.');
+    }
+
+    const idColegio = scope.colegioIds[0];
+
+    const plan = await this.prisma.planPensiones.findFirst({
+      where: {
+        id_colegio: idColegio,
+        id_anio: params.idAnio,
+        estado: 'Activo',
+      },
+      include: {
+        detalles: {
+          where: { mes: params.mes },
+          include: { concepto: true },
+        },
+      },
+    });
+
+    if (!plan || !plan.detalles.length) {
+      throw new BadRequestException('No existe pensión programada para ese mes.');
+    }
+
+    const detalle = plan.detalles[0];
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_colegio: idColegio,
+        id_anio: params.idAnio,
+        estado_matricula: 'Activo',
+      },
+    });
+
+    const hoy = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      let creados = 0;
+      let publicados = 0;
+
+      for (const matricula of matriculas) {
+        let cronograma = await tx.cronogramaPagos.findFirst({
+          where: {
+            id_matricula: matricula.id_matricula,
+            id_concepto: detalle.id_concepto,
+          },
+        });
+
+        if (!cronograma) {
+          const descuento = await this.calcularDescuentoGeneral(tx, {
+            idTenant: matricula.id_tenant || scope.tenantId,
+            idColegio: matricula.id_colegio,
+            idAnio: matricula.id_anio,
+            tipoConcepto: 'PENSION',
+            montoBase: Number(detalle.monto_base),
+            fechaReferencia: hoy,
+            matricula,
+          });
+
+          await tx.cronogramaPagos.create({
+            data: {
+              id_matricula: matricula.id_matricula,
+              id_concepto: detalle.id_concepto,
+              id_plan_pension_detalle: detalle.id_plan_detalle,
+              fecha_vencimiento: detalle.fecha_vencimiento,
+              estado_pago: detalle.fecha_vencimiento < hoy ? 'Vencido' : 'Pendiente',
+              monto_base_original: Number(detalle.monto_base),
+              descuento_aplicado: descuento.descuentoAplicado,
+              monto_programado: descuento.montoProgramado,
+              id_campana_descuento: descuento.idCampanaDescuento,
+              estado_publicacion: 'Publicado',
+              fecha_publicacion: detalle.fecha_publicacion,
+              fecha_publicado: new Date(),
+              visible_apoderado: true,
+            },
+          });
+
+          creados += 1;
+        } else if (cronograma.estado_publicacion !== 'Publicado') {
+          await tx.cronogramaPagos.update({
+            where: { id_cronograma: cronograma.id_cronograma },
+            data: {
+              estado_publicacion: 'Publicado',
+              visible_apoderado: true,
+              fecha_publicado: new Date(),
+              estado_pago: detalle.fecha_vencimiento < hoy ? 'Vencido' : 'Pendiente',
+            },
+          });
+
+          publicados += 1;
+        }
+      }
+
+      await tx.planPensionesDetalle.update({
+        where: { id_plan_detalle: detalle.id_plan_detalle },
+        data: { estado: 'Publicado' },
+      });
+
+      return {
+        message: 'Pensiones publicadas correctamente.',
+        mes: detalle.nombre_mes,
+        total_matriculas: matriculas.length,
+        creados,
+        publicados,
+      };
+    });
+  }
+
+  async crearCampanaDescuento(dto: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const idColegio =
+      dto.id_colegio || (scope.tipo === 'colegio' ? scope.colegioIds[0] : null);
+
+    if (idColegio && !scope.colegioIds.includes(Number(idColegio))) {
+      throw new UnauthorizedException('No tienes acceso al colegio seleccionado.');
+    }
+
+    const fechaInicio = new Date(`${dto.fecha_inicio}T00:00:00`);
+    const fechaFin = new Date(`${dto.fecha_fin}T00:00:00`);
+
+    if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+      throw new BadRequestException('Las fechas no son válidas.');
+    }
+
+    if (fechaFin < fechaInicio) {
+      throw new BadRequestException('La fecha fin no puede ser anterior a la fecha inicio.');
+    }
+
+    if (
+      dto.monto_promocional === undefined &&
+      dto.descuento_monto === undefined &&
+      dto.descuento_porcentaje === undefined
+    ) {
+      throw new BadRequestException('Ingresa monto promocional, descuento fijo o porcentaje.');
+    }
+
+    return this.prisma.campanaDescuento.create({
+      data: {
+        id_tenant: scope.tenantId,
+        id_colegio: idColegio ? Number(idColegio) : null,
+        id_anio: dto.id_anio ? Number(dto.id_anio) : null,
+        nombre: dto.nombre,
+        descripcion: this.normalizeEmpty(dto.descripcion),
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        tipo_concepto_aplica: dto.tipo_concepto_aplica
+          ? this.normalizarTipoConcepto(dto.tipo_concepto_aplica)
+          : null,
+        tipo_ingreso_aplica: this.normalizeEmpty(dto.tipo_ingreso_aplica),
+        monto_promocional:
+          dto.monto_promocional !== undefined ? Number(dto.monto_promocional) : undefined,
+        descuento_monto:
+          dto.descuento_monto !== undefined ? Number(dto.descuento_monto) : undefined,
+        descuento_porcentaje:
+          dto.descuento_porcentaje !== undefined ? Number(dto.descuento_porcentaje) : undefined,
+        solo_alumnos_vigentes: dto.solo_alumnos_vigentes ?? false,
+        estado: dto.estado || 'Activo',
+      },
+      include: {
+        colegio: true,
+        anio: true,
+      },
+    });
+  }
+
+  async listarCampanasDescuento(params: ScopeParams & { idAnio?: number }) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.campanaDescuento.findMany({
+      where: {
+        OR: [
+          { id_colegio: { in: scope.colegioIds } },
+          { id_colegio: null, id_tenant: scope.tenantId },
+        ],
+        ...(params.idAnio ? { id_anio: params.idAnio } : {}),
+      },
+      include: {
+        colegio: true,
+        anio: true,
+      },
+      orderBy: [{ fecha_inicio: 'desc' }, { id_campana_descuento: 'desc' }],
+    });
   }
 }

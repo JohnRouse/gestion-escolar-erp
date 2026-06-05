@@ -101,6 +101,8 @@ model Tenant {
   escalas      EscalaCalificacion[]
   tipos_eval   TipoEvaluacion[]
   campanas_matricula CampanaMatricula[]
+  planes_pensiones    PlanPensiones[]
+  campanas_descuento  CampanaDescuento[]
 }
 
 model Colegio {
@@ -137,6 +139,8 @@ model Colegio {
   tipos_eval   TipoEvaluacion[]
   codigos_estudiantes EstudianteCodigoColegio[]
   campanas_matricula CampanaMatricula[]
+  planes_pensiones    PlanPensiones[]
+  campanas_descuento  CampanaDescuento[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -302,6 +306,8 @@ model AnioLectivo {
   asignaciones AsignacionDocente[]
   eventos      Evento[]
   campanas_matricula CampanaMatricula[]
+  planes_pensiones    PlanPensiones[]
+  campanas_descuento  CampanaDescuento[]
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -587,7 +593,8 @@ model ConceptoPago {
   colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
   anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 
-  cronogramas CronogramaPagos[]
+  cronogramas            CronogramaPagos[]
+  detalles_plan_pension  PlanPensionesDetalle[]
 
   @@index([id_anio])
   @@index([id_tenant])
@@ -624,6 +631,85 @@ model CampanaMatricula {
   @@index([estado, fecha_inicio, fecha_fin])
 }
 
+model PlanPensiones {
+  id_plan_pension Int      @id @default(autoincrement())
+  id_tenant       Int?
+  id_colegio      Int
+  id_anio         Int
+  nombre          String   @db.VarChar(120)
+  monto_mensual   Decimal  @db.Decimal(10, 2)
+  mes_inicio      Int      @default(3) @db.TinyInt
+  mes_fin         Int      @default(12) @db.TinyInt
+  dia_publicacion Int      @default(1) @db.TinyInt
+  dia_vencimiento Int      @default(5) @db.TinyInt
+  estado          String   @default("Activo") @db.VarChar(20)
+  created_at      DateTime @default(now())
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio     @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  detalles PlanPensionesDetalle[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_anio])
+  @@index([estado])
+}
+
+model PlanPensionesDetalle {
+  id_plan_detalle    Int      @id @default(autoincrement())
+  id_plan_pension    Int
+  id_concepto        Int
+  mes                Int      @db.TinyInt
+  nombre_mes         String   @db.VarChar(20)
+  fecha_publicacion  DateTime @db.Date
+  fecha_vencimiento  DateTime @db.Date
+  monto_base         Decimal  @db.Decimal(10, 2)
+  estado             String   @default("Programado") @db.VarChar(20)
+
+  plan      PlanPensiones @relation(fields: [id_plan_pension], references: [id_plan_pension])
+  concepto  ConceptoPago  @relation(fields: [id_concepto], references: [id_concepto])
+
+  cronogramas CronogramaPagos[]
+
+  @@unique([id_plan_pension, mes])
+  @@index([id_plan_pension])
+  @@index([id_concepto])
+  @@index([mes])
+}
+
+model CampanaDescuento {
+  id_campana_descuento Int      @id @default(autoincrement())
+  id_tenant            Int?
+  id_colegio           Int?
+  id_anio              Int?
+  nombre               String   @db.VarChar(120)
+  descripcion          String?  @db.VarChar(500)
+  fecha_inicio         DateTime @db.Date
+  fecha_fin            DateTime @db.Date
+  tipo_concepto_aplica String?  @db.VarChar(30)
+  tipo_ingreso_aplica  String?  @db.VarChar(160)
+  monto_promocional    Decimal? @db.Decimal(10, 2)
+  descuento_monto      Decimal? @db.Decimal(10, 2)
+  descuento_porcentaje Decimal? @db.Decimal(5, 2)
+  solo_alumnos_vigentes Boolean @default(false)
+  estado               String   @default("Activo") @db.VarChar(20)
+  created_at           DateTime @default(now())
+
+  tenant  Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo? @relation(fields: [id_anio], references: [id_anio])
+
+  cronogramas CronogramaPagos[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_anio])
+  @@index([tipo_concepto_aplica])
+  @@index([estado, fecha_inicio, fecha_fin])
+}
+
 model CronogramaPagos {
   id_cronograma     Int      @id @default(autoincrement())
   id_matricula      Int
@@ -634,10 +720,18 @@ model CronogramaPagos {
   descuento_aplicado    Decimal  @default(0) @db.Decimal(10, 2)
   monto_programado      Decimal? @db.Decimal(10, 2)
   id_campana_matricula  Int?
+  id_plan_pension_detalle Int?
+  id_campana_descuento    Int?
+  estado_publicacion      String   @default("Publicado") @db.VarChar(20)
+  fecha_publicacion       DateTime? @db.Date
+  fecha_publicado         DateTime?
+  visible_apoderado       Boolean  @default(true)
 
-  matricula Matricula    @relation(fields: [id_matricula], references: [id_matricula])
-  concepto  ConceptoPago @relation(fields: [id_concepto], references: [id_concepto])
-  campana   CampanaMatricula? @relation(fields: [id_campana_matricula], references: [id_campana])
+  matricula            Matricula             @relation(fields: [id_matricula], references: [id_matricula])
+  concepto             ConceptoPago          @relation(fields: [id_concepto], references: [id_concepto])
+  campana              CampanaMatricula?     @relation(fields: [id_campana_matricula], references: [id_campana])
+  plan_pension_detalle PlanPensionesDetalle? @relation(fields: [id_plan_pension_detalle], references: [id_plan_detalle])
+  campana_descuento    CampanaDescuento?     @relation(fields: [id_campana_descuento], references: [id_campana_descuento])
 
   pagos PagoTransaccion[]
 
@@ -645,6 +739,9 @@ model CronogramaPagos {
   @@index([fecha_vencimiento, estado_pago])
   @@index([id_concepto])
   @@index([id_campana_matricula])
+  @@index([id_plan_pension_detalle])
+  @@index([id_campana_descuento])
+  @@index([estado_publicacion, fecha_publicacion, visible_apoderado])
 }
 
 model PagoTransaccion {

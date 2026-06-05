@@ -120,6 +120,108 @@ export class FinanzasController {
     return { received: true };
   }
 
+  // ── NUEVAS RUTAS: PLANES DE PENSIÓN, PUBLICACIÓN Y DESCUENTOS ──
+  @Get('planes-pensiones')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarPlanesPensiones(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+  ) {
+    return this.finanzasService.listarPlanesPensiones({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idAnio: anioId ? Number(anioId) : undefined,
+    });
+  }
+
+  @Post('planes-pensiones')
+  @Roles('Admin', 'Director')
+  async crearPlanPensiones(
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.crearPlanPensiones(body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
+  @Post('matriculas/:id/generar-pensiones')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async generarPensionesMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.generarCronogramaPensionesMatricula(Number(id), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Post('pensiones/publicar-mes')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async publicarPensionesMes(
+    @Body() body: { id_anio: number; mes: number; id_colegio?: number; scope?: string },
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.publicarPensionesMes({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      idAnio: Number(body.id_anio),
+      mes: Number(body.mes),
+    });
+  }
+
+  @Get('campanas-descuento')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarCampanasDescuento(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+  ) {
+    return this.finanzasService.listarCampanasDescuento({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idAnio: anioId ? Number(anioId) : undefined,
+    });
+  }
+
+  @Post('campanas-descuento')
+  @Roles('Admin', 'Director')
+  async crearCampanaDescuento(
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.crearCampanaDescuento(body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
+  // ── CONCEPTOS ────────────────────────────────────────
   @Get('conceptos')
   @Roles('Admin', 'Director', 'Secretaria')
   async getConceptos(
