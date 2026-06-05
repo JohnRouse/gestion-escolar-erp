@@ -84,7 +84,13 @@ type Alumno = {
       estado_matricula: string;
       id_colegio?: number;
       colegio?: { nombre: string; codigo?: string | null };
-      anio?: { nombre_anio: string; estado?: string; fecha_fin?: string | null };
+      anio?: {
+        id_anio?: number;
+        nombre_anio: string;
+        estado?: string;
+        fecha_inicio?: string | null;
+        fecha_fin?: string | null;
+      };
       seccion?: {
         letra: string;
         grado: {
@@ -561,6 +567,19 @@ export default function MatriculaPage() {
     return new Date().getFullYear();
   };
 
+  const getAnioCorteMatriculaFrontend = (matricula: any) => {
+    const desdeNombre = matricula?.anio?.nombre_anio?.match(/\d{4}/)?.[0];
+
+    if (desdeNombre) return Number(desdeNombre);
+
+    if (matricula?.anio?.fecha_inicio) {
+      const fecha = new Date(matricula.anio.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    return null;
+  };
+
   const esAnioLectivoBloqueanteFrontend = (anio: any) => {
     if (!anio) return true;
 
@@ -598,7 +617,7 @@ export default function MatriculaPage() {
     const estadoOperativo = getEstadoOperativoAnioFrontend(anioSeleccionado);
 
     if (estadoOperativo === 'Planificación') {
-      return ['Reserva'];
+      return ['Reserva', 'Renovación', 'Renovación con cambio de sede'];
     }
 
     const anioCorte = getAnioCorteFrontend();
@@ -623,7 +642,14 @@ export default function MatriculaPage() {
     }
 
     if (estadoOperativo === 'Matrícula abierta') {
-      return ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
+      return [
+        'Nuevo',
+        'Traslado',
+        'Reingreso',
+        'Continuidad interna',
+        'Renovación',
+        'Renovación con cambio de sede',
+      ];
     }
 
     return ['Nuevo', 'Traslado', 'Reingreso', 'Continuidad interna'];
@@ -667,20 +693,25 @@ export default function MatriculaPage() {
     }
 
     if (estadoOperativo === 'Planificación') {
-      if (tipoIngreso !== 'Reserva') {
+      if (
+        !['Reserva', 'Renovación', 'Renovación con cambio de sede'].includes(tipoIngreso)
+      ) {
         return {
           bloquea: true,
           tipo: 'warning',
           texto:
-            'Este año lectivo todavía está en planificación. Para este periodo solo puedes registrar reservas. Cambia el tipo de ingreso a Reserva o cambia el estado del año a Matrícula abierta si ya iniciarán el proceso.',
+            'Este año lectivo todavía está en planificación. Solo puedes registrar reservas o renovaciones anticipadas.',
         };
       }
+
+      const esRenovacion = ['Renovación', 'Renovación con cambio de sede'].includes(tipoIngreso);
 
       return {
         bloquea: false,
         tipo: 'info',
-        texto:
-          'Se registrará como reserva. No se generará cobro ni activación hasta que el año lectivo pase a Matrícula abierta o En curso.',
+        texto: esRenovacion
+          ? 'Se registrará como pre-matrícula anticipada para el siguiente año. Si existe una campaña vigente, el cobro se generará con el monto promocional congelado.'
+          : 'Se registrará como reserva. No se generará cobro ni activación hasta que el año lectivo pase a Matrícula abierta o En curso.',
       };
     }
 
@@ -848,11 +879,16 @@ export default function MatriculaPage() {
   }, [formAlumno.fecha_nacimiento, anioId]);
 
   const matriculaActiva = useMemo(() => {
-    if (!estudiante?.matriculas?.length) return null;
+    if (!estudiante?.matriculas?.length || !anioId) return null;
 
-    const matriculasBloqueantes = estudiante.matriculas.filter((m) =>
-      estadosMatriculaBloqueantes.includes(m.estado_matricula),
-    );
+    const anioDestino = getAnioCorteFrontend();
+
+    const matriculasBloqueantes = estudiante.matriculas.filter((m) => {
+      return (
+        estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
+        getAnioCorteMatriculaFrontend(m) === anioDestino
+      );
+    });
 
     if (!matriculasBloqueantes.length) return null;
 
@@ -873,7 +909,7 @@ export default function MatriculaPage() {
     }
 
     return matriculasBloqueantes[0];
-  }, [activeScope, colegioDestinoId, estudiante?.matriculas]);
+  }, [activeScope, colegioDestinoId, estudiante?.matriculas, anioId]);
 
   const alertaEdad = useMemo(() => {
     if (!alumno || !seccionSeleccionada) return null;
@@ -2225,6 +2261,12 @@ export default function MatriculaPage() {
                             : getEstadoOperativoAnioFrontend(anioSeleccionado) === 'En curso'
                               ? 'Año en curso: solo permite traslado, reingreso o regularización.'
                               : 'Matrícula abierta: permite ingreso regular.'}
+                        </p>
+                      )}
+
+                      {['Renovación', 'Renovación con cambio de sede'].includes(tipoIngreso) && (
+                        <p className="mt-2 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-blue-700 ring-1 ring-blue-100">
+                          Este tipo se usa para alumnos vigentes que desean asegurar matrícula del siguiente año. Si hay campaña activa, el monto promocional quedará congelado en el cronograma.
                         </p>
                       )}
                     </label>

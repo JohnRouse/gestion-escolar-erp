@@ -798,6 +798,56 @@ export class AcademicosController {
     });
   }
 
+  // ── CAMPAÑAS DE MATRÍCULA ────────────────────────────
+  @Get('campanas-matricula')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarCampanasMatricula(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+  ) {
+    return this.academicosService.listarCampanasMatricula({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idAnio: anioId ? Number(anioId) : undefined,
+    });
+  }
+
+  @Post('campanas-matricula')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  crearCampanaMatricula(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio: number;
+      id_colegio?: number;
+      nombre: string;
+      descripcion?: string;
+      fecha_inicio: string;
+      fecha_fin: string;
+      monto_promocional?: number;
+      descuento_monto?: number;
+      tipo_ingreso_aplica?: string;
+      solo_alumnos_vigentes?: boolean;
+      estado?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearCampanaMatricula({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      body,
+    });
+  }
+
   // ── DOCENTES ─────────────────────────────────────────
   @Get('docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

@@ -442,6 +442,12 @@ export class AcademicosService {
   private normalizarTipoIngreso(value?: string | null) {
     const valor = this.normalizeEmpty(value) || 'Nuevo';
 
+    const key = valor
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
     const alias: Record<string, string> = {
       nuevo: 'Nuevo',
       traslado: 'Traslado',
@@ -451,12 +457,17 @@ export class AcademicosService {
       regularizacion: 'Regularización',
       regularización: 'Regularización',
       reserva: 'Reserva',
+      renovacion: 'Renovación',
+      'renovacion matricula': 'Renovación',
+      'renovacion de matricula': 'Renovación',
+      rematricula: 'Renovación',
+      're matricula': 'Renovación',
+      're-matricula': 'Renovación',
+      'renovacion con cambio de sede': 'Renovación con cambio de sede',
+      'renovacion cambio sede': 'Renovación con cambio de sede',
+      'traslado interno siguiente anio': 'Renovación con cambio de sede',
+      'traslado interno siguiente año': 'Renovación con cambio de sede',
     };
-
-    const key = valor
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
 
     const normalizado = alias[key] || valor;
     const permitidos = [
@@ -466,11 +477,13 @@ export class AcademicosService {
       'Continuidad interna',
       'Regularización',
       'Reserva',
+      'Renovación',
+      'Renovación con cambio de sede',
     ];
 
     if (!permitidos.includes(normalizado)) {
       throw new BadRequestException(
-        'Tipo de ingreso inválido. Usa Nuevo, Traslado, Reingreso, Continuidad interna, Regularización o Reserva.',
+        'Tipo de ingreso inválido. Usa Nuevo, Traslado, Reingreso, Continuidad interna, Regularización, Reserva, Renovación o Renovación con cambio de sede.',
       );
     }
 
@@ -489,6 +502,145 @@ export class AcademicosService {
 
     return valor;
   }
+
+  // ── NUEVOS HELPERS DE MATRÍCULA PARA RENOVACIÓN Y CAMPAÑAS ──
+
+  private tiposRenovacion = ['Renovación', 'Renovación con cambio de sede'];
+
+  private estadosMatriculaNoFinales = [
+    'Activo',
+    'Pre-matriculado',
+    'Reserva',
+    'Pendiente',
+    'Observado',
+  ];
+
+  private getAnioCorteDeRegistro(anio?: {
+    fecha_inicio?: Date | string | null;
+    nombre_anio?: string | null;
+  } | null) {
+    if (!anio) return new Date().getFullYear();
+
+    if (anio.fecha_inicio) {
+      const fecha = new Date(anio.fecha_inicio);
+      if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear();
+    }
+
+    const match = String(anio.nombre_anio || '').match(/\d{4}/);
+    return match ? Number(match[0]) : new Date().getFullYear();
+  }
+
+  private async buscarMatriculasNoFinalesAlumnoGrupo(params: {
+    idEstudiante: number;
+    idTenant: number | null;
+  }) {
+    const whereTenantGrupo = params.idTenant
+      ? {
+          OR: [
+            { id_tenant: params.idTenant },
+            { id_tenant: null },
+            { colegio: { id_tenant: params.idTenant } },
+          ],
+        }
+      : {};
+
+    return this.prisma.matricula.findMany({
+      where: {
+        id_estudiante: params.idEstudiante,
+        ...whereTenantGrupo,
+        estado_matricula: { in: this.estadosMatriculaNoFinales },
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        seccion: {
+          include: {
+            grado: { include: { nivel: true } },
+          },
+        },
+      },
+      orderBy: { id_matricula: 'desc' },
+    });
+  }
+
+  private mensajeMatriculaExistenteMismoAnio(matriculaExistente: any) {
+    const colegioNombre = matriculaExistente?.colegio?.nombre || 'este colegio';
+    const anioNombre = matriculaExistente?.anio?.nombre_anio || 'el año lectivo registrado';
+    const gradoNombre = matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
+    const nivelNombre = matriculaExistente?.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
+    const letra = matriculaExistente?.seccion?.letra || '-';
+    const estado = matriculaExistente?.estado_matricula || 'matriculado';
+
+    return `El alumno ya tiene una matrícula no finalizada para ${anioNombre}: ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}. No puede tener dos procesos para el mismo año escolar.`;
+  }
+
+  private async validarBloqueoYOrigenMatricula(params: {
+    idEstudiante: number;
+    idTenant: number | null;
+    idColegioDestino: number;
+    anioDestino: {
+      id_anio: number;
+      fecha_inicio?: Date | string | null;
+      nombre_anio?: string | null;
+    };
+    tipoIngreso: string;
+  }) {
+    const anioDestino = this.getAnioCorteDeRegistro(params.anioDestino);
+    const esRenovacion = this.tiposRenovacion.includes(params.tipoIngreso);
+
+    const matriculas = await this.buscarMatriculasNoFinalesAlumnoGrupo({
+      idEstudiante: params.idEstudiante,
+      idTenant: params.idTenant,
+    });
+
+    const mismaGestion = matriculas.find(
+      (matricula) => this.getAnioCorteDeRegistro(matricula.anio) === anioDestino,
+    );
+
+    if (mismaGestion) {
+      throw new BadRequestException(
+        this.mensajeMatriculaExistenteMismoAnio(mismaGestion),
+      );
+    }
+
+    const matriculaOrigen =
+      matriculas
+        .filter((matricula) => this.getAnioCorteDeRegistro(matricula.anio) < anioDestino)
+        .sort(
+          (a, b) =>
+            this.getAnioCorteDeRegistro(b.anio) -
+            this.getAnioCorteDeRegistro(a.anio),
+        )[0] || null;
+
+    if (esRenovacion && !matriculaOrigen) {
+      throw new BadRequestException(
+        'No se encontró una matrícula anterior vigente para renovar. Si es alumno nuevo o reingreso, usa el tipo de ingreso correspondiente.',
+      );
+    }
+
+    if (
+      params.tipoIngreso === 'Renovación con cambio de sede' &&
+      matriculaOrigen?.id_colegio === params.idColegioDestino
+    ) {
+      throw new BadRequestException(
+        'El tipo “Renovación con cambio de sede” requiere que la sede destino sea distinta a la sede anterior.',
+      );
+    }
+
+    if (
+      params.tipoIngreso === 'Renovación' &&
+      matriculaOrigen?.id_colegio &&
+      matriculaOrigen.id_colegio !== params.idColegioDestino
+    ) {
+      throw new BadRequestException(
+        'El alumno viene de otra sede del grupo. Usa “Renovación con cambio de sede”.',
+      );
+    }
+
+    return { matriculaOrigen };
+  }
+
+  // ── FIN NUEVOS HELPERS DE MATRÍCULA ───────────────────
 
   private getEstadoOperativoAnio(anio: {
     estado?: string | null;
@@ -547,17 +699,25 @@ export class AcademicosService {
     }
 
     if (estadoOperativo === 'Planificación') {
-      if (tipoIngreso !== 'Reserva') {
-        throw new BadRequestException(
-          'El año lectivo está en planificación. Solo puedes registrar reservas para este periodo.',
-        );
+      if (tipoIngreso === 'Reserva') {
+        return {
+          tipoIngreso,
+          estadoMatricula: 'Reserva',
+          generaCobroMatricula: false,
+        };
       }
 
-      return {
-        tipoIngreso,
-        estadoMatricula: 'Reserva',
-        generaCobroMatricula: false,
-      };
+      if (this.tiposRenovacion.includes(tipoIngreso)) {
+        return {
+          tipoIngreso,
+          estadoMatricula: 'Pre-matriculado',
+          generaCobroMatricula: true,
+        };
+      }
+
+      throw new BadRequestException(
+        'El año lectivo está en planificación. Solo puedes registrar reservas o renovaciones/re-matrículas anticipadas.',
+      );
     }
 
     const tiposPermitidosEnCurso = ['Traslado', 'Reingreso', 'Regularización'];
@@ -580,7 +740,7 @@ export class AcademicosService {
 
     if (tipoIngreso === 'Reserva') {
       throw new BadRequestException(
-        'El tipo Reserva solo debe usarse para años lectivos en planificación o futuros. Para el periodo abierto usa Nuevo, Traslado, Reingreso o Continuidad interna.',
+        'El tipo Reserva solo debe usarse para años lectivos en planificación o futuros. Para el periodo abierto usa Nuevo, Traslado, Reingreso, Continuidad interna, Renovación o Renovación con cambio de sede.',
       );
     }
 
@@ -704,6 +864,106 @@ export class AcademicosService {
     return creados;
   }
 
+  // ── HELPERS DE MONTO / CAMPAÑA ────────────────────────
+  private montoProgramadoCronograma(item: {
+    monto_programado?: Prisma.Decimal | number | string | null;
+    concepto?: { monto_base?: Prisma.Decimal | number | string | null };
+  }) {
+    return Number(item.monto_programado ?? item.concepto?.monto_base ?? 0);
+  }
+
+  private async obtenerCampanaMatriculaActiva(
+    tx: Prisma.TransactionClient,
+    params: {
+      idTenant: number | null;
+      idColegio: number | null;
+      idAnio: number;
+      tipoIngreso: string;
+      matriculaOrigen?: any | null;
+    },
+  ) {
+    const hoy = new Date();
+    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+
+    const campanas = await tx.campanaMatricula.findMany({
+      where: {
+        id_anio: params.idAnio,
+        estado: 'Activo',
+        fecha_inicio: { lte: hoyInicio },
+        fecha_fin: { gte: hoyInicio },
+        OR: [
+          { id_colegio: params.idColegio || undefined },
+          { id_colegio: null },
+        ],
+      },
+      orderBy: [{ id_colegio: 'desc' }, { id_campana: 'desc' }],
+    });
+
+    return (
+      campanas.find((campana) => {
+        if (campana.solo_alumnos_vigentes && !params.matriculaOrigen) {
+          return false;
+        }
+
+        const aplica = String(campana.tipo_ingreso_aplica || '').trim();
+        if (!aplica) return true;
+
+        return aplica
+          .split(',')
+          .map((item) => item.trim())
+          .includes(params.tipoIngreso);
+      }) || null
+    );
+  }
+
+  private async crearCronogramaMatriculaConMonto(
+    tx: Prisma.TransactionClient,
+    params: {
+      idMatricula: number;
+      concepto: any;
+      fechaVencimiento: Date;
+      idTenant: number | null;
+      idColegio: number | null;
+      tipoIngreso: string;
+      matriculaOrigen?: any | null;
+    },
+  ) {
+    const montoBase = Number(params.concepto.monto_base);
+    const campana = await this.obtenerCampanaMatriculaActiva(tx, {
+      idTenant: params.idTenant,
+      idColegio: params.idColegio,
+      idAnio: params.concepto.id_anio,
+      tipoIngreso: params.tipoIngreso,
+      matriculaOrigen: params.matriculaOrigen,
+    });
+
+    let montoProgramado = montoBase;
+    let descuentoAplicado = 0;
+
+    if (campana) {
+      if (campana.monto_promocional !== null && campana.monto_promocional !== undefined) {
+        montoProgramado = Number(campana.monto_promocional);
+      } else if (campana.descuento_monto !== null && campana.descuento_monto !== undefined) {
+        montoProgramado = Math.max(montoBase - Number(campana.descuento_monto), 0);
+      }
+
+      descuentoAplicado = Math.max(montoBase - montoProgramado, 0);
+    }
+
+    return tx.cronogramaPagos.create({
+      data: {
+        id_matricula: params.idMatricula,
+        id_concepto: params.concepto.id_concepto,
+        fecha_vencimiento: params.fechaVencimiento,
+        estado_pago: 'Pendiente',
+        monto_base_original: montoBase,
+        descuento_aplicado: descuentoAplicado,
+        monto_programado: montoProgramado,
+        id_campana_matricula: campana?.id_campana || null,
+      },
+    });
+  }
+
   // ── ASEGURAR CRONOGRAMA DE MATRÍCULA ─────────────────
   private async asegurarCronogramaMatricula(
     tx: Prisma.TransactionClient,
@@ -800,65 +1060,6 @@ export class AcademicosService {
       cronograma: primerCronograma,
       creado: true,
     };
-  }
-
-  // ── NUEVOS HELPERS PARA EVITAR MATRÍCULA DUPLICADA ──
-
-  private async buscarMatriculaBloqueanteVigenteGrupo(params: {
-    idEstudiante: number;
-    idTenant: number | null;
-  }) {
-    const whereTenantGrupo = params.idTenant
-      ? {
-          OR: [
-            { id_tenant: params.idTenant },
-            { id_tenant: null },
-            {
-              colegio: {
-                id_tenant: params.idTenant,
-              },
-            },
-          ],
-        }
-      : {};
-
-    return this.prisma.matricula.findFirst({
-      where: {
-        id_estudiante: params.idEstudiante,
-        ...whereTenantGrupo,
-        estado_matricula: {
-          in: ['Activo', 'Pre-matriculado', 'Reserva', 'Pendiente'],
-        },
-      },
-      include: {
-        colegio: true,
-        anio: true,
-        seccion: {
-          include: {
-            grado: {
-              include: { nivel: true },
-            },
-          },
-        },
-      },
-      orderBy: { id_matricula: 'desc' },
-    });
-  }
-
-  private mensajeMatriculaExistenteGrupo(matriculaExistente: any) {
-    const colegioNombre =
-      matriculaExistente?.colegio?.nombre || 'este colegio';
-    const anioNombre =
-      matriculaExistente?.anio?.nombre_anio ||
-      'el año lectivo registrado';
-    const gradoNombre =
-      matriculaExistente?.seccion?.grado?.nombre_grado || 'grado';
-    const nivelNombre =
-      matriculaExistente?.seccion?.grado?.nivel?.nombre_nivel || 'nivel';
-    const letra = matriculaExistente?.seccion?.letra || '-';
-    const estado = matriculaExistente?.estado_matricula || 'matriculado';
-
-    return `No se puede registrar una nueva matrícula porque el alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Si el alumno continuará el siguiente año, usa Promoción/Re-matrícula. Si cambiará de sede o sección, usa Movimiento de matrícula.`;
   }
 
   // ── FIN HELPERS ──────────────────────────────────────
@@ -1859,18 +2060,14 @@ export class AcademicosService {
       );
     }
 
-    // VALIDACIÓN DE MATRÍCULA EXISTENTE EN EL MISMO GRUPO
-    const matriculaExistente =
-      await this.buscarMatriculaBloqueanteVigenteGrupo({
-        idEstudiante: params.dto.id_estudiante,
-        idTenant,
-      });
-
-    if (matriculaExistente) {
-      throw new BadRequestException(
-        this.mensajeMatriculaExistenteGrupo(matriculaExistente),
-      );
-    }
+    // VALIDACIÓN DE MATRÍCULA EXISTENTE EN EL MISMO AÑO ESCOLAR
+    const validacionMatricula = await this.validarBloqueoYOrigenMatricula({
+      idEstudiante: params.dto.id_estudiante,
+      idTenant,
+      idColegioDestino: idColegio,
+      anioDestino: anio,
+      tipoIngreso: validacionPeriodo.tipoIngreso,
+    });
 
     const matriculados = await this.prisma.matricula.count({
       where: {
@@ -1928,6 +2125,12 @@ export class AcademicosService {
           grado_procedencia: this.normalizeEmpty((params.dto as any).grado_procedencia),
           observacion_procedencia: this.normalizeEmpty((params.dto as any).observacion_procedencia),
           estado_revision: 'Por revisar',
+          id_matricula_origen: validacionMatricula.matriculaOrigen?.id_matricula || null,
+          id_colegio_origen: validacionMatricula.matriculaOrigen?.id_colegio || null,
+          id_anio_origen: validacionMatricula.matriculaOrigen?.id_anio || null,
+          tipo_proceso_matricula: this.tiposRenovacion.includes(validacionPeriodo.tipoIngreso)
+            ? validacionPeriodo.tipoIngreso
+            : null,
         },
       });
 
@@ -1974,13 +2177,14 @@ export class AcademicosService {
           const fechaVenc = new Date();
           fechaVenc.setDate(fechaVenc.getDate() + 1);
 
-          await tx.cronogramaPagos.create({
-            data: {
-              id_matricula: matricula.id_matricula,
-              id_concepto: concepto.id_concepto,
-              fecha_vencimiento: fechaVenc,
-              estado_pago: 'Pendiente',
-            },
+          await this.crearCronogramaMatriculaConMonto(tx, {
+            idMatricula: matricula.id_matricula,
+            concepto,
+            fechaVencimiento: fechaVenc,
+            idTenant,
+            idColegio,
+            tipoIngreso: validacionPeriodo.tipoIngreso,
+            matriculaOrigen: validacionMatricula.matriculaOrigen,
           });
         }
       }
@@ -2311,7 +2515,7 @@ export class AcademicosService {
     );
 
     const totalProgramado = matricula.cronogramas.reduce(
-      (acc, item) => acc + Number(item.concepto.monto_base),
+      (acc, item) => acc + this.montoProgramadoCronograma(item),
       0,
     );
 
@@ -3033,12 +3237,12 @@ export class AcademicosService {
         throw new BadRequestException('El pago de matrícula ya fue registrado.');
       }
 
-      const montoBase = Number(cronogramaMatricula.concepto.monto_base);
+      const totalMatricula = this.montoProgramadoCronograma(cronogramaMatricula);
       const pagadoActual = cronogramaMatricula.pagos.reduce(
         (acc, pago) => acc + Number(pago.monto_pagado),
         0,
       );
-      const saldo = montoBase - pagadoActual;
+      const saldo = totalMatricula - pagadoActual;
 
       if (monto > saldo) {
         throw new BadRequestException(
@@ -3058,7 +3262,7 @@ export class AcademicosService {
       });
 
       const nuevoTotalPagado = pagadoActual + monto;
-      const pagoCompleto = nuevoTotalPagado >= montoBase;
+      const pagoCompleto = nuevoTotalPagado >= totalMatricula;
 
       await tx.cronogramaPagos.update({
         where: { id_cronograma: cronogramaMatricula.id_cronograma },
@@ -3352,5 +3556,114 @@ export class AcademicosService {
     }
 
     return matricula;
+  }
+
+  // ── CAMPAÑAS DE MATRÍCULA ────────────────────────────
+  async listarCampanasMatricula(
+    params: ScopeParams & {
+      idAnio?: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.campanaMatricula.findMany({
+      where: {
+        ...this.colegioWhere(scope),
+        ...(params.idAnio ? { id_anio: params.idAnio } : {}),
+      },
+      include: {
+        colegio: true,
+        anio: true,
+      },
+      orderBy: [{ fecha_inicio: 'desc' }, { id_campana: 'desc' }],
+    });
+  }
+
+  async crearCampanaMatricula(
+    params: ScopeParams & {
+      body: {
+        id_anio: number;
+        id_colegio?: number;
+        nombre: string;
+        descripcion?: string;
+        fecha_inicio: string;
+        fecha_fin: string;
+        monto_promocional?: number;
+        descuento_monto?: number;
+        tipo_ingreso_aplica?: string;
+        solo_alumnos_vigentes?: boolean;
+        estado?: string;
+      };
+    },
+  ) {
+    const scope = await this.resolveScope({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId || params.body.id_colegio,
+    });
+
+    if (scope.tipo !== 'colegio' || scope.colegioIds.length !== 1) {
+      throw new BadRequestException('Selecciona un colegio específico para crear la campaña.');
+    }
+
+    const idColegio = scope.colegioIds[0];
+    const anio = await this.prisma.anioLectivo.findFirst({
+      where: {
+        id_anio: Number(params.body.id_anio),
+        id_colegio: idColegio,
+      },
+    });
+
+    if (!anio) {
+      throw new BadRequestException('El año lectivo no pertenece al colegio seleccionado.');
+    }
+
+    const fechaInicio = new Date(`${params.body.fecha_inicio}T00:00:00`);
+    const fechaFin = new Date(`${params.body.fecha_fin}T00:00:00`);
+
+    if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+      throw new BadRequestException('Las fechas de campaña no son válidas.');
+    }
+
+    if (fechaFin < fechaInicio) {
+      throw new BadRequestException('La fecha fin no puede ser anterior a la fecha inicio.');
+    }
+
+    if (
+      params.body.monto_promocional === undefined &&
+      params.body.descuento_monto === undefined
+    ) {
+      throw new BadRequestException('Ingresa un monto promocional o un descuento.');
+    }
+
+    return this.prisma.campanaMatricula.create({
+      data: {
+        id_tenant: scope.tenantId,
+        id_colegio: idColegio,
+        id_anio: Number(params.body.id_anio),
+        nombre: params.body.nombre.trim(),
+        descripcion: this.normalizeEmpty(params.body.descripcion),
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        monto_promocional:
+          params.body.monto_promocional !== undefined
+            ? Number(params.body.monto_promocional)
+            : undefined,
+        descuento_monto:
+          params.body.descuento_monto !== undefined
+            ? Number(params.body.descuento_monto)
+            : undefined,
+        tipo_ingreso_aplica:
+          this.normalizeEmpty(params.body.tipo_ingreso_aplica) ||
+          'Renovación,Renovación con cambio de sede',
+        solo_alumnos_vigentes: params.body.solo_alumnos_vigentes ?? true,
+        estado: params.body.estado || 'Activo',
+      },
+      include: {
+        colegio: true,
+        anio: true,
+      },
+    });
   }
 }

@@ -100,6 +100,7 @@ model Tenant {
   cursos       Curso[]
   escalas      EscalaCalificacion[]
   tipos_eval   TipoEvaluacion[]
+  campanas_matricula CampanaMatricula[]
 }
 
 model Colegio {
@@ -135,6 +136,7 @@ model Colegio {
   escalas      EscalaCalificacion[]
   tipos_eval   TipoEvaluacion[]
   codigos_estudiantes EstudianteCodigoColegio[]
+  campanas_matricula CampanaMatricula[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -299,6 +301,7 @@ model AnioLectivo {
   conceptos    ConceptoPago[]
   asignaciones AsignacionDocente[]
   eventos      Evento[]
+  campanas_matricula CampanaMatricula[]
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -418,6 +421,10 @@ model Matricula {
   codigo_modular_procedencia  String?   @db.VarChar(30)
   grado_procedencia           String?   @db.VarChar(80)
   observacion_procedencia     String?   @db.VarChar(500)
+  id_matricula_origen       Int?
+  id_colegio_origen         Int?
+  id_anio_origen            Int?
+  tipo_proceso_matricula    String? @db.VarChar(50)
   estado_revision             String    @default("Por revisar") @db.VarChar(30)
   id_usuario_revision         Int?
   fecha_revision              DateTime?
@@ -445,6 +452,9 @@ model Matricula {
   @@index([estado_revision])
   @@index([tipo_ingreso])
   @@index([id_usuario_revision])
+  @@index([id_matricula_origen])
+  @@index([id_colegio_origen, id_anio_origen])
+  @@index([tipo_proceso_matricula])
 }
 
 // ======================================================
@@ -586,21 +596,55 @@ model ConceptoPago {
   @@index([id_anio, id_colegio, tipo_concepto])
 }
 
+model CampanaMatricula {
+  id_campana             Int      @id @default(autoincrement())
+  id_tenant              Int?
+  id_colegio             Int?
+  id_anio                Int
+  nombre                 String   @db.VarChar(120)
+  descripcion            String?  @db.VarChar(500)
+  fecha_inicio           DateTime @db.Date
+  fecha_fin              DateTime @db.Date
+  monto_promocional      Decimal? @db.Decimal(10, 2)
+  descuento_monto        Decimal? @db.Decimal(10, 2)
+  tipo_ingreso_aplica    String?  @db.VarChar(160)
+  solo_alumnos_vigentes  Boolean  @default(true)
+  estado                 String   @default("Activo") @db.VarChar(20)
+  created_at             DateTime @default(now())
+
+  tenant  Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo  @relation(fields: [id_anio], references: [id_anio])
+
+  cronogramas CronogramaPagos[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([id_anio])
+  @@index([estado, fecha_inicio, fecha_fin])
+}
+
 model CronogramaPagos {
   id_cronograma     Int      @id @default(autoincrement())
   id_matricula      Int
   id_concepto       Int
   fecha_vencimiento DateTime @db.Date
   estado_pago       String   @default("Pendiente") @db.VarChar(20)
+  monto_base_original    Decimal? @db.Decimal(10, 2)
+  descuento_aplicado    Decimal  @default(0) @db.Decimal(10, 2)
+  monto_programado      Decimal? @db.Decimal(10, 2)
+  id_campana_matricula  Int?
 
   matricula Matricula    @relation(fields: [id_matricula], references: [id_matricula])
   concepto  ConceptoPago @relation(fields: [id_concepto], references: [id_concepto])
+  campana   CampanaMatricula? @relation(fields: [id_campana_matricula], references: [id_campana])
 
   pagos PagoTransaccion[]
 
   @@unique([id_matricula, id_concepto], name: "uq_cronograma_matricula_concepto")
   @@index([fecha_vencimiento, estado_pago])
   @@index([id_concepto])
+  @@index([id_campana_matricula])
 }
 
 model PagoTransaccion {
