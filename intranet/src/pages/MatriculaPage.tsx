@@ -850,12 +850,9 @@ export default function MatriculaPage() {
   const matriculaActiva = useMemo(() => {
     if (!estudiante?.matriculas?.length) return null;
 
-    const matriculasBloqueantes = estudiante.matriculas.filter((m) => {
-      return (
-        estadosMatriculaBloqueantes.includes(m.estado_matricula) &&
-        esAnioLectivoBloqueanteFrontend(m.anio)
-      );
-    });
+    const matriculasBloqueantes = estudiante.matriculas.filter((m) =>
+      estadosMatriculaBloqueantes.includes(m.estado_matricula),
+    );
 
     if (!matriculasBloqueantes.length) return null;
 
@@ -929,7 +926,7 @@ export default function MatriculaPage() {
     }
 
     if (estado === 'Activo') {
-      return `Este alumno ya tiene matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Para cambiarlo de sede, sección o año debe usarse un proceso controlado de movimiento, promoción o reserva del siguiente año.`;
+      return `Este alumno ya tiene una matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}. Para pasarlo al siguiente año debe usarse Promoción/Re-matrícula; para cambiarlo de sede o sección debe usarse Movimiento de matrícula.`;
     }
 
     return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;

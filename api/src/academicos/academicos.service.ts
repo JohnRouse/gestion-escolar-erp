@@ -36,6 +36,47 @@ interface MatriculaScope {
 export class AcademicosService {
   constructor(private prisma: PrismaService) {}
 
+  // ── HELPERS DE ESTADOS FINALES ──────────────────────
+  private readonly estadosMatriculaFinales = [
+    'Anulado',
+    'Retirado',
+    'No continúa',
+    'Finalizado',
+    'Promocionado',
+    'Egresado',
+  ];
+
+  private readonly estadosRevisionFinales = ['Rechazado'];
+
+  private esMatriculaFinal(matricula?: {
+    estado_matricula?: string | null;
+    estado_revision?: string | null;
+  } | null) {
+    if (!matricula) return false;
+
+    return (
+      this.estadosMatriculaFinales.includes(String(matricula.estado_matricula || '')) ||
+      this.estadosRevisionFinales.includes(String(matricula.estado_revision || ''))
+    );
+  }
+
+  private asegurarMatriculaNoFinal(
+    matricula: {
+      estado_matricula?: string | null;
+      estado_revision?: string | null;
+    },
+    accion: string,
+  ) {
+    if (!this.esMatriculaFinal(matricula)) return;
+
+    const estadoMatricula = matricula.estado_matricula || '—';
+    const estadoRevision = matricula.estado_revision || '—';
+
+    throw new BadRequestException(
+      `No se puede ${accion} porque la matrícula está cerrada. Estado: ${estadoMatricula}. Revisión: ${estadoRevision}. Si fue un error, usa un flujo de reapertura autorizado.`,
+    );
+  }
+
   private normalizeEmpty(value?: string | null) {
     const clean = value?.trim();
     return clean ? clean : null;
@@ -761,38 +802,7 @@ export class AcademicosService {
     };
   }
 
-  // ── NUEVOS HELPERS PARA EVITAR MATRÍCULA DUPLICADA EN EL MISMO AÑO ESCOLAR ──
-
-  private esAnioLectivoBloqueante(anio?: {
-    estado?: string | null;
-    fecha_fin?: Date | string | null;
-  } | null) {
-    if (!anio) return true;
-
-    const estado = String(anio.estado || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-
-    if (['cerrado', 'archivado'].includes(estado)) {
-      return false;
-    }
-
-    if (anio.fecha_fin) {
-      const fechaFin = new Date(anio.fecha_fin);
-
-      if (!Number.isNaN(fechaFin.getTime())) {
-        const hoy = new Date();
-        const finDelDia = new Date(fechaFin);
-        finDelDia.setHours(23, 59, 59, 999);
-
-        if (hoy > finDelDia) return false;
-      }
-    }
-
-    return true;
-  }
+  // ── NUEVOS HELPERS PARA EVITAR MATRÍCULA DUPLICADA ──
 
   private async buscarMatriculaBloqueanteVigenteGrupo(params: {
     idEstudiante: number;
@@ -812,7 +822,7 @@ export class AcademicosService {
         }
       : {};
 
-    const matriculas = await this.prisma.matricula.findMany({
+    return this.prisma.matricula.findFirst({
       where: {
         id_estudiante: params.idEstudiante,
         ...whereTenantGrupo,
@@ -833,14 +843,7 @@ export class AcademicosService {
       },
       orderBy: { id_matricula: 'desc' },
     });
-
-    return (
-      matriculas.find((matricula) =>
-        this.esAnioLectivoBloqueante(matricula.anio),
-      ) || null
-    );
   }
-
 
   private mensajeMatriculaExistenteGrupo(matriculaExistente: any) {
     const colegioNombre =
@@ -855,7 +858,7 @@ export class AcademicosService {
     const letra = matriculaExistente?.seccion?.letra || '-';
     const estado = matriculaExistente?.estado_matricula || 'matriculado';
 
-    return `El alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Para cambiarlo de sede o sección, usa el flujo de movimiento/traslado de matrícula, no una nueva matrícula.`;
+    return `No se puede registrar una nueva matrícula porque el alumno ya figura como ${estado} en ${colegioNombre}, ${gradoNombre} "${letra}" · ${nivelNombre}, ${anioNombre}. Si el alumno continuará el siguiente año, usa Promoción/Re-matrícula. Si cambiará de sede o sección, usa Movimiento de matrícula.`;
   }
 
   // ── FIN HELPERS ──────────────────────────────────────
@@ -2367,6 +2370,8 @@ export class AcademicosService {
         throw new NotFoundException('No se encontró la matrícula solicitada.');
       }
 
+      this.asegurarMatriculaNoFinal(matricula, 'generar cobro de matrícula');
+
       if (matricula.estado_matricula === 'Activo') {
         throw new BadRequestException('La matrícula ya está activa.');
       }
@@ -2859,6 +2864,12 @@ export class AcademicosService {
       throw new NotFoundException('No se encontró la matrícula solicitada.');
     }
 
+    if (this.esMatriculaFinal(matricula)) {
+      throw new BadRequestException(
+        `No se puede modificar la revisión porque la matrícula está cerrada. Estado: ${matricula.estado_matricula}. Revisión: ${matricula.estado_revision}.`,
+      );
+    }
+
     if (estadoRevision === 'Observado' && !this.normalizeEmpty(params.observacionRevision)) {
       throw new BadRequestException('Para observar una matrícula debes ingresar una observación.');
     }
@@ -2867,6 +2878,10 @@ export class AcademicosService {
       where: { id_matricula: params.idMatricula },
       data: {
         estado_revision: estadoRevision,
+        estado_matricula:
+          estadoRevision === 'Rechazado'
+            ? 'Anulado'
+            : undefined,
         id_usuario_revision: params.userId,
         fecha_revision: new Date(),
         observacion_revision: this.normalizeEmpty(params.observacionRevision),
@@ -2983,6 +2998,8 @@ export class AcademicosService {
       if (!matricula) {
         throw new NotFoundException('No se encontró la matrícula solicitada.');
       }
+
+      this.asegurarMatriculaNoFinal(matricula, 'registrar pagos');
 
       if (matricula.estado_revision !== 'Aprobado') {
         throw new BadRequestException(
@@ -3124,6 +3141,8 @@ export class AcademicosService {
       if (!matricula) {
         throw new NotFoundException('No se encontró la matrícula solicitada.');
       }
+
+      this.asegurarMatriculaNoFinal(matricula, 'activar la matrícula');
 
       if (matricula.estado_revision !== 'Aprobado') {
         throw new BadRequestException(

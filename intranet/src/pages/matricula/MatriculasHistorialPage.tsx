@@ -270,9 +270,48 @@ export default function MatriculasHistorialPage() {
     return Math.max(montoBase - pagado, 0);
   };
 
+  // ─── HELPERS PARA MATRÍCULAS FINALES ──────────────────
+  const estadosMatriculaFinales = [
+    'Anulado',
+    'Retirado',
+    'No continúa',
+    'Finalizado',
+    'Promocionado',
+    'Egresado',
+  ];
+
+  const estadosRevisionFinales = ['Rechazado'];
+
+  const esMatriculaFinal = (detalle: any) => {
+    if (!detalle) return false;
+
+    return (
+      estadosMatriculaFinales.includes(String(detalle.estado_matricula || '')) ||
+      estadosRevisionFinales.includes(String(detalle.estado_revision || ''))
+    );
+  };
+
+  const mensajeMatriculaFinal = (detalle: any) => {
+    const estado = detalle?.estado_matricula || '—';
+    const revision = detalle?.estado_revision || '—';
+
+    return `Esta matrícula está cerrada. Estado: ${estado}. Revisión: ${revision}. No se puede aprobar, cobrar ni activar desde este modal.`;
+  };
+
   // ─── GENERAR COBRO DE MATRÍCULA ──────────────────────
   const generarCobroMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
+
+    if (esMatriculaFinal(detalleMatricula)) {
+      const message = mensajeMatriculaFinal(detalleMatricula);
+      setMensajePago(message);
+      showToast({
+        type: 'warning',
+        title: 'Matrícula cerrada',
+        message,
+      });
+      return;
+    }
 
     setSavingPago(true);
     setMensajePago(null);
@@ -334,6 +373,7 @@ export default function MatriculasHistorialPage() {
       let detalle = res.data;
 
       if (
+        !esMatriculaFinal(detalle) &&
         detalle?.estado_matricula === 'Reserva' &&
         !getCronogramaMatricula(detalle)
       ) {
@@ -427,6 +467,17 @@ export default function MatriculasHistorialPage() {
   const guardarRevision = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
 
+    if (esMatriculaFinal(detalleMatricula)) {
+      const message = mensajeMatriculaFinal(detalleMatricula);
+      setMensajeRevision(message);
+      showToast({
+        type: 'warning',
+        title: 'Matrícula cerrada',
+        message,
+      });
+      return;
+    }
+
     setSavingRevision(true);
     setMensajeRevision(null);
 
@@ -469,6 +520,17 @@ export default function MatriculasHistorialPage() {
   // ─── FUNCIONES DE PAGO Y ACTIVACIÓN ───────────────────
   const registrarPagoMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
+
+    if (esMatriculaFinal(detalleMatricula)) {
+      const message = mensajeMatriculaFinal(detalleMatricula);
+      setMensajePago(message);
+      showToast({
+        type: 'warning',
+        title: 'Matrícula cerrada',
+        message,
+      });
+      return;
+    }
 
     setSavingPago(true);
     setMensajePago(null);
@@ -519,6 +581,17 @@ export default function MatriculasHistorialPage() {
 
   const activarMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
+
+    if (esMatriculaFinal(detalleMatricula)) {
+      const message = mensajeMatriculaFinal(detalleMatricula);
+      setMensajePago(message);
+      showToast({
+        type: 'warning',
+        title: 'Matrícula cerrada',
+        message,
+      });
+      return;
+    }
 
     setSavingPago(true);
     setMensajePago(null);
@@ -801,6 +874,12 @@ export default function MatriculasHistorialPage() {
                 </div>
               ) : detalleMatricula ? (
                 <div className="space-y-5">
+                  {esMatriculaFinal(detalleMatricula) && (
+                    <div className="rounded-3xl bg-rose-50 p-5 text-sm font-bold leading-6 text-rose-700 ring-1 ring-rose-100">
+                      {mensajeMatriculaFinal(detalleMatricula)}
+                    </div>
+                  )}
+
                   <div className="grid gap-3 md:grid-cols-3">
                     <DetailBox
                       label="Estado"
@@ -966,34 +1045,40 @@ export default function MatriculasHistorialPage() {
                       />
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
-                      <select
-                        value={revisionEstado}
-                        onChange={(e) => setRevisionEstado(e.target.value)}
-                        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                      >
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="Observado">Observado</option>
-                        <option value="Rechazado">Rechazado</option>
-                        <option value="Por revisar">Por revisar</option>
-                      </select>
+                    {!esMatriculaFinal(detalleMatricula) ? (
+                      <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
+                        <select
+                          value={revisionEstado}
+                          onChange={(e) => setRevisionEstado(e.target.value)}
+                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                        >
+                          <option value="Aprobado">Aprobado</option>
+                          <option value="Observado">Observado</option>
+                          <option value="Rechazado">Rechazado</option>
+                          <option value="Por revisar">Por revisar</option>
+                        </select>
 
-                      <input
-                        value={revisionObservacion}
-                        onChange={(e) => setRevisionObservacion(e.target.value)}
-                        placeholder="Observación de revisión"
-                        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                      />
+                        <input
+                          value={revisionObservacion}
+                          onChange={(e) => setRevisionObservacion(e.target.value)}
+                          placeholder="Observación de revisión"
+                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                        />
 
-                      <button
-                        type="button"
-                        onClick={guardarRevision}
-                        disabled={savingRevision}
-                        className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
-                      >
-                        {savingRevision ? 'Guardando...' : 'Guardar revisión'}
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={guardarRevision}
+                          disabled={savingRevision}
+                          className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
+                        >
+                          {savingRevision ? 'Guardando...' : 'Guardar revisión'}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-4 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                        La revisión está bloqueada porque esta matrícula está cerrada.
+                      </p>
+                    )}
 
                     {mensajeRevision && (
                       <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
@@ -1048,7 +1133,7 @@ export default function MatriculasHistorialPage() {
                       Pago de matrícula y activación
                     </h4>
 
-                    {detalleMatricula && !getCronogramaMatricula(detalleMatricula) && (
+                    {detalleMatricula && !getCronogramaMatricula(detalleMatricula) && !esMatriculaFinal(detalleMatricula) && (
                       <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
                         Esta matrícula todavía no tiene cobro de matrícula generado.
                         <button
@@ -1068,6 +1153,14 @@ export default function MatriculasHistorialPage() {
                       const revisionAprobada = detalleMatricula.estado_revision === 'Aprobado';
                       const pagoPagado = cronogramaMatricula?.estado_pago === 'Pagado';
                       const matriculaActiva = detalleMatricula.estado_matricula === 'Activo';
+
+                      if (esMatriculaFinal(detalleMatricula)) {
+                        return (
+                          <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
+                            No se puede registrar pago ni activar una matrícula anulada, rechazada o finalizada.
+                          </p>
+                        );
+                      }
 
                       if (matriculaActiva) {
                         return (
