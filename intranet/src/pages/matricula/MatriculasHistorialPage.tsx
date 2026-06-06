@@ -311,7 +311,11 @@ export default function MatriculasHistorialPage() {
 
     if (!cronograma) return 0;
 
-    const montoBase = Number(cronograma.concepto?.monto_base || 0);
+    const montoBase = Number(
+      cronograma.monto_programado ??
+        cronograma.concepto?.monto_base ??
+        0,
+    );
     const pagado = (cronograma.pagos || []).reduce(
       (acc: number, pago: any) => acc + Number(pago.monto_pagado || 0),
       0,
@@ -347,6 +351,18 @@ export default function MatriculasHistorialPage() {
 
     return `Esta matrícula está cerrada. Estado: ${estado}. Revisión: ${revision}. No se puede aprobar, cobrar ni activar desde este modal.`;
   };
+
+  // ─── HELPERS PARA BLOQUEAR PROMOCIÓN ──────────────────
+  const cronogramaMatriculaTienePagos =
+    Boolean(cronogramaMatriculaDetalle?.pagos?.length) ||
+    totalPagadoMatriculaDetalle > 0;
+
+  const puedeAplicarPromocionMatricula =
+    Boolean(detalleMatricula) &&
+    Boolean(cronogramaMatriculaDetalle) &&
+    !cronogramaMatriculaTienePagos &&
+    cronogramaMatriculaDetalle?.estado_pago !== 'Pagado' &&
+    !esMatriculaFinal(detalleMatricula);
 
   // ─── GENERAR COBRO DE MATRÍCULA ──────────────────────
   const generarCobroMatricula = async () => {
@@ -399,6 +415,54 @@ export default function MatriculasHistorialPage() {
         type: 'error',
         title: 'No se pudo generar cobro',
         message: errorMessage,
+      });
+    } finally {
+      setSavingPago(false);
+    }
+  };
+
+  // ─── APLICAR PROMOCIÓN VIGENTE ──────────────────────
+  const aplicarPromocionMatricula = async () => {
+    if (!token || !detalleMatricula) return;
+
+    const codigo = detalleMatricula.codigo_matricula || detalleMatricula.id_matricula;
+
+    setSavingPago(true);
+    setMensajePago(null);
+
+    try {
+      const res = await axios.post(
+        `/api/tesoreria/matriculas/${codigo}/aplicar-promocion-matricula${detalleQueryString}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const message =
+        res.data?.message || 'Promoción aplicada correctamente al cobro de matrícula.';
+
+      setMensajePago(message);
+
+      showToast({
+        type: 'success',
+        title: 'Promoción aplicada',
+        message,
+        duration: 6500,
+      });
+
+      await abrirDetalleMatricula(detalleMatricula.id_matricula);
+      await fetchMatriculas();
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'No se pudo aplicar la promoción vigente.';
+
+      setMensajePago(errorMessage);
+
+      showToast({
+        type: 'error',
+        title: 'No se pudo aplicar',
+        message: errorMessage,
+        duration: 6500,
       });
     } finally {
       setSavingPago(false);
@@ -1370,6 +1434,26 @@ export default function MatriculasHistorialPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* Aplicar promoción vigente */}
+                  {!esMatriculaFinal(detalleMatricula) && (
+                    <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                      <button
+                        type="button"
+                        onClick={aplicarPromocionMatricula}
+                        disabled={savingPago || !puedeAplicarPromocionMatricula}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Aplicar promoción vigente
+                      </button>
+
+                      {cronogramaMatriculaDetalle && !puedeAplicarPromocionMatricula && !matriculaPagadaParaPensiones && (
+                        <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-bold leading-5 text-slate-500 ring-1 ring-slate-100">
+                          La promoción solo puede aplicarse si el cobro de matrícula no tiene pagos registrados.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Generar cronograma de pensiones */}
                   {!esMatriculaFinal(detalleMatricula) && (

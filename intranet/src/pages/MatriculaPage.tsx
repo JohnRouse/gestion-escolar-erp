@@ -11,6 +11,7 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  Circle,
   Clock,
   GraduationCap,
   Loader2,
@@ -243,6 +244,51 @@ const validarFechaNacimientoFrontend = (fecha?: string) => {
   return null;
 };
 
+// ─── Step Hint Component ──────────────────────────────────────────────────────
+
+const StepHint = ({
+  step,
+  title,
+  description,
+  done = false,
+  warning = false,
+}: {
+  step: number;
+  title: string;
+  description?: string;
+  done?: boolean;
+  warning?: boolean;
+}) => {
+  const Icon = done ? CheckCircle2 : warning ? AlertCircle : Circle;
+
+  const cls = done
+    ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+    : warning
+      ? 'bg-amber-50 text-amber-700 ring-amber-100'
+      : 'bg-slate-50 text-slate-500 ring-slate-100';
+
+  return (
+    <div className={`mb-4 rounded-2xl px-4 py-3 ring-1 ${cls}`}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/70">
+          <Icon size={15} />
+        </div>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.14em]">
+            Paso {step}
+          </p>
+          <p className="mt-0.5 text-sm font-black">{title}</p>
+          {description && (
+            <p className="mt-1 text-xs font-bold leading-5 opacity-80">
+              {description}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MatriculaPage() {
@@ -304,6 +350,11 @@ export default function MatriculaPage() {
     const colegio = colegios.find((item) => item.id_colegio === colegioDestinoId);
     return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado';
   }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
+
+  const colegioDestinoDefinido = useMemo(() => {
+    if (activeScope.tipo === 'colegio') return Boolean(activeScope.id_colegio);
+    return Boolean(colegioDestinoId);
+  }, [activeScope.tipo, activeScope.id_colegio, colegioDestinoId]);
 
   const anioSeleccionado = useMemo(() => anios.find((item) => item.id_anio === anioId) || null, [anioId, anios]);
 
@@ -714,6 +765,14 @@ export default function MatriculaPage() {
       <div className="grid gap-5 xl:grid-cols-[0.92fr_1.65fr]">
         {/* ── Columna izquierda ── */}
         <section className="space-y-5">
+          <StepHint
+            step={1}
+            title="Busca o registra al alumno"
+            description="Ingresa DNI para revisar si ya existe. Si no existe, crea su ficha."
+            done={Boolean(alumno)}
+            warning={!alumno}
+          />
+
           <Card icon={Search} title="Buscar alumno" subtitle="Ingresa el DNI para revisar su ficha.">
             <div className="flex gap-2">
               <input
@@ -939,24 +998,42 @@ export default function MatriculaPage() {
           {alumno && !matriculaActiva && (
             <>
               {activeScope.tipo === 'todos' && puedeVerConsolidado && (
-                <Card icon={MapPin} title="Colegio destino" subtitle="Selecciona la sede donde se registrará la matrícula.">
-                  <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
-                    <label>
-                      <Label>Sede de matrícula</Label>
-                      <select
-                        value={colegioDestinoId}
-                        onChange={(e) => { setColegioDestinoId(e.target.value ? Number(e.target.value) : ''); setSeccionId(''); setAnioId(''); setExcepcionTraslado(false); setMensaje(null); }}
-                        className={selectClass}
-                      >
-                        <option value="">Selecciona colegio destino</option>
-                        {colegios.map((c) => (
-                          <option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </Card>
+                <>
+                  <StepHint
+                    step={2}
+                    title="Selecciona el colegio destino"
+                    description="La matrícula se registrará en esta sede."
+                    done={colegioDestinoDefinido}
+                    warning={!colegioDestinoDefinido}
+                  />
+
+                  <Card icon={MapPin} title="Colegio destino" subtitle="Selecciona la sede donde se registrará la matrícula.">
+                    <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                      <label>
+                        <Label>Sede de matrícula</Label>
+                        <select
+                          value={colegioDestinoId}
+                          onChange={(e) => { setColegioDestinoId(e.target.value ? Number(e.target.value) : ''); setSeccionId(''); setAnioId(''); setExcepcionTraslado(false); setMensaje(null); }}
+                          className={selectClass}
+                        >
+                          <option value="">Selecciona colegio destino</option>
+                          {colegios.map((c) => (
+                            <option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </Card>
+                </>
               )}
+
+              <StepHint
+                step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 3 : 2}
+                title="Selecciona o agrega uno o más apoderados"
+                description="Debe existir al menos un apoderado vinculado para continuar."
+                done={apoderados.length > 0}
+                warning={Boolean(alumno && apoderados.length === 0)}
+              />
 
               <Card icon={ShieldCheck} title="Apoderados" subtitle="Debes vincular al menos un apoderado.">
                 <div className="flex gap-2">
@@ -1057,6 +1134,14 @@ export default function MatriculaPage() {
                 )}
               </Card>
 
+              <StepHint
+                step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 4 : 3}
+                title="Selecciona año, grado y sección"
+                description="El sistema validará cupos, edad y periodo de matrícula."
+                done={Boolean(anioSeleccionado && seccionSeleccionada)}
+                warning={Boolean(alumno && (!anioSeleccionado || !seccionSeleccionada))}
+              />
+
               <Card icon={GraduationCap} title="Registrar pre-matrícula" subtitle="Filtra por nivel y grado para elegir sección.">
                 <div className="grid gap-4 xl:grid-cols-3">
                   <label>
@@ -1118,6 +1203,14 @@ export default function MatriculaPage() {
 
                 {seccionesFiltradas.length === 0 && <Empty text="Sin secciones disponibles" />}
 
+                <StepHint
+                  step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 5 : 4}
+                  title="Define el tipo de ingreso"
+                  description="Nuevo, traslado, reingreso, regularización o reserva, según el año lectivo."
+                  done={Boolean(tipoIngreso)}
+                  warning={!tipoIngreso}
+                />
+
                 <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Procedencia del alumno</p>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1161,6 +1254,13 @@ export default function MatriculaPage() {
                     {mensaje}
                   </div>
                 )}
+
+                <StepHint
+                  step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 6 : 5}
+                  title="Revisa y registra"
+                  description="Confirma que alumno, apoderado, sede, sección y tipo de ingreso estén correctos."
+                  done={Boolean(alumno && apoderados.length > 0 && seccionSeleccionada)}
+                />
 
                 <button
                   type="button"

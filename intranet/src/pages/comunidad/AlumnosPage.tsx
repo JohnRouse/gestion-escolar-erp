@@ -18,6 +18,7 @@ import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import PersonAvatar from '../../components/PersonAvatar';
 
 type CodigoColegio = { id_colegio: number; codigo: string };
 type Meta = { total: number; page: number; limit: number; totalPages: number };
@@ -56,30 +57,6 @@ const fecha = (value?: string | null) =>
 
 const getCodigo = (alumno: AlumnoItem) =>
   alumno.codigos_colegio?.[0]?.codigo || alumno.codigo_estudiante || 'Sin código';
-
-const getInitials = (nombres: string) => {
-  const parts = nombres.trim().split(' ');
-  return parts.length >= 2
-    ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    : nombres.slice(0, 2).toUpperCase();
-};
-
-// Paleta de colores para avatares determinística según nombre
-const avatarColors = [
-  'bg-violet-100 text-violet-700',
-  'bg-sky-100 text-sky-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-teal-100 text-teal-700',
-  'bg-orange-100 text-orange-700',
-];
-
-const getAvatarColor = (name: string) => {
-  const sum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return avatarColors[sum % avatarColors.length];
-};
 
 // Badge de estado de matrícula
 const estadoBadge: Record<string, string> = {
@@ -324,8 +301,6 @@ export default function AlumnosPage() {
               const ultimaMatricula = alumno.matriculas?.[0];
               const apoderado = alumno.apoderados?.[0];
               const nombre = fullName(alumno.persona);
-              const initials = getInitials(alumno.persona.nombres);
-              const avatarColor = getAvatarColor(nombre);
               const estadoMatricula = ultimaMatricula?.estado_matricula;
 
               return (
@@ -335,11 +310,7 @@ export default function AlumnosPage() {
                 >
                   {/* Columna alumno */}
                   <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-xs font-black ${avatarColor}`}
-                    >
-                      {initials}
-                    </div>
+                    <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">
                         {nombre}
@@ -464,11 +435,7 @@ export default function AlumnosPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div className="flex items-center gap-4">
                 {detalle && (
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${getAvatarColor(fullName(detalle.persona))}`}
-                  >
-                    {getInitials(detalle.persona.nombres)}
-                  </div>
+                  <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
                 )}
                 <div>
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-1 text-[11px] font-bold text-accent-600 ring-1 ring-accent-100">

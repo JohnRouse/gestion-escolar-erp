@@ -155,7 +155,7 @@ export class FinanzasService {
     };
   }
 
-  // ── NUEVOS HELPERS PARA PENSIONES Y DESCUENTOS ──────
+  // ── HELPERS PARA PENSIONES Y DESCUENTOS ──────
   private readonly mesesEscolares = [
     { mes: 1, nombre: 'Enero' },
     { mes: 2, nombre: 'Febrero' },
@@ -242,7 +242,13 @@ export class FinanzasService {
     });
 
     const campana = campanas.find((item) => {
-      if (item.solo_alumnos_vigentes && !params.matricula) return false;
+      const esAlumnoVigente =
+        Boolean(params.matricula?.id_matricula_origen) ||
+        Boolean(params.matricula?.id_colegio_origen) ||
+        Boolean(params.matricula?.id_anio_origen) ||
+        Boolean(params.matricula?.tipo_proceso_matricula);
+
+      if (item.solo_alumnos_vigentes && !esAlumnoVigente) return false;
 
       const tipoIngresoAplica = String(item.tipo_ingreso_aplica || '').trim();
 
@@ -283,7 +289,7 @@ export class FinanzasService {
     };
   }
 
-  // ── FIN NUEVOS HELPERS ────────────────────────────
+  // ── FIN HELPERS ────────────────────────────
 
   private async getAniosActivos(scope: FinanzasScope) {
     if (!scope.colegioIds.length) return [];
@@ -1123,6 +1129,110 @@ export class FinanzasService {
         },
       },
       orderBy: [{ id_anio: 'desc' }, { id_plan_pension: 'desc' }],
+    });
+  }
+
+  async aplicarPromocionMatricula(
+    matriculaIdOCodigo: string,
+    params: ScopeParams,
+  ) {
+    const scope = await this.resolveScope(params);
+    const idNumerico = Number(matriculaIdOCodigo);
+    const whereMatricula = Number.isInteger(idNumerico) && idNumerico > 0
+      ? { id_matricula: idNumerico }
+      : { codigo_matricula: matriculaIdOCodigo };
+
+    return this.prisma.$transaction(async (tx) => {
+      const matricula = await tx.matricula.findFirst({
+        where: {
+          ...whereMatricula,
+          id_colegio: { in: scope.colegioIds },
+        },
+        include: {
+          anio: true,
+          colegio: true,
+          estudiante: { include: { persona: true } },
+          cronogramas: {
+            include: {
+              concepto: true,
+              pagos: true,
+            },
+          },
+        },
+      });
+
+      if (!matricula) {
+        throw new NotFoundException('No se encontró la matrícula seleccionada.');
+      }
+
+      const cronogramaMatricula = matricula.cronogramas.find(
+        (item) => item.concepto?.tipo_concepto === 'MATRICULA',
+      );
+
+      if (!cronogramaMatricula) {
+        throw new BadRequestException(
+          'La matrícula todavía no tiene un cobro de matrícula generado.',
+        );
+      }
+
+      if (cronogramaMatricula.pagos.length > 0) {
+        throw new BadRequestException(
+          'No se puede aplicar una promoción porque este cobro ya tiene pagos registrados.',
+        );
+      }
+
+      if (cronogramaMatricula.estado_pago === 'Pagado') {
+        throw new BadRequestException(
+          'No se puede aplicar una promoción porque la matrícula ya está pagada.',
+        );
+      }
+
+      const montoBase = Number(
+        cronogramaMatricula.monto_base_original ??
+          cronogramaMatricula.concepto.monto_base,
+      );
+
+      const descuento = await this.calcularDescuentoGeneral(tx, {
+        idTenant: scope.tenantId,
+        idColegio: matricula.id_colegio,
+        idAnio: matricula.id_anio,
+        tipoConcepto: 'MATRICULA',
+        montoBase,
+        fechaReferencia: new Date(),
+        matricula,
+      });
+
+      if (!descuento.idCampanaDescuento || descuento.descuentoAplicado <= 0) {
+        throw new BadRequestException(
+          'No hay una campaña/descuento vigente aplicable para esta matrícula.',
+        );
+      }
+
+      const actualizado = await tx.cronogramaPagos.update({
+        where: { id_cronograma: cronogramaMatricula.id_cronograma },
+        data: {
+          monto_base_original: montoBase,
+          descuento_aplicado: descuento.descuentoAplicado,
+          monto_programado: descuento.montoProgramado,
+          id_campana_descuento: descuento.idCampanaDescuento,
+        },
+        include: {
+          concepto: true,
+          campana_descuento: true,
+        },
+      });
+
+      return {
+        message: `Promoción aplicada correctamente. Nuevo monto de matrícula: S/ ${Number(
+          actualizado.monto_programado,
+        ).toFixed(2)}.`,
+        codigo_matricula: matricula.codigo_matricula,
+        id_matricula: matricula.id_matricula,
+        monto_base_original: actualizado.monto_base_original,
+        descuento_aplicado: actualizado.descuento_aplicado,
+        monto_programado: actualizado.monto_programado,
+        campana: actualizado.campana_descuento,
+      };
     });
   }
 

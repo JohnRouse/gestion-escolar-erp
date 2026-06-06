@@ -170,6 +170,22 @@ export class FinanzasController {
     });
   }
 
+  @Post('matriculas/:id/aplicar-promocion-matricula')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async aplicarPromocionMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.aplicarPromocionMatricula(id, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   @Post('pensiones/publicar-mes')
   @Roles('Admin', 'Director', 'Secretaria')
   async publicarPensionesMes(

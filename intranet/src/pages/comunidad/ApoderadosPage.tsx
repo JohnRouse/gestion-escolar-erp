@@ -18,6 +18,7 @@ import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import PersonAvatar from '../../components/PersonAvatar';
 
 type Meta = { total: number; page: number; limit: number; totalPages: number };
 
@@ -56,29 +57,6 @@ const fullName = (p: ApoderadoItem['persona']) =>
 
 const getCodigo = (e: ApoderadoItem['estudiantes'][number]['estudiante']) =>
   e.codigos_colegio?.[0]?.codigo || e.codigo_estudiante || 'Sin código';
-
-const getInitials = (nombres: string) => {
-  const parts = nombres.trim().split(' ');
-  return parts.length >= 2
-    ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    : nombres.slice(0, 2).toUpperCase();
-};
-
-const avatarColors = [
-  'bg-violet-100 text-violet-700',
-  'bg-sky-100 text-sky-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-teal-100 text-teal-700',
-  'bg-orange-100 text-orange-700',
-];
-
-const getAvatarColor = (name: string) => {
-  const sum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return avatarColors[sum % avatarColors.length];
-};
 
 // Badge de estado de matrícula del hijo
 const estadoBadge: Record<string, string> = {
@@ -281,8 +259,6 @@ export default function ApoderadosPage() {
           <div className="divide-y divide-slate-100/80">
             {data.map((apoderado) => {
               const nombre = fullName(apoderado.persona);
-              const initials = getInitials(apoderado.persona.nombres);
-              const avatarColor = getAvatarColor(nombre);
               const primerHijo = apoderado.estudiantes?.[0]?.estudiante;
               const totalHijos = apoderado.estudiantes?.length || 0;
 
@@ -293,11 +269,7 @@ export default function ApoderadosPage() {
                 >
                   {/* Columna apoderado */}
                   <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-xs font-black ${avatarColor}`}
-                    >
-                      {initials}
-                    </div>
+                    <PersonAvatar persona={apoderado.persona} size="md" rounded="2xl" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">{nombre}</p>
                       <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-400">
@@ -416,11 +388,7 @@ export default function ApoderadosPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div className="flex items-center gap-4">
                 {detalle && (
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-black ${getAvatarColor(fullName(detalle.persona))}`}
-                  >
-                    {getInitials(detalle.persona.nombres)}
-                  </div>
+                  <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
                 )}
                 <div>
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-1 text-[11px] font-bold text-accent-600 ring-1 ring-accent-100">
@@ -478,22 +446,19 @@ export default function ApoderadosPage() {
                     {detalle.estudiantes?.length ? (
                       <div className="grid gap-3 md:grid-cols-2">
                         {detalle.estudiantes.map((r) => {
-                          const estudianteNombre = `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`;
                           const estadoMatricula = r.estudiante.matriculas?.[0]?.estado_matricula;
                           return (
                             <div
                               key={r.estudiante.id_persona}
                               className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
                             >
-                              <div
-                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getAvatarColor(estudianteNombre)}`}
-                              >
-                                {getInitials(r.estudiante.persona.nombres)}
-                              </div>
+                              <PersonAvatar persona={r.estudiante.persona} size="sm" rounded="xl" />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-2">
                                   <p className="truncate text-sm font-bold text-slate-800">
-                                    {r.parentesco}: {estudianteNombre}
+                                    {r.parentesco}:{' '}
+                                    {r.estudiante.persona.nombres}{' '}
+                                    {r.estudiante.persona.apellido_paterno}
                                   </p>
                                   {estadoMatricula && (
                                     <span

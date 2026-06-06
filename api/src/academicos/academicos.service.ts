@@ -916,6 +916,61 @@ export class AcademicosService {
     );
   }
 
+  private async obtenerCampanaDescuentoMatriculaActiva(
+    tx: Prisma.TransactionClient,
+    params: {
+      idTenant: number | null;
+      idColegio: number | null;
+      idAnio: number;
+      tipoIngreso: string;
+      matriculaOrigen?: any | null;
+    },
+  ) {
+    const hoy = new Date();
+    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+
+    const campanas = await tx.campanaDescuento.findMany({
+      where: {
+        estado: 'Activo',
+        fecha_inicio: { lte: hoyInicio },
+        fecha_fin: { gte: hoyInicio },
+        OR: [{ id_colegio: params.idColegio || undefined }, { id_colegio: null }],
+        AND: [
+          {
+            OR: [{ id_anio: params.idAnio }, { id_anio: null }],
+          },
+          {
+            OR: [
+              { tipo_concepto_aplica: 'MATRICULA' },
+              { tipo_concepto_aplica: null },
+            ],
+          },
+        ],
+      },
+      orderBy: [
+        { id_colegio: 'desc' },
+        { id_anio: 'desc' },
+        { id_campana_descuento: 'desc' },
+      ],
+    });
+
+    return (
+      campanas.find((campana) => {
+        if (campana.solo_alumnos_vigentes && !params.matriculaOrigen) {
+          return false;
+        }
+
+        const aplica = String(campana.tipo_ingreso_aplica || '').trim();
+        if (!aplica) return true;
+
+        return aplica
+          .split(',')
+          .map((item) => item.trim())
+          .includes(params.tipoIngreso);
+      }) || null
+    );
+  }
+
   private async crearCronogramaMatriculaConMonto(
     tx: Prisma.TransactionClient,
     params: {
@@ -937,10 +992,40 @@ export class AcademicosService {
       matriculaOrigen: params.matriculaOrigen,
     });
 
+    const campanaDescuento = await this.obtenerCampanaDescuentoMatriculaActiva(tx, {
+      idTenant: params.idTenant,
+      idColegio: params.idColegio,
+      idAnio: params.concepto.id_anio,
+      tipoIngreso: params.tipoIngreso,
+      matriculaOrigen: params.matriculaOrigen,
+    });
+
     let montoProgramado = montoBase;
     let descuentoAplicado = 0;
 
-    if (campana) {
+    if (campanaDescuento) {
+      if (
+        campanaDescuento.monto_promocional !== null &&
+        campanaDescuento.monto_promocional !== undefined
+      ) {
+        montoProgramado = Number(campanaDescuento.monto_promocional);
+      } else if (
+        campanaDescuento.descuento_monto !== null &&
+        campanaDescuento.descuento_monto !== undefined
+      ) {
+        montoProgramado = Math.max(montoBase - Number(campanaDescuento.descuento_monto), 0);
+      } else if (
+        campanaDescuento.descuento_porcentaje !== null &&
+        campanaDescuento.descuento_porcentaje !== undefined
+      ) {
+        montoProgramado = Math.max(
+          montoBase - (montoBase * Number(campanaDescuento.descuento_porcentaje)) / 100,
+          0,
+        );
+      }
+
+      descuentoAplicado = Math.max(montoBase - montoProgramado, 0);
+    } else if (campana) {
       if (campana.monto_promocional !== null && campana.monto_promocional !== undefined) {
         montoProgramado = Number(campana.monto_promocional);
       } else if (campana.descuento_monto !== null && campana.descuento_monto !== undefined) {
@@ -960,6 +1045,7 @@ export class AcademicosService {
         descuento_aplicado: descuentoAplicado,
         monto_programado: montoProgramado,
         id_campana_matricula: campana?.id_campana || null,
+        id_campana_descuento: campanaDescuento?.id_campana_descuento || null,
       },
     });
   }
