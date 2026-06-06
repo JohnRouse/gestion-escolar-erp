@@ -499,11 +499,11 @@ export default function AlumnosPage() {
                             key={r.apoderado.id_persona}
                             className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
                           >
-                            <div
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getAvatarColor(r.apoderado.persona.nombres)}`}
-                            >
-                              {getInitials(r.apoderado.persona.nombres)}
-                            </div>
+                            <PersonAvatar
+  persona={r.apoderado.persona}
+  size="sm"
+  rounded="xl"
+/>
                             <div>
                               <p className="text-sm font-bold text-slate-800">
                                 {r.parentesco}:{' '}
