@@ -187,6 +187,41 @@ export default function MatriculasHistorialPage() {
 
   const [autoOpenedMatriculaId, setAutoOpenedMatriculaId] = useState<number | null>(null);
 
+  // ─── HELPERS PARA BLOQUEAR PENSIONES ───────────────────
+  const cronogramaMatriculaDetalle = useMemo(() => {
+    if (!detalleMatricula?.cronogramas?.length) return null;
+
+    return (
+      detalleMatricula.cronogramas.find(
+        (item: any) => item.concepto?.tipo_concepto === 'MATRICULA',
+      ) || null
+    );
+  }, [detalleMatricula]);
+
+  const totalMatriculaDetalle = useMemo(() => {
+    if (!cronogramaMatriculaDetalle) return 0;
+
+    return Number(
+      cronogramaMatriculaDetalle.monto_programado ??
+        cronogramaMatriculaDetalle.concepto?.monto_base ??
+        0,
+    );
+  }, [cronogramaMatriculaDetalle]);
+
+  const totalPagadoMatriculaDetalle = useMemo(() => {
+    if (!cronogramaMatriculaDetalle?.pagos?.length) return 0;
+
+    return cronogramaMatriculaDetalle.pagos.reduce(
+      (sum: number, pago: any) => sum + Number(pago.monto_pagado || 0),
+      0,
+    );
+  }, [cronogramaMatriculaDetalle]);
+
+  const matriculaPagadaParaPensiones =
+    Boolean(cronogramaMatriculaDetalle) &&
+    (cronogramaMatriculaDetalle.estado_pago === 'Pagado' ||
+      totalPagadoMatriculaDetalle + 0.01 >= totalMatriculaDetalle);
+
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
 
@@ -1339,10 +1374,19 @@ export default function MatriculasHistorialPage() {
                   {/* Generar cronograma de pensiones */}
                   {!esMatriculaFinal(detalleMatricula) && (
                     <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                      {detalleMatricula && !matriculaPagadaParaPensiones && (
+                        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-700 ring-1 ring-amber-100">
+                          Para generar el cronograma de pensiones, primero debe registrarse el pago completo de matrícula.
+                        </p>
+                      )}
                       <button
                         type="button"
                         onClick={generarPensionesMatricula}
-                        disabled={savingPago || esMatriculaFinal(detalleMatricula)}
+                        disabled={
+                          savingPago ||
+                          esMatriculaFinal(detalleMatricula) ||
+                          !matriculaPagadaParaPensiones
+                        }
                         className="inline-flex h-10 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:opacity-50"
                       >
                         Generar cronograma de pensiones

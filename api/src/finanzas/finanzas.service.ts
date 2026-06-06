@@ -1146,7 +1146,46 @@ export class FinanzasService {
     if (!matricula) throw new NotFoundException('Matrícula no encontrada.');
 
     if (!['Activo', 'Pre-matriculado'].includes(matricula.estado_matricula)) {
-      throw new BadRequestException('Solo puedes generar cronograma para matrículas activas o pre-matriculadas.');
+      throw new BadRequestException(
+        'Solo puedes generar cronograma para matrículas activas o pre-matriculadas.',
+      );
+    }
+
+    const cronogramaMatricula = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        id_matricula: matricula.id_matricula,
+        concepto: {
+          tipo_concepto: 'MATRICULA',
+        },
+      },
+      include: {
+        concepto: true,
+        pagos: true,
+      },
+    });
+
+    if (!cronogramaMatricula) {
+      throw new BadRequestException(
+        'No se encontró el cobro de matrícula. Primero genera o registra el pago de matrícula antes de crear las pensiones.',
+      );
+    }
+
+    const totalMatricula = this.montoProgramadoCronograma(cronogramaMatricula);
+    const totalPagadoMatricula = cronogramaMatricula.pagos.reduce(
+      (sum, pago) => sum + Number(pago.monto_pagado),
+      0,
+    );
+
+    const matriculaPagada =
+      cronogramaMatricula.estado_pago === 'Pagado' ||
+      totalPagadoMatricula + 0.01 >= totalMatricula;
+
+    if (!matriculaPagada) {
+      throw new BadRequestException(
+        `No puedes generar el cronograma de pensiones porque la matrícula aún no está pagada. Monto matrícula: S/ ${totalMatricula.toFixed(
+          2,
+        )}. Pagado: S/ ${totalPagadoMatricula.toFixed(2)}.`,
+      );
     }
 
     const plan = await this.prisma.planPensiones.findFirst({
