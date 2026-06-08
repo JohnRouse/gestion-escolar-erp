@@ -237,6 +237,71 @@ export class FinanzasController {
     });
   }
 
+  // ── NUEVAS RUTAS: REFERENCIAS DE PAGO Y PAGOS RECIBIDOS ──
+  @Post('referencias/generar-faltantes')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async generarReferenciasPagoFaltantes(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.generarReferenciasPagoFaltantes({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Get('referencias/:referencia')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async buscarDeudaPorReferencia(
+    @Param('referencia') referencia: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.buscarDeudaPorReferencia(referencia, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Post('pagos-recibidos')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async registrarPagoRecibido(
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.registrarPagoRecibido(body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
+  @Post('pagos-recibidos/:id/aplicar')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async aplicarPagoRecibido(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.aplicarPagoRecibido(Number(id), body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
   // ── CONCEPTOS ────────────────────────────────────────
   @Get('conceptos')
   @Roles('Admin', 'Director', 'Secretaria')

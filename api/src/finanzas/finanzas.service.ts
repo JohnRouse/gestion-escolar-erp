@@ -289,6 +289,51 @@ export class FinanzasService {
     };
   }
 
+  // ── NUEVOS HELPERS PARA REFERENCIAS DE PAGO ──────────
+  private getPrefijoColegioPago(colegio?: { codigo?: string | null; nombre_corto?: string | null; id_colegio?: number } | null) {
+    const raw = colegio?.codigo || colegio?.nombre_corto || (colegio?.id_colegio ? `COL${colegio.id_colegio}` : 'COL');
+    return String(raw).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'COL';
+  }
+
+  private async generarReferenciaPago(tx: Prisma.TransactionClient, params: { colegio?: any | null; anio: number }) {
+    const prefijo = `${this.getPrefijoColegioPago(params.colegio)}-PG-${params.anio}`;
+    const existentes = await tx.cronogramaPagos.count({ where: { referencia_pago: { startsWith: `${prefijo}-` } } });
+
+    for (let offset = 1; offset <= 1000; offset += 1) {
+      const referencia = `${prefijo}-${String(existentes + offset).padStart(6, '0')}`;
+      const existe = await tx.cronogramaPagos.findUnique({ where: { referencia_pago: referencia }, select: { id_cronograma: true } });
+      if (!existe) return referencia;
+    }
+
+    throw new BadRequestException('No se pudo generar una referencia de pago disponible.');
+  }
+
+  private saldoCronograma(cronograma: any) {
+    const monto = this.montoProgramadoCronograma(cronograma);
+    const pagado = (cronograma.pagos || []).reduce((sum: number, pago: any) => sum + Number(pago.monto_pagado || 0), 0);
+    return { monto, pagado, saldo: Math.max(monto - pagado, 0) };
+  }
+
+  private async asegurarReferenciaPagoCronograma(tx: Prisma.TransactionClient, idCronograma: number) {
+    const cronograma = await tx.cronogramaPagos.findUnique({
+      where: { id_cronograma: idCronograma },
+      include: { matricula: { include: { anio: true, colegio: true } } },
+    });
+
+    if (!cronograma) throw new NotFoundException('Cronograma no encontrado.');
+    if (cronograma.referencia_pago) return cronograma.referencia_pago;
+
+    const anio = this.getAnioCorte(cronograma.matricula.anio);
+    const referencia = await this.generarReferenciaPago(tx, { colegio: cronograma.matricula.colegio, anio });
+
+    await tx.cronogramaPagos.update({
+      where: { id_cronograma: idCronograma },
+      data: { referencia_pago: referencia },
+    });
+
+    return referencia;
+  }
+
   // ── FIN HELPERS ────────────────────────────
 
   private async getAniosActivos(scope: FinanzasScope) {
@@ -770,6 +815,8 @@ export class FinanzasService {
             estado_pago: 'Pendiente',
           },
         });
+        // Asegurar referencia de pago para el nuevo cronograma
+        await this.asegurarReferenciaPagoCronograma(this.prisma, nuevoCronograma.id_cronograma);
         totalCreados++;
 
         const estudiante = await this.prisma.estudiante.findUnique({
@@ -1346,7 +1393,7 @@ export class FinanzasService {
           matricula,
         });
 
-        await tx.cronogramaPagos.create({
+        const nuevoCronograma = await tx.cronogramaPagos.create({
           data: {
             id_matricula: matricula.id_matricula,
             id_concepto: detalle.id_concepto,
@@ -1367,6 +1414,9 @@ export class FinanzasService {
             visible_apoderado: publicado,
           },
         });
+
+        // Asegurar referencia de pago para la pensión creada
+        await this.asegurarReferenciaPagoCronograma(tx, nuevoCronograma.id_cronograma);
 
         creados += 1;
       }
@@ -1573,6 +1623,187 @@ export class FinanzasService {
         anio: true,
       },
       orderBy: [{ fecha_inicio: 'desc' }, { id_campana_descuento: 'desc' }],
+    });
+  }
+
+  // ── NUEVOS MÉTODOS PARA GESTIÓN DE PAGOS Y REFERENCIAS ──
+  async generarReferenciasPagoFaltantes(params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const pendientes = await this.prisma.cronogramaPagos.findMany({
+      where: {
+        referencia_pago: null,
+        matricula: { id_colegio: { in: scope.colegioIds } },
+      },
+      select: { id_cronograma: true },
+      orderBy: { id_cronograma: 'asc' },
+    });
+
+    let generadas = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const item of pendientes) {
+        await this.asegurarReferenciaPagoCronograma(tx, item.id_cronograma);
+        generadas += 1;
+      }
+    });
+
+    return { message: `Referencias de pago generadas: ${generadas}.`, total_generadas: generadas };
+  }
+
+  async buscarDeudaPorReferencia(referencia: string, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        referencia_pago: referencia.trim(),
+        matricula: { id_colegio: { in: scope.colegioIds } },
+      },
+      include: {
+        concepto: true,
+        pagos: true,
+        matricula: {
+          include: {
+            colegio: true,
+            anio: true,
+            estudiante: {
+              include: {
+                persona: true,
+                apoderados: { include: { apoderado: { include: { persona: true } } } },
+              },
+            },
+            seccion: { include: { grado: { include: { nivel: true } } } },
+          },
+        },
+      },
+    });
+
+    if (!cronograma) throw new NotFoundException('No se encontró una deuda con esa referencia de pago.');
+
+    const saldo = this.saldoCronograma(cronograma);
+
+    return {
+      referencia_pago: cronograma.referencia_pago,
+      id_cronograma: cronograma.id_cronograma,
+      concepto: cronograma.concepto,
+      estado_pago: cronograma.estado_pago,
+      monto: saldo.monto,
+      pagado: saldo.pagado,
+      saldo: saldo.saldo,
+      fecha_vencimiento: cronograma.fecha_vencimiento,
+      matricula: cronograma.matricula,
+    };
+  }
+
+  async registrarPagoRecibido(body: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+    const referencia = this.normalizeEmpty(body.referencia_escrita);
+    const monto = Number(body.monto_recibido);
+
+    if (!Number.isFinite(monto) || monto <= 0) throw new BadRequestException('Ingresa un monto recibido válido.');
+
+    let cronograma: any = null;
+
+    if (referencia) {
+      cronograma = await this.prisma.cronogramaPagos.findFirst({
+        where: { referencia_pago: referencia, matricula: { id_colegio: { in: scope.colegioIds } } },
+        include: { matricula: { include: { estudiante: { include: { apoderados: true } } } } },
+      });
+    }
+
+    const idColegio = cronograma?.matricula?.id_colegio || body.id_colegio || scope.colegioIds[0] || null;
+    const idApoderado = body.id_apoderado || cronograma?.matricula?.estudiante?.apoderados?.[0]?.id_apoderado || null;
+
+    const pago = await this.prisma.pagoRecibido.create({
+      data: {
+        id_tenant: scope.tenantId,
+        id_colegio: idColegio,
+        medio_pago: body.medio_pago || 'Yape',
+        monto_recibido: monto,
+        fecha_pago_reportada: body.fecha_pago_reportada ? new Date(body.fecha_pago_reportada) : new Date(),
+        nombre_pagador: this.normalizeEmpty(body.nombre_pagador),
+        telefono_pagador: this.normalizeEmpty(body.telefono_pagador),
+        numero_operacion: this.normalizeEmpty(body.numero_operacion),
+        referencia_escrita: referencia,
+        captura_url: this.normalizeEmpty(body.captura_url),
+        estado: cronograma ? 'Identificado' : 'Pendiente',
+        id_cronograma: cronograma?.id_cronograma || null,
+        id_matricula: cronograma?.matricula?.id_matricula || null,
+        id_estudiante: cronograma?.matricula?.id_estudiante || null,
+        id_apoderado: idApoderado,
+        observacion: this.normalizeEmpty(body.observacion),
+        id_usuario_registro: params.userId,
+      },
+      include: { cronograma: { include: { concepto: true, matricula: { include: { estudiante: { include: { persona: true } } } } } } },
+    });
+
+    return { message: cronograma ? 'Pago recibido registrado e identificado por referencia.' : 'Pago recibido registrado como pendiente de identificar.', pago };
+  }
+
+  async aplicarPagoRecibido(idPagoRecibido: number, body: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    return this.prisma.$transaction(async (tx) => {
+      const pagoRecibido = await tx.pagoRecibido.findFirst({
+        where: { id_pago_recibido: idPagoRecibido, OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }] },
+      });
+
+      if (!pagoRecibido) throw new NotFoundException('No se encontró el pago recibido.');
+      if (pagoRecibido.estado === 'Aplicado') throw new BadRequestException('Este pago recibido ya fue aplicado.');
+
+      const idCronograma = Number(body.id_cronograma || pagoRecibido.id_cronograma);
+      if (!idCronograma) throw new BadRequestException('Selecciona la deuda a la que se aplicará el pago.');
+
+      const cronograma = await tx.cronogramaPagos.findFirst({
+        where: { id_cronograma: idCronograma, matricula: { id_colegio: { in: scope.colegioIds } } },
+        include: {
+          concepto: true,
+          pagos: true,
+          matricula: { include: { estudiante: { include: { apoderados: true } } } },
+        },
+      });
+
+      if (!cronograma) throw new NotFoundException('No se encontró la deuda seleccionada.');
+
+      const idApoderado = body.id_apoderado || pagoRecibido.id_apoderado || cronograma.matricula.estudiante.apoderados?.[0]?.id_apoderado;
+      if (!idApoderado) throw new BadRequestException('Selecciona un apoderado para registrar el pago.');
+
+      const montoAplicar = Number(body.monto_aplicar || pagoRecibido.monto_recibido);
+      if (!Number.isFinite(montoAplicar) || montoAplicar <= 0) throw new BadRequestException('Ingresa un monto válido para aplicar.');
+
+      const saldo = this.saldoCronograma(cronograma);
+      if (montoAplicar > saldo.saldo + 0.01) throw new BadRequestException(`El monto excede el saldo pendiente. Saldo: S/ ${saldo.saldo.toFixed(2)}.`);
+
+      await tx.pagoTransaccion.create({
+        data: {
+          id_cronograma: cronograma.id_cronograma,
+          id_apoderado: Number(idApoderado),
+          id_usuario_cajero: params.userId,
+          monto_pagado: montoAplicar,
+          metodo_pago: pagoRecibido.medio_pago,
+          nro_operacion: pagoRecibido.numero_operacion || pagoRecibido.referencia_escrita || undefined,
+        },
+      });
+
+      const totalPagadoNuevo = saldo.pagado + montoAplicar;
+      const nuevoEstado = totalPagadoNuevo + 0.01 >= saldo.monto ? 'Pagado' : 'Parcial';
+
+      await tx.cronogramaPagos.update({ where: { id_cronograma: cronograma.id_cronograma }, data: { estado_pago: nuevoEstado } });
+
+      const actualizado = await tx.pagoRecibido.update({
+        where: { id_pago_recibido: idPagoRecibido },
+        data: {
+          estado: 'Aplicado',
+          id_cronograma: cronograma.id_cronograma,
+          id_matricula: cronograma.matricula.id_matricula,
+          id_estudiante: cronograma.matricula.id_estudiante,
+          id_apoderado: Number(idApoderado),
+          id_usuario_validacion: params.userId,
+          fecha_validacion: new Date(),
+        },
+      });
+
+      return { message: `Pago aplicado correctamente. Estado de deuda: ${nuevoEstado}.`, pago_recibido: actualizado, estado_pago: nuevoEstado };
     });
   }
 }

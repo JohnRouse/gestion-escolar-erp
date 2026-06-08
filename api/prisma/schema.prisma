@@ -71,6 +71,8 @@ model Usuario {
   circulares             Circular[]
   notificaciones         Notificacion[]
   tokensFCM              TokenFCM[]
+  pagos_recibidos_registrados PagoRecibido[] @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados   PagoRecibido[] @relation("PagoRecibidoValidacion")
 }
 
 model Tenant {
@@ -103,6 +105,8 @@ model Tenant {
   campanas_matricula CampanaMatricula[]
   planes_pensiones    PlanPensiones[]
   campanas_descuento  CampanaDescuento[]
+  ordenes_pago OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 }
 
 model Colegio {
@@ -141,6 +145,8 @@ model Colegio {
   campanas_matricula CampanaMatricula[]
   planes_pensiones    PlanPensiones[]
   campanas_descuento  CampanaDescuento[]
+  ordenes_pago OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -358,6 +364,8 @@ model Apoderado {
   citas       Cita[]
   comentarios ComentarioFoto[]
   reacciones  ReaccionFoto[]
+  ordenes_pago OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 }
 
 model Docente {
@@ -384,6 +392,8 @@ model Estudiante {
   matriculas   Matricula[]
   registrosNFC RegistroNFC[]
   codigos_colegio EstudianteCodigoColegio[]
+  ordenes_pago OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 }
 
 model ApoderadoEstudiante {
@@ -449,6 +459,8 @@ model Matricula {
   asistencias            Asistencia[]
   cronogramas            CronogramaPagos[]
   comentariosBimestrales ComentarioBimestral[]
+  ordenes_pago OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -727,6 +739,7 @@ model CronogramaPagos {
   fecha_publicacion       DateTime? @db.Date
   fecha_publicado         DateTime?
   visible_apoderado       Boolean  @default(true)
+  referencia_pago    String?  @unique @db.VarChar(40)
 
   matricula            Matricula             @relation(fields: [id_matricula], references: [id_matricula])
   concepto             ConceptoPago          @relation(fields: [id_concepto], references: [id_concepto])
@@ -735,6 +748,8 @@ model CronogramaPagos {
   campana_descuento    CampanaDescuento?     @relation(fields: [id_campana_descuento], references: [id_campana_descuento])
 
   pagos PagoTransaccion[]
+  ordenes_pago    OrdenPago[]
+  pagos_recibidos PagoRecibido[]
 
   @@unique([id_matricula, id_concepto], name: "uq_cronograma_matricula_concepto")
   @@index([fecha_vencimiento, estado_pago])
@@ -762,6 +777,86 @@ model PagoTransaccion {
   @@index([id_cronograma])
   @@index([id_apoderado])
   @@index([id_usuario_cajero])
+}
+
+model OrdenPago {
+  id_orden_pago       Int      @id @default(autoincrement())
+  codigo_orden        String   @unique @db.VarChar(40)
+  id_tenant           Int?
+  id_colegio          Int?
+  id_cronograma       Int
+  id_matricula        Int
+  id_estudiante       Int
+  id_apoderado        Int?
+  proveedor           String   @default("MANUAL") @db.VarChar(30)
+  metodo              String?  @db.VarChar(30)
+  monto               Decimal  @db.Decimal(10, 2)
+  moneda              String   @default("PEN") @db.VarChar(3)
+  estado              String   @default("Creada") @db.VarChar(20)
+  checkout_url        String?  @db.VarChar(500)
+  qr_url              String?  @db.VarChar(500)
+  provider_order_id   String?  @db.VarChar(120)
+  provider_payment_id String?  @db.VarChar(120)
+  provider_response   Json?
+  metadata_json       Json?
+  fecha_creacion      DateTime @default(now())
+  fecha_expiracion    DateTime?
+  fecha_pago          DateTime?
+
+  tenant     Tenant?         @relation(fields: [id_tenant], references: [id_tenant])
+  colegio    Colegio?        @relation(fields: [id_colegio], references: [id_colegio])
+  cronograma CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
+  matricula  Matricula       @relation(fields: [id_matricula], references: [id_matricula])
+  estudiante Estudiante      @relation(fields: [id_estudiante], references: [id_persona])
+  apoderado  Apoderado?      @relation(fields: [id_apoderado], references: [id_persona])
+
+  @@index([id_cronograma])
+  @@index([id_matricula])
+  @@index([id_estudiante])
+  @@index([id_apoderado])
+  @@index([estado])
+  @@index([provider_order_id])
+}
+
+model PagoRecibido {
+  id_pago_recibido      Int      @id @default(autoincrement())
+  id_tenant             Int?
+  id_colegio            Int?
+  medio_pago            String   @default("Yape") @db.VarChar(30)
+  monto_recibido        Decimal  @db.Decimal(10, 2)
+  fecha_pago_reportada  DateTime
+  nombre_pagador        String?  @db.VarChar(160)
+  telefono_pagador      String?  @db.VarChar(30)
+  numero_operacion      String?  @db.VarChar(80)
+  referencia_escrita    String?  @db.VarChar(80)
+  captura_url           String?  @db.VarChar(500)
+  estado                String   @default("Pendiente") @db.VarChar(20)
+  id_cronograma         Int?
+  id_matricula          Int?
+  id_estudiante         Int?
+  id_apoderado          Int?
+  observacion           String?  @db.VarChar(600)
+  id_usuario_registro   Int
+  id_usuario_validacion Int?
+  fecha_validacion      DateTime?
+  created_at            DateTime @default(now())
+
+  tenant         Tenant?          @relation(fields: [id_tenant], references: [id_tenant])
+  colegio        Colegio?         @relation(fields: [id_colegio], references: [id_colegio])
+  cronograma     CronogramaPagos? @relation(fields: [id_cronograma], references: [id_cronograma])
+  matricula      Matricula?       @relation(fields: [id_matricula], references: [id_matricula])
+  estudiante     Estudiante?      @relation(fields: [id_estudiante], references: [id_persona])
+  apoderado      Apoderado?       @relation(fields: [id_apoderado], references: [id_persona])
+  registrado_por Usuario          @relation("PagoRecibidoRegistro", fields: [id_usuario_registro], references: [id_usuario])
+  validado_por   Usuario?         @relation("PagoRecibidoValidacion", fields: [id_usuario_validacion], references: [id_usuario])
+
+  @@index([id_colegio, estado])
+  @@index([referencia_escrita])
+  @@index([numero_operacion])
+  @@index([id_cronograma])
+  @@index([id_matricula])
+  @@index([id_estudiante])
+  @@index([id_apoderado])
 }
 
 // ======================================================

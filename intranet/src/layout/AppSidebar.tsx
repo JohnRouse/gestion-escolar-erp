@@ -149,6 +149,7 @@ const menuFinanzas: NavItem[] = [
       { title: 'Estado de cuenta', path: '/tesoreria' },
       { title: 'Config. pensiones', path: '/tesoreria/configuracion' },
       { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+      { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
     ],
   },
 ];
