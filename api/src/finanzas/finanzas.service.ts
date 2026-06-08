@@ -371,7 +371,7 @@ export class FinanzasService {
     const filtroMatricula = {
       ...this.anioWhere(anioIds),
       ...this.colegioWhere(scope),
-      estado_matricula: 'Activo',
+      estado_matricula: { in: ['Activo', 'Pre-matriculado', 'Reserva'] },
     };
 
     const recaudadoHoyRaw = await this.prisma.$queryRaw<{ total: string }[]>(
@@ -381,7 +381,6 @@ export class FinanzasService {
         JOIN CronogramaPagos cp ON pt.id_cronograma = cp.id_cronograma
         JOIN Matricula m ON cp.id_matricula = m.id_matricula
         WHERE DATE(pt.fecha_pago) = CURDATE()
-          AND m.id_anio IN (${Prisma.join(anioIds.length ? anioIds : [-1])})
           AND m.id_colegio IN (${Prisma.join(scope.colegioIds.length ? scope.colegioIds : [-1])})
       `,
     );
@@ -402,7 +401,7 @@ export class FinanzasService {
         ) pagos ON pagos.id_cronograma = cp.id_cronograma
         WHERE m.id_anio IN (${Prisma.join(anioIds.length ? anioIds : [-1])})
           AND m.id_colegio IN (${Prisma.join(scope.colegioIds.length ? scope.colegioIds : [-1])})
-          AND m.estado_matricula = 'Activo'
+          AND m.estado_matricula IN ('Activo', 'Pre-matriculado', 'Reserva')
           AND cp.estado_pago <> 'Pagado'
           AND cp.fecha_vencimiento < CURDATE()
       `,
@@ -421,7 +420,7 @@ export class FinanzasService {
 
     const pendientes = await this.prisma.cronogramaPagos.count({
       where: {
-        estado_pago: { in: ['Pendiente', 'Vencido'] },
+        estado_pago: { in: ['Pendiente', 'Parcial', 'Vencido'] },
         matricula: filtroMatricula,
       },
     });
@@ -470,6 +469,7 @@ export class FinanzasService {
 
       return {
         id_cronograma: cron.id_cronograma,
+        referencia_pago: cron.referencia_pago,
         concepto: cron.concepto.nombre_concepto,
         fecha_vencimiento: cron.fecha_vencimiento,
         monto_base: Number(cron.concepto.monto_base),
@@ -636,7 +636,7 @@ export class FinanzasService {
 
     return this.prisma.cronogramaPagos.count({
       where: {
-        estado_pago: { in: ['Pendiente', 'Vencido'] },
+        estado_pago: { in: ['Pendiente', 'Parcial', 'Vencido'] },
         matricula: {
           ...this.anioWhere(anioIds),
           ...this.colegioWhere(scope),
@@ -1710,10 +1710,13 @@ export class FinanzasService {
       matricula: {
         id_colegio: { in: scope.colegioIds },
       },
-      estado_pago: {
-        in: params.estado ? [params.estado] : ['Pendiente', 'Parcial'],
-      },
     };
+
+    if (params.estado && params.estado !== 'Todos') {
+      where.estado_pago = { in: [params.estado] };
+    } else if (!params.estado) {
+      where.estado_pago = { in: ['Pendiente', 'Parcial'] };
+    }
 
     if (params.anioId) where.matricula.id_anio = Number(params.anioId);
 
