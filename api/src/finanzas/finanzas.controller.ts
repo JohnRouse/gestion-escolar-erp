@@ -269,6 +269,31 @@ export class FinanzasController {
     });
   }
 
+  @Get('deudas-pendientes')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarDeudasPendientes(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('q') q?: string,
+    @Query('estado') estado?: string,
+    @Query('anio_id') anioId?: string,
+    @Query('concepto') concepto?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.finanzasService.listarDeudasPendientes({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      q,
+      estado,
+      anioId: anioId ? Number(anioId) : undefined,
+      concepto,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
   @Post('pagos-recibidos')
   @Roles('Admin', 'Director', 'Secretaria')
   async registrarPagoRecibido(

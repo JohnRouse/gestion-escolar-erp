@@ -23,6 +23,7 @@ import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';
 import ValidarPagosPage from './pages/tesoreria/ValidarPagosPage';
+import CobranzasPage from './pages/tesoreria/CobranzasPage';
 
 
 function AppRoutes() {
@@ -64,6 +65,7 @@ function AppRoutes() {
 <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
 <Route path="/tesoreria/validar-pagos" element={<ValidarPagosPage />} />
 <Route path="/matricula/historial" element={<MatriculasHistorialPage />} />
+<Route path="/tesoreria/cobranzas" element={<CobranzasPage />} />
 <Route path="/matricula/renovacion" element={<RenovacionMatriculaPage />} />
 <Route path="/comunidad/alumnos" element={<AlumnosPage />} />
 <Route path="/comunidad/apoderados" element={<ApoderadosPage />} />

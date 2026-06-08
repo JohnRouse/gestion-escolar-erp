@@ -1695,6 +1695,127 @@ export class FinanzasService {
     };
   }
 
+  async listarDeudasPendientes(params: ScopeParams & {
+    q?: string;
+    estado?: string;
+    anioId?: number;
+    concepto?: string;
+    limit?: number;
+  }) {
+    const scope = await this.resolveScope(params);
+    const q = this.normalizeEmpty(params.q);
+    const limit = Math.min(Number(params.limit || 100), 300);
+
+    const where: any = {
+      matricula: {
+        id_colegio: { in: scope.colegioIds },
+      },
+      estado_pago: {
+        in: params.estado ? [params.estado] : ['Pendiente', 'Parcial'],
+      },
+    };
+
+    if (params.anioId) where.matricula.id_anio = Number(params.anioId);
+
+    if (params.concepto) {
+      where.concepto = {
+        nombre_concepto: { contains: params.concepto },
+      };
+    }
+
+    if (q) {
+      where.OR = [
+        { referencia_pago: { contains: q } },
+        { matricula: { codigo_matricula: { contains: q } } },
+        {
+          matricula: {
+            estudiante: {
+              persona: {
+                OR: [
+                  { dni: { contains: q } },
+                  { nombres: { contains: q } },
+                  { apellido_paterno: { contains: q } },
+                  { apellido_materno: { contains: q } },
+                ],
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    const deudas = await this.prisma.cronogramaPagos.findMany({
+      where,
+      include: {
+        concepto: true,
+        pagos: true,
+        matricula: {
+          include: {
+            colegio: true,
+            anio: true,
+            estudiante: {
+              include: {
+                persona: true,
+                apoderados: {
+                  include: {
+                    apoderado: { include: { persona: true } },
+                  },
+                },
+              },
+            },
+            seccion: { include: { grado: { include: { nivel: true } } } },
+          },
+        },
+      },
+      orderBy: [{ fecha_vencimiento: 'asc' }, { id_cronograma: 'asc' }],
+      take: limit,
+    });
+
+    return deudas.map((deuda) => {
+      const saldo = this.saldoCronograma(deuda);
+      const persona = deuda.matricula.estudiante.persona;
+      const apoderadoPrincipal =
+        deuda.matricula.estudiante.apoderados?.[0]?.apoderado?.persona || null;
+
+      return {
+        id_cronograma: deuda.id_cronograma,
+        referencia_pago: deuda.referencia_pago,
+        concepto: deuda.concepto?.nombre_concepto,
+        tipo_concepto: deuda.concepto?.tipo_concepto,
+        estado_pago: deuda.estado_pago,
+        fecha_vencimiento: deuda.fecha_vencimiento,
+        monto: saldo.monto,
+        pagado: saldo.pagado,
+        saldo: saldo.saldo,
+        matricula: {
+          id_matricula: deuda.matricula.id_matricula,
+          codigo_matricula: deuda.matricula.codigo_matricula,
+          estado_matricula: deuda.matricula.estado_matricula,
+          colegio: deuda.matricula.colegio,
+          anio: deuda.matricula.anio,
+          seccion: deuda.matricula.seccion,
+        },
+        alumno: {
+          id_persona: persona.id_persona,
+          dni: persona.dni,
+          nombres: persona.nombres,
+          apellido_paterno: persona.apellido_paterno,
+          apellido_materno: persona.apellido_materno,
+        },
+        apoderado: apoderadoPrincipal
+          ? {
+              dni: apoderadoPrincipal.dni,
+              nombres: apoderadoPrincipal.nombres,
+              apellido_paterno: apoderadoPrincipal.apellido_paterno,
+              apellido_materno: apoderadoPrincipal.apellido_materno,
+              telefono: apoderadoPrincipal.telefono,
+              correo: apoderadoPrincipal.correo,
+            }
+          : null,
+      };
+    });
+  }
+
   async registrarPagoRecibido(body: any, params: ScopeParams) {
     const scope = await this.resolveScope(params);
     const referencia = this.normalizeEmpty(body.referencia_escrita);
