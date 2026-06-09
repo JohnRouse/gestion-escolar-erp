@@ -100,6 +100,11 @@ const fullName = (persona: {
   }`.trim();
 
 function buildMensaje(deuda: DeudaRegistro) {
+  const linkPago =
+    deuda.referencia_pago && typeof window !== 'undefined'
+      ? `${window.location.origin}/pago/${deuda.referencia_pago}`
+      : '';
+
   return [
     'Estimado padre/madre, le recordamos el pago pendiente:',
     '',
@@ -109,10 +114,12 @@ function buildMensaje(deuda: DeudaRegistro) {
     `Código de pago: ${deuda.referencia_pago || 'Sin código'}`,
     `Vencimiento: ${formatDate(deuda.fecha_vencimiento)}`,
     '',
+    linkPago ? `Puede ver el detalle aquí: ${linkPago}` : '',
+    '',
     'Si paga por Yape/Plin/transferencia, coloque el código de pago en la descripción.',
     '',
     'Muchas gracias.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function GuideCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {

@@ -25,6 +25,7 @@ import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracion
 import ValidarPagosPage from './pages/tesoreria/ValidarPagosPage';
 import CobranzasPage from './pages/tesoreria/CobranzasPage';
 import PagosRecibidosPage from './pages/tesoreria/PagosRecibidosPage';
+import PagoPublicoPage from './pages/publico/PagoPublicoPage';
 
 
 function AppRoutes() {
@@ -41,6 +42,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/pago/:referencia" element={<PagoPublicoPage />} />
       <Route
   element={
     <ProtectedRoute>

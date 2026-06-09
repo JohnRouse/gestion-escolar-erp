@@ -403,7 +403,7 @@ export class FinanzasController {
     });
   }
 
-  // ── CONCEPTOS ────────────────────────────────────────
+    // ── CONCEPTOS ────────────────────────────────────────
   @Get('conceptos')
   @Roles('Admin', 'Director', 'Secretaria')
   async getConceptos(

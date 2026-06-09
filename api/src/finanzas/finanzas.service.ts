@@ -2168,60 +2168,55 @@ export class FinanzasService {
     const scope = await this.resolveScope(params);
 
     const pago = await this.prisma.pagoTransaccion.findFirst({
-      where: {
-        id_transaccion: idTransaccion,
-        cronograma: {
-          matricula: {
-            id_colegio: { in: scope.colegioIds },
-          },
-        },
+  where: {
+    id_transaccion: idTransaccion,
+    cronograma: {
+      matricula: {
+        id_colegio: { in: scope.colegioIds },
       },
+    },
+  },
+  include: {
+    cronograma: {
       include: {
-        cronograma: {
+        concepto: true,
+        pagos: true,
+        matricula: {
           include: {
-            concepto: true,
-            pagos: true,
-            matricula: {
+            colegio: true,
+            anio: true,
+            estudiante: {
               include: {
-                colegio: true,
-                anio: true,
-                estudiante: {
-                  include: {
-                    persona: true,
-                  },
-                },
-                seccion: {
-                  include: {
-                    grado: {
-                      include: {
-                        nivel: true,
-                      },
-                    },
-                  },
-                },
+                persona: true,
               },
             },
-          },
-        },
-        apoderado: {
-          include: {
-            persona: true,
-          },
-        },
-        usuario_cajero: {
-          select: {
-            id_usuario: true,
-            username: true,
-            persona: {
-              select: {
-                nombres: true,
-                apellido_paterno: true,
+            seccion: {
+              include: {
+                grado: {
+                  include: {
+                    nivel: true,
+                  },
+                },
               },
             },
           },
         },
       },
-    });
+    },
+    apoderado: {
+      include: {
+        persona: true,
+      },
+    },
+    cajero: {
+      select: {
+        id_usuario: true,
+        username: true,
+      },
+    },
+  },
+});
+
 
     if (!pago) {
       throw new NotFoundException('No se encontró el comprobante de pago.');
@@ -2261,7 +2256,73 @@ export class FinanzasService {
       colegio: cronograma.matricula.colegio,
       alumno: cronograma.matricula.estudiante.persona,
       apoderado: pago.apoderado?.persona || null,
-      cajero: pago.usuario_cajero || null,
+      cajero: pago.cajero || null,
+    };
+  }
+
+  // ── MÉTODO PARA LINK PÚBLICO DE PAGO ──
+  async obtenerPagoPublicoPorReferencia(referencia: string) {
+    const ref = referencia.trim();
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: { referencia_pago: ref },
+      include: {
+        concepto: true,
+        pagos: true,
+        matricula: {
+          include: {
+            colegio: true,
+            anio: true,
+            estudiante: { include: { persona: true } },
+            seccion: { include: { grado: { include: { nivel: true } } } },
+          },
+        },
+      },
+    });
+
+    if (!cronograma) {
+      throw new NotFoundException('No se encontró un pago con ese código.');
+    }
+
+    const monto = this.montoProgramadoCronograma(cronograma);
+    const pagado = cronograma.pagos.reduce(
+      (sum, pago) => sum + Number(pago.monto_pagado || 0),
+      0,
+    );
+    const saldo = Math.max(monto - pagado, 0);
+    const alumno = cronograma.matricula.estudiante.persona;
+
+    return {
+      referencia_pago: cronograma.referencia_pago,
+      estado_pago: cronograma.estado_pago,
+      fecha_vencimiento: cronograma.fecha_vencimiento,
+      concepto: {
+        nombre_concepto: cronograma.concepto?.nombre_concepto,
+        tipo_concepto: cronograma.concepto?.tipo_concepto,
+      },
+      monto,
+      pagado,
+      saldo,
+      colegio: {
+        nombre: cronograma.matricula.colegio?.nombre,
+        nombre_corto: cronograma.matricula.colegio?.nombre_corto,
+      },
+      alumno: {
+        nombres: alumno.nombres,
+        apellido_paterno: alumno.apellido_paterno,
+        apellido_materno: alumno.apellido_materno,
+      },
+      matricula: {
+        codigo_matricula: cronograma.matricula.codigo_matricula,
+        aula: cronograma.matricula.seccion
+          ? `${cronograma.matricula.seccion.grado?.nombre_grado || ''} ${cronograma.matricula.seccion.letra || ''}`.trim()
+          : null,
+        anio: cronograma.matricula.anio?.nombre_anio,
+      },
+      instrucciones: {
+        mensaje:
+          'Realiza el pago por Yape, Plin o transferencia y coloca el código de pago en la descripción para identificarlo correctamente.',
+      },
     };
   }
 }
