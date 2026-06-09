@@ -1751,7 +1751,11 @@ export class FinanzasService {
       where,
       include: {
         concepto: true,
-        pagos: true,
+        pagos: {
+          orderBy: {
+            fecha_pago: 'desc',
+          },
+        },
         matricula: {
           include: {
             colegio: true,
@@ -1774,11 +1778,12 @@ export class FinanzasService {
       take: limit,
     });
 
-    return deudas.map((deuda) => {
+    const rows = deudas.map((deuda) => {
       const saldo = this.saldoCronograma(deuda);
       const persona = deuda.matricula.estudiante.persona;
       const apoderadoPrincipal =
         deuda.matricula.estudiante.apoderados?.[0]?.apoderado?.persona || null;
+      const ultimoPago = deuda.pagos?.[0] || null;
 
       return {
         id_cronograma: deuda.id_cronograma,
@@ -1790,6 +1795,7 @@ export class FinanzasService {
         monto: saldo.monto,
         pagado: saldo.pagado,
         saldo: saldo.saldo,
+        monto_visible: deuda.estado_pago === 'Pagado' ? saldo.pagado : saldo.saldo,
         matricula: {
           id_matricula: deuda.matricula.id_matricula,
           codigo_matricula: deuda.matricula.codigo_matricula,
@@ -1815,8 +1821,44 @@ export class FinanzasService {
               correo: apoderadoPrincipal.correo,
             }
           : null,
+        ultimo_pago: ultimoPago
+          ? {
+              id_transaccion: ultimoPago.id_transaccion,
+              monto_pagado: ultimoPago.monto_pagado,
+              metodo_pago: ultimoPago.metodo_pago,
+              nro_operacion: ultimoPago.nro_operacion,
+              fecha_pago: ultimoPago.fecha_pago,
+            }
+          : null,
       };
     });
+
+    if (params.estado === 'Pagado') {
+      return rows.sort((a, b) => {
+        const fa = a.ultimo_pago?.fecha_pago ? new Date(a.ultimo_pago.fecha_pago).getTime() : 0;
+        const fb = b.ultimo_pago?.fecha_pago ? new Date(b.ultimo_pago.fecha_pago).getTime() : 0;
+        return fb - fa;
+      });
+    }
+
+    if (params.estado === 'Todos') {
+      return rows.sort((a, b) => {
+        const getRank = (item: any) => {
+          if (item.estado_pago === 'Pagado') return 3;
+          if (item.estado_pago === 'Parcial') return 2;
+          return 1;
+        };
+
+        const rankDiff = getRank(b) - getRank(a);
+        if (rankDiff !== 0) return rankDiff;
+
+        const fa = a.ultimo_pago?.fecha_pago ? new Date(a.ultimo_pago.fecha_pago).getTime() : 0;
+        const fb = b.ultimo_pago?.fecha_pago ? new Date(b.ultimo_pago.fecha_pago).getTime() : 0;
+        return fb - fa;
+      });
+    }
+
+    return rows;
   }
 
   async registrarPagoRecibido(body: any, params: ScopeParams) {

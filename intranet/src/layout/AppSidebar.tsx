@@ -146,11 +146,10 @@ const menuFinanzas: NavItem[] = [
     path: '/tesoreria',
     roles: ['Admin', 'Secretaria', 'Director'],
     children: [
-      { title: 'Estado de cuenta', path: '/tesoreria' },
-      { title: 'Cobranza y recordatorios', path: '/tesoreria/cobranzas' },
-      { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
-      { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
-      { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+       { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
+  { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
+  { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
+  { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
     ],
   },
 ];
