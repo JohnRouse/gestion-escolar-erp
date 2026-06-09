@@ -2162,4 +2162,106 @@ export class FinanzasService {
     pago: actualizado,
   };
 }
+
+  // ── MÉTODO PARA COMPROBANTE DE PAGO ──
+  async obtenerComprobantePago(idTransaccion: number, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const pago = await this.prisma.pagoTransaccion.findFirst({
+      where: {
+        id_transaccion: idTransaccion,
+        cronograma: {
+          matricula: {
+            id_colegio: { in: scope.colegioIds },
+          },
+        },
+      },
+      include: {
+        cronograma: {
+          include: {
+            concepto: true,
+            pagos: true,
+            matricula: {
+              include: {
+                colegio: true,
+                anio: true,
+                estudiante: {
+                  include: {
+                    persona: true,
+                  },
+                },
+                seccion: {
+                  include: {
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        apoderado: {
+          include: {
+            persona: true,
+          },
+        },
+        usuario_cajero: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: {
+              select: {
+                nombres: true,
+                apellido_paterno: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!pago) {
+      throw new NotFoundException('No se encontró el comprobante de pago.');
+    }
+
+    const cronograma = pago.cronograma;
+    const totalPagado = cronograma.pagos.reduce(
+      (sum, item) => sum + Number(item.monto_pagado || 0),
+      0,
+    );
+
+    const montoTotal = this.montoProgramadoCronograma(cronograma);
+    const saldo = Math.max(montoTotal - totalPagado, 0);
+
+    const fecha = new Date(pago.fecha_pago);
+    const year = fecha.getFullYear();
+
+    return {
+      codigo_comprobante: `REC-${year}-${String(pago.id_transaccion).padStart(6, '0')}`,
+      pago: {
+        id_transaccion: pago.id_transaccion,
+        monto_pagado: pago.monto_pagado,
+        metodo_pago: pago.metodo_pago,
+        nro_operacion: pago.nro_operacion,
+        fecha_pago: pago.fecha_pago,
+      },
+      deuda: {
+        id_cronograma: cronograma.id_cronograma,
+        referencia_pago: cronograma.referencia_pago,
+        concepto: cronograma.concepto,
+        estado_pago: cronograma.estado_pago,
+        monto_total: montoTotal,
+        total_pagado: totalPagado,
+        saldo,
+      },
+      matricula: cronograma.matricula,
+      colegio: cronograma.matricula.colegio,
+      alumno: cronograma.matricula.estudiante.persona,
+      apoderado: pago.apoderado?.persona || null,
+      cajero: pago.usuario_cajero || null,
+    };
+  }
 }

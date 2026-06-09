@@ -17,6 +17,7 @@ import {
   Settings,
   User,
   X,
+  Zap,
 } from 'lucide-react';
 
 function generarAvatar(nombre: string): string {
@@ -26,7 +27,7 @@ function generarAvatar(nombre: string): string {
 }
 
 const iconButtonClass =
-  'inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200/70 bg-white text-gray-500 shadow-sm shadow-gray-200/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-200 hover:bg-accent-50 hover:text-accent-600 focus:outline-none focus:ring-4 focus:ring-accent-500/10';
+  'inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200/80 bg-white text-gray-500 shadow-sm transition-all duration-200 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500/20';
 
 export default function AppHeader() {
   const { user, logout } = useAuth();
@@ -130,10 +131,10 @@ export default function AppHeader() {
       }`}
     >
       <div
-        className={`relative mx-auto flex h-16 max-w-[1600px] items-center justify-between rounded-[1.35rem] border px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 ${
+        className={`relative mx-auto flex h-16 max-w-[1600px] items-center justify-between rounded-lg border px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 ${
           isScrolled
-            ? 'border-gray-200/80 bg-white/90 shadow-[0_18px_55px_-38px_rgba(15,23,42,0.65)]'
-            : 'border-gray-200/70 bg-white/85 shadow-[0_20px_70px_-45px_rgba(15,23,42,0.55)]'
+            ? 'border-gray-200/80 bg-white/95 shadow-lg shadow-gray-950/10'
+            : 'border-gray-200/70 bg-white/90 shadow-md shadow-gray-950/5'
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -143,7 +144,7 @@ export default function AppHeader() {
             aria-label="Abrir menú"
             className={`${iconButtonClass} xl:hidden`}
           >
-            <Menu size={19} strokeWidth={2.2} />
+            <Menu size={20} strokeWidth={2} />
           </button>
 
           {canShowSchoolSelector && (
@@ -154,14 +155,14 @@ export default function AppHeader() {
                   setSchoolDropdownOpen((value) => !value);
                   setDropdownOpen(false);
                 }}
-                className="group hidden h-11 max-w-[19rem] items-center gap-2 rounded-2xl border border-gray-200/70 bg-white px-3 text-left shadow-sm shadow-gray-200/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-200 hover:bg-accent-50 focus:outline-none focus:ring-4 focus:ring-accent-500/10 sm:flex"
+                className="group hidden h-11 max-w-xs items-center gap-2.5 rounded-lg border border-gray-200/80 bg-gradient-to-br from-white to-gray-50 px-3 text-left shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-white sm:flex"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-100 to-accent-50 text-accent-600 ring-1 ring-accent-200">
                   {activeScope.tipo === 'todos' ? <Globe2 size={16} /> : <School size={16} />}
                 </span>
 
                 <span className="min-w-0">
-                  <span className="block truncate text-xs font-black uppercase tracking-[0.14em] text-gray-400">
+                  <span className="block truncate text-xs font-semibold uppercase tracking-wider text-gray-500">
                     {tenant?.nombre || 'Organización'}
                   </span>
                   <span className="block truncate text-sm font-bold text-gray-800">
@@ -171,7 +172,7 @@ export default function AppHeader() {
 
                 <ChevronDown
                   size={16}
-                  className={`shrink-0 text-gray-400 transition-transform duration-200 ${
+                  className={`ml-auto shrink-0 text-gray-400 transition-transform duration-300 ${
                     schoolDropdownOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -196,15 +197,15 @@ export default function AppHeader() {
                     onClick={() => setSchoolDropdownOpen(false)}
                   />
 
-                  <div className="absolute left-0 z-50 mt-3 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_22px_70px_-35px_rgba(15,23,42,0.45)] animate-in fade-in-0 zoom-in-95 duration-150">
-                    <div className="bg-gradient-to-br from-accent-50 via-white to-white px-4 py-4">
+                  <div className="absolute left-0 z-50 mt-3 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-gray-200/80 bg-white shadow-xl shadow-gray-950/15 animate-in fade-in-0 slide-in-from-top-2">
+                    <div className="bg-gradient-to-r from-accent-50 via-white to-white px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-accent-600 shadow-sm ring-1 ring-accent-100">
-                          <Building2 size={19} />
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-accent-100 to-accent-50 text-accent-600 shadow-sm ring-1 ring-accent-200">
+                          <Building2 size={20} />
                         </div>
 
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-black text-gray-900">
+                          <p className="truncate text-sm font-bold text-gray-900">
                             {tenant?.nombre || 'Organización'}
                           </p>
                           <p className="truncate text-xs text-gray-500">
@@ -214,38 +215,38 @@ export default function AppHeader() {
                       </div>
                     </div>
 
-                    <div className="max-h-[24rem] overflow-y-auto p-2">
+                    <div className="max-h-80 overflow-y-auto p-2">
                       {puedeVerConsolidado && colegios.length > 1 && (
                         <button
                           type="button"
                           onClick={() => {
-  setTodosLosColegios();
-  setSchoolDropdownOpen(false);
-}}
-                          className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50"
+                            setTodosLosColegios();
+                            setSchoolDropdownOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-50"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
-                              <Globe2 size={17} />
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white font-semibold">
+                              <Globe2 size={18} />
                             </span>
 
                             <span className="min-w-0">
-                              <span className="block text-sm font-black text-gray-800">
+                              <span className="block text-sm font-semibold text-gray-900">
                                 Todos los colegios
                               </span>
-                              <span className="block truncate text-xs text-gray-400">
+                              <span className="block truncate text-xs text-gray-500">
                                 Vista consolidada del grupo
                               </span>
                             </span>
                           </span>
 
                           {activeScope.tipo === 'todos' && (
-                            <Check size={17} className="shrink-0 text-accent-600" />
+                            <Check size={18} className="shrink-0 text-accent-600" />
                           )}
                         </button>
                       )}
 
-                      <div className="my-2 border-t border-gray-100" />
+                      {puedeVerConsolidado && colegios.length > 1 && <div className="my-2 border-t border-gray-100" />}
 
                       {colegios.map((colegio) => {
                         const selected =
@@ -257,26 +258,26 @@ export default function AppHeader() {
                             key={colegio.id_colegio}
                             type="button"
                             onClick={() => {
-  setColegioActivo(colegio.id_colegio);
-  setSchoolDropdownOpen(false);
-}}
-                            className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50"
+                              setColegioActivo(colegio.id_colegio);
+                              setSchoolDropdownOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-50"
                           >
                             <span className="flex min-w-0 items-center gap-3">
                               <span
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white font-semibold shadow-md"
                                 style={{
                                   backgroundColor: colegio.color_principal || '#4f46e5',
                                 }}
                               >
-                                <School size={17} />
+                                <School size={18} />
                               </span>
 
                               <span className="min-w-0">
-                                <span className="block truncate text-sm font-black text-gray-800">
+                                <span className="block truncate text-sm font-semibold text-gray-900">
                                   {colegio.nombre}
                                 </span>
-                                <span className="block truncate text-xs text-gray-400">
+                                <span className="block truncate text-xs text-gray-500">
                                   {(colegio.niveles || [])
                                     .map((nivel) => nivel.nombre_nivel)
                                     .join(' · ') || 'Sin niveles configurados'}
@@ -285,7 +286,7 @@ export default function AppHeader() {
                             </span>
 
                             {selected && (
-                              <Check size={17} className="shrink-0 text-accent-600" />
+                              <Check size={18} className="shrink-0 text-accent-600" />
                             )}
                           </button>
                         );
@@ -298,7 +299,7 @@ export default function AppHeader() {
           )}
 
           <form
-            className="hidden h-11 w-[min(26rem,42vw)] items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-50/80 px-3 text-sm transition-all duration-200 focus-within:border-accent-300 focus-within:bg-white focus-within:shadow-[0_12px_35px_-25px_rgba(76,110,245,0.9)] focus-within:ring-4 focus-within:ring-accent-500/10 md:flex"
+            className="hidden h-11 w-[min(26rem,42vw)] items-center gap-2.5 rounded-lg border border-gray-200/80 bg-gray-50 px-3 text-sm transition-all duration-200 focus-within:border-accent-400 focus-within:bg-white md:flex"
             onSubmit={(event) => {
               event.preventDefault();
               handleSearch(
@@ -307,15 +308,15 @@ export default function AppHeader() {
               );
             }}
           >
-            <Search size={17} className="shrink-0 text-gray-400" strokeWidth={2.2} />
+            <Search size={18} className="shrink-0 text-gray-400" strokeWidth={2} />
             <input
               ref={searchInputRef}
               name="search"
               type="text"
               placeholder="Buscar alumno o DNI..."
-              className="h-full min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
+              className="h-full min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500"
             />
-            <kbd className="hidden rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-gray-400 shadow-sm lg:inline-flex">
+            <kbd className="hidden rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-500 shadow-sm lg:inline-flex">
               ⌘K
             </kbd>
           </form>
@@ -336,8 +337,8 @@ export default function AppHeader() {
             aria-label="Ver notificaciones"
             className={`${iconButtonClass} relative`}
           >
-            <Bell size={18} strokeWidth={2.2} />
-            <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-4 ring-white" />
+            <Bell size={18} strokeWidth={2} />
+            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 shadow-md" />
           </button>
 
           <div className="relative ml-1">
@@ -348,24 +349,24 @@ export default function AppHeader() {
                 setSchoolDropdownOpen(false);
               }}
               aria-expanded={dropdownOpen}
-              className="group flex h-11 items-center gap-2 rounded-2xl border border-transparent bg-transparent py-1 pl-1 pr-2 transition-all duration-200 hover:border-gray-200/80 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-4 focus:ring-accent-500/10 sm:pr-3"
+              className="group flex h-11 items-center gap-2.5 rounded-lg border border-transparent bg-transparent py-1 pl-1 pr-2 transition-all duration-200 hover:border-gray-200/80 hover:bg-gray-50"
             >
               <img
                 src={avatarSrc}
                 alt={userName}
-                className="h-9 w-9 rounded-xl object-cover ring-1 ring-gray-200"
+                className="h-9 w-9 rounded-lg object-cover ring-2 ring-gray-200"
               />
               <div className="hidden min-w-0 text-left leading-tight sm:block">
                 <p className="max-w-28 truncate text-sm font-semibold text-gray-800">
                   {firstName}
                 </p>
-                <p className="max-w-28 truncate text-[11px] font-medium text-gray-400">
+                <p className="max-w-28 truncate text-xs font-medium text-gray-500">
                   {userRole}
                 </p>
               </div>
               <ChevronDown
                 size={16}
-                className={`hidden text-gray-400 transition-transform duration-200 sm:block ${
+                className={`hidden text-gray-400 transition-transform duration-300 sm:block ${
                   dropdownOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -375,25 +376,26 @@ export default function AppHeader() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
 
-                <div className="absolute right-0 z-50 mt-3 w-72 overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_22px_70px_-35px_rgba(15,23,42,0.45)] animate-in fade-in-0 zoom-in-95 duration-150">
-                  <div className="bg-gradient-to-br from-accent-50 via-white to-white px-4 py-4">
+                <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-lg border border-gray-200/80 bg-white shadow-xl shadow-gray-950/15 animate-in fade-in-0 slide-in-from-top-2">
+                  <div className="bg-gradient-to-r from-accent-50 via-white to-white px-4 py-4">
                     <div className="flex items-center gap-3">
                       <img
                         src={avatarSrc}
                         alt={userName}
-                        className="h-12 w-12 rounded-2xl object-cover ring-4 ring-white shadow-sm"
+                        className="h-12 w-12 rounded-lg object-cover ring-4 ring-white shadow-md"
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900">
                           {userName}
                         </p>
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-gray-600">
                           {user?.email || user?.correo || 'admin@smv.edu.pe'}
                         </p>
                       </div>
                     </div>
 
-                    <span className="mt-3 inline-flex rounded-full border border-accent-100 bg-white px-2.5 py-1 text-[11px] font-semibold text-accent-600 shadow-sm">
+                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-accent-100 bg-white px-3 py-1.5 text-xs font-semibold text-accent-700 shadow-sm">
+                      <Zap size={12} />
                       {userRole}
                     </span>
                   </div>
@@ -405,9 +407,9 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         navigate('/perfil');
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                         <User size={16} />
                       </span>
                       Editar perfil
@@ -419,9 +421,9 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         navigate('/configuracion');
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
                         <Settings size={16} />
                       </span>
                       Configuración
@@ -433,9 +435,9 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         alert('Soporte: contacta al administrador.');
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
                         <HelpCircle size={16} />
                       </span>
                       Soporte
@@ -446,9 +448,9 @@ export default function AppHeader() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-500">
                         <LogOut size={16} />
                       </span>
                       Cerrar sesión
@@ -462,7 +464,7 @@ export default function AppHeader() {
 
         {mobileSearchOpen && (
           <form
-            className="absolute inset-x-0 top-[4.75rem] z-40 mx-auto flex h-13 items-center gap-2 rounded-2xl border border-gray-200/80 bg-white px-3 py-2 shadow-[0_18px_60px_-35px_rgba(15,23,42,0.55)] md:hidden"
+            className="absolute inset-x-0 top-[4.75rem] z-40 mx-auto flex h-11 items-center gap-2.5 rounded-lg border border-gray-200/80 bg-white px-3 py-2 shadow-lg shadow-gray-950/5 animate-in fade-in-0 slide-in-from-top-2"
             onSubmit={(event) => {
               event.preventDefault();
               handleSearch(
@@ -474,19 +476,19 @@ export default function AppHeader() {
               );
             }}
           >
-            <Search size={17} className="text-gray-400" />
+            <Search size={18} className="text-gray-400" />
             <input
               name="mobileSearch"
               autoFocus
               type="text"
               placeholder="Buscar alumno o DNI..."
-              className="h-9 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
+              className="h-9 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500"
             />
             <button
               type="button"
               onClick={() => setMobileSearchOpen(false)}
               aria-label="Cerrar búsqueda"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
             >
               <X size={16} />
             </button>

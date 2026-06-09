@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader } from 'lucide-react';
 
 const IMAGENES = [
   'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
@@ -43,8 +43,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Panel izquierdo: Imágenes institucionales (70%) */}
-      <div className="hidden lg:flex lg:w-[70%] relative overflow-hidden bg-gray-900">
+      {/* Panel izquierdo: Imágenes institucionales (65%) */}
+      <div className="hidden lg:flex lg:w-[65%] relative overflow-hidden bg-gray-900">
         {IMAGENES.map((img, index) => (
           <div
             key={index}
@@ -57,98 +57,135 @@ export default function LoginPage() {
               alt="Colegio Santa María Victoria"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
         ))}
 
         <div className="relative z-10 flex flex-col justify-end p-12 pb-16 text-white">
-          <h1 className="text-3xl font-light tracking-tight mb-2">Santa María Victoria</h1>
-          <p className="text-sm text-white/60 max-w-sm leading-relaxed">
-            Sistema de gestión interna para personal autorizado.
-          </p>
-          <div className="flex gap-2 mt-8">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold tracking-tight mb-3">Santa María Victoria</h1>
+            <p className="text-base text-white/75 max-w-md leading-relaxed font-light">
+              Sistema integral de gestión educativa para personal autorizado.
+            </p>
+          </div>
+          
+          <div className="flex gap-2 mt-auto">
             {IMAGENES.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setImagenActual(index)}
                 className={`h-1 rounded-full transition-all duration-300 ${
-                  index === imagenActual ? 'bg-white w-6' : 'bg-white/30 w-1.5'
+                  index === imagenActual ? 'bg-white w-8' : 'bg-white/30 w-2'
                 }`}
+                aria-label={`Ir a imagen ${index + 1}`}
               />
             ))}
           </div>
         </div>
       </div>
 
-      {/* Panel derecho: Formulario de login (30%) */}
-      <div className="flex-1 flex items-center justify-center px-8 py-12 bg-gray-50 lg:w-[30%]">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-10">
-            <div className="w-12 h-12 rounded-xl bg-accent-500 flex items-center justify-center mx-auto mb-5">
-              <span className="text-xl font-semibold text-white">SMV</span>
+      {/* Panel derecho: Formulario de login (35%) */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 bg-gradient-to-b from-gray-50 to-gray-100 lg:w-[35%] relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-50 rounded-full -mr-48 -mt-48 opacity-30" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-accent-50 rounded-full -ml-36 -mb-36 opacity-20" />
+
+        <div className="w-full max-w-sm relative z-10">
+          {/* Logo y encabezado */}
+          <div className="text-center mb-12">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-500 to-accent-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-2xl font-bold text-white">SMV</span>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Iniciar Sesión</h2>
-            <p className="text-sm text-gray-500 mt-1.5">
-              Ingresa tus credenciales para acceder al sistema.
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
+            <p className="text-sm text-gray-600">
+              Accede al sistema de gestión escolar
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Campo Usuario */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Usuario
               </label>
               <input
                 type="text"
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:border-accent-400 focus:ring-3 focus:ring-accent-50 outline-none transition-all duration-150"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 focus:border-accent-500 focus:ring-4 focus:ring-accent-100 focus:outline-none shadow-sm hover:border-gray-400"
                 placeholder="usuario@smv.edu.pe"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+
+            {/* Campo Contraseña */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Contraseña
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:border-accent-400 focus:ring-3 focus:ring-accent-50 outline-none transition-all duration-150"
+                  className="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 focus:border-accent-500 focus:ring-4 focus:ring-accent-100 focus:outline-none shadow-sm hover:border-gray-400"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-500 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                  disabled={loading}
                 >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
+            {/* Mensaje de error */}
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-xs rounded-lg px-4 py-3">
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-start gap-3 animate-pulse">
+                <div className="w-1 h-1 rounded-full bg-red-700 mt-1.5 flex-shrink-0" />
                 {error}
               </div>
             )}
 
+            {/* Botón de envío */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-lg transition-colors duration-150 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:shadow-none transform hover:scale-105 disabled:scale-100"
             >
-              <LogIn size={16} />
-              {loading ? 'Ingresando...' : 'Acceder al sistema'}
+              {loading ? (
+                <>
+                  <Loader size={18} className="animate-spin" />
+                  <span>Ingresando...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn size={18} />
+                  <span>Acceder al sistema</span>
+                </>
+              )}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-8">
-            ¿Olvidaste tu contraseña? Contacta al administrador.
-          </p>
+          {/* Footer */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <p className="text-center text-xs text-gray-500">
+              ¿Olvidaste tu contraseña?{' '}
+              <a href="#" className="text-accent-600 hover:text-accent-700 font-semibold transition-colors duration-200">
+                Contacta al administrador
+              </a>
+            </p>
+            <p className="text-center text-xs text-gray-400 mt-3">
+              © 2024 Colegio Santa María Victoria. Todos los derechos reservados.
+            </p>
+          </div>
         </div>
       </div>
     </div>

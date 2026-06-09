@@ -7,6 +7,7 @@ import {
   History,
   Loader2,
   MessageCircle,
+  ReceiptText,
   RefreshCw,
   Search,
   Send,
@@ -17,6 +18,7 @@ import PersonAvatar from '../../components/PersonAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ComprobantePagoModal from '../../components/tesoreria/ComprobantePagoModal';
 
 type EstadoFiltro = 'Todos' | 'Pendiente' | 'Parcial' | 'Pagado' | '';
 
@@ -135,6 +137,8 @@ export default function CobranzasPage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState<EstadoFiltro>('Todos');
   const [copiadas, setCopiadas] = useState<Record<number, boolean>>({});
+  const [comprobante, setComprobante] = useState<any | null>(null);
+  const [loadingComprobante, setLoadingComprobante] = useState<number | null>(null);
 
   const totalVisible = useMemo(() => {
     return registros.reduce((sum, item) => {
@@ -183,6 +187,29 @@ export default function CobranzasPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const verComprobante = async (idTransaccion?: number | null) => {
+    if (!token || !idTransaccion) return;
+
+    setLoadingComprobante(idTransaccion);
+
+    try {
+      const res = await axios.get(
+        `/api/tesoreria/pagos/${idTransaccion}/comprobante${queryString}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setComprobante(res.data);
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'No se abrió el comprobante',
+        message: error.response?.data?.message || 'No se pudo cargar el comprobante.',
+      });
+    } finally {
+      setLoadingComprobante(null);
     }
   };
 
@@ -423,9 +450,19 @@ export default function CobranzasPage() {
                       </a>
                     </>
                   ) : (
-                    <span className="inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100">
-                      Pago ya aplicado
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => verComprobante(deuda.ultimo_pago?.id_transaccion)}
+                      disabled={!deuda.ultimo_pago?.id_transaccion || loadingComprobante === deuda.ultimo_pago?.id_transaccion}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-50"
+                    >
+                      {loadingComprobante === deuda.ultimo_pago?.id_transaccion ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <ReceiptText size={16} />
+                      )}
+                      Ver comprobante
+                    </button>
                   )}
                 </div>
               </article>
@@ -433,6 +470,13 @@ export default function CobranzasPage() {
           })
         )}
       </section>
+
+      {comprobante && (
+        <ComprobantePagoModal
+          comprobante={comprobante}
+          onClose={() => setComprobante(null)}
+        />
+      )}
     </div>
   );
 }

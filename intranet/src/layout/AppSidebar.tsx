@@ -20,6 +20,7 @@ import {
   ChartColumn,
   Bell,
   GraduationCap,
+  Zap,
 } from 'lucide-react';
 
 interface NavItem {
@@ -146,10 +147,10 @@ const menuFinanzas: NavItem[] = [
     path: '/tesoreria',
     roles: ['Admin', 'Secretaria', 'Director'],
     children: [
-       { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
-  { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
-  { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
-  { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+      { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
+      { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
+      { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
+      { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
     ],
   },
 ];
@@ -221,7 +222,7 @@ export default function AppSidebar() {
   };
 
   const Tooltip = ({ title }: { title: string }) => (
-    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-xl bg-gray-950 px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-950 px-3 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
       {title}
     </span>
   );
@@ -240,11 +241,11 @@ export default function AppSidebar() {
             type="button"
             onClick={() => setExpanded(isExpanded ? null : item.title)}
             className={cx(
-              'group relative flex h-10 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200',
+              'group relative flex h-10 w-full items-center rounded-lg text-sm font-semibold transition-all duration-200',
               isCollapsed ? 'justify-center px-0' : 'justify-between px-3',
               isActive
-                ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-950 hover:shadow-sm'
+                ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/30'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950'
             )}
           >
             <span className={cx('flex min-w-0 items-center', isCollapsed ? 'justify-center' : 'gap-3')}>
@@ -261,9 +262,9 @@ export default function AppSidebar() {
 
             {!isCollapsed && (
               <ChevronDown
-                size={15}
+                size={16}
                 className={cx(
-                  'shrink-0 transition-transform duration-200',
+                  'shrink-0 transition-transform duration-300',
                   isExpanded && 'rotate-180',
                   isActive ? 'text-white/90' : 'text-gray-400'
                 )}
@@ -274,7 +275,7 @@ export default function AppSidebar() {
           </button>
 
           {isExpanded && !isCollapsed && (
-            <div className="relative ml-5 mt-1.5 space-y-1 pl-4 before:absolute before:bottom-2 before:left-1 before:top-2 before:w-px before:bg-gray-200">
+            <div className="relative ml-3 mt-2 space-y-1 border-l-2 border-gray-200 pl-3">
               {item.children!.map((child) => {
                 const activeChild = isChildActive(child.path);
 
@@ -284,10 +285,10 @@ export default function AppSidebar() {
                     type="button"
                     onClick={() => handleNavigate(child.path)}
                     className={cx(
-                      'relative flex min-h-9 w-full items-center rounded-xl px-3 text-left text-sm transition-all duration-200 before:absolute before:-left-[15px] before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full',
+                      'relative flex min-h-8 w-full items-center rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-all duration-200',
                       activeChild
-                        ? 'bg-accent-50 font-semibold text-accent-700 before:bg-accent-500'
-                        : 'text-gray-500 before:bg-gray-300 hover:bg-gray-50 hover:text-gray-800'
+                        ? 'bg-accent-50 font-semibold text-accent-700'
+                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                     )}
                   >
                     <span className="truncate">{child.title}</span>
@@ -306,11 +307,11 @@ export default function AppSidebar() {
         type="button"
         onClick={() => handleNavigate(item.path)}
         className={cx(
-          'group relative flex h-10 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200',
+          'group relative flex h-10 w-full items-center rounded-lg text-sm font-semibold transition-all duration-200',
           isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
           isActive
-            ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-950 hover:shadow-sm'
+            ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/30'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950'
         )}
       >
         <Icon
@@ -334,7 +335,7 @@ export default function AppSidebar() {
           type="button"
           aria-label="Cerrar menú"
           onClick={close}
-          className="fixed inset-0 z-40 bg-gray-950/20 backdrop-blur-[2px] xl:hidden"
+          className="fixed inset-0 z-40 bg-gray-950/30 backdrop-blur-sm xl:hidden"
         />
       )}
 
@@ -342,21 +343,21 @@ export default function AppSidebar() {
         className={cx(
           'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          isCollapsed ? 'w-[88px]' : 'w-[260px]'
+          isCollapsed ? 'w-24' : 'w-72'
         )}
       >
-        <div className="flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-gray-950/[0.03] backdrop-blur-xl transition-all duration-300">
+        <div className="flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-2xl border border-white bg-gradient-to-b from-white to-gray-50 shadow-lg shadow-gray-950/10 backdrop-blur-sm">
           {/* Cabecera */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100/80 px-3">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-4">
             <button
               type="button"
               onClick={() => handleNavigate('/dashboard')}
               className={cx(
-                'group flex min-w-0 items-center rounded-2xl transition-colors hover:bg-gray-50',
+                'group flex min-w-0 items-center rounded-lg transition-colors hover:bg-gray-100',
                 isCollapsed ? 'h-10 w-10 justify-center' : 'gap-3 px-2 py-2'
               )}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-accent-500 text-white shadow-sm shadow-accent-500/25">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/30">
                 <LayoutDashboard size={18} />
               </span>
 
@@ -365,7 +366,7 @@ export default function AppSidebar() {
                   <span className="block truncate text-base font-bold leading-5 text-gray-950">
                     SMV
                   </span>
-                  <span className="block truncate text-[11px] font-medium text-gray-400">
+                  <span className="block truncate text-xs font-medium text-gray-500">
                     Gestión escolar
                   </span>
                 </span>
@@ -376,7 +377,7 @@ export default function AppSidebar() {
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                 title="Contraer menú"
               >
                 <PanelLeft size={18} />
@@ -385,11 +386,11 @@ export default function AppSidebar() {
           </div>
 
           {isCollapsed && (
-            <div className="flex justify-center border-b border-gray-100/80 py-2">
+            <div className="flex justify-center border-b border-gray-100 py-2">
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                 title="Expandir menú"
               >
                 <PanelLeft size={18} className="rotate-180" />
@@ -398,15 +399,15 @@ export default function AppSidebar() {
           )}
 
           {/* Navegación */}
-          <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-hide">
+          <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-5 scrollbar-hide">
             {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
-                  <p className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                  <p className="px-3 text-xs font-bold uppercase tracking-wider text-gray-400">
                     {categoria.titulo}
                   </p>
                 ) : (
-                  <div className="mx-auto my-2 h-px w-8 rounded-full bg-gray-200" />
+                  <div className="mx-auto my-3 h-px w-6 rounded-full bg-gray-200" />
                 )}
 
                 <div className="space-y-1">
@@ -417,18 +418,18 @@ export default function AppSidebar() {
           </nav>
 
           {/* Pie */}
-          <div className="mt-auto shrink-0 border-t border-gray-100/80 p-3">
+          <div className="mt-auto shrink-0 border-t border-gray-100 p-3">
             {!isCollapsed ? (
-              <div className="rounded-2xl bg-gray-50 px-3 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+              <div className="rounded-lg bg-gradient-to-br from-gray-50 to-gray-50/50 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Rol activo
                 </p>
-                <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+                <p className="mt-1.5 truncate text-sm font-bold text-gray-800">
                   {user?.rol || 'Usuario'}
                 </p>
               </div>
             ) : (
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-50 text-xs font-bold text-gray-500">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold text-gray-600">
                 {(user?.rol || 'U').slice(0, 1)}
               </div>
             )}

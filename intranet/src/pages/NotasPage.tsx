@@ -19,6 +19,7 @@ import {
   School,
   Calendar,
   BookOpen,
+  Zap,
 } from 'lucide-react';
 
 interface Asignacion {
@@ -65,26 +66,30 @@ const tipoEvaluaciones = [
 
 const grupoOrden = ['TRABAJO EN CLASE', 'PRÁCTICAS', 'OTRAS EVALUACIONES', 'EXAMEN'];
 
-const grupoStyles: Record<string, { header: string; subHeader: string; cell: string }> = {
+const grupoStyles: Record<string, { header: string; subHeader: string; cell: string; accent: string }> = {
   'TRABAJO EN CLASE': {
-    header: 'bg-amber-50/80 text-amber-700 ring-amber-100',
-    subHeader: 'bg-amber-50/55 text-amber-700',
-    cell: 'bg-amber-50/20',
+    header: 'bg-gradient-to-r from-amber-50 to-amber-50/50 text-amber-700 ring-amber-100',
+    subHeader: 'bg-amber-50/80 text-amber-700',
+    cell: 'bg-amber-50/30',
+    accent: 'bg-amber-500',
   },
   PRÁCTICAS: {
-    header: 'bg-indigo-50/80 text-indigo-700 ring-indigo-100',
-    subHeader: 'bg-indigo-50/55 text-indigo-700',
-    cell: 'bg-indigo-50/20',
+    header: 'bg-gradient-to-r from-indigo-50 to-indigo-50/50 text-indigo-700 ring-indigo-100',
+    subHeader: 'bg-indigo-50/80 text-indigo-700',
+    cell: 'bg-indigo-50/30',
+    accent: 'bg-indigo-500',
   },
   EXAMEN: {
-    header: 'bg-rose-50/80 text-rose-700 ring-rose-100',
-    subHeader: 'bg-rose-50/55 text-rose-700',
-    cell: 'bg-rose-50/15',
+    header: 'bg-gradient-to-r from-rose-50 to-rose-50/50 text-rose-700 ring-rose-100',
+    subHeader: 'bg-rose-50/80 text-rose-700',
+    cell: 'bg-rose-50/20',
+    accent: 'bg-rose-500',
   },
   'OTRAS EVALUACIONES': {
-    header: 'bg-slate-50/90 text-slate-600 ring-slate-100',
-    subHeader: 'bg-slate-50/70 text-slate-600',
-    cell: 'bg-slate-50/25',
+    header: 'bg-gradient-to-r from-slate-50 to-slate-50/50 text-slate-600 ring-slate-100',
+    subHeader: 'bg-slate-50/80 text-slate-600',
+    cell: 'bg-slate-50/30',
+    accent: 'bg-slate-500',
   },
 };
 
@@ -163,7 +168,7 @@ function getNotaColor(value: unknown) {
   const nota = normalizarNotaEntera(value);
 
   if (nota < 11) {
-    return 'border-rose-200 bg-rose-50/70 text-rose-600 focus:border-rose-300 focus:ring-rose-100';
+    return 'border-rose-200 bg-rose-50/70 text-rose-700 focus:border-rose-300 focus:ring-rose-100';
   }
 
   return 'border-blue-100 bg-blue-50/35 text-blue-700 focus:border-accent-300 focus:ring-accent-100';
@@ -300,9 +305,9 @@ export default function NotasPage() {
   }, [practicasExistentes]);
 
   const getPromedioClass = (promedio: number) => {
-    if (promedio >= 14) return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
-    if (promedio >= 11) return 'bg-sky-50 text-sky-700 ring-sky-100';
-    return 'bg-rose-50 text-rose-700 ring-rose-100';
+    if (promedio >= 14) return 'bg-emerald-100 text-emerald-700 ring-emerald-200';
+    if (promedio >= 11) return 'bg-sky-100 text-sky-700 ring-sky-200';
+    return 'bg-rose-100 text-rose-700 ring-rose-200';
   };
 
   const handleSalonChange = (seccion: string) => {
@@ -347,18 +352,18 @@ export default function NotasPage() {
     setMensaje(null);
 
     const notas = grilla.grilla.flatMap((fila) =>
-  grilla.evaluaciones
-    .filter((eva) => {
-      const valor = fila[eva.id];
+      grilla.evaluaciones
+        .filter((eva) => {
+          const valor = fila[eva.id];
 
-      return valor !== null && valor !== undefined && valor !== '';
-    })
-    .map((eva) => ({
-      id_matricula: fila.id_matricula,
-      id_evaluacion_det: eva.id,
-      valor_nota: normalizarNotaEntera(fila[eva.id]),
-    }))
-);
+          return valor !== null && valor !== undefined && valor !== '';
+        })
+        .map((eva) => ({
+          id_matricula: fila.id_matricula,
+          id_evaluacion_det: eva.id,
+          valor_nota: normalizarNotaEntera(fila[eva.id]),
+        }))
+    );
 
     try {
       await axios.put(
@@ -420,7 +425,7 @@ export default function NotasPage() {
 
   return (
     <div className="animate-slide-in-right">
-      <div className="w-full space-y-5">
+      <div className="w-full space-y-6">
         <PageHeader
           eyebrow="Registro de notas por unidad"
           title="Registro de Notas"
@@ -432,9 +437,9 @@ export default function NotasPage() {
                 type="button"
                 onClick={() => setModalOpen(true)}
                 disabled={!asignacionId}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm shadow-gray-200/50 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus size={16} />
+                <Plus size={18} />
                 Agregar evaluación
               </button>
 
@@ -442,9 +447,9 @@ export default function NotasPage() {
                 type="button"
                 onClick={guardarNotas}
                 disabled={saving || !grilla}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-500 to-accent-600 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:from-accent-600 hover:to-accent-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -452,15 +457,15 @@ export default function NotasPage() {
         />
 
         {/* Filtros principales */}
-        <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-gray-200/70 ring-1 ring-gray-100 backdrop-blur">
+        <section className="rounded-2xl border border-white bg-gradient-to-br from-white to-gray-50 p-6 shadow-sm backdrop-blur">
           <div className="grid gap-4 lg:grid-cols-4">
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                <School size={13} />
+              <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <School size={14} />
                 Salón
               </span>
               <select
-                className="h-12 w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-semibold text-gray-800 outline-none transition-all focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                 value={salonSeleccionado}
                 onChange={(e) => handleSalonChange(e.target.value)}
               >
@@ -474,12 +479,12 @@ export default function NotasPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                <Calendar size={13} />
+              <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <Calendar size={14} />
                 Periodo
               </span>
               <select
-                className="h-12 w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-semibold text-gray-800 outline-none transition-all focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                 value={periodoId}
                 onChange={(e) => handlePeriodoChange(Number(e.target.value))}
               >
@@ -492,12 +497,12 @@ export default function NotasPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                <ClipboardList size={13} />
+              <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <ClipboardList size={14} />
                 Unidad
               </span>
               <select
-                className="h-12 w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-semibold text-gray-800 outline-none transition-all focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                 value={unidadId}
                 onChange={(e) => setUnidadId(Number(e.target.value))}
               >
@@ -510,12 +515,12 @@ export default function NotasPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                <BookOpen size={13} />
+              <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <BookOpen size={14} />
                 Curso
               </span>
               <select
-                className="h-12 w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-semibold text-gray-800 outline-none transition-all focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                 value={asignacionId ?? ''}
                 onChange={(e) => handleCursoChange(Number(e.target.value))}
               >
@@ -529,47 +534,39 @@ export default function NotasPage() {
             </label>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex items-center gap-3 min-h-[98px] rounded-3xl bg-gray-50/80 px-5 py-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-accent-600 shadow-sm">
-                <GraduationCap size={17} />
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="group flex flex-col gap-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-4 ring-1 ring-blue-100 transition-all hover:ring-blue-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">Salón Actual</span>
+                <School className="h-5 w-5 text-blue-500" />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-400">Salón actual</p>
-                <p className="truncate text-lg font-extrabold text-gray-900">
-                  {asignacionActual?.seccion || salonSeleccionado || '—'}
-                </p>
-              </div>
+              <p className="text-2xl font-bold text-blue-900">
+                {asignacionActual?.seccion || salonSeleccionado || '—'}
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 min-h-[98px] rounded-3xl bg-gray-50/80 px-5 py-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sky-600 shadow-sm">
-                <UsersRound size={17} />
+            <div className="group flex flex-col gap-3 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-4 ring-1 ring-emerald-100 transition-all hover:ring-emerald-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Alumnos</span>
+                <UsersRound className="h-5 w-5 text-emerald-500" />
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-400">Alumnos</p>
-                <p className="text-lg font-extrabold text-gray-900">{alumnosCount}</p>
-              </div>
+              <p className="text-2xl font-bold text-emerald-900">{alumnosCount}</p>
             </div>
 
-            <div className="flex items-center gap-3 min-h-[98px] rounded-3xl bg-gray-50/80 px-5 py-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm">
-                <Table2 size={17} />
+            <div className="group flex flex-col gap-3 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-50/50 p-4 ring-1 ring-indigo-100 transition-all hover:ring-indigo-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Evaluaciones</span>
+                <Table2 className="h-5 w-5 text-indigo-500" />
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-400">Evaluaciones</p>
-                <p className="text-lg font-extrabold text-gray-900">{evaluacionesCount}</p>
-              </div>
+              <p className="text-2xl font-bold text-indigo-900">{evaluacionesCount}</p>
             </div>
 
-            <div className="flex items-center gap-3 min-h-[98px] rounded-3xl bg-gray-50/80 px-5 py-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                <Sparkles size={17} />
+            <div className="group flex flex-col gap-3 rounded-lg bg-gradient-to-br from-violet-50 to-violet-50/50 p-4 ring-1 ring-violet-100 transition-all hover:ring-violet-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">Promedio</span>
+                <Sparkles className="h-5 w-5 text-violet-500" />
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-400">Promedio general</p>
-                <p className="text-lg font-extrabold text-gray-900">{promedioGeneral ?? '—'}</p>
-              </div>
+              <p className="text-2xl font-bold text-violet-900">{promedioGeneral ?? '—'}</p>
             </div>
           </div>
         </section>
@@ -577,14 +574,14 @@ export default function NotasPage() {
         {/* Mensaje */}
         {mensaje && (
           <div
-            className={`flex items-start gap-3 rounded-3xl border p-4 text-sm font-medium shadow-sm ${
+            className={`flex items-start gap-3 rounded-lg border p-4 text-sm font-semibold animate-in fade-in ${
               mensaje.tipo === 'exito'
                 ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                 : 'border-rose-200 bg-rose-50 text-rose-700'
             }`}
           >
             <div className="mt-0.5">
-              {mensaje.tipo === 'exito' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              {mensaje.tipo === 'exito' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
             </div>
             <span>{mensaje.texto}</span>
           </div>
@@ -592,58 +589,60 @@ export default function NotasPage() {
 
         {/* Grilla */}
         {loading ? (
-          <div className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-gray-200/70 ring-1 ring-gray-100">
-            <div className="mb-5 flex items-center justify-between">
+          <div className="rounded-2xl border border-white bg-white/90 p-6 shadow-sm backdrop-blur">
+            <div className="mb-6 flex items-center justify-between">
               <div>
-                <div className="skeleton h-4 w-32 rounded-full" />
-                <div className="skeleton mt-2 h-3 w-48 rounded-full" />
+                <div className="skeleton h-5 w-40 rounded-full" />
+                <div className="skeleton mt-2 h-4 w-56 rounded-full" />
               </div>
-              <div className="skeleton h-10 w-28 rounded-2xl" />
+              <div className="skeleton h-11 w-32 rounded-lg" />
             </div>
             <div className="space-y-3">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="skeleton h-11 w-full rounded-2xl" />
+                <div key={i} className="skeleton h-12 w-full rounded-lg" />
               ))}
             </div>
           </div>
         ) : grilla ? (
-          <section className="overflow-hidden rounded-[30px] border border-white bg-white/95 shadow-sm shadow-gray-200/70 ring-1 ring-gray-100 backdrop-blur">
-            <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <section className="overflow-hidden rounded-2xl border border-white bg-white/95 shadow-sm backdrop-blur">
+            <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-950">
+                <h2 className="text-lg font-bold text-gray-950">
                   {grilla.asignacion?.curso || asignacionActual?.curso || 'Grilla de notas'}
                 </h2>
-                <p className="mt-0.5 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-600">
                   {grilla.asignacion?.seccion || asignacionActual?.seccion || 'Salón no especificado'} · {periodoActual.label} · Unidad {unidadId}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500">
-                  Azul: aprobado
+                <span className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                  <Zap size={13} className="text-blue-500" />
+                  Aprobado: 11 o más
                 </span>
-                <span className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600">
-                  Rojo: menor a 11
+                <span className="inline-flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
+                  <AlertCircle size={13} className="text-rose-500" />
+                  Desaprobado: menor a 11
                 </span>
               </div>
             </div>
 
             {grilla.evaluaciones.length === 0 ? (
-              <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-accent-50 text-accent-600">
-                  <Plus size={24} />
+              <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-accent-50 text-accent-600 shadow-sm">
+                  <Plus size={28} />
                 </div>
-                <h3 className="mt-4 text-base font-bold text-gray-900">Aún no hay evaluaciones</h3>
-                <p className="mt-1 max-w-md text-sm text-gray-500">
+                <h3 className="mt-4 text-lg font-bold text-gray-900">Aún no hay evaluaciones</h3>
+                <p className="mt-2 max-w-md text-sm text-gray-600">
                   Crea la primera evaluación para iniciar el registro de notas de esta unidad.
                 </p>
                 <button
                   type="button"
                   onClick={() => setModalOpen(true)}
-                  className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-4 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:bg-accent-600"
+                  className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-500 to-accent-600 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:from-accent-600 hover:to-accent-700"
                 >
-                  <Plus size={16} />
-                  Agregar evaluación
+                  <Plus size={18} />
+                  Crear evaluación
                 </button>
               </div>
             ) : (
@@ -653,13 +652,13 @@ export default function NotasPage() {
                     <tr>
                       <th
                         rowSpan={2}
-                        className="sticky left-0 z-30 w-14 border-b border-r border-gray-100 bg-white px-3 py-3 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400"
+                        className="sticky left-0 z-30 w-14 border-b border-r border-gray-100 bg-white px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500"
                       >
                         N°
                       </th>
                       <th
                         rowSpan={2}
-                        className="sticky left-[56px] z-30 w-[270px] border-b border-r border-gray-100 bg-white px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400 shadow-[12px_0_18px_-18px_rgba(15,23,42,0.45)]"
+                        className="sticky left-[56px] z-30 w-[270px] border-b border-r border-gray-100 bg-white px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500"
                       >
                         Nombre completo
                       </th>
@@ -669,7 +668,7 @@ export default function NotasPage() {
                           <th
                             key={grupo.nombre}
                             colSpan={grupo.evaluaciones.length}
-                            className={`border-b border-r border-gray-100 px-3 py-2 text-center text-[11px] font-extrabold uppercase tracking-[0.16em] ring-1 ${style.header}`}
+                            className={`border-b border-r border-gray-100 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider ring-1 ${style.header}`}
                           >
                             {grupo.nombre}
                           </th>
@@ -677,7 +676,7 @@ export default function NotasPage() {
                       })}
                       <th
                         rowSpan={2}
-                        className="sticky right-0 z-30 w-24 border-b border-l border-gray-100 bg-white px-3 py-3 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400 shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.42)]"
+                        className="sticky right-0 z-30 w-24 border-b border-l border-gray-100 bg-white px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500 shadow-[-8px_0_12px_-6px_rgba(15,23,42,0.1)]"
                       >
                         Prom.
                       </th>
@@ -692,16 +691,16 @@ export default function NotasPage() {
                             className={`group min-w-[116px] border-b border-r border-gray-100 px-2 py-2 text-center align-middle ${style.subHeader}`}
                           >
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
-                              <span className="line-clamp-2 text-[11px] font-bold uppercase leading-4 tracking-[0.05em]">
+                              <span className="line-clamp-2 text-[11px] font-bold uppercase leading-4 tracking-wider">
                                 {eva.descripcion}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => eliminarEvaluacion(eva.id)}
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-300 opacity-0 transition-all hover:bg-rose-100 hover:text-rose-500 group-hover:opacity-100"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 opacity-0 transition-all hover:bg-rose-100 hover:text-rose-600 group-hover:opacity-100"
                                 title="Eliminar evaluación"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </th>
@@ -717,11 +716,11 @@ export default function NotasPage() {
 
                       return (
                         <tr key={fila.id_matricula} className="group">
-                          <td className="sticky left-0 z-20 border-b border-r border-gray-100 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-500 transition-colors group-hover:bg-gray-50">
+                          <td className="sticky left-0 z-20 border-b border-r border-gray-100 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-500 transition-colors group-hover:bg-gray-50/50">
                             {index + 1}
                           </td>
 
-                          <td className="sticky left-[56px] z-20 border-b border-r border-gray-100 bg-white px-4 py-2 text-center shadow-[12px_0_18px_-18px_rgba(15,23,42,0.45)] transition-colors group-hover:bg-gray-50">
+                          <td className="sticky left-[56px] z-20 border-b border-r border-gray-100 bg-white px-4 py-2 text-center shadow-[12px_0_18px_-18px_rgba(15,23,42,0.45)] transition-colors group-hover:bg-gray-50/50">
                             <p className="mx-auto max-w-[230px] truncate text-sm font-semibold text-gray-900">
                               {fila.alumno}
                             </p>
@@ -744,7 +743,7 @@ export default function NotasPage() {
                                   onChange={(e) =>
                                     handleNotaChange(fila.id_matricula, eva.id, e.target.value)
                                   }
-                                  className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-extrabold tabular-nums outline-none transition-all focus:ring-4 ${getNotaColor(
+                                  className={`mx-auto h-9 w-16 rounded-lg border text-center text-sm font-bold tabular-nums outline-none transition-all focus:ring-3 ${getNotaColor(
                                     fila[eva.id]
                                   )}`}
                                   aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
@@ -753,9 +752,9 @@ export default function NotasPage() {
                             ));
                           })}
 
-                          <td className="sticky right-0 z-20 border-b border-l border-gray-100 bg-white px-3 py-2 text-center align-middle shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.42)] transition-colors group-hover:bg-gray-50">
+                          <td className="sticky right-0 z-20 border-b border-l border-gray-100 bg-white px-3 py-2 text-center align-middle shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.42)] transition-colors group-hover:bg-gray-50/50">
                             <span
-                              className={`inline-flex min-w-14 items-center justify-center rounded-xl px-2.5 py-1.5 text-xs font-extrabold tabular-nums ring-1 ${getPromedioClass(
+                              className={`inline-flex min-w-14 items-center justify-center rounded-lg px-3 py-1.5 text-xs font-bold tabular-nums ring-1 ${getPromedioClass(
                                 promedio
                               )}`}
                             >
@@ -771,12 +770,12 @@ export default function NotasPage() {
             )}
           </section>
         ) : (
-          <section className="flex min-h-[340px] flex-col items-center justify-center rounded-[30px] border border-dashed border-gray-200 bg-white/70 px-6 py-12 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gray-100 text-gray-400">
-              <BookOpenCheck size={24} />
+          <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gradient-to-b from-white to-gray-50 px-6 py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-gray-400 shadow-sm">
+              <BookOpenCheck size={28} />
             </div>
-            <h3 className="mt-4 text-base font-bold text-gray-900">Selecciona un salón y curso</h3>
-            <p className="mt-1 max-w-md text-sm text-gray-500">
+            <h3 className="mt-4 text-lg font-bold text-gray-900">Selecciona un salón y curso</h3>
+            <p className="mt-2 max-w-md text-sm text-gray-600">
               Al elegir salón, bimestre, unidad y curso aparecerá la grilla de calificaciones.
             </p>
           </section>
@@ -785,16 +784,16 @@ export default function NotasPage() {
 
       {/* Modal de nueva evaluación */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-[32px] border border-white bg-white shadow-2xl shadow-gray-950/20">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-950/40 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white bg-gradient-to-br from-white to-gray-50 shadow-2xl shadow-gray-950/20 animate-in zoom-in-95">
             <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-semibold text-accent-600">
-                  <Plus size={13} />
+                <div className="inline-flex items-center gap-2 rounded-full bg-accent-100 px-3 py-1 text-xs font-semibold text-accent-700">
+                  <Plus size={14} />
                   Nueva evaluación
                 </div>
                 <h2 className="mt-3 text-xl font-bold text-gray-950">Agregar evaluación</h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-600">
                   Registra una actividad para {periodoActual.label}, unidad {unidadId}.
                 </p>
               </div>
@@ -802,23 +801,23 @@ export default function NotasPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                 aria-label="Cerrar modal"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
             <div className="space-y-4 px-6 py-5">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Descripción
                 </span>
                 <input
                   type="text"
                   value={nuevaEvalDesc}
                   onChange={(e) => setNuevaEvalDesc(e.target.value)}
-                  className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-medium text-gray-800 outline-none transition-all placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all placeholder:text-gray-400 focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                   placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..."
                   autoFocus
                 />
@@ -826,13 +825,13 @@ export default function NotasPage() {
 
               <div className="grid gap-4 sm:grid-cols-[0.85fr_1.15fr]">
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Tipo
                   </span>
                   <select
                     value={nuevaEvalTipo}
                     onChange={(e) => setNuevaEvalTipo(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50/70 px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                    className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 outline-none transition-all focus:border-accent-500 focus:ring-3 focus:ring-accent-100"
                   >
                     {tipoEvaluaciones.map((tipo) => (
                       <option key={tipo.id} value={tipo.id}>
@@ -842,13 +841,13 @@ export default function NotasPage() {
                   </select>
                 </label>
 
-                <div className="rounded-3xl border border-indigo-100 bg-indigo-50/40 p-4">
+                <div className="rounded-lg border border-indigo-100 bg-gradient-to-br from-indigo-50 to-indigo-50/50 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-400">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
                         Prácticas existentes
                       </p>
-                      <p className="mt-1 text-sm font-bold text-indigo-700">
+                      <p className="mt-1.5 text-sm font-bold text-indigo-900">
                         Sigue: Práctica {siguientePractica}
                       </p>
                     </div>
@@ -858,7 +857,7 @@ export default function NotasPage() {
                         setNuevaEvalTipo('3');
                         setNuevaEvalDesc(`Práctica ${siguientePractica}`);
                       }}
-                      className="shrink-0 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-600 hover:text-white"
+                      className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
                     >
                       Usar
                     </button>
@@ -866,7 +865,7 @@ export default function NotasPage() {
 
                   <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
                     {practicasExistentes.length === 0 ? (
-                      <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-400">
+                      <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-400 shadow-sm">
                         No hay prácticas creadas
                       </span>
                     ) : (
@@ -888,7 +887,7 @@ export default function NotasPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50"
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:border-gray-400"
               >
                 Cancelar
               </button>
@@ -897,9 +896,9 @@ export default function NotasPage() {
                 type="button"
                 onClick={crearEvaluacion}
                 disabled={!nuevaEvalDesc.trim()}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent-500 to-accent-600 px-5 text-sm font-semibold text-white shadow-lg shadow-accent-500/20 transition-all hover:from-accent-600 hover:to-accent-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus size={16} />
+                <Plus size={18} />
                 Crear evaluación
               </button>
             </div>

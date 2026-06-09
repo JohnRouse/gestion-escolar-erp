@@ -386,6 +386,23 @@ export class FinanzasController {
     });
   }
 
+  // ── RUTA PARA COMPROBANTE DE PAGO ──
+  @Get('pagos/:id/comprobante')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async obtenerComprobantePago(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.obtenerComprobantePago(Number(id), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   // ── CONCEPTOS ────────────────────────────────────────
   @Get('conceptos')
   @Roles('Admin', 'Director', 'Secretaria')
