@@ -334,6 +334,16 @@ export class FinanzasService {
     return referencia;
   }
 
+  private getColegioIdFromScope(scope: FinanzasScope, params: ScopeParams) {
+    const colegioId = params.colegioId ? Number(params.colegioId) : scope.colegioIds?.[0];
+
+    if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+      throw new BadRequestException('Selecciona un colegio válido.');
+    }
+
+    return colegioId;
+  }
+
   // ── FIN HELPERS ────────────────────────────
 
   private async getAniosActivos(scope: FinanzasScope) {
@@ -2168,55 +2178,54 @@ export class FinanzasService {
     const scope = await this.resolveScope(params);
 
     const pago = await this.prisma.pagoTransaccion.findFirst({
-  where: {
-    id_transaccion: idTransaccion,
-    cronograma: {
-      matricula: {
-        id_colegio: { in: scope.colegioIds },
+      where: {
+        id_transaccion: idTransaccion,
+        cronograma: {
+          matricula: {
+            id_colegio: { in: scope.colegioIds },
+          },
+        },
       },
-    },
-  },
-  include: {
-    cronograma: {
       include: {
-        concepto: true,
-        pagos: true,
-        matricula: {
+        cronograma: {
           include: {
-            colegio: true,
-            anio: true,
-            estudiante: {
+            concepto: true,
+            pagos: true,
+            matricula: {
               include: {
-                persona: true,
-              },
-            },
-            seccion: {
-              include: {
-                grado: {
+                colegio: true,
+                anio: true,
+                estudiante: {
                   include: {
-                    nivel: true,
+                    persona: true,
+                  },
+                },
+                seccion: {
+                  include: {
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
                   },
                 },
               },
             },
           },
         },
+        apoderado: {
+          include: {
+            persona: true,
+          },
+        },
+        cajero: {
+          select: {
+            id_usuario: true,
+            username: true,
+          },
+        },
       },
-    },
-    apoderado: {
-      include: {
-        persona: true,
-      },
-    },
-    cajero: {
-      select: {
-        id_usuario: true,
-        username: true,
-      },
-    },
-  },
-});
-
+    });
 
     if (!pago) {
       throw new NotFoundException('No se encontró el comprobante de pago.');
@@ -2271,7 +2280,11 @@ export class FinanzasService {
         pagos: true,
         matricula: {
           include: {
-            colegio: true,
+            colegio: {
+              include: {
+                datos_cobro: true,
+              },
+            },
             anio: true,
             estudiante: { include: { persona: true } },
             seccion: { include: { grado: { include: { nivel: true } } } },
@@ -2291,6 +2304,25 @@ export class FinanzasService {
     );
     const saldo = Math.max(monto - pagado, 0);
     const alumno = cronograma.matricula.estudiante.persona;
+    const datosCobro = cronograma.matricula.colegio?.datos_cobro;
+
+    const datosCobroPublicos =
+      datosCobro && datosCobro.activo
+        ? {
+            nombre_destinatario: datosCobro.nombre_destinatario,
+            numero_yape: datosCobro.numero_yape,
+            numero_plin: datosCobro.numero_plin,
+            banco_1: datosCobro.banco_1,
+            cuenta_1: datosCobro.cuenta_1,
+            cci_1: datosCobro.cci_1,
+            banco_2: datosCobro.banco_2,
+            cuenta_2: datosCobro.cuenta_2,
+            cci_2: datosCobro.cci_2,
+            qr_yape_url: datosCobro.qr_yape_url,
+            qr_plin_url: datosCobro.qr_plin_url,
+            instrucciones: datosCobro.instrucciones,
+          }
+        : null;
 
     return {
       referencia_pago: cronograma.referencia_pago,
@@ -2319,10 +2351,109 @@ export class FinanzasService {
           : null,
         anio: cronograma.matricula.anio?.nombre_anio,
       },
+      datos_cobro: datosCobroPublicos,
       instrucciones: {
         mensaje:
+          datosCobroPublicos?.instrucciones ||
           'Realiza el pago por Yape, Plin o transferencia y coloca el código de pago en la descripción para identificarlo correctamente.',
       },
+    };
+  }
+
+  // ── MÉTODOS PARA DATOS DE COBRO DEL COLEGIO ──
+  async obtenerDatosCobroColegio(params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+    const idColegio = this.getColegioIdFromScope(scope, params);
+
+    const colegio = await this.prisma.colegio.findFirst({
+      where: {
+        AND: [
+          { id_colegio: idColegio },
+          { id_colegio: { in: scope.colegioIds } },
+        ],
+      },
+      select: {
+        id_colegio: true,
+        nombre: true,
+        nombre_corto: true,
+        codigo: true,
+        datos_cobro: true,
+      },
+    });
+
+    if (!colegio) {
+      throw new NotFoundException('No se encontró el colegio.');
+    }
+
+    return {
+      colegio: {
+        id_colegio: colegio.id_colegio,
+        nombre: colegio.nombre,
+        nombre_corto: colegio.nombre_corto,
+        codigo: colegio.codigo,
+      },
+      datos_cobro:
+        colegio.datos_cobro || {
+          id_datos_cobro: null,
+          id_colegio: idColegio,
+          nombre_destinatario: '',
+          numero_yape: '',
+          numero_plin: '',
+          banco_1: '',
+          cuenta_1: '',
+          cci_1: '',
+          banco_2: '',
+          cuenta_2: '',
+          cci_2: '',
+          qr_yape_url: '',
+          qr_plin_url: '',
+          instrucciones:
+            'Coloca el código de pago en la descripción del Yape, Plin o transferencia.',
+          activo: true,
+        },
+    };
+  }
+
+  async guardarDatosCobroColegio(body: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+    const idColegio = this.getColegioIdFromScope(scope, params);
+
+    const nombreDestinatario = this.normalizeEmpty(body.nombre_destinatario);
+
+    if (!nombreDestinatario) {
+      throw new BadRequestException('Ingresa el nombre del destinatario.');
+    }
+
+    const data = {
+      nombre_destinatario: nombreDestinatario,
+      numero_yape: this.normalizeEmpty(body.numero_yape),
+      numero_plin: this.normalizeEmpty(body.numero_plin),
+      banco_1: this.normalizeEmpty(body.banco_1),
+      cuenta_1: this.normalizeEmpty(body.cuenta_1),
+      cci_1: this.normalizeEmpty(body.cci_1),
+      banco_2: this.normalizeEmpty(body.banco_2),
+      cuenta_2: this.normalizeEmpty(body.cuenta_2),
+      cci_2: this.normalizeEmpty(body.cci_2),
+      qr_yape_url: this.normalizeEmpty(body.qr_yape_url),
+      qr_plin_url: this.normalizeEmpty(body.qr_plin_url),
+      instrucciones:
+        this.normalizeEmpty(body.instrucciones) ||
+        'Coloca el código de pago en la descripción del Yape, Plin o transferencia.',
+      activo: body.activo === false ? false : true,
+    };
+
+    const datos = await this.prisma.datosCobroColegio.upsert({
+      where: { id_colegio: idColegio },
+      create: {
+        id_colegio: idColegio,
+        ...data,
+      },
+      update: data,
+    });
+
+    return {
+      message: 'Datos de cobro guardados correctamente.',
+      datos_cobro: datos,
     };
   }
 }

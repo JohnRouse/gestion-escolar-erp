@@ -151,6 +151,7 @@ const menuFinanzas: NavItem[] = [
       { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
       { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
       { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+      { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
     ],
   },
 ];

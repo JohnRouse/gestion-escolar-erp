@@ -147,6 +147,7 @@ model Colegio {
   campanas_descuento  CampanaDescuento[]
   ordenes_pago OrdenPago[]
   pagos_recibidos PagoRecibido[]
+  datos_cobro  DatosCobroColegio?
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -1188,4 +1189,34 @@ model EstudianteCodigoColegio {
   @@id([id_estudiante, id_colegio])
   @@unique([id_colegio, codigo])
   @@index([codigo])
+}
+
+model DatosCobroColegio {
+  id_datos_cobro      Int      @id @default(autoincrement())
+  id_colegio          Int      @unique
+
+  nombre_destinatario String   @db.VarChar(160)
+  numero_yape         String?  @db.VarChar(30)
+  numero_plin         String?  @db.VarChar(30)
+
+  banco_1             String?  @db.VarChar(80)
+  cuenta_1            String?  @db.VarChar(80)
+  cci_1               String?  @db.VarChar(80)
+
+  banco_2             String?  @db.VarChar(80)
+  cuenta_2            String?  @db.VarChar(80)
+  cci_2               String?  @db.VarChar(80)
+
+  qr_yape_url         String?  @db.VarChar(500)
+  qr_plin_url         String?  @db.VarChar(500)
+
+  instrucciones       String?  @db.Text
+  activo              Boolean  @default(true)
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  colegio             Colegio  @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+
+  @@index([activo])
 }

@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { AlertCircle, CheckCircle2, Copy, Loader2, ShieldCheck, WalletCards } from 'lucide-react';
+import {
+  AlertCircle,
+  Banknote,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  Smartphone,
+  WalletCards,
+} from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 const formatMoney = (value: number | string | null | undefined) => `S/ ${Number(value || 0).toFixed(2)}`;
@@ -114,13 +124,84 @@ export default function PagoPublicoPage() {
           </div>
         </div>
 
+        {data.datos_cobro ? (
+          <div className="mt-5 rounded-3xl bg-white p-5 ring-1 ring-slate-100">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+              Datos para realizar el pago
+            </p>
+
+            <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-emerald-800 ring-1 ring-emerald-100">
+              <div className="flex items-start gap-3">
+                <Smartphone size={20} />
+                <div>
+                  <h2 className="font-black">Yape / Plin</h2>
+                  <p className="mt-1 text-sm font-bold">
+                    Destinatario: {data.datos_cobro.nombre_destinatario || '—'}
+                  </p>
+                  {data.datos_cobro.numero_yape && (
+                    <p className="mt-1 text-sm font-black">Yape: {data.datos_cobro.numero_yape}</p>
+                  )}
+                  {data.datos_cobro.numero_plin && (
+                    <p className="mt-1 text-sm font-black">Plin: {data.datos_cobro.numero_plin}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {(data.datos_cobro.qr_yape_url || data.datos_cobro.qr_plin_url) && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {data.datos_cobro.qr_yape_url && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-100">
+                    <QrCode className="mx-auto mb-2 text-slate-500" size={20} />
+                    <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      QR Yape
+                    </p>
+                    <img src={data.datos_cobro.qr_yape_url} alt="QR Yape" className="mx-auto max-h-56 rounded-2xl object-contain" />
+                  </div>
+                )}
+                {data.datos_cobro.qr_plin_url && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-100">
+                    <QrCode className="mx-auto mb-2 text-slate-500" size={20} />
+                    <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      QR Plin
+                    </p>
+                    <img src={data.datos_cobro.qr_plin_url} alt="QR Plin" className="mx-auto max-h-56 rounded-2xl object-contain" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(data.datos_cobro.banco_1 || data.datos_cobro.cuenta_1 || data.datos_cobro.cci_1) && (
+              <div className="mt-4 rounded-2xl bg-sky-50 p-4 text-sky-800 ring-1 ring-sky-100">
+                <div className="flex items-start gap-3">
+                  <Banknote size={20} />
+                  <div>
+                    <h2 className="font-black">Transferencia bancaria</h2>
+                    {data.datos_cobro.banco_1 && <p className="mt-1 text-sm font-bold">Banco: {data.datos_cobro.banco_1}</p>}
+                    {data.datos_cobro.cuenta_1 && <p className="mt-1 text-sm font-black">Cuenta: {data.datos_cobro.cuenta_1}</p>}
+                    {data.datos_cobro.cci_1 && <p className="mt-1 text-sm font-black">CCI: {data.datos_cobro.cci_1}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-3xl bg-amber-50 p-5 text-amber-800 ring-1 ring-amber-100">
+            <p className="text-sm font-black">El colegio aún no configuró sus datos de cobro.</p>
+            <p className="mt-1 text-sm font-bold leading-6">
+              Comunícate con el colegio para solicitar el número o cuenta de pago.
+            </p>
+          </div>
+        )}
+
         <div className="mt-5 rounded-3xl bg-sky-50 p-5 text-sky-800 ring-1 ring-sky-100">
           <div className="flex items-start gap-3">
             <ShieldCheck size={22} />
             <div>
               <h2 className="font-black">Instrucciones</h2>
               <p className="mt-1 text-sm font-bold leading-6">
-                Paga por Yape, Plin o transferencia y coloca el código de pago en la descripción.
+                {data.datos_cobro?.instrucciones ||
+                  'Realiza el pago por Yape, Plin o transferencia y coloca el código de pago en la descripción.'}
               </p>
               <p className="mt-2 text-sm font-black">Código: {data.referencia_pago}</p>
             </div>

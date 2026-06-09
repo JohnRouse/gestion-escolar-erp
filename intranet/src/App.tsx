@@ -26,6 +26,7 @@ import ValidarPagosPage from './pages/tesoreria/ValidarPagosPage';
 import CobranzasPage from './pages/tesoreria/CobranzasPage';
 import PagosRecibidosPage from './pages/tesoreria/PagosRecibidosPage';
 import PagoPublicoPage from './pages/publico/PagoPublicoPage';
+import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 
 
 function AppRoutes() {
@@ -58,6 +59,7 @@ function AppRoutes() {
 <Route path="/matricula" element={<MatriculaPage />} />
 <Route path="/tesoreria" element={<TesoreriaPage />} />
 <Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
+<Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
 <Route path="/asistencia" element={<AsistenciaPage />} />
 <Route path="/notas" element={<NotasPage />} />
 <Route path="/circulares" element={<CircularesPage />} />

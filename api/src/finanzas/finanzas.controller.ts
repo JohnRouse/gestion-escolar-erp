@@ -403,7 +403,46 @@ export class FinanzasController {
     });
   }
 
-    // ── CONCEPTOS ────────────────────────────────────────
+  // ── RUTA PÚBLICA PARA LINK DE PAGO ──
+  @Get('public/pagos/:referencia')
+  @UseGuards()
+  async obtenerPagoPublicoPorReferencia(@Param('referencia') referencia: string) {
+    return this.finanzasService.obtenerPagoPublicoPorReferencia(referencia);
+  }
+
+  // ── RUTAS PARA DATOS DE COBRO DEL COLEGIO ──
+  @Get('datos-cobro')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async obtenerDatosCobroColegio(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.obtenerDatosCobroColegio({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Put('datos-cobro')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async guardarDatosCobroColegio(
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.guardarDatosCobroColegio(body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  // ── CONCEPTOS ────────────────────────────────────────
   @Get('conceptos')
   @Roles('Admin', 'Director', 'Secretaria')
   async getConceptos(
