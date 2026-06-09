@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Param,
   Body,
   UseGuards,
@@ -320,6 +321,64 @@ export class FinanzasController {
     @Query('colegio_id') colegioId?: string,
   ) {
     return this.finanzasService.aplicarPagoRecibido(Number(id), body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
+  // ── NUEVAS RUTAS: LISTAR, IDENTIFICAR Y CAMBIAR ESTADO DE PAGOS RECIBIDOS ──
+  @Get('pagos-recibidos')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarPagosRecibidos(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('q') q?: string,
+    @Query('estado') estado?: string,
+    @Query('medio') medio?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.finanzasService.listarPagosRecibidos({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      q,
+      estado,
+      medio,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Patch('pagos-recibidos/:id/identificar')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async identificarPagoRecibido(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.identificarPagoRecibido(Number(id), body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
+  @Patch('pagos-recibidos/:id/estado')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async actualizarEstadoPagoRecibido(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.actualizarEstadoPagoRecibido(Number(id), body, {
       userId: req.user.userId,
       rol: req.user.rol,
       scope: scope || body.scope,

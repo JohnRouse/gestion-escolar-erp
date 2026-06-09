@@ -136,9 +136,13 @@ export default function CobranzasPage() {
   };
 
   useEffect(() => {
-    fetchDeudas();
+    const timer = window.setTimeout(() => {
+      fetchDeudas();
+    }, 450);
+
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, estado]);
+  }, [token, queryString, estado, q]);
 
   const copiarMensaje = async (deuda: DeudaPendiente) => {
     await navigator.clipboard.writeText(buildMensaje(deuda));
@@ -191,14 +195,18 @@ export default function CobranzasPage() {
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-            Deudas pendientes
+            {estado === 'Pagado'
+              ? 'Pagos encontrados'
+              : estado === 'Todos'
+                ? 'Registros encontrados'
+                : 'Deudas pendientes'}
           </p>
           <p className="mt-2 text-3xl font-black text-slate-950">{deudas.length}</p>
         </div>
 
         <div className="rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-            Monto pendiente
+            {estado === 'Pagado' ? 'Monto pagado' : 'Monto pendiente'}
           </p>
           <p className="mt-2 text-3xl font-black text-slate-950">
             {formatMoney(totalPendiente)}
@@ -233,8 +241,7 @@ export default function CobranzasPage() {
             className={inputClass}
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && fetchDeudas()}
-            placeholder="Alumno, DNI, matrícula o código de pago"
+            placeholder="Escribe alumno, DNI, matrícula o código de pago"
           />
 
           <select
@@ -243,8 +250,10 @@ export default function CobranzasPage() {
             onChange={(event) => setEstado(event.target.value)}
           >
             <option value="">Pendiente y parcial</option>
+            <option value="Todos">Todos</option>
             <option value="Pendiente">Solo pendiente</option>
             <option value="Parcial">Solo parcial</option>
+            <option value="Pagado">Pagados</option>
           </select>
 
           <button
@@ -274,7 +283,7 @@ export default function CobranzasPage() {
           <div className="rounded-[30px] bg-white p-8 text-center shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
             <CheckCircle2 className="mx-auto text-emerald-600" size={32} />
             <p className="mt-3 text-sm font-black text-slate-700">
-              No hay deudas pendientes con esos filtros.
+              No hay registros con esos filtros.
             </p>
           </div>
         ) : (

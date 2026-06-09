@@ -148,24 +148,48 @@ export default function TesoreriaPage() {
       });
 
       const matriculas = alumnoRes.data.estudiantes?.[0]?.matriculas || [];
-      const matriculaActiva = matriculas.find((m: any) => {
-        if (m.estado_matricula !== 'Activo') return false;
-        if (activeScope.tipo === 'colegio') return m.id_colegio === activeScope.id_colegio;
-        return true;
-      });
 
-      if (!matriculaActiva) {
+      const matriculasFiltradas = matriculas
+        .filter((m: any) => {
+          if (activeScope.tipo === 'colegio') return m.id_colegio === activeScope.id_colegio;
+          return true;
+        })
+        .sort((a: any, b: any) => {
+          const getYear = (m: any) => {
+            const fromName = String(m.anio?.nombre_anio || '').match(/\d{4}/)?.[0];
+            if (fromName) return Number(fromName);
+            if (m.anio?.fecha_inicio) return new Date(m.anio.fecha_inicio).getFullYear();
+            return 0;
+          };
+
+          const prioridad: Record<string, number> = {
+            Activo: 5,
+            'Pre-matriculado': 4,
+            Reserva: 3,
+            Pendiente: 2,
+          };
+
+          return (
+            (prioridad[b.estado_matricula] || 0) - (prioridad[a.estado_matricula] || 0) ||
+            getYear(b) - getYear(a) ||
+            Number(b.id_matricula || 0) - Number(a.id_matricula || 0)
+          );
+        });
+
+      const matriculaSeleccionada = matriculasFiltradas[0];
+
+      if (!matriculaSeleccionada) {
         alert(
           activeScope.tipo === 'colegio'
-            ? `No se encontró matrícula activa para ${activeColegio?.nombre || 'este colegio'}.`
-            : 'No tiene matrícula activa.',
+            ? `No se encontró matrícula para ${activeColegio?.nombre || 'este colegio'}.`
+            : 'No se encontraron matrículas para este alumno.',
         );
         setEstado(null);
         return;
       }
 
       const res = await axios.get(
-        `/api/tesoreria/estado-cuenta/${matriculaActiva.id_matricula}${queryString}`,
+        `/api/tesoreria/estado-cuenta/${matriculaSeleccionada.id_matricula}${queryString}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setEstado(res.data);

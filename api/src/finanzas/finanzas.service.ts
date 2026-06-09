@@ -1930,4 +1930,194 @@ export class FinanzasService {
       return { message: `Pago aplicado correctamente. Estado de deuda: ${nuevoEstado}.`, pago_recibido: actualizado, estado_pago: nuevoEstado };
     });
   }
+
+  // ── NUEVOS MÉTODOS PARA GESTIÓN DE PAGOS RECIBIDOS ──
+
+  async listarPagosRecibidos(params: ScopeParams & {
+    q?: string;
+    estado?: string;
+    medio?: string;
+    limit?: number;
+  }) {
+    const scope = await this.resolveScope(params);
+    const q = this.normalizeEmpty(params.q);
+    const limit = Math.min(Number(params.limit || 100), 300);
+
+    const where: any = {
+      OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
+    };
+
+    if (params.estado && params.estado !== 'Todos') where.estado = params.estado;
+    if (params.medio && params.medio !== 'Todos') where.medio_pago = params.medio;
+
+    if (q) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { referencia_escrita: { contains: q } },
+            { numero_operacion: { contains: q } },
+            { nombre_pagador: { contains: q } },
+            { telefono_pagador: { contains: q } },
+            { cronograma: { referencia_pago: { contains: q } } },
+            { matricula: { codigo_matricula: { contains: q } } },
+            {
+              estudiante: {
+                persona: {
+                  OR: [
+                    { dni: { contains: q } },
+                    { nombres: { contains: q } },
+                    { apellido_paterno: { contains: q } },
+                    { apellido_materno: { contains: q } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    return this.prisma.pagoRecibido.findMany({
+      where,
+      include: {
+        colegio: true,
+        cronograma: { include: { concepto: true } },
+        matricula: {
+          include: {
+            colegio: true,
+            anio: true,
+            seccion: { include: { grado: { include: { nivel: true } } } },
+          },
+        },
+        estudiante: { include: { persona: true } },
+        apoderado: { include: { persona: true } },
+        registrado_por: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: { select: { nombres: true, apellido_paterno: true } },
+          },
+        },
+        validado_por: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: { select: { nombres: true, apellido_paterno: true } },
+          },
+        },
+      },
+      orderBy: [{ created_at: 'desc' }, { id_pago_recibido: 'desc' }],
+      take: limit,
+    });
+  }
+
+  async identificarPagoRecibido(idPagoRecibido: number, body: any, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+    const referencia = this.normalizeEmpty(body.referencia_pago || body.referencia_escrita);
+
+    if (!referencia) {
+      throw new BadRequestException('Ingresa el código de pago para identificar este pago recibido.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const pagoRecibido = await tx.pagoRecibido.findFirst({
+        where: {
+          id_pago_recibido: idPagoRecibido,
+          OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
+        },
+      });
+
+      if (!pagoRecibido) throw new NotFoundException('No se encontró el pago recibido.');
+      if (pagoRecibido.estado === 'Aplicado') {
+        throw new BadRequestException('Este pago ya fue aplicado y no puede modificarse.');
+      }
+
+      const cronograma = await tx.cronogramaPagos.findFirst({
+        where: {
+          referencia_pago: referencia,
+          matricula: { id_colegio: { in: scope.colegioIds } },
+        },
+        include: {
+          concepto: true,
+          pagos: true,
+          matricula: {
+            include: { estudiante: { include: { apoderados: true } } },
+          },
+        },
+      });
+
+      if (!cronograma) throw new NotFoundException('No se encontró una deuda con ese código de pago.');
+
+      const idApoderado =
+        body.id_apoderado ||
+        pagoRecibido.id_apoderado ||
+        cronograma.matricula.estudiante.apoderados?.[0]?.id_apoderado ||
+        null;
+
+      const actualizado = await tx.pagoRecibido.update({
+        where: { id_pago_recibido: idPagoRecibido },
+        data: {
+          estado: 'Identificado',
+          referencia_escrita: referencia,
+          id_cronograma: cronograma.id_cronograma,
+          id_matricula: cronograma.matricula.id_matricula,
+          id_estudiante: cronograma.matricula.id_estudiante,
+          id_apoderado: idApoderado,
+          observacion: this.normalizeEmpty(body.observacion) || pagoRecibido.observacion,
+        },
+        include: {
+          cronograma: { include: { concepto: true } },
+          matricula: true,
+          estudiante: { include: { persona: true } },
+          apoderado: { include: { persona: true } },
+        },
+      });
+
+      return { message: 'Pago identificado correctamente. Ahora puedes confirmarlo.', pago: actualizado };
+    });
+  }
+
+  async actualizarEstadoPagoRecibido(
+  idPagoRecibido: number,
+  body: any,
+  params: ScopeParams,
+) {
+  const scope = await this.resolveScope(params);
+  const estado = this.normalizeEmpty(body.estado) || '';
+
+  if (!['Pendiente', 'Identificado', 'Observado', 'Rechazado'].includes(estado)) {
+    throw new BadRequestException('Estado no válido para el pago recibido.');
+  }
+
+  const pago = await this.prisma.pagoRecibido.findFirst({
+    where: {
+      id_pago_recibido: idPagoRecibido,
+      OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
+    },
+  });
+
+  if (!pago) {
+    throw new NotFoundException('No se encontró el pago recibido.');
+  }
+
+  if (pago.estado === 'Aplicado') {
+    throw new BadRequestException(
+      'Un pago aplicado no puede cambiarse desde esta opción.',
+    );
+  }
+
+  const actualizado = await this.prisma.pagoRecibido.update({
+    where: { id_pago_recibido: idPagoRecibido },
+    data: {
+      estado,
+      observacion: this.normalizeEmpty(body.observacion) || pago.observacion,
+    },
+  });
+
+  return {
+    message: `Pago marcado como ${estado}.`,
+    pago: actualizado,
+  };
+}
 }

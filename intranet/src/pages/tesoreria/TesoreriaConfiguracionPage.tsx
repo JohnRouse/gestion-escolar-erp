@@ -98,6 +98,28 @@ function estadoClass(estado?: string) {
   return 'bg-slate-50 text-slate-600 ring-slate-100';
 }
 
+function GuideCard({
+  step,
+  title,
+  description,
+}: {
+  step: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-accent-600">
+        Paso {step}
+      </p>
+      <h3 className="mt-1 text-sm font-black text-slate-900">{title}</h3>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function Card({
   title,
   description,
@@ -334,13 +356,32 @@ export default function TesoreriaConfiguracionPage() {
       <PageHeader
         eyebrow="Tesorería"
         title="Configuración de pensiones"
-        description={`Administra cronogramas base, campañas y publicación mensual para ${scopeLabel.toLowerCase()}.`}
+        description={`Define las pensiones del año, crea descuentos y activa los cobros del mes para ${scopeLabel.toLowerCase()}.`}
         icon={WalletCards}
         meta={[
           { label: 'Contexto activo', value: scopeLabel },
           { label: 'Estado', value: loading ? 'Cargando...' : 'Listo' },
         ]}
       />
+
+      {/* Guía visual de tres pasos */}
+      <section className="grid gap-3 md:grid-cols-3">
+        <GuideCard
+          step={1}
+          title="Crear pensiones del año"
+          description="Define los meses, montos y fechas de vencimiento para el año escolar."
+        />
+        <GuideCard
+          step={2}
+          title="Crear descuentos o campañas"
+          description="Úsalo para matrícula anticipada, promociones o descuentos especiales."
+        />
+        <GuideCard
+          step={3}
+          title="Activar cobros del mes"
+          description="Cuando llegue el mes, publica la pensión para que aparezca como deuda."
+        />
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card

@@ -108,6 +108,9 @@ export default function ValidarPagosPage() {
   const [pagoRecibido, setPagoRecibido] = useState<any | null>(null);
   const [modoSinCodigo, setModoSinCodigo] = useState(false);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+
   const [form, setForm] = useState({
     medio_pago: 'Yape',
     monto_recibido: '',
@@ -204,6 +207,10 @@ export default function ValidarPagosPage() {
 
       setPagoRecibido(res.data?.pago || res.data);
 
+      if (deuda) {
+        setConfirmOpen(true);
+      }
+
       showToast({
         type: 'success',
         title: deuda ? 'Pago recibido registrado' : 'Pago no identificado registrado',
@@ -228,6 +235,7 @@ export default function ValidarPagosPage() {
     if (!token || !pagoRecibido?.id_pago_recibido || !deuda?.id_cronograma) return;
 
     setAplicando(true);
+    setConfirmando(true);
 
     try {
       const res = await axios.post(
@@ -247,6 +255,7 @@ export default function ValidarPagosPage() {
 
       await buscar();
       setPagoRecibido(null);
+      setConfirmOpen(false);
     } catch (error: any) {
       showToast({
         type: 'error',
@@ -255,6 +264,7 @@ export default function ValidarPagosPage() {
       });
     } finally {
       setAplicando(false);
+      setConfirmando(false);
     }
   };
 
@@ -518,32 +528,87 @@ export default function ValidarPagosPage() {
         </section>
       )}
 
-      {deuda && (
-        <section className="rounded-[30px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-100/80">
-          <StepHeader
-            step={3}
-            title="Confirma el pago"
-            description="Al confirmar, la deuda del alumno quedará pagada o parcialmente pagada."
-            done={deuda.estado_pago === 'Pagado'}
-            warning={Boolean(!pagoRecibido && deuda.estado_pago !== 'Pagado')}
-          />
+      {/* Modal de confirmación */}
+      {confirmOpen && deuda && pagoRecibido && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg animate-modal-pop rounded-[30px] bg-white p-6 shadow-2xl shadow-slate-950/20">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-slate-950">Confirmar pago</h2>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                  Revisa los datos antes de marcar la deuda como pagada o parcialmente pagada.
+                </p>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={aplicarPago}
-            disabled={aplicando || !pagoRecibido || deuda.estado_pago === 'Pagado'}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {aplicando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            Confirmar y aplicar pago
-          </button>
+            <div className="mt-5 grid gap-3">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  Alumno
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-900">{alumnoNombre}</p>
+              </div>
 
-          {!pagoRecibido && deuda.estado_pago !== 'Pagado' && (
-            <p className="mt-3 text-xs font-bold leading-5 text-slate-400">
-              Primero registra el pago recibido del paso 2.
-            </p>
-          )}
-        </section>
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  Concepto
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-900">
+                  {deuda.concepto?.nombre_concepto || 'Pago pendiente'}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700 ring-1 ring-emerald-100">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+                    Monto recibido
+                  </p>
+                  <p className="mt-1 text-lg font-black">S/ {Number(form.monto_recibido || 0).toFixed(2)}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                    Medio
+                  </p>
+                  <p className="mt-1 text-lg font-black text-slate-900">{form.medio_pago}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  Operación / pagador
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-900">
+                  {form.numero_operacion || 'Sin operación'} · {form.nombre_pagador || 'Sin nombre'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                disabled={confirmando}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-50"
+              >
+                Revisar otra vez
+              </button>
+
+              <button
+                type="button"
+                onClick={aplicarPago}
+                disabled={confirmando}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {confirmando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                Confirmar pago
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
