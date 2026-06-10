@@ -25,12 +25,19 @@ type ConsultaResponse = {
   colegio: any;
   alumno: any;
   resumen: {
-    total_pendiente: number;
-    cantidad_pendiente: number;
+    total_por_pagar?: number;
+    total_pendiente_programado?: number;
+    total_pendiente?: number; // fallback
+    cantidad_por_pagar?: number;
+    cantidad_proximos?: number;
+    cantidad_pagados?: number;
     cantidad_total: number;
   };
   matriculas: any[];
   pagos: any[];
+  pagos_para_pagar?: any[];
+  proximos_pagos?: any[];
+  pagos_cubiertos?: any[];
   datos_cobro: any | null;
   instrucciones: { mensaje: string };
 };
@@ -71,13 +78,18 @@ export default function ConsultaPagosPublicaPage() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
 
-  const pagosPendientes = useMemo(
-    () => (data?.pagos || []).filter((pago) => pago.requiere_pago),
+  const pagosPorPagar = useMemo(
+    () => data?.pagos_para_pagar || (data?.pagos || []).filter((pago) => pago.requiere_pago),
+    [data],
+  );
+
+  const proximosPagos = useMemo(
+    () => data?.proximos_pagos || [],
     [data],
   );
 
   const pagosPagados = useMemo(
-    () => (data?.pagos || []).filter((pago) => !pago.requiere_pago),
+    () => data?.pagos_cubiertos || (data?.pagos || []).filter((pago) => !pago.requiere_pago),
     [data],
   );
 
@@ -237,34 +249,35 @@ export default function ConsultaPagosPublicaPage() {
 
                   <div className="rounded-3xl bg-rose-50 p-5 text-rose-800 ring-1 ring-rose-100">
                     <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
-                      Total pendiente
+                      Por pagar ahora
                     </p>
                     <p className="mt-1 text-3xl font-black">
-                      {formatMoney(data.resumen.total_pendiente)}
+                      {formatMoney(data.resumen.total_por_pagar ?? data.resumen.total_pendiente)}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <Mini label="Pendientes" value={String(data.resumen.cantidad_pendiente)} />
+                <div className="mt-5 grid gap-3 grid-cols-2 md:grid-cols-4">
+                  <Mini label="Por pagar ahora" value={String(data.resumen.cantidad_por_pagar ?? data.resumen.cantidad_pendiente)} />
+                  <Mini label="Próximos pagos" value={String(data.resumen.cantidad_proximos || 0)} />
                   <Mini label="Pagos visibles" value={String(data.resumen.cantidad_total)} />
                   <Mini label="Matrículas" value={String(data.matriculas.length)} />
                 </div>
               </div>
 
               <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-                <h2 className="text-lg font-black text-slate-950">Pagos pendientes</h2>
+                <h2 className="text-lg font-black text-slate-950">Por pagar ahora</h2>
                 <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
                   Copia el código del concepto que vas a pagar y colócalo en la descripción.
                 </p>
 
                 <div className="mt-5 space-y-3">
-                  {pagosPendientes.length === 0 ? (
+                  {pagosPorPagar.length === 0 ? (
                     <div className="rounded-3xl bg-emerald-50 p-5 text-emerald-800 ring-1 ring-emerald-100">
                       <div className="flex items-start gap-3">
                         <CheckCircle2 size={22} />
                         <div>
-                          <p className="font-black">No tienes pagos pendientes.</p>
+                          <p className="font-black">No tienes pagos vencidos ni pagos del mes actual.</p>
                           <p className="mt-1 text-sm font-bold leading-6">
                             Los conceptos visibles figuran pagados o sin saldo pendiente.
                           </p>
@@ -272,12 +285,51 @@ export default function ConsultaPagosPublicaPage() {
                       </div>
                     </div>
                   ) : (
-                    pagosPendientes.map((pago) => (
+                    pagosPorPagar.map((pago) => (
                       <PagoCard key={pago.id_cronograma} pago={pago} onCopy={copy} copied={copied} />
                     ))
                   )}
                 </div>
               </div>
+
+              {proximosPagos.length > 0 && (
+                <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+                  <h2 className="text-lg font-black text-slate-950">Próximos pagos publicados</h2>
+                  <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
+                    Estos conceptos aún no vencen. Se muestran para que puedas planificar, pero no se consideran dentro de “Por pagar ahora”.
+                  </p>
+
+                  <div className="mt-5 space-y-3">
+                    {proximosPagos.map((pago) => (
+                      <article key={pago.id_cronograma} className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-black text-slate-950">{pago.concepto}</h3>
+                              <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700 ring-1 ring-sky-100">
+                                Próximo
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm font-bold text-slate-500">
+                              {pago.matricula?.anio} · {pago.matricula?.aula || 'Aula no indicada'} · Vence {formatDate(pago.fecha_vencimiento)}
+                            </p>
+                            <p className="mt-2 text-xl font-black text-slate-700">{formatMoney(pago.saldo)}</p>
+                          </div>
+
+                          <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                              Código de pago
+                            </p>
+                            <p className="mt-1 break-all text-sm font-black text-slate-950">
+                              {pago.referencia_pago || 'Sin código'}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {pagosPagados.length > 0 && (
                 <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
@@ -483,6 +535,36 @@ function DatosCobroCard({
                   className="mt-1 block text-left text-sm font-black"
                 >
                   CCI: {datos.cci_1} {copied === 'cci' ? '· Copiado' : ''}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(datos.banco_2 || datos.cuenta_2 || datos.cci_2) && (
+        <div className="mt-4 rounded-3xl bg-indigo-50 p-4 text-indigo-800 ring-1 ring-indigo-100">
+          <div className="flex items-start gap-3">
+            <Banknote size={20} />
+            <div>
+              <h3 className="font-black">Segunda cuenta</h3>
+              {datos.banco_2 && <p className="mt-1 text-sm font-bold">Banco: {datos.banco_2}</p>}
+              {datos.cuenta_2 && (
+                <button
+                  type="button"
+                  onClick={() => onCopy(datos.cuenta_2, 'cuenta2')}
+                  className="mt-1 block text-left text-sm font-black"
+                >
+                  Cuenta: {datos.cuenta_2} {copied === 'cuenta2' ? '· Copiado' : ''}
+                </button>
+              )}
+              {datos.cci_2 && (
+                <button
+                  type="button"
+                  onClick={() => onCopy(datos.cci_2, 'cci2')}
+                  className="mt-1 block text-left text-sm font-black"
+                >
+                  CCI: {datos.cci_2} {copied === 'cci2' ? '· Copiado' : ''}
                 </button>
               )}
             </div>

@@ -184,6 +184,26 @@ export default function PagoPublicoPage() {
                 </div>
               </div>
             )}
+
+            {(data.datos_cobro.banco_2 || data.datos_cobro.cuenta_2 || data.datos_cobro.cci_2) && (
+              <div className="mt-4 rounded-2xl bg-indigo-50 p-4 text-indigo-800 ring-1 ring-indigo-100">
+                <div className="flex items-start gap-3">
+                  <Banknote size={20} />
+                  <div>
+                    <h2 className="font-black">Segunda cuenta bancaria</h2>
+                    {data.datos_cobro.banco_2 && (
+                      <p className="mt-1 text-sm font-bold">Banco: {data.datos_cobro.banco_2}</p>
+                    )}
+                    {data.datos_cobro.cuenta_2 && (
+                      <p className="mt-1 text-sm font-black">Cuenta: {data.datos_cobro.cuenta_2}</p>
+                    )}
+                    {data.datos_cobro.cci_2 && (
+                      <p className="mt-1 text-sm font-black">CCI: {data.datos_cobro.cci_2}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-5 rounded-3xl bg-amber-50 p-5 text-amber-800 ring-1 ring-amber-100">

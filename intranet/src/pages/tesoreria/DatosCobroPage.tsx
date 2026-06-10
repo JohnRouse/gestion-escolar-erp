@@ -261,6 +261,17 @@ export default function DatosCobroPage() {
               </div>
             )}
 
+            {(form.banco_2 || form.cuenta_2 || form.cci_2) && (
+              <div className="mt-3 rounded-3xl bg-indigo-50 p-4 text-indigo-800 ring-1 ring-indigo-100">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] opacity-70">
+                  Segunda cuenta
+                </p>
+                <p className="mt-2 text-sm font-black">{form.banco_2 || 'Banco'}</p>
+                {form.cuenta_2 && <p className="mt-1 text-sm font-bold">Cuenta: {form.cuenta_2}</p>}
+                {form.cci_2 && <p className="mt-1 text-sm font-bold">CCI: {form.cci_2}</p>}
+              </div>
+            )}
+
             <div className="mt-4 rounded-3xl bg-amber-50 p-4 text-amber-800 ring-1 ring-amber-100">
               <p className="text-sm font-black">Instrucción</p>
               <p className="mt-1 text-sm font-bold leading-6">

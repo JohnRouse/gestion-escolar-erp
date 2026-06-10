@@ -2570,16 +2570,53 @@ export class FinanzasService {
         return a.requiere_pago ? -1 : 1;
       }
 
-      const fa = a.fecha_vencimiento ? new Date(a.fecha_vencimiento).getTime() : 0;
-      const fb = b.fecha_vencimiento ? new Date(b.fecha_vencimiento).getTime() : 0;
+      const fa = a.fecha_vencimiento
+        ? new Date(a.fecha_vencimiento).getTime()
+        : 0;
+      const fb = b.fecha_vencimiento
+        ? new Date(b.fecha_vencimiento).getTime()
+        : 0;
+
       return fa - fb;
     });
 
-    const pendientes = pagosOrdenados.filter((pago) => pago.requiere_pago);
-    const totalPendiente = pendientes.reduce(
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const finMesActual = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    const pagosParaPagar = pagosOrdenados.filter((pago) => {
+      if (!pago.requiere_pago) return false;
+      if (!pago.fecha_vencimiento) return true;
+      const vencimiento = new Date(pago.fecha_vencimiento);
+      return vencimiento <= finMesActual;
+    });
+
+    const proximosPagos = pagosOrdenados.filter((pago) => {
+      if (!pago.requiere_pago) return false;
+      if (!pago.fecha_vencimiento) return false;
+      const vencimiento = new Date(pago.fecha_vencimiento);
+      return vencimiento > finMesActual;
+    });
+
+    const pagosCubiertos = pagosOrdenados.filter((pago) => !pago.requiere_pago);
+
+    const totalPorPagar = pagosParaPagar.reduce(
       (sum, pago) => sum + Number(pago.saldo || 0),
       0,
     );
+
+    const totalPendienteProgramado = pagosOrdenados
+      .filter((pago) => pago.requiere_pago)
+      .reduce((sum, pago) => sum + Number(pago.saldo || 0), 0);
 
     const datosCobro = colegio.datos_cobro;
     const datosCobroPublicos =
@@ -2615,8 +2652,11 @@ export class FinanzasService {
         apellido_materno: alumno.apellido_materno,
       },
       resumen: {
-        total_pendiente: totalPendiente,
-        cantidad_pendiente: pendientes.length,
+        total_por_pagar: totalPorPagar,
+        total_pendiente_programado: totalPendienteProgramado,
+        cantidad_por_pagar: pagosParaPagar.length,
+        cantidad_proximos: proximosPagos.length,
+        cantidad_pagados: pagosCubiertos.length,
         cantidad_total: pagosOrdenados.length,
       },
       matriculas: matriculas.map((matricula) => ({
@@ -2630,6 +2670,9 @@ export class FinanzasService {
         nivel: matricula.seccion?.grado?.nivel?.nombre_nivel || null,
       })),
       pagos: pagosOrdenados,
+      pagos_para_pagar: pagosParaPagar,
+      proximos_pagos: proximosPagos,
+      pagos_cubiertos: pagosCubiertos,
       datos_cobro: datosCobroPublicos,
       instrucciones: {
         mensaje:
