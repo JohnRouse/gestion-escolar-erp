@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
   ArrowLeft,
@@ -10,6 +10,17 @@ import {
   Search,
   Users,
   X,
+  GraduationCap,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Clock,
+  CreditCard,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Banknote,
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +28,7 @@ import { useSchool } from '../../contexts/SchoolContext';
 import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../contexts/ToastContext';
 
+// ─── Interfaces ──────────────────────────────────────────
 interface CodigoColegio {
   id_estudiante: number;
   id_colegio: number;
@@ -82,6 +94,7 @@ interface MatriculaItem {
   } | null;
 }
 
+// ─── Helpers ─────────────────────────────────────────────
 const formatFechaHora = (value: string) =>
   new Date(value).toLocaleString('es-PE', {
     day: '2-digit',
@@ -101,49 +114,115 @@ const getCodigoAlumnoDetalle = (detalle: any) => {
   const codigoColegio = detalle?.estudiante?.codigos_colegio?.find(
     (item: CodigoColegio) => item.id_colegio === detalle?.id_colegio,
   );
-
   return codigoColegio?.codigo || detalle?.estudiante?.codigo_estudiante || 'Sin código';
 };
 
 const formatMoney = (value: number | string | null | undefined) =>
   `S/ ${Number(value || 0).toFixed(2)}`;
 
-const Label = ({ children }: { children: string }) => (
-  <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+// ─── Badge de estado con color semántico ─────────────────
+const EstadoBadge = ({ estado }: { estado: string }) => {
+  const config: Record<string, { bg: string; text: string; icon: any }> = {
+    Activo: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: CheckCircle2 },
+    'Pre-matriculado': { bg: 'bg-blue-50', text: 'text-blue-700', icon: Clock },
+    Inactivo: { bg: 'bg-neutral-100', text: 'text-neutral-500', icon: XCircle },
+    Anulado: { bg: 'bg-red-50', text: 'text-red-600', icon: XCircle },
+    Retirado: { bg: 'bg-neutral-100', text: 'text-neutral-500', icon: XCircle },
+    Reserva: { bg: 'bg-amber-50', text: 'text-amber-700', icon: Clock },
+  };
+  const c = config[estado] || { bg: 'bg-neutral-100', text: 'text-neutral-600', icon: Clock };
+  const Icon = c.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
+      <Icon size={12} />
+      {estado}
+    </span>
+  );
+};
+
+const RevisionBadge = ({ estado }: { estado: string }) => {
+  const config: Record<string, { bg: string; text: string; icon: any }> = {
+    Aprobado: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: CheckCircle2 },
+    'Por revisar': { bg: 'bg-amber-50', text: 'text-amber-700', icon: Clock },
+    Observado: { bg: 'bg-orange-50', text: 'text-orange-700', icon: AlertTriangle },
+    Rechazado: { bg: 'bg-red-50', text: 'text-red-600', icon: XCircle },
+  };
+  const c = config[estado] || config['Por revisar'];
+  const Icon = c.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
+      <Icon size={12} />
+      {estado || 'Por revisar'}
+    </span>
+  );
+};
+
+// ─── Componentes UI ──────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
     {children}
   </span>
 );
 
-const DetailBox = ({
+const DetailCard = ({
   label,
   value,
-  white = false,
+  icon: Icon,
 }: {
   label: string;
   value: string;
-  white?: boolean;
+  icon?: any;
 }) => (
-  <div
-    className={`rounded-2xl p-4 ring-1 ring-slate-100 ${
-      white ? 'bg-white' : 'bg-slate-50'
-    }`}
-  >
-    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+  <div className="rounded-2xl bg-white p-4 ring-1 ring-neutral-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+    <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
       {label}
     </p>
-    <p className="mt-2 text-sm font-black text-slate-900">{value}</p>
+    <p className="mt-2 text-sm font-semibold text-neutral-900 flex items-center gap-2">
+      {Icon && <Icon size={14} className="text-neutral-400 flex-shrink-0" />}
+      {value}
+    </p>
   </div>
 );
 
-const Info = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-      {label}
-    </p>
-    <p className="mt-2 text-sm font-black text-slate-900">{value}</p>
+const ModalSection = ({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: any;
+  children: React.ReactNode;
+}) => (
+  <div className="rounded-2xl bg-neutral-50 p-5 ring-1 ring-neutral-200/60">
+    <h4 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+      <Icon size={16} className="text-[#CCF32F]" />
+      {title}
+    </h4>
+    <div className="mt-4">{children}</div>
   </div>
 );
 
+// ─── Estados finales ─────────────────────────────────────
+const estadosMatriculaFinales = [
+  'Anulado', 'Retirado', 'No continúa', 'Finalizado', 'Promocionado', 'Egresado',
+];
+const estadosRevisionFinales = ['Rechazado'];
+
+const esMatriculaFinal = (detalle: any) => {
+  if (!detalle) return false;
+  return (
+    estadosMatriculaFinales.includes(String(detalle.estado_matricula || '')) ||
+    estadosRevisionFinales.includes(String(detalle.estado_revision || ''))
+  );
+};
+
+const mensajeMatriculaFinal = (detalle: any) => {
+  const estado = detalle?.estado_matricula || '—';
+  const revision = detalle?.estado_revision || '—';
+  return `Esta matrícula está cerrada. Estado: ${estado}. Revisión: ${revision}. No se puede aprobar, cobrar ni activar desde este modal.`;
+};
+
+// ═══════════════════════════════════════════════════════════
 export default function MatriculasHistorialPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
@@ -151,6 +230,7 @@ export default function MatriculasHistorialPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
+  // ─── States ────────────────────────────────────────────
   const [data, setData] = useState<MatriculaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
@@ -160,24 +240,19 @@ export default function MatriculasHistorialPage() {
   const [estado, setEstado] = useState('Todos');
   const [estadoRevision, setEstadoRevision] = useState('Todos');
   const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
+  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const [revisionEstado, setRevisionEstado] = useState('Aprobado');
   const [revisionObservacion, setRevisionObservacion] = useState('');
   const [savingRevision, setSavingRevision] = useState(false);
   const [mensajeRevision, setMensajeRevision] = useState<string | null>(null);
 
-  // ─── NUEVOS ESTADOS DE PAGO Y ACTIVACIÓN ──────────────
   const [pagoApoderadoId, setPagoApoderadoId] = useState('');
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
@@ -187,10 +262,9 @@ export default function MatriculasHistorialPage() {
 
   const [autoOpenedMatriculaId, setAutoOpenedMatriculaId] = useState<number | null>(null);
 
-  // ─── HELPERS PARA BLOQUEAR PENSIONES ───────────────────
+  // ─── Computed ──────────────────────────────────────────
   const cronogramaMatriculaDetalle = useMemo(() => {
     if (!detalleMatricula?.cronogramas?.length) return null;
-
     return (
       detalleMatricula.cronogramas.find(
         (item: any) => item.concepto?.tipo_concepto === 'MATRICULA',
@@ -200,20 +274,16 @@ export default function MatriculasHistorialPage() {
 
   const totalMatriculaDetalle = useMemo(() => {
     if (!cronogramaMatriculaDetalle) return 0;
-
     return Number(
       cronogramaMatriculaDetalle.monto_programado ??
-        cronogramaMatriculaDetalle.concepto?.monto_base ??
-        0,
+        cronogramaMatriculaDetalle.concepto?.monto_base ?? 0,
     );
   }, [cronogramaMatriculaDetalle]);
 
   const totalPagadoMatriculaDetalle = useMemo(() => {
     if (!cronogramaMatriculaDetalle?.pagos?.length) return 0;
-
     return cronogramaMatriculaDetalle.pagos.reduce(
-      (sum: number, pago: any) => sum + Number(pago.monto_pagado || 0),
-      0,
+      (sum: number, pago: any) => sum + Number(pago.monto_pagado || 0), 0,
     );
   }, [cronogramaMatriculaDetalle]);
 
@@ -222,9 +292,19 @@ export default function MatriculasHistorialPage() {
     (cronogramaMatriculaDetalle.estado_pago === 'Pagado' ||
       totalPagadoMatriculaDetalle + 0.01 >= totalMatriculaDetalle);
 
+  const cronogramaMatriculaTienePagos =
+    Boolean(cronogramaMatriculaDetalle?.pagos?.length) || totalPagadoMatriculaDetalle > 0;
+
+  const puedeAplicarPromocionMatricula =
+    Boolean(detalleMatricula) &&
+    Boolean(cronogramaMatriculaDetalle) &&
+    !cronogramaMatriculaTienePagos &&
+    cronogramaMatriculaDetalle?.estado_pago !== 'Pagado' &&
+    !esMatriculaFinal(detalleMatricula);
+
+  // ─── Params ────────────────────────────────────────────
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
-
     if (q.trim()) search.set('q', q.trim());
     if (desde) search.set('desde', desde);
     if (hasta) search.set('hasta', hasta);
@@ -233,35 +313,28 @@ export default function MatriculasHistorialPage() {
     if (estadoRevision !== 'Todos') search.set('estado_revision', estadoRevision);
     search.set('page', String(page));
     search.set('limit', '10');
-
     const query = search.toString();
     return query ? `?${query}` : '';
   }, [desde, estado, estadoRevision, hasta, page, q, queryString, registradoPor]);
 
   const detalleQueryString = useMemo(() => {
     const colegioIdUrl = searchParams.get('colegio_id');
-
-    if (colegioIdUrl) {
-      return `?colegio_id=${colegioIdUrl}`;
-    }
-
+    if (colegioIdUrl) return `?colegio_id=${colegioIdUrl}`;
     return queryString;
   }, [queryString, searchParams]);
 
+  // ─── Fetch ─────────────────────────────────────────────
   useEffect(() => {
     fetchMatriculas();
   }, [params, token]);
 
   const fetchMatriculas = async () => {
     if (!token) return;
-
     setLoading(true);
-
     try {
       const res = await axios.get(`/api/academicos/matriculas/buscar${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setData(res.data?.data || []);
       setMeta(res.data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 });
     } catch {
@@ -272,35 +345,24 @@ export default function MatriculasHistorialPage() {
   };
 
   const limpiarFiltros = () => {
-    setQ('');
-    setDesde('');
-    setHasta('');
-    setRegistradoPor('');
-    setEstado('Todos');
-    setEstadoRevision('Todos');
-    setPage(1);
+    setQ(''); setDesde(''); setHasta(''); setRegistradoPor('');
+    setEstado('Todos'); setEstadoRevision('Todos'); setPage(1);
   };
 
   const getCodigoAlumno = (matricula: MatriculaItem) => {
     const codigoColegio = matricula.estudiante.codigos_colegio?.find(
       (item) => item.id_colegio === matricula.id_colegio,
     );
-
     return codigoColegio?.codigo || matricula.estudiante.codigo_estudiante || 'Sin código';
   };
 
-  // ─── HELPERS DE PAGO ──────────────────────────────────
   const getCronogramaMatricula = (detalle: any) => {
     return (
       detalle?.cronogramas?.find((item: any) => {
         const tipo = item.concepto?.tipo_concepto;
-
         if (tipo) return tipo === 'MATRICULA';
-
         return String(item.concepto?.nombre_concepto || '')
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           .includes('matric');
       }) || null
     );
@@ -308,184 +370,75 @@ export default function MatriculasHistorialPage() {
 
   const getSaldoMatricula = (detalle: any) => {
     const cronograma = getCronogramaMatricula(detalle);
-
     if (!cronograma) return 0;
-
-    const montoBase = Number(
-      cronograma.monto_programado ??
-        cronograma.concepto?.monto_base ??
-        0,
-    );
+    const montoBase = Number(cronograma.monto_programado ?? cronograma.concepto?.monto_base ?? 0);
     const pagado = (cronograma.pagos || []).reduce(
-      (acc: number, pago: any) => acc + Number(pago.monto_pagado || 0),
-      0,
+      (acc: number, pago: any) => acc + Number(pago.monto_pagado || 0), 0,
     );
-
     return Math.max(montoBase - pagado, 0);
   };
 
-  // ─── HELPERS PARA MATRÍCULAS FINALES ──────────────────
-  const estadosMatriculaFinales = [
-    'Anulado',
-    'Retirado',
-    'No continúa',
-    'Finalizado',
-    'Promocionado',
-    'Egresado',
-  ];
-
-  const estadosRevisionFinales = ['Rechazado'];
-
-  const esMatriculaFinal = (detalle: any) => {
-    if (!detalle) return false;
-
-    return (
-      estadosMatriculaFinales.includes(String(detalle.estado_matricula || '')) ||
-      estadosRevisionFinales.includes(String(detalle.estado_revision || ''))
-    );
-  };
-
-  const mensajeMatriculaFinal = (detalle: any) => {
-    const estado = detalle?.estado_matricula || '—';
-    const revision = detalle?.estado_revision || '—';
-
-    return `Esta matrícula está cerrada. Estado: ${estado}. Revisión: ${revision}. No se puede aprobar, cobrar ni activar desde este modal.`;
-  };
-
-  // ─── HELPERS PARA BLOQUEAR PROMOCIÓN ──────────────────
-  const cronogramaMatriculaTienePagos =
-    Boolean(cronogramaMatriculaDetalle?.pagos?.length) ||
-    totalPagadoMatriculaDetalle > 0;
-
-  const puedeAplicarPromocionMatricula =
-    Boolean(detalleMatricula) &&
-    Boolean(cronogramaMatriculaDetalle) &&
-    !cronogramaMatriculaTienePagos &&
-    cronogramaMatriculaDetalle?.estado_pago !== 'Pagado' &&
-    !esMatriculaFinal(detalleMatricula);
-
-  // ─── GENERAR COBRO DE MATRÍCULA ──────────────────────
+  // ─── Acciones ──────────────────────────────────────────
   const generarCobroMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
-
     if (esMatriculaFinal(detalleMatricula)) {
       const message = mensajeMatriculaFinal(detalleMatricula);
       setMensajePago(message);
-      showToast({
-        type: 'warning',
-        title: 'Matrícula cerrada',
-        message,
-      });
+      showToast({ type: 'warning', title: 'Matrícula cerrada', message });
       return;
     }
-
-    setSavingPago(true);
-    setMensajePago(null);
-
+    setSavingPago(true); setMensajePago(null);
     try {
       const res = await axios.post(
         `/api/academicos/matriculas/${detalleMatricula.id_matricula}/generar-cobro-matricula${detalleQueryString}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        {}, { headers: { Authorization: `Bearer ${token}` } },
       );
-
       const detalleActualizado = res.data?.matricula || detalleMatricula;
       const saldo = getSaldoMatricula(detalleActualizado);
-
       setDetalleMatricula(detalleActualizado);
       setPagoMonto(saldo ? String(saldo.toFixed(2)) : '');
-
-      const successMessage =
-        res.data?.message || 'Cobro de matrícula generado correctamente.';
-
+      const successMessage = res.data?.message || 'Cobro de matrícula generado correctamente.';
       setMensajePago(successMessage);
-      showToast({
-        type: 'success',
-        title: 'Cobro generado',
-        message: successMessage,
-      });
-
+      showToast({ type: 'success', title: 'Cobro generado', message: successMessage });
       await fetchMatriculas();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'No se pudo generar el cobro de matrícula.';
-
+      const errorMessage = error.response?.data?.message || 'No se pudo generar el cobro de matrícula.';
       setMensajePago(errorMessage);
-      showToast({
-        type: 'error',
-        title: 'No se pudo generar cobro',
-        message: errorMessage,
-      });
-    } finally {
-      setSavingPago(false);
-    }
+      showToast({ type: 'error', title: 'No se pudo generar cobro', message: errorMessage });
+    } finally { setSavingPago(false); }
   };
 
-  // ─── APLICAR PROMOCIÓN VIGENTE ──────────────────────
   const aplicarPromocionMatricula = async () => {
     if (!token || !detalleMatricula) return;
-
     const codigo = detalleMatricula.codigo_matricula || detalleMatricula.id_matricula;
-
-    setSavingPago(true);
-    setMensajePago(null);
-
+    setSavingPago(true); setMensajePago(null);
     try {
       const res = await axios.post(
         `/api/tesoreria/matriculas/${codigo}/aplicar-promocion-matricula${detalleQueryString}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        {}, { headers: { Authorization: `Bearer ${token}` } },
       );
-
-      const message =
-        res.data?.message || 'Promoción aplicada correctamente al cobro de matrícula.';
-
+      const message = res.data?.message || 'Promoción aplicada correctamente al cobro de matrícula.';
       setMensajePago(message);
-
-      showToast({
-        type: 'success',
-        title: 'Promoción aplicada',
-        message,
-        duration: 6500,
-      });
-
+      showToast({ type: 'success', title: 'Promoción aplicada', message, duration: 6500 });
       await abrirDetalleMatricula(detalleMatricula.id_matricula);
       await fetchMatriculas();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        'No se pudo aplicar la promoción vigente.';
-
+      const errorMessage = error.response?.data?.message || 'No se pudo aplicar la promoción vigente.';
       setMensajePago(errorMessage);
-
-      showToast({
-        type: 'error',
-        title: 'No se pudo aplicar',
-        message: errorMessage,
-        duration: 6500,
-      });
-    } finally {
-      setSavingPago(false);
-    }
+      showToast({ type: 'error', title: 'No se pudo aplicar', message: errorMessage, duration: 6500 });
+    } finally { setSavingPago(false); }
   };
 
-  // ─── FUNCIONES DE DETALLE Y REVISIÓN ──────────────────
   const abrirDetalleMatricula = async (idMatricula: number) => {
     if (!token) return;
-
-    setDetalleOpen(true);
-    setDetalleLoading(true);
-    setDetalleMatricula(null);
-    setCronogramaOpen(false);
-
+    setDetalleOpen(true); setDetalleLoading(true); setDetalleMatricula(null);
+    setCronogramaOpen(false); setIsClosing(false);
     try {
       const res = await axios.get(
         `/api/academicos/matriculas/${idMatricula}/detalle${detalleQueryString}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       let detalle = res.data;
-
       if (
         !esMatriculaFinal(detalle) &&
         detalle?.estado_matricula === 'Reserva' &&
@@ -494,303 +447,195 @@ export default function MatriculasHistorialPage() {
         try {
           const cobroRes = await axios.post(
             `/api/academicos/matriculas/${idMatricula}/generar-cobro-matricula${detalleQueryString}`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } },
+            {}, { headers: { Authorization: `Bearer ${token}` } },
           );
-
           detalle = cobroRes.data?.matricula || detalle;
-
-          showToast({
-            type: 'success',
-            title: 'Cobro generado',
-            message: 'Se generó el cobro de matrícula para esta reserva.',
-          });
+          showToast({ type: 'success', title: 'Cobro generado', message: 'Se generó el cobro de matrícula para esta reserva.' });
         } catch (error: any) {
           showToast({
-            type: 'warning',
-            title: 'Reserva sin cobro',
-            message:
-              error.response?.data?.message ||
-              'No se pudo generar el cobro de matrícula. Verifica el concepto de pago del año lectivo.',
+            type: 'warning', title: 'Reserva sin cobro',
+            message: error.response?.data?.message || 'No se pudo generar el cobro de matrícula.',
             duration: 6500,
           });
         }
       }
-
       setDetalleMatricula(detalle);
       setRevisionEstado(detalle?.estado_revision || 'Aprobado');
       setRevisionObservacion(detalle?.observacion_revision || '');
       setMensajeRevision(null);
-
       const apoderadoDefault = detalle?.estudiante?.apoderados?.[0]?.id_apoderado;
       const saldoMatricula = getSaldoMatricula(detalle);
-
       setPagoApoderadoId(apoderadoDefault ? String(apoderadoDefault) : '');
       setPagoMonto(saldoMatricula ? String(saldoMatricula.toFixed(2)) : '');
-      setPagoMetodo('Efectivo');
-      setPagoOperacion('');
-      setMensajePago(null);
+      setPagoMetodo('Efectivo'); setPagoOperacion(''); setMensajePago(null);
     } catch {
       setDetalleOpen(false);
-    } finally {
-      setDetalleLoading(false);
-    }
+    } finally { setDetalleLoading(false); }
   };
 
-  // Efecto seguro para abrir automáticamente
   useEffect(() => {
     if (!token) return;
-
     const matriculaIdParam = searchParams.get('matricula_id');
-
-    if (!matriculaIdParam) {
-      if (autoOpenedMatriculaId !== null) {
-        setAutoOpenedMatriculaId(null);
-      }
-      return;
-    }
-
+    if (!matriculaIdParam) { if (autoOpenedMatriculaId !== null) setAutoOpenedMatriculaId(null); return; }
     const matriculaId = Number(matriculaIdParam);
-
-    if (!Number.isInteger(matriculaId) || matriculaId <= 0) {
-      return;
-    }
-
+    if (!Number.isInteger(matriculaId) || matriculaId <= 0) return;
     if (autoOpenedMatriculaId === matriculaId) return;
-
     setAutoOpenedMatriculaId(matriculaId);
     abrirDetalleMatricula(matriculaId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, searchParams, autoOpenedMatriculaId]);
 
-  // Cierre seguro del modal: limpia URL, luego cierra
-  const cerrarDetalle = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete('matricula_id');
-    next.delete('colegio_id');
-
-    setSearchParams(next, { replace: true });
-
-    setDetalleOpen(false);
-    setDetalleMatricula(null);
-    setCronogramaOpen(false);
-    setMensajeRevision(null);
-    setMensajePago(null);
-  };
+  const cerrarDetalle = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('matricula_id'); next.delete('colegio_id');
+      setSearchParams(next, { replace: true });
+      setDetalleOpen(false); setIsClosing(false);
+      setDetalleMatricula(null); setCronogramaOpen(false);
+      setMensajeRevision(null); setMensajePago(null);
+    }, 280);
+  }, [searchParams, setSearchParams]);
 
   const guardarRevision = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
-
     if (esMatriculaFinal(detalleMatricula)) {
       const message = mensajeMatriculaFinal(detalleMatricula);
       setMensajeRevision(message);
-      showToast({
-        type: 'warning',
-        title: 'Matrícula cerrada',
-        message,
-      });
+      showToast({ type: 'warning', title: 'Matrícula cerrada', message });
       return;
     }
-
-    setSavingRevision(true);
-    setMensajeRevision(null);
-
+    setSavingRevision(true); setMensajeRevision(null);
     try {
       const res = await axios.patch(
         `/api/academicos/matriculas/${detalleMatricula.id_matricula}/revision${queryString}`,
-        {
-          estado_revision: revisionEstado,
-          observacion_revision: revisionObservacion,
-        },
+        { estado_revision: revisionEstado, observacion_revision: revisionObservacion },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       setDetalleMatricula(res.data?.matricula || detalleMatricula);
       const successMessage = res.data?.message || 'Revisión actualizada.';
-
       setMensajeRevision(successMessage);
-      showToast({
-        type: 'success',
-        title: 'Revisión guardada',
-        message: successMessage,
-      });
-
+      showToast({ type: 'success', title: 'Revisión guardada', message: successMessage });
       await fetchMatriculas();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'No se pudo actualizar la revisión.';
-
+      const errorMessage = error.response?.data?.message || 'No se pudo actualizar la revisión.';
       setMensajeRevision(errorMessage);
-      showToast({
-        type: 'error',
-        title: 'Error en revisión',
-        message: errorMessage,
-      });
-    } finally {
-      setSavingRevision(false);
-    }
+      showToast({ type: 'error', title: 'Error en revisión', message: errorMessage });
+    } finally { setSavingRevision(false); }
   };
 
-  // ─── FUNCIONES DE PAGO Y ACTIVACIÓN ───────────────────
   const registrarPagoMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
-
     if (esMatriculaFinal(detalleMatricula)) {
       const message = mensajeMatriculaFinal(detalleMatricula);
       setMensajePago(message);
-      showToast({
-        type: 'warning',
-        title: 'Matrícula cerrada',
-        message,
-      });
+      showToast({ type: 'warning', title: 'Matrícula cerrada', message });
       return;
     }
-
-    setSavingPago(true);
-    setMensajePago(null);
-
+    setSavingPago(true); setMensajePago(null);
     try {
       const res = await axios.post(
         `/api/academicos/matriculas/${detalleMatricula.id_matricula}/pago-matricula${queryString}`,
         {
-          id_apoderado: Number(pagoApoderadoId),
-          monto_pagado: Number(pagoMonto),
-          metodo_pago: pagoMetodo,
-          nro_operacion: pagoOperacion,
-          activar_automaticamente: true,
+          id_apoderado: Number(pagoApoderadoId), monto_pagado: Number(pagoMonto),
+          metodo_pago: pagoMetodo, nro_operacion: pagoOperacion, activar_automaticamente: true,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       const detalleActualizado = res.data?.matricula || detalleMatricula;
       setDetalleMatricula(detalleActualizado);
       const saldo = getSaldoMatricula(detalleActualizado);
       setPagoMonto(saldo ? String(saldo.toFixed(2)) : '');
-
-      const successMessage =
-        res.data?.message || 'Pago registrado correctamente.';
-
+      const successMessage = res.data?.message || 'Pago registrado correctamente.';
       setMensajePago(successMessage);
-      showToast({
-        type: 'success',
-        title: 'Pago registrado',
-        message: successMessage,
-      });
-
+      showToast({ type: 'success', title: 'Pago registrado', message: successMessage });
       await fetchMatriculas();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'No se pudo registrar el pago.';
-
+      const errorMessage = error.response?.data?.message || 'No se pudo registrar el pago.';
       setMensajePago(errorMessage);
-      showToast({
-        type: 'error',
-        title: 'Error al registrar pago',
-        message: errorMessage,
-      });
-    } finally {
-      setSavingPago(false);
-    }
+      showToast({ type: 'error', title: 'Error al registrar pago', message: errorMessage });
+    } finally { setSavingPago(false); }
   };
 
   const activarMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
-
     if (esMatriculaFinal(detalleMatricula)) {
       const message = mensajeMatriculaFinal(detalleMatricula);
       setMensajePago(message);
-      showToast({
-        type: 'warning',
-        title: 'Matrícula cerrada',
-        message,
-      });
+      showToast({ type: 'warning', title: 'Matrícula cerrada', message });
       return;
     }
-
-    setSavingPago(true);
-    setMensajePago(null);
-
+    setSavingPago(true); setMensajePago(null);
     try {
       const res = await axios.post(
         `/api/academicos/matriculas/${detalleMatricula.id_matricula}/activar${queryString}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        {}, { headers: { Authorization: `Bearer ${token}` } },
       );
-
       setDetalleMatricula(res.data?.matricula || detalleMatricula);
-      const successMessage =
-        res.data?.message || 'Matrícula activada correctamente.';
-
+      const successMessage = res.data?.message || 'Matrícula activada correctamente.';
       setMensajePago(successMessage);
-      showToast({
-        type: 'success',
-        title: 'Matrícula activada',
-        message: successMessage,
-      });
-
+      showToast({ type: 'success', title: 'Matrícula activada', message: successMessage });
       await fetchMatriculas();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || 'No se pudo activar la matrícula.';
-
+      const errorMessage = error.response?.data?.message || 'No se pudo activar la matrícula.';
       setMensajePago(errorMessage);
-      showToast({
-        type: 'error',
-        title: 'Error al activar matrícula',
-        message: errorMessage,
-      });
-    } finally {
-      setSavingPago(false);
-    }
+      showToast({ type: 'error', title: 'Error al activar matrícula', message: errorMessage });
+    } finally { setSavingPago(false); }
   };
 
-  // ─── GENERAR CRONOGRAMA DE PENSIONES ──────────────────
   const generarPensionesMatricula = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
-
-    setSavingPago(true);
-    setMensajePago(null);
-
+    setSavingPago(true); setMensajePago(null);
     try {
       const res = await axios.post(
         `/api/tesoreria/matriculas/${detalleMatricula.id_matricula}/generar-pensiones${queryString}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        {}, { headers: { Authorization: `Bearer ${token}` } },
       );
-
-      const message =
-        res.data?.message ||
-        'Se revisó el cronograma de pensiones de la matrícula.';
-
-      showToast({
-        type: 'success',
-        title: 'Cronograma de pensiones',
-        message,
-        duration: 6500,
-      });
-
+      const message = res.data?.message || 'Se revisó el cronograma de pensiones de la matrícula.';
+      showToast({ type: 'success', title: 'Cronograma de pensiones', message, duration: 6500 });
       setMensajePago(message);
       await abrirDetalleMatricula(detalleMatricula.id_matricula);
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        'No se pudo generar el cronograma de pensiones.';
-
+      const message = error.response?.data?.message || 'No se pudo generar el cronograma de pensiones.';
       setMensajePago(message);
-
-      showToast({
-        type: 'error',
-        title: 'No se pudo generar',
-        message,
-        duration: 6500,
-      });
-    } finally {
-      setSavingPago(false);
-    }
+      showToast({ type: 'error', title: 'No se pudo generar', message, duration: 6500 });
+    } finally { setSavingPago(false); }
   };
 
+  // ─── Input class helper ────────────────────────────────
+  const inputClass =
+    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400';
+
+  const selectClass =
+    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 appearance-none cursor-pointer';
+
+  // ═══════════════════════════════════════════════════════
   return (
     <div className="w-full space-y-6">
+      {/* Animaciones del modal */}
+      <style>{`
+        @keyframes modalOverlayIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalOverlayOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes modalPanelIn {
+          from { opacity: 0; transform: translateY(24px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes modalPanelOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(16px) scale(0.98); }
+        }
+        .modal-overlay-enter { animation: modalOverlayIn 0.25s ease-out forwards; }
+        .modal-overlay-exit { animation: modalOverlayOut 0.2s ease-in forwards; }
+        .modal-panel-enter { animation: modalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .modal-panel-exit { animation: modalPanelOut 0.2s ease-in forwards; }
+      `}</style>
+
       <PageHeader
         eyebrow="Gestión académica"
         title="Historial de matrículas"
@@ -802,73 +647,37 @@ export default function MatriculasHistorialPage() {
         ]}
       />
 
-      <div className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
+      {/* ── Filtros ──────────────────────────────────────── */}
+      <div className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
           <div className="relative">
-            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={q}
-              onChange={(event) => {
-                setPage(1);
-                setQ(event.target.value);
-              }}
+              onChange={(e) => { setPage(1); setQ(e.target.value); }}
               placeholder="Alumno, apoderado, DNI o N° matrícula"
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+              className={`${inputClass} pl-11`}
             />
           </div>
 
-          <input
-            type="date"
-            value={desde}
-            onChange={(event) => {
-              setPage(1);
-              setDesde(event.target.value);
-            }}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-          />
-
-          <input
-            type="date"
-            value={hasta}
-            onChange={(event) => {
-              setPage(1);
-              setHasta(event.target.value);
-            }}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-          />
+          <input type="date" value={desde} onChange={(e) => { setPage(1); setDesde(e.target.value); }} className={inputClass} />
+          <input type="date" value={hasta} onChange={(e) => { setPage(1); setHasta(e.target.value); }} className={inputClass} />
 
           <input
             value={registradoPor}
-            onChange={(event) => {
-              setPage(1);
-              setRegistradoPor(event.target.value);
-            }}
+            onChange={(e) => { setPage(1); setRegistradoPor(e.target.value); }}
             placeholder="Registrado por"
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+            className={inputClass}
           />
 
-          <select
-            value={estado}
-            onChange={(event) => {
-              setPage(1);
-              setEstado(event.target.value);
-            }}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-          >
-            <option value="Todos">Todos</option>
+          <select value={estado} onChange={(e) => { setPage(1); setEstado(e.target.value); }} className={selectClass}>
+            <option value="Todos">Todos los estados</option>
             <option value="Pre-matriculado">Pre-matriculado</option>
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
           </select>
 
-          <select
-            value={estadoRevision}
-            onChange={(event) => {
-              setPage(1);
-              setEstadoRevision(event.target.value);
-            }}
-            className="h-12 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-          >
+          <select value={estadoRevision} onChange={(e) => { setPage(1); setEstadoRevision(e.target.value); }} className={selectClass}>
             <option value="Todos">Revisión: todos</option>
             <option value="Por revisar">Por revisar</option>
             <option value="Aprobado">Aprobado</option>
@@ -879,41 +688,46 @@ export default function MatriculasHistorialPage() {
           <button
             type="button"
             onClick={limpiarFiltros}
-            className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+            className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300"
           >
             Limpiar
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[30px] border border-white bg-white/90 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-        <div className="flex items-center justify-between border-b border-slate-100 p-5">
+      {/* ── Tabla / Lista ────────────────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
           <button
             type="button"
             onClick={() => navigate('/matricula')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-sm font-black text-slate-600 ring-1 ring-slate-100 transition hover:bg-slate-100"
+            className="inline-flex items-center gap-2 rounded-xl bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-600 ring-1 ring-neutral-200/60 transition-all duration-150 hover:bg-neutral-100"
           >
             <ArrowLeft size={16} />
             Volver
           </button>
-
-          <div className="text-sm font-bold text-slate-400">
+          <div className="text-sm font-medium text-neutral-400">
             Página {meta.page} de {meta.totalPages || 1}
           </div>
         </div>
 
         {loading ? (
           <div className="flex min-h-[340px] items-center justify-center">
-            <Loader2 size={26} className="animate-spin text-accent-500" />
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 size={28} className="animate-spin text-[#CCF32F]" />
+              <p className="text-sm text-neutral-400">Cargando matrículas…</p>
+            </div>
           </div>
         ) : data.length === 0 ? (
           <div className="flex min-h-[340px] flex-col items-center justify-center text-center">
-            <CalendarDays size={34} className="text-slate-300" />
-            <p className="mt-3 text-sm font-black text-slate-600">Sin resultados</p>
-            <p className="mt-1 text-sm text-slate-400">Ajusta los filtros para buscar otra matrícula.</p>
+            <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
+              <CalendarDays size={28} className="text-neutral-300" />
+            </div>
+            <p className="text-sm font-semibold text-neutral-600">Sin resultados</p>
+            <p className="mt-1 text-sm text-neutral-400">Ajusta los filtros para buscar otra matrícula.</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-neutral-100">
             {data.map((matricula) => {
               const alumno = matricula.estudiante.persona;
               const apoderado = matricula.estudiante.apoderados?.[0];
@@ -922,48 +736,47 @@ export default function MatriculasHistorialPage() {
                 : 'No registrado';
 
               return (
-                <div key={matricula.id_matricula} className="grid gap-4 p-5 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center">
-                  <div>
-                    <p className="text-sm font-black text-slate-900">
-                      {matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`} · {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
+                <div
+                  key={matricula.id_matricula}
+                  className="group grid gap-4 px-5 py-4 transition-colors duration-150 hover:bg-neutral-50/50 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-neutral-900 truncate">
+                      {matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`}
+                      <span className="mx-1.5 text-neutral-300">·</span>
+                      {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
                     </p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">DNI alumno: {alumno.dni}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
-                      Código alumno: {getCodigoAlumno(matricula)}
-                    </p>
+                    <p className="mt-1 text-xs text-neutral-400">DNI: {alumno.dni} · Código: {getCodigoAlumno(matricula)}</p>
                     {apoderado && (
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        Apoderado: {apoderado.apoderado.persona.nombres} {apoderado.apoderado.persona.apellido_paterno} · DNI {apoderado.apoderado.persona.dni}
+                      <p className="mt-1 text-xs text-neutral-400">
+                        Apoderado: {apoderado.apoderado.persona.nombres} {apoderado.apoderado.persona.apellido_paterno}
                       </p>
                     )}
                   </div>
 
-                  <div>
-                    <p className="text-sm font-black text-slate-700">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-700 truncate">
                       {matricula.colegio?.nombre || 'Colegio'}
                     </p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
-                      {matricula.seccion.grado.nivel?.nombre_nivel} · {matricula.seccion.grado.nombre_grado} "{matricula.seccion.letra}"
+                    <p className="mt-1 text-xs text-neutral-400">
+                      {matricula.seccion.grado.nivel?.nombre_nivel} · {matricula.seccion.grado.nombre_grado} &ldquo;{matricula.seccion.letra}&rdquo;
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-black text-slate-700">{formatFechaHora(matricula.fecha_matricula)}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">Registrado por: {registrador}</p>
-                    <span className="mt-2 inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
-                      {matricula.estado_matricula}
-                    </span>
-                    <span className="mt-2 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
-                      {matricula.estado_revision || 'Por revisar'}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <EstadoBadge estado={matricula.estado_matricula} />
+                    <RevisionBadge estado={matricula.estado_revision || 'Por revisar'} />
+                    <span className="text-xs text-neutral-400 ml-1">
+                      {formatFechaHora(matricula.fecha_matricula)}
                     </span>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => abrirDetalleMatricula(matricula.id_matricula)}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <Eye size={16} />
+                    <Eye size={15} />
                     Ver
                   </button>
                 </div>
@@ -972,26 +785,23 @@ export default function MatriculasHistorialPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-slate-100 p-5">
+        {/* Paginación */}
+        <div className="flex items-center justify-between border-t border-neutral-100 px-5 py-4">
           <button
             type="button"
-            onClick={() => setPage((current) => Math.max(current - 1, 1))}
+            onClick={() => setPage((c) => Math.max(c - 1, 1))}
             disabled={page <= 1}
-            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft size={16} />
             Anterior
           </button>
-
-          <p className="text-sm font-bold text-slate-400">
-            {meta.total} registros
-          </p>
-
+          <p className="text-sm font-medium text-neutral-400">{meta.total} registros</p>
           <button
             type="button"
-            onClick={() => setPage((current) => Math.min(current + 1, meta.totalPages || 1))}
+            onClick={() => setPage((c) => Math.min(c + 1, meta.totalPages || 1))}
             disabled={page >= (meta.totalPages || 1)}
-            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Siguiente
             <ChevronRight size={16} />
@@ -999,200 +809,138 @@ export default function MatriculasHistorialPage() {
         </div>
       </div>
 
-      {/* Modal de detalle de matrícula */}
+      {/* ══════════ Modal de detalle ══════════ */}
       {detalleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm animate-modal-overlay-in">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-slate-200 animate-modal-panel-in">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 backdrop-blur-sm px-4 py-6 ${
+            isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'
+          }`}
+          onClick={(e) => { if (e.target === e.currentTarget) cerrarDetalle(); }}
+        >
+          <div
+            className={`w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${
+              isClosing ? 'modal-panel-exit' : 'modal-panel-enter'
+            }`}
+          >
+            {/* ── Header del modal ── */}
+            <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-bold text-accent-600 ring-1 ring-accent-100">
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#CCF32F]/10 px-3 py-1 text-xs font-semibold text-neutral-800">
+                  <GraduationCap size={13} />
                   Detalle de matrícula
                 </div>
-
-                <h3 className="mt-3 text-xl font-black text-slate-950">
+                <h3 className="mt-3 text-xl font-semibold text-neutral-900 tracking-tight">
                   {detalleMatricula?.estudiante?.persona
                     ? `${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
                     : 'Cargando matrícula'}
                 </h3>
-
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-neutral-400">
                   Información académica, apoderados, procedencia y cronograma.
                 </p>
               </div>
-
               <button
                 type="button"
                 onClick={cerrarDetalle}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100 transition hover:bg-slate-100"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all duration-150 hover:bg-neutral-200 hover:text-neutral-600 flex-shrink-0"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="max-h-[72vh] overflow-y-auto p-6">
+            {/* ── Body del modal ── */}
+            <div className="overflow-y-auto flex-1 p-6">
               {detalleLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center text-sm font-bold text-slate-500">
-                  Cargando detalle...
+                <div className="flex min-h-[260px] items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 size={28} className="animate-spin text-[#CCF32F]" />
+                    <p className="text-sm text-neutral-400">Cargando detalle…</p>
+                  </div>
                 </div>
               ) : detalleMatricula ? (
                 <div className="space-y-5">
+                  {/* Alerta de matrícula cerrada */}
                   {esMatriculaFinal(detalleMatricula) && (
-                    <div className="rounded-3xl bg-rose-50 p-5 text-sm font-bold leading-6 text-rose-700 ring-1 ring-rose-100">
-                      {mensajeMatriculaFinal(detalleMatricula)}
+                    <div className="flex items-start gap-3 rounded-2xl bg-red-50 p-4 ring-1 ring-red-200/60">
+                      <AlertTriangle size={18} className="text-red-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm font-medium text-red-700">{mensajeMatriculaFinal(detalleMatricula)}</p>
                     </div>
                   )}
 
+                  {/* Info general */}
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-                    <DetailBox label="ID matrícula" value={formatNumeroMatricula(detalleMatricula)} />
-                    <DetailBox label="Código alumno" value={getCodigoAlumnoDetalle(detalleMatricula)} />
-                    <DetailBox label="Estado" value={detalleMatricula.estado_matricula} />
-                    <DetailBox
-                      label="Matriculado el"
-                      value={formatFechaHora(detalleMatricula.fecha_matricula)}
-                    />
-                    <DetailBox
+                    <DetailCard label="ID matrícula" value={formatNumeroMatricula(detalleMatricula)} icon={FileText} />
+                    <DetailCard label="Código alumno" value={getCodigoAlumnoDetalle(detalleMatricula)} icon={GraduationCap} />
+                    <DetailCard label="Estado" value={detalleMatricula.estado_matricula} icon={CheckCircle2} />
+                    <DetailCard label="Matriculado el" value={formatFechaHora(detalleMatricula.fecha_matricula)} icon={Clock} />
+                    <DetailCard
                       label="Registrado por"
                       value={
                         detalleMatricula.registrado_por?.persona
                           ? `${detalleMatricula.registrado_por.persona.nombres} ${detalleMatricula.registrado_por.persona.apellido_paterno}`
                           : 'No registrado'
                       }
+                      icon={Users}
                     />
                   </div>
 
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">
-                      Datos académicos
-                    </h4>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <DetailBox
-                        label="Colegio"
-                        value={detalleMatricula.colegio?.nombre || '—'}
-                        white
-                      />
-                      <DetailBox
-                        label="Nivel"
-                        value={
-                          detalleMatricula.seccion?.grado?.nivel
-                            ?.nombre_nivel || '—'
-                        }
-                        white
-                      />
-                      <DetailBox
-                        label="Grado"
-                        value={
-                          detalleMatricula.seccion?.grado?.nombre_grado || '—'
-                        }
-                        white
-                      />
-                      <DetailBox
-                        label="Sección"
-                        value={detalleMatricula.seccion?.letra || '—'}
-                        white
-                      />
-                      <DetailBox
-                        label="Año lectivo"
-                        value={detalleMatricula.anio?.nombre_anio || '—'}
-                        white
-                      />
-                      <DetailBox
-                        label="Aula"
-                        value={detalleMatricula.seccion?.aula?.nombre_aula || '—'}
-                        white
-                      />
+                  {/* Datos académicos */}
+                  <ModalSection title="Datos académicos" icon={GraduationCap}>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <DetailCard label="Colegio" value={detalleMatricula.colegio?.nombre || '—'} />
+                      <DetailCard label="Nivel" value={detalleMatricula.seccion?.grado?.nivel?.nombre_nivel || '—'} />
+                      <DetailCard label="Grado" value={detalleMatricula.seccion?.grado?.nombre_grado || '—'} />
+                      <DetailCard label="Sección" value={detalleMatricula.seccion?.letra || '—'} />
+                      <DetailCard label="Año lectivo" value={detalleMatricula.anio?.nombre_anio || '—'} />
+                      <DetailCard label="Aula" value={detalleMatricula.seccion?.aula?.nombre_aula || '—'} />
                     </div>
-                  </div>
+                  </ModalSection>
 
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">
-                      Apoderados
-                    </h4>
-
-                    <div className="mt-3 space-y-3">
+                  {/* Apoderados */}
+                  <ModalSection title="Apoderados" icon={Users}>
+                    <div className="space-y-3">
                       {detalleMatricula.estudiante?.apoderados?.length ? (
-                        detalleMatricula.estudiante.apoderados.map(
-                          (relacion: any) => (
-                            <div
-                              key={relacion.id_apoderado}
-                              className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
-                            >
-                              <p className="text-sm font-black text-slate-800">
-                                {relacion.parentesco}:{' '}
-                                {relacion.apoderado.persona.nombres}{' '}
-                                {relacion.apoderado.persona.apellido_paterno}
-                              </p>
-
-                              <div className="mt-3 grid gap-2 text-xs font-bold text-slate-500 md:grid-cols-2">
-                                <p>
-                                  <span className="text-slate-400">DNI:</span>{' '}
-                                  {relacion.apoderado.persona.dni || '—'}
-                                </p>
-                                <p>
-                                  <span className="text-slate-400">
-                                    Número:
-                                  </span>{' '}
-                                  {relacion.apoderado.persona.telefono || '—'}
-                                </p>
-                                <p>
-                                  <span className="text-slate-400">
-                                    Correo:
-                                  </span>{' '}
-                                  {relacion.apoderado.persona.correo || '—'}
-                                </p>
-                                <p>
-                                  <span className="text-slate-400">
-                                    Distrito:
-                                  </span>{' '}
-                                  {relacion.apoderado.persona.distrito || '—'}
-                                </p>
-                                <p>
-                                  <span className="text-slate-400">
-                                    Departamento:
-                                  </span>{' '}
-                                  {relacion.apoderado.persona.departamento ||
-                                    '—'}
-                                </p>
-                                <p>
-                                  <span className="text-slate-400">
-                                    Dirección:
-                                  </span>{' '}
-                                  {relacion.apoderado.persona.direccion || '—'}
-                                </p>
-                              </div>
+                        detalleMatricula.estudiante.apoderados.map((relacion: any) => (
+                          <div key={relacion.id_apoderado} className="rounded-2xl bg-white p-4 ring-1 ring-neutral-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                            <p className="text-sm font-semibold text-neutral-800">
+                              {relacion.parentesco}:{' '}
+                              {relacion.apoderado.persona.nombres} {relacion.apoderado.persona.apellido_paterno}
+                            </p>
+                            <div className="mt-3 grid gap-2 text-xs text-neutral-500 md:grid-cols-2">
+                              <p><span className="text-neutral-400">DNI:</span> {relacion.apoderado.persona.dni || '—'}</p>
+                              <p><span className="text-neutral-400">Teléfono:</span> {relacion.apoderado.persona.telefono || '—'}</p>
+                              <p><span className="text-neutral-400">Correo:</span> {relacion.apoderado.persona.correo || '—'}</p>
+                              <p><span className="text-neutral-400">Distrito:</span> {relacion.apoderado.persona.distrito || '—'}</p>
+                              <p><span className="text-neutral-400">Departamento:</span> {relacion.apoderado.persona.departamento || '—'}</p>
+                              <p><span className="text-neutral-400">Dirección:</span> {relacion.apoderado.persona.direccion || '—'}</p>
                             </div>
-                          ),
-                        )
+                          </div>
+                        ))
                       ) : (
-                        <p className="text-sm font-bold text-slate-400">
-                          Sin apoderados vinculados.
-                        </p>
+                        <p className="text-sm text-neutral-400">Sin apoderados vinculados.</p>
                       )}
                     </div>
-                  </div>
+                  </ModalSection>
 
                   {/* Procedencia */}
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">Procedencia</h4>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <Info label="Tipo de ingreso" value={detalleMatricula.tipo_ingreso || 'Nuevo'} />
-                      <Info label="Colegio procedencia" value={detalleMatricula.colegio_procedencia || '—'} />
-                      <Info label="Código modular" value={detalleMatricula.codigo_modular_procedencia || '—'} />
-                      <Info label="Grado procedencia" value={detalleMatricula.grado_procedencia || '—'} />
+                  <ModalSection title="Procedencia" icon={Banknote}>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <DetailCard label="Tipo de ingreso" value={detalleMatricula.tipo_ingreso || 'Nuevo'} />
+                      <DetailCard label="Colegio procedencia" value={detalleMatricula.colegio_procedencia || '—'} />
+                      <DetailCard label="Código modular" value={detalleMatricula.codigo_modular_procedencia || '—'} />
+                      <DetailCard label="Grado procedencia" value={detalleMatricula.grado_procedencia || '—'} />
                     </div>
                     {detalleMatricula.observacion_procedencia && (
-                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                      <p className="mt-3 rounded-xl bg-white p-3 text-sm text-neutral-500 ring-1 ring-neutral-200/60">
                         {detalleMatricula.observacion_procedencia}
                       </p>
                     )}
-                  </div>
+                  </ModalSection>
 
                   {/* Revisión administrativa */}
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">Revisión administrativa</h4>
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <Info label="Estado revisión" value={detalleMatricula.estado_revision || 'Por revisar'} />
-                      <Info
+                  <ModalSection title="Revisión administrativa" icon={CheckCircle2}>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <DetailCard label="Estado revisión" value={detalleMatricula.estado_revision || 'Por revisar'} />
+                      <DetailCard
                         label="Revisado por"
                         value={
                           detalleMatricula.revisado_por?.persona
@@ -1200,111 +948,103 @@ export default function MatriculasHistorialPage() {
                             : '—'
                         }
                       />
-                      <Info
+                      <DetailCard
                         label="Fecha revisión"
                         value={detalleMatricula.fecha_revision ? formatFechaHora(detalleMatricula.fecha_revision) : '—'}
                       />
                     </div>
 
                     {!esMatriculaFinal(detalleMatricula) ? (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
-                        <select
-                          value={revisionEstado}
-                          onChange={(e) => setRevisionEstado(e.target.value)}
-                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                        >
-                          <option value="Aprobado">Aprobado</option>
-                          <option value="Observado">Observado</option>
-                          <option value="Rechazado">Rechazado</option>
-                          <option value="Por revisar">Por revisar</option>
-                        </select>
-
-                        <input
-                          value={revisionObservacion}
-                          onChange={(e) => setRevisionObservacion(e.target.value)}
-                          placeholder="Observación de revisión"
-                          className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                        />
-
+                      <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto] items-end">
+                        <div>
+                          <SectionLabel>Estado</SectionLabel>
+                          <select
+                            value={revisionEstado}
+                            onChange={(e) => setRevisionEstado(e.target.value)}
+                            className={selectClass}
+                          >
+                            <option value="Aprobado">Aprobado</option>
+                            <option value="Observado">Observado</option>
+                            <option value="Rechazado">Rechazado</option>
+                            <option value="Por revisar">Por revisar</option>
+                          </select>
+                        </div>
+                        <div>
+                          <SectionLabel>Observación</SectionLabel>
+                          <input
+                            value={revisionObservacion}
+                            onChange={(e) => setRevisionObservacion(e.target.value)}
+                            placeholder="Observación de revisión"
+                            className={inputClass}
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={guardarRevision}
                           disabled={savingRevision}
-                          className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
+                          className="h-11 rounded-2xl bg-neutral-900 px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          {savingRevision ? 'Guardando...' : 'Guardar revisión'}
+                          {savingRevision ? 'Guardando…' : 'Guardar revisión'}
                         </button>
                       </div>
                     ) : (
-                      <p className="mt-4 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                      <p className="mt-4 rounded-xl bg-white p-3 text-sm text-neutral-500 ring-1 ring-neutral-200/60">
                         La revisión está bloqueada porque esta matrícula está cerrada.
                       </p>
                     )}
 
                     {mensajeRevision && (
-                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                      <p className={`mt-3 rounded-xl p-3 text-sm font-medium ring-1 ${
+                        mensajeRevision.includes('No se pudo') || mensajeRevision.includes('cerrada')
+                          ? 'bg-red-50 text-red-600 ring-red-200/60'
+                          : 'bg-emerald-50 text-emerald-600 ring-emerald-200/60'
+                      }`}>
                         {mensajeRevision}
                       </p>
                     )}
-                  </div>
+                  </ModalSection>
 
                   {/* Resumen financiero */}
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">
-                      Resumen financiero
-                    </h4>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-4">
-                      <DetailBox
+                  <ModalSection title="Resumen financiero" icon={CreditCard}>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <DetailCard
                         label="Pago matrícula"
-                        value={
-                          detalleMatricula.resumen_financiero
-                            ?.estado_pago_matricula || 'No generado'
-                        }
-                        white
+                        value={detalleMatricula.resumen_financiero?.estado_pago_matricula || 'No generado'}
                       />
-                      <DetailBox
+                      <DetailCard
                         label="Programado"
-                        value={formatMoney(
-                          detalleMatricula.resumen_financiero
-                            ?.total_programado,
-                        )}
-                        white
+                        value={formatMoney(detalleMatricula.resumen_financiero?.total_programado)}
                       />
-                      <DetailBox
+                      <DetailCard
                         label="Pagado"
-                        value={formatMoney(
-                          detalleMatricula.resumen_financiero?.total_pagado,
-                        )}
-                        white
+                        value={formatMoney(detalleMatricula.resumen_financiero?.total_pagado)}
                       />
-                      <DetailBox
+                      <DetailCard
                         label="Saldo"
-                        value={formatMoney(
-                          detalleMatricula.resumen_financiero?.saldo,
-                        )}
-                        white
+                        value={formatMoney(detalleMatricula.resumen_financiero?.saldo)}
                       />
                     </div>
-                  </div>
+                  </ModalSection>
 
-                  {/* Pago de matrícula y activación */}
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
-                    <h4 className="text-sm font-black text-slate-900">
-                      Pago de matrícula y activación
-                    </h4>
-
+                  {/* Pago y activación */}
+                  <ModalSection title="Pago de matrícula y activación" icon={CreditCard}>
                     {detalleMatricula && !getCronogramaMatricula(detalleMatricula) && !esMatriculaFinal(detalleMatricula) && (
-                      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
-                        Esta matrícula todavía no tiene cobro de matrícula generado.
-                        <button
-                          type="button"
-                          onClick={generarCobroMatricula}
-                          disabled={savingPago}
-                          className="mt-3 inline-flex h-10 items-center justify-center rounded-2xl bg-amber-500 px-4 text-sm font-black text-white transition hover:bg-amber-600 disabled:opacity-50"
-                        >
-                          Generar cobro de matrícula
-                        </button>
+                      <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200/60">
+                        <AlertTriangle size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">
+                            Esta matrícula todavía no tiene cobro de matrícula generado.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={generarCobroMatricula}
+                            disabled={savingPago}
+                            className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                          >
+                            {savingPago ? <Loader2 size={15} className="animate-spin" /> : <CreditCard size={15} />}
+                            Generar cobro de matrícula
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -1317,57 +1057,66 @@ export default function MatriculasHistorialPage() {
 
                       if (esMatriculaFinal(detalleMatricula)) {
                         return (
-                          <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">
-                            No se puede registrar pago ni activar una matrícula anulada, rechazada o finalizada.
-                          </p>
+                          <div className="flex items-start gap-3 rounded-2xl bg-red-50 p-4 ring-1 ring-red-200/60">
+                            <XCircle size={18} className="text-red-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm font-medium text-red-700">
+                              No se puede registrar pago ni activar una matrícula anulada, rechazada o finalizada.
+                            </p>
+                          </div>
                         );
                       }
 
                       if (matriculaActiva) {
                         return (
-                          <p className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
-                            La matrícula ya está activa. Las pensiones del año deben estar generadas en el cronograma.
-                          </p>
+                          <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200/60">
+                            <CheckCircle2 size={18} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm font-medium text-emerald-700">
+                              La matrícula ya está activa. Las pensiones del año deben estar generadas en el cronograma.
+                            </p>
+                          </div>
                         );
                       }
 
                       if (!revisionAprobada) {
                         return (
-                          <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
-                            Primero debes aprobar la revisión administrativa para poder registrar el pago y activar la matrícula.
-                          </p>
+                          <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200/60">
+                            <Clock size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm font-medium text-amber-700">
+                              Primero debes aprobar la revisión administrativa para poder registrar el pago y activar la matrícula.
+                            </p>
+                          </div>
                         );
                       }
 
                       if (pagoPagado) {
                         return (
-                          <div className="mt-4 space-y-3">
-                            <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
-                              El pago de matrícula figura como pagado. Puedes activar la matrícula.
-                            </p>
-
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200/60">
+                              <CheckCircle2 size={18} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-sm font-medium text-emerald-700">
+                                El pago de matrícula figura como pagado. Puedes activar la matrícula.
+                              </p>
+                            </div>
                             <button
                               type="button"
                               onClick={activarMatricula}
                               disabled={savingPago}
-                              className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50"
+                              className="h-11 rounded-2xl bg-[#CCF32F] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
-                              {savingPago ? 'Activando...' : 'Activar matrícula'}
+                              {savingPago ? (
+                                <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Activando…</span>
+                              ) : 'Activar matrícula'}
                             </button>
                           </div>
                         );
                       }
 
                       return (
-                        <div className="mt-4 space-y-3">
+                        <div className="space-y-4">
                           <div className="grid gap-3 md:grid-cols-4">
-                            <label>
-                              <Label>Apoderado pagador</Label>
-                              <select
-                                value={pagoApoderadoId}
-                                onChange={(e) => setPagoApoderadoId(e.target.value)}
-                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                              >
+                            <div>
+                              <SectionLabel>Apoderado pagador</SectionLabel>
+                              <select value={pagoApoderadoId} onChange={(e) => setPagoApoderadoId(e.target.value)} className={selectClass}>
                                 <option value="">Seleccionar</option>
                                 {detalleMatricula.estudiante?.apoderados?.map((relacion: any) => (
                                   <option key={relacion.id_apoderado} value={relacion.id_apoderado}>
@@ -1375,127 +1124,117 @@ export default function MatriculasHistorialPage() {
                                   </option>
                                 ))}
                               </select>
-                            </label>
-
-                            <label>
-                              <Label>Monto</Label>
-                              <input
-                                value={pagoMonto}
-                                onChange={(e) => setPagoMonto(e.target.value)}
-                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                              />
-                            </label>
-
-                            <label>
-                              <Label>Método</Label>
-                              <select
-                                value={pagoMetodo}
-                                onChange={(e) => setPagoMetodo(e.target.value)}
-                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                              >
+                            </div>
+                            <div>
+                              <SectionLabel>Monto</SectionLabel>
+                              <input value={pagoMonto} onChange={(e) => setPagoMonto(e.target.value)} className={inputClass} />
+                            </div>
+                            <div>
+                              <SectionLabel>Método</SectionLabel>
+                              <select value={pagoMetodo} onChange={(e) => setPagoMetodo(e.target.value)} className={selectClass}>
                                 <option value="Efectivo">Efectivo</option>
                                 <option value="Yape">Yape</option>
                                 <option value="Plin">Plin</option>
                                 <option value="Transferencia">Transferencia</option>
                                 <option value="Tarjeta">Tarjeta</option>
                               </select>
-                            </label>
-
-                            <label>
-                              <Label>N° operación</Label>
-                              <input
-                                value={pagoOperacion}
-                                onChange={(e) => setPagoOperacion(e.target.value)}
-                                placeholder="Opcional"
-                                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
-                              />
-                            </label>
+                            </div>
+                            <div>
+                              <SectionLabel>N° operación</SectionLabel>
+                              <input value={pagoOperacion} onChange={(e) => setPagoOperacion(e.target.value)} placeholder="Opcional" className={inputClass} />
+                            </div>
                           </div>
-
-                          <p className="text-xs font-bold text-slate-400">
-                            Saldo de matrícula: {formatMoney(saldoMatricula)}
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={registrarPagoMatricula}
-                            disabled={savingPago}
-                            className="h-12 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50"
-                          >
-                            {savingPago ? 'Registrando...' : 'Registrar pago y activar'}
-                          </button>
+                          <div className="flex items-center gap-4">
+                            <p className="text-xs text-neutral-400">
+                              Saldo de matrícula: <span className="font-semibold text-neutral-600">{formatMoney(saldoMatricula)}</span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={registrarPagoMatricula}
+                              disabled={savingPago}
+                              className="h-11 rounded-2xl bg-[#CCF32F] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                            >
+                              {savingPago ? (
+                                <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Registrando…</span>
+                              ) : 'Registrar pago y activar'}
+                            </button>
+                          </div>
                         </div>
                       );
                     })()}
 
                     {mensajePago && (
-                      <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                      <p className={`mt-3 rounded-xl p-3 text-sm font-medium ring-1 ${
+                        mensajePago.includes('No se pudo') || mensajePago.includes('cerrada') || mensajePago.includes('No se puede')
+                          ? 'bg-red-50 text-red-600 ring-red-200/60'
+                          : 'bg-emerald-50 text-emerald-600 ring-emerald-200/60'
+                      }`}>
                         {mensajePago}
                       </p>
                     )}
-                  </div>
+                  </ModalSection>
 
-                  {/* Aplicar promoción vigente */}
+                  {/* Aplicar promoción */}
                   {!esMatriculaFinal(detalleMatricula) && (
-                    <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <ModalSection title="Promoción vigente" icon={Sparkles}>
                       <button
                         type="button"
                         onClick={aplicarPromocionMatricula}
                         disabled={savingPago || !puedeAplicarPromocionMatricula}
-                        className="inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
                       >
+                        {savingPago ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                         Aplicar promoción vigente
                       </button>
-
                       {cronogramaMatriculaDetalle && !puedeAplicarPromocionMatricula && !matriculaPagadaParaPensiones && (
-                        <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-bold leading-5 text-slate-500 ring-1 ring-slate-100">
+                        <p className="mt-3 text-xs text-neutral-400">
                           La promoción solo puede aplicarse si el cobro de matrícula no tiene pagos registrados.
                         </p>
                       )}
-                    </div>
+                    </ModalSection>
                   )}
 
-                  {/* Generar cronograma de pensiones */}
+                  {/* Generar pensiones */}
                   {!esMatriculaFinal(detalleMatricula) && (
-                    <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                    <ModalSection title="Cronograma de pensiones" icon={FileText}>
                       {detalleMatricula && !matriculaPagadaParaPensiones && (
-                        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-700 ring-1 ring-amber-100">
-                          Para generar el cronograma de pensiones, primero debe registrarse el pago completo de matrícula.
-                        </p>
+                        <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200/60 mb-4">
+                          <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs font-medium text-amber-700">
+                            Para generar el cronograma de pensiones, primero debe registrarse el pago completo de matrícula.
+                          </p>
+                        </div>
                       )}
                       <button
                         type="button"
                         onClick={generarPensionesMatricula}
-                        disabled={
-                          savingPago ||
-                          esMatriculaFinal(detalleMatricula) ||
-                          !matriculaPagadaParaPensiones
-                        }
-                        className="inline-flex h-10 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:opacity-50"
+                        disabled={savingPago || esMatriculaFinal(detalleMatricula) || !matriculaPagadaParaPensiones}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
                       >
+                        {savingPago ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
                         Generar cronograma de pensiones
                       </button>
-                    </div>
+                    </ModalSection>
                   )}
 
-                  {/* Cronograma de pagos */}
-                  <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+                  {/* Cronograma desplegable */}
+                  <div className="rounded-2xl bg-neutral-50 p-5 ring-1 ring-neutral-200/60">
                     <button
                       type="button"
                       onClick={() => setCronogramaOpen(!cronogramaOpen)}
                       className="flex w-full items-center justify-between text-left"
                     >
                       <div>
-                        <h4 className="text-sm font-black text-slate-900">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                          <CreditCard size={16} className="text-[#CCF32F]" />
                           Cronograma de pagos
                         </h4>
-                        <p className="mt-1 text-xs font-bold text-slate-400">
-                          {detalleMatricula.cronogramas?.length || 0} conceptos
-                          generados
+                        <p className="mt-1 text-xs text-neutral-400">
+                          {detalleMatricula.cronogramas?.length || 0} conceptos generados
                         </p>
                       </div>
-
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+                      <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-500 ring-1 ring-neutral-200/60">
+                        {cronogramaOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {cronogramaOpen ? 'Ocultar' : 'Ver detalle'}
                       </span>
                     </button>
@@ -1506,31 +1245,31 @@ export default function MatriculasHistorialPage() {
                           detalleMatricula.cronogramas.map((item: any) => (
                             <div
                               key={item.id_cronograma}
-                              className="flex flex-col gap-2 rounded-2xl bg-white p-3 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between"
+                              className="flex flex-col gap-2 rounded-xl bg-white p-4 ring-1 ring-neutral-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div>
-                                <p className="text-sm font-black text-slate-800">
+                                <p className="text-sm font-semibold text-neutral-800">
                                   {item.concepto.nombre_concepto}
                                 </p>
-                                <p className="mt-1 text-xs text-slate-400">
-                                  Vencimiento:{' '}
-                                  {new Date(
-                                    item.fecha_vencimiento,
-                                  ).toLocaleDateString('es-PE')}{' '}
-                                  · Monto:{' '}
-                                  {formatMoney(item.concepto.monto_base)}
+                                <p className="mt-1 text-xs text-neutral-400">
+                                  Vence: {new Date(item.fecha_vencimiento).toLocaleDateString('es-PE')} · Monto: {formatMoney(item.concepto.monto_base)}
                                 </p>
                               </div>
-
-                              <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+                              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                                item.estado_pago === 'Pagado'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : item.estado_pago === 'Parcial'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-neutral-100 text-neutral-500'
+                              }`}>
+                                {item.estado_pago === 'Pagado' && <CheckCircle2 size={11} />}
+                                {item.estado_pago === 'Parcial' && <Clock size={11} />}
                                 {item.estado_pago}
                               </span>
                             </div>
                           ))
                         ) : (
-                          <p className="text-sm font-bold text-slate-400">
-                            No hay conceptos generados.
-                          </p>
+                          <p className="text-sm text-neutral-400">No hay conceptos generados.</p>
                         )}
                       </div>
                     )}

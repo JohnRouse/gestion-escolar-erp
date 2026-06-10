@@ -1,7 +1,23 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Camera, X, Save } from 'lucide-react';
+import {
+  Pencil,
+  Camera,
+  X,
+  Save,
+  User,
+  Mail,
+  Phone,
+  Briefcase,
+  ShieldCheck,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 
 interface PerfilData {
   nombres: string;
@@ -14,16 +30,20 @@ interface PerfilData {
 }
 
 function generarAvatar(nombre: string): string {
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nombre)}&backgroundColor=4c6ef5,748ffc,91a7ff,bac8ff,dbe4ff&textColor=ffffff&radius=50`;
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nombre)}&backgroundColor=CCF32F,91e600,65a30d&textColor=000000&radius=50`;
 }
 
 export default function PerfilPage() {
   const { token, user, updateUser } = useAuth();
   const [perfil, setPerfil] = useState<PerfilData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  
+  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
-  // Campos editables (modal)
+  // Editable fields
   const [editNombres, setEditNombres] = useState('');
   const [editApPaterno, setEditApPaterno] = useState('');
   const [editApMaterno, setEditApMaterno] = useState('');
@@ -31,14 +51,23 @@ export default function PerfilPage() {
   const [editTelefono, setEditTelefono] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Cambio de contraseña
+  // Password states
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  // Password visibility
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -68,13 +97,22 @@ export default function PerfilPage() {
     setEditCorreo(perfil.correo);
     setEditTelefono(perfil.telefono);
     setEditAvatarUrl(perfil.avatar_url || '');
-    setMessage('');
+    setMessage(null);
+    setIsClosing(false);
     setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setModalOpen(false);
+      setIsClosing(false);
+    }, 200);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage('');
+    setMessage(null);
     try {
       await axios.put('/api/auth/perfil', {
         nombres: editNombres,
@@ -100,9 +138,9 @@ export default function PerfilPage() {
         avatar_url: editAvatarUrl || null,
       });
 
-      setModalOpen(false);
+      closeModal();
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Error al guardar los cambios');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar los cambios' });
     } finally {
       setSaving(false);
     }
@@ -116,13 +154,13 @@ export default function PerfilPage() {
   };
 
   const handleChangePassword = async () => {
-    setPasswordMessage('');
+    setPasswordMessage(null);
     if (newPassword !== confirmPassword) {
-      setPasswordMessage('Las contraseñas no coinciden');
+      setPasswordMessage({ type: 'error', text: 'Las contraseñas no coinciden' });
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMessage('La nueva contraseña debe tener al menos 6 caracteres');
+      setPasswordMessage({ type: 'error', text: 'La nueva contraseña debe tener al menos 6 caracteres' });
       return;
     }
     setChangingPassword(true);
@@ -131,36 +169,53 @@ export default function PerfilPage() {
         password_actual: currentPassword,
         password_nueva: newPassword,
       }, { headers: { Authorization: `Bearer ${token}` } });
-      setPasswordMessage('Contraseña actualizada con éxito');
+      setPasswordMessage({ type: 'success', text: 'Contraseña actualizada con éxito' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      setPasswordMessage(err.response?.data?.message || 'Error al cambiar la contraseña');
+      setPasswordMessage({ type: 'error', text: err.response?.data?.message || 'Error al cambiar la contraseña' });
     } finally {
       setChangingPassword(false);
     }
   };
 
+  // Input styles
+  const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400";
+  const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-neutral-400";
+
   if (loading) {
     return (
-      <div className="animate-slide-in-right">
-        <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
-        <div className="card p-6">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="skeleton w-16 h-16 rounded-full" />
-            <div>
-              <div className="skeleton h-5 w-40 mb-1" />
-              <div className="skeleton h-4 w-24" />
+      <div className="w-full max-w-5xl mx-auto space-y-6 p-1">
+        <div className="h-8 w-32 rounded-lg bg-neutral-100 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-16 h-16 rounded-full bg-neutral-100 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-5 w-40 rounded-lg bg-neutral-100 animate-pulse" />
+                <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-16 rounded bg-neutral-100 animate-pulse" />
+                  <div className="h-5 w-32 rounded-lg bg-neutral-100 animate-pulse" />
+                </div>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6">
-            {[...Array(5)].map((_, i) => (
-              <div key={i}>
-                <div className="skeleton h-3 w-16 mb-2" />
-                <div className="skeleton h-5 w-32" />
-              </div>
-            ))}
+          <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="h-6 w-32 rounded-lg bg-neutral-100 animate-pulse mb-6" />
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-3 w-24 rounded bg-neutral-100 animate-pulse mb-2" />
+                  <div className="h-11 w-full rounded-2xl bg-neutral-100 animate-pulse" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -169,9 +224,12 @@ export default function PerfilPage() {
 
   if (!perfil) {
     return (
-      <div className="animate-slide-in-right">
-        <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
-        <p className="text-gray-500">No se pudo cargar la información del perfil.</p>
+      <div className="w-full max-w-5xl mx-auto p-1">
+        <h1 className="text-xl font-semibold text-neutral-900 mb-6">Perfil</h1>
+        <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-neutral-200/60 bg-white">
+          <AlertCircle size={32} className="text-neutral-300 mb-3" />
+          <p className="text-sm text-neutral-500">No se pudo cargar la información del perfil.</p>
+        </div>
       </div>
     );
   }
@@ -179,172 +237,266 @@ export default function PerfilPage() {
   const avatarSrc = perfil.avatar_url || generarAvatar(`${perfil.nombres} ${perfil.apellidoPaterno}`);
 
   return (
-    <div className="animate-slide-in-right">
-      <h1 className="text-xl font-semibold text-gray-900 mb-6">Perfil</h1>
+    <div className="w-full max-w-5xl mx-auto space-y-6 p-1">
+      {/* Animations CSS */}
+      <style>{`
+        @keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalOverlayOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes modalPanelIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes modalPanelOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(16px) scale(0.98); } }
+        .modal-overlay-enter { animation: modalOverlayIn 0.2s ease-out forwards; }
+        .modal-overlay-exit { animation: modalOverlayOut 0.15s ease-in forwards; }
+        .modal-panel-enter { animation: modalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .modal-panel-exit { animation: modalPanelOut 0.15s ease-in forwards; }
+      `}</style>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tarjeta de información personal */}
-        <div className="card p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      {/* Header */}
+      <div className={`transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Perfil</h1>
+        <p className="text-sm text-neutral-500 mt-1">Gestiona tu información personal y seguridad.</p>
+      </div>
+
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        {/* Personal Information Card */}
+        <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <img src={avatarSrc} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-gray-100" />
+              <div className="relative">
+                <img 
+                  src={avatarSrc} 
+                  alt="Avatar" 
+                  className="w-16 h-16 rounded-full object-cover ring-4 ring-[#CCF32F]/10" 
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#CCF32F] flex items-center justify-center ring-2 ring-white">
+                  <CheckCircle2 size={12} className="text-black" />
+                </div>
+              </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
                   {perfil.nombres} {perfil.apellidoPaterno} {perfil.apellidoMaterno}
                 </h2>
-                <p className="text-sm text-gray-500">{perfil.cargo}</p>
+                <span className="inline-flex items-center gap-1.5 mt-1 rounded-full bg-[#CCF32F]/10 px-2.5 py-1 text-xs font-semibold text-neutral-800">
+                  <Briefcase size={12} />
+                  {perfil.cargo}
+                </span>
               </div>
             </div>
-            <button onClick={openModal} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition-colors duration-150">
+            <button 
+              onClick={openModal} 
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#CCF32F] text-black text-sm font-medium transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98]"
+            >
               <Pencil size={15} /> Editar
             </button>
           </div>
 
-          <h3 className="text-base font-semibold text-gray-900 mb-6">Información Personal</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">NOMBRES</p>
-              <p className="text-sm font-medium text-gray-800">{perfil.nombres || '—'}</p>
+          <div className="h-px bg-neutral-100 mb-6" />
+
+          <div className="space-y-5">
+            <div className="flex items-start gap-3">
+              <User size={16} className="text-neutral-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className={labelClass}>Nombre Completo</p>
+                <p className="text-sm font-medium text-neutral-800">
+                  {perfil.nombres} {perfil.apellidoPaterno} {perfil.apellidoMaterno}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">APELLIDOS</p>
-              <p className="text-sm font-medium text-gray-800">
-                {perfil.apellidoPaterno ? `${perfil.apellidoPaterno} ${perfil.apellidoMaterno}` : '—'}
-              </p>
+            <div className="flex items-start gap-3">
+              <Mail size={16} className="text-neutral-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className={labelClass}>Correo Electrónico</p>
+                <p className="text-sm font-medium text-neutral-800">
+                  {perfil.correo || <span className="text-neutral-400 italic">No registrado</span>}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">CORREO ELECTRÓNICO</p>
-              <p className="text-sm font-medium text-gray-800">
-                {perfil.correo || <span className="text-gray-400 italic">No registrado</span>}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">TELÉFONO</p>
-              <p className="text-sm font-medium text-gray-800">
-                {perfil.telefono || <span className="text-gray-400 italic">No registrado</span>}
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-xs font-medium text-gray-500 mb-1">CARGO / PUESTO</p>
-              <p className="text-sm font-medium text-gray-800">{perfil.cargo}</p>
+            <div className="flex items-start gap-3">
+              <Phone size={16} className="text-neutral-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className={labelClass}>Teléfono</p>
+                <p className="text-sm font-medium text-neutral-800">
+                  {perfil.telefono || <span className="text-neutral-400 italic">No registrado</span>}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Tarjeta de Seguridad */}
-        <div className="card p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-6">Seguridad</h3>
+        {/* Security Card */}
+        <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-2 mb-6">
+            <ShieldCheck size={18} className="text-[#CCF32F]" />
+            <h3 className="text-lg font-semibold text-neutral-900 tracking-tight">Seguridad</h3>
+          </div>
+
           <div className="space-y-4">
             <div>
-              <label className="label">Contraseña actual</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="••••••••"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
+              <label className={labelClass}>Contraseña actual</label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? 'text' : 'password'}
+                  className={`${inputClass} pr-11`}
+                  placeholder="••••••••"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                  {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div>
-              <label className="label">Nueva contraseña</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="Mínimo 6 caracteres"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <label className={labelClass}>Nueva contraseña</label>
+              <div className="relative">
+                <input
+                  type={showNew ? 'text' : 'password'}
+                  className={`${inputClass} pr-11`}
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                  {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div>
-              <label className="label">Confirmar nueva contraseña</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="Repite la nueva contraseña"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <label className={labelClass}>Confirmar nueva contraseña</label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  className={`${inputClass} pr-11`}
+                  placeholder="Repite la nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {passwordMessage && (
-              <p className={`text-sm ${passwordMessage.includes('éxito') ? 'text-emerald-600' : 'text-red-500'}`}>
-                {passwordMessage}
-              </p>
+              <div className={`flex items-center gap-2 rounded-xl p-3 text-sm font-medium ${
+                passwordMessage.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60' 
+                  : 'bg-red-50 text-red-600 ring-1 ring-red-200/60'
+              }`}>
+                {passwordMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                {passwordMessage.text}
+              </div>
             )}
 
             <button
               onClick={handleChangePassword}
               disabled={changingPassword}
-              className="btn btn-secondary w-full"
+              className="w-full h-11 rounded-2xl bg-neutral-900 text-white text-sm font-medium transition-all duration-150 hover:bg-neutral-800 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {changingPassword ? 'Cambiando...' : 'Actualizar contraseña'}
+              {changingPassword ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+              {changingPassword ? 'Actualizando...' : 'Actualizar contraseña'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Modal de edición */}
+      {/* ═══ Modal de Edición ═══ */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto slide-up">
-            <div className="p-8">
-              <div className="flex items-start justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900">Editar Información Personal</h2>
-                  <p className="text-sm text-gray-500 mt-1">Actualiza tus datos para mantener tu perfil al día.</p>
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`}
+          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+          <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
+          
+          <div className={`relative bg-white rounded-2xl shadow-2xl ring-1 ring-neutral-200/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#CCF32F]/10 px-3 py-1 text-xs font-semibold text-neutral-800 mb-3">
+                  <Pencil size={13} />
+                  Editando perfil
                 </div>
-                <button onClick={() => setModalOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-                  <X size={18} />
-                </button>
+                <h2 className="text-xl font-semibold text-neutral-900 tracking-tight">Información Personal</h2>
+                <p className="text-sm text-neutral-400 mt-1">Actualiza tus datos para mantener tu perfil al día.</p>
               </div>
+              <button 
+                onClick={closeModal} 
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all duration-150 hover:bg-neutral-200 hover:text-neutral-600 flex-shrink-0"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-              <div className="mb-8">
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Cambiar Foto de Perfil</h3>
-                <div className="flex items-center gap-6">
-                  <div className="relative group">
-                    <img src={editAvatarUrl || avatarSrc} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
-                    <label className="absolute bottom-0 right-0 bg-white border border-gray-200 rounded-full p-1.5 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
-                      <Camera size={14} className="text-gray-400" />
-                      <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                    </label>
-                  </div>
-                  <p className="text-sm text-gray-500">Sube una imagen cuadrada (200×200 px)<br />en formato JPEG o PNG.</p>
-                </div>
-              </div>
-
-              <h3 className="text-base font-semibold text-gray-900 mb-6">Información Personal</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="label">Nombres</label>
-                  <input type="text" className="input" value={editNombres} onChange={e => setEditNombres(e.target.value)} />
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Avatar Section */}
+              <div className="flex items-center gap-6">
+                <div className="relative group">
+                  <img 
+                    src={editAvatarUrl || avatarSrc} 
+                    alt="Avatar" 
+                    className="w-20 h-20 rounded-full object-cover ring-4 ring-neutral-100" 
+                  />
+                  <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-150">
+                    <Camera size={20} className="text-white" />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  </label>
                 </div>
                 <div>
-                  <label className="label">Apellido Paterno</label>
-                  <input type="text" className="input" value={editApPaterno} onChange={e => setEditApPaterno(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Apellido Materno</label>
-                  <input type="text" className="input" value={editApMaterno} onChange={e => setEditApMaterno(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Correo Electrónico</label>
-                  <input type="email" className="input" value={editCorreo} onChange={e => setEditCorreo(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Teléfono</label>
-                  <input type="text" className="input" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} />
+                  <p className="text-sm font-medium text-neutral-700">Foto de perfil</p>
+                  <p className="text-xs text-neutral-400 mt-1">Sube una imagen cuadrada (200×200 px) en formato JPEG o PNG.</p>
                 </div>
               </div>
 
-              {message && <p className="mt-4 text-sm text-red-500">{message}</p>}
+              <div className="h-px bg-neutral-100" />
 
-              <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-                <button onClick={() => setModalOpen(false)} className="btn btn-secondary">Cerrar</button>
-                <button onClick={handleSave} disabled={saving} className="btn btn-primary">
-                  <Save size={15} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className={labelClass}>Nombres</label>
+                  <input type="text" className={inputClass} value={editNombres} onChange={e => setEditNombres(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelClass}>Apellido Paterno</label>
+                  <input type="text" className={inputClass} value={editApPaterno} onChange={e => setEditApPaterno(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelClass}>Apellido Materno</label>
+                  <input type="text" className={inputClass} value={editApMaterno} onChange={e => setEditApMaterno(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelClass}>Correo Electrónico</label>
+                  <input type="email" className={inputClass} value={editCorreo} onChange={e => setEditCorreo(e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Teléfono</label>
+                  <input type="text" className={inputClass} value={editTelefono} onChange={e => setEditTelefono(e.target.value)} />
+                </div>
               </div>
+
+              {message && (
+                <div className="flex items-center gap-2 rounded-xl p-3 text-sm font-medium bg-red-50 text-red-600 ring-1 ring-red-200/60">
+                  <AlertCircle size={16} />
+                  {message.text}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-100 bg-neutral-50/50 flex-shrink-0">
+              <button 
+                onClick={closeModal} 
+                className="h-11 px-5 rounded-2xl border border-neutral-200 bg-white text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSave} 
+                disabled={saving} 
+                className="h-11 px-6 rounded-2xl bg-[#CCF32F] text-black text-sm font-medium transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {saving ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
             </div>
           </div>
         </div>

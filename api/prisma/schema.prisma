@@ -837,9 +837,11 @@ model PagoRecibido {
   id_estudiante         Int?
   id_apoderado          Int?
   observacion           String?  @db.VarChar(600)
-  id_usuario_registro   Int
+  id_usuario_registro   Int?
   id_usuario_validacion Int?
   fecha_validacion      DateTime?
+  banco_destino         String?  @db.VarChar(80)
+  origen_reporte        String?  @default("Interno") @db.VarChar(50)
   created_at            DateTime @default(now())
 
   tenant         Tenant?          @relation(fields: [id_tenant], references: [id_tenant])
@@ -848,7 +850,7 @@ model PagoRecibido {
   matricula      Matricula?       @relation(fields: [id_matricula], references: [id_matricula])
   estudiante     Estudiante?      @relation(fields: [id_estudiante], references: [id_persona])
   apoderado      Apoderado?       @relation(fields: [id_apoderado], references: [id_persona])
-  registrado_por Usuario          @relation("PagoRecibidoRegistro", fields: [id_usuario_registro], references: [id_usuario])
+  registrado_por Usuario?         @relation("PagoRecibidoRegistro", fields: [id_usuario_registro], references: [id_usuario])
   validado_por   Usuario?         @relation("PagoRecibidoValidacion", fields: [id_usuario_validacion], references: [id_usuario])
 
   @@index([id_colegio, estado])

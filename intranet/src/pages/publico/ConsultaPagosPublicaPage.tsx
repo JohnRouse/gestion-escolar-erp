@@ -13,6 +13,7 @@ import {
   Smartphone,
   WalletCards,
 } from 'lucide-react';
+import ReportarPagoModal from '../../components/publico/ReportarPagoModal';
 
 type ColegioPublico = {
   id_colegio: number;
@@ -77,6 +78,7 @@ export default function ConsultaPagosPublicaPage() {
   const [data, setData] = useState<ConsultaResponse | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
+  const [pagoAReportar, setPagoAReportar] = useState<any | null>(null);
 
   const pagosPorPagar = useMemo(
     () => data?.pagos_para_pagar || (data?.pagos || []).filter((pago) => pago.requiere_pago),
@@ -286,7 +288,13 @@ export default function ConsultaPagosPublicaPage() {
                     </div>
                   ) : (
                     pagosPorPagar.map((pago) => (
-                      <PagoCard key={pago.id_cronograma} pago={pago} onCopy={copy} copied={copied} />
+                      <PagoCard
+                        key={pago.id_cronograma}
+                        pago={pago}
+                        onCopy={copy}
+                        copied={copied}
+                        onReport={() => setPagoAReportar(pago)}
+                      />
                     ))
                   )}
                 </div>
@@ -372,6 +380,17 @@ export default function ConsultaPagosPublicaPage() {
             </aside>
           </div>
         )}
+
+        {pagoAReportar && data && (
+          <ReportarPagoModal
+            pago={pagoAReportar}
+            alumno={data.alumno}
+            colegioId={colegioId}
+            dni={dni}
+            onClose={() => setPagoAReportar(null)}
+            onSuccess={() => consultar()}
+          />
+        )}
       </section>
     </main>
   );
@@ -381,10 +400,12 @@ function PagoCard({
   pago,
   onCopy,
   copied,
+  onReport,
 }: {
   pago: any;
   onCopy: (value?: string | null, label?: string) => void;
   copied: string;
+  onReport: () => void;
 }) {
   const link = pago.referencia_pago
     ? `${window.location.origin}/pago/${pago.referencia_pago}`
@@ -437,6 +458,14 @@ function PagoCard({
                 Ver detalle
               </a>
             )}
+
+            <button
+              type="button"
+              onClick={onReport}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
+            >
+              Ya realicé el pago
+            </button>
           </div>
         </div>
       </div>

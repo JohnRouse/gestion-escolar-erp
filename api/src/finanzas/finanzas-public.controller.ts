@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { FinanzasService } from './finanzas.service';
 
 @Controller('tesoreria/public')
@@ -26,5 +30,34 @@ export class FinanzasPublicController {
       Number(colegioId),
       dni,
     );
+  }
+
+  @Post('reportar-pago')
+  @UseInterceptors(
+    FileInterceptor('comprobante', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const dir = './uploads/comprobantes';
+          if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req, file, cb) => {
+          const safeExt = extname(file.originalname || '').toLowerCase() || '.jpg';
+          cb(null, `comprobante-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        cb(null, allowed.includes(file.mimetype));
+      },
+    }),
+  )
+  async reportarPagoPublico(
+    @Body() body: any,
+    @UploadedFile() file?: any,
+  ) {
+    const capturaUrl = file ? `/uploads/comprobantes/${file.filename}` : null;
+    return this.finanzasService.reportarPagoPublico(body, capturaUrl);
   }
 }

@@ -2681,4 +2681,109 @@ export class FinanzasService {
       },
     };
   }
+
+  // ── MÉTODO PÚBLICO: REPORTAR PAGO ──
+  async reportarPagoPublico(body: any, capturaUrl?: string | null) {
+    const colegioId = Number(body.colegio_id);
+    const idCronograma = Number(body.id_cronograma);
+    const dni = String(body.dni || '').replace(/\D/g, '');
+    const referencia = this.normalizeEmpty(body.referencia_pago);
+    const medioPago = this.normalizeEmpty(body.medio_pago) || 'Yape';
+    const bancoDestino = this.normalizeEmpty(body.banco_destino);
+    const monto = Number(body.monto_recibido);
+    const numeroOperacion = this.normalizeEmpty(body.numero_operacion);
+    const nombrePagador = this.normalizeEmpty(body.nombre_pagador);
+
+    if (!colegioId) throw new BadRequestException('Selecciona el colegio.');
+    if (!idCronograma) throw new BadRequestException('No se identificó el pago escolar.');
+    if (dni.length !== 8) throw new BadRequestException('Ingresa un DNI válido.');
+    if (!Number.isFinite(monto) || monto <= 0) throw new BadRequestException('Ingresa un monto válido.');
+    if (!numeroOperacion) throw new BadRequestException('Ingresa el número de operación.');
+    if (!nombrePagador) throw new BadRequestException('Ingresa el nombre del pagador.');
+    if (medioPago === 'Transferencia' && !bancoDestino) {
+      throw new BadRequestException('Selecciona el banco destino.');
+    }
+    if (!capturaUrl) throw new BadRequestException('Adjunta la captura del comprobante.');
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        id_cronograma: idCronograma,
+        referencia_pago: referencia || undefined,
+        matricula: {
+          id_colegio: colegioId,
+          estudiante: {
+            persona: { dni },
+          },
+        },
+      },
+      include: {
+        concepto: true,
+        pagos: true,
+        matricula: {
+          include: {
+            colegio: true,
+            estudiante: {
+              include: {
+                persona: true,
+                apoderados: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cronograma) {
+      throw new NotFoundException('No se encontró el pago escolar para los datos ingresados.');
+    }
+
+    const duplicado = await this.prisma.pagoRecibido.findFirst({
+      where: {
+        id_cronograma: cronograma.id_cronograma,
+        numero_operacion: numeroOperacion,
+        estado: { notIn: ['Rechazado'] },
+      },
+    });
+
+    if (duplicado) {
+      throw new BadRequestException('Ya existe un reporte con ese número de operación para este pago.');
+    }
+
+    const idApoderado = cronograma.matricula.estudiante.apoderados?.[0]?.id_apoderado || null;
+
+    const pago = await this.prisma.pagoRecibido.create({
+      data: {
+        id_tenant: cronograma.matricula.colegio?.id_tenant || null,
+        id_colegio: cronograma.matricula.id_colegio,
+        medio_pago: medioPago,
+        banco_destino: bancoDestino,
+        monto_recibido: monto,
+        fecha_pago_reportada: new Date(),
+        nombre_pagador: nombrePagador,
+        telefono_pagador: this.normalizeEmpty(body.telefono_pagador),
+        numero_operacion: numeroOperacion,
+        referencia_escrita: cronograma.referencia_pago,
+        captura_url: capturaUrl,
+        estado: 'Identificado',
+        id_cronograma: cronograma.id_cronograma,
+        id_matricula: cronograma.matricula.id_matricula,
+        id_estudiante: cronograma.matricula.id_estudiante,
+        id_apoderado: idApoderado,
+        observacion: 'Reportado desde portal público de pagos.',
+        origen_reporte: 'Portal público',
+        id_usuario_registro: null,
+      },
+      include: {
+        cronograma: { include: { concepto: true } },
+        matricula: true,
+        estudiante: { include: { persona: true } },
+        apoderado: { include: { persona: true } },
+      },
+    });
+
+    return {
+      message: 'Comprobante enviado correctamente. El colegio revisará y confirmará el pago.',
+      pago,
+    };
+  }
 }

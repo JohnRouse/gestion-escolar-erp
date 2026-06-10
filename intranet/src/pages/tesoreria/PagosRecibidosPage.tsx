@@ -3,6 +3,7 @@ import axios from 'axios';
 import {
   AlertCircle,
   CheckCircle2,
+  ExternalLink,
   Eye,
   Loader2,
   Search,
@@ -28,6 +29,9 @@ type PagoRecibido = {
   estado: string;
   observacion?: string | null;
   id_cronograma?: number | null;
+  banco_destino?: string | null;
+  captura_url?: string | null;
+  origen_reporte?: string | null;
   cronograma?: {
     id_cronograma: number;
     referencia_pago?: string | null;
@@ -360,6 +364,18 @@ export default function PagosRecibidosPage() {
                         Operación: {pago.numero_operacion || 'Sin operación'} · Pagador: {pago.nombre_pagador || 'Sin nombre'}
                       </p>
 
+                      {pago.banco_destino && (
+                        <p className="mt-1 text-xs font-bold text-slate-400">
+                          Banco destino: {pago.banco_destino}
+                        </p>
+                      )}
+
+                      {pago.origen_reporte === 'Portal público' && (
+                        <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                          Reportado por el padre
+                        </span>
+                      )}
+
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         Código escrito: {pago.referencia_escrita || 'Sin código'} · Concepto: {pago.cronograma?.concepto?.nombre_concepto || 'No identificado'}
                       </p>
@@ -409,7 +425,41 @@ export default function PagosRecibidosPage() {
               <Info label="Operación" value={selected.numero_operacion || 'Sin operación'} />
               <Info label="Fecha reportada" value={formatDateTime(selected.fecha_pago_reportada)} />
               <Info label="Estado" value={selected.estado} />
+              <Info label="Banco destino" value={selected.banco_destino || '—'} />
+              <Info label="Origen" value={selected.origen_reporte || 'Interno'} />
             </div>
+
+            {selected.captura_url && (
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Comprobante adjunto
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-500">
+                      Archivo enviado desde el portal público.
+                    </p>
+                  </div>
+                  <a
+                    href={selected.captura_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                  >
+                    <ExternalLink size={16} />
+                    Abrir
+                  </a>
+                </div>
+
+                {selected.captura_url.match(/\.(png|jpg|jpeg|webp)$/i) && (
+                  <img
+                    src={selected.captura_url}
+                    alt="Comprobante de pago"
+                    className="max-h-80 w-full rounded-2xl object-contain bg-white"
+                  />
+                )}
+              </div>
+            )}
 
             <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
               <label>
