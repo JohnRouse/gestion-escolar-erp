@@ -270,7 +270,7 @@ export default function ConsultaPagosPublicaPage() {
               <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
                 <h2 className="text-lg font-black text-slate-950">Por pagar ahora</h2>
                 <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-                  Copia el código del concepto que vas a pagar y colócalo en la descripción.
+                  Copia el código para pagar. Si ya enviaste tu comprobante, verás el estado “En revisión”.
                 </p>
 
                 <div className="mt-5 space-y-3">
@@ -417,14 +417,34 @@ function PagoCard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-black text-slate-950">{pago.concepto}</h3>
-            <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
-              Pendiente
-            </span>
+            {pago.en_revision ? (
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                Comprobante en revisión
+              </span>
+            ) : (
+              <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
+                Pendiente
+              </span>
+            )}
           </div>
           <p className="mt-1 text-sm font-bold text-slate-500">
             {pago.matricula?.anio} · {pago.matricula?.aula || 'Aula no indicada'} · Vence {formatDate(pago.fecha_vencimiento)}
           </p>
           <p className="mt-2 text-2xl font-black text-rose-700">{formatMoney(pago.saldo)}</p>
+
+          {pago.en_revision && pago.reporte_pago && (
+            <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-amber-800 ring-1 ring-amber-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+                Reporte recibido
+              </p>
+              <p className="mt-1 text-sm font-bold leading-5">
+                El colegio está revisando el comprobante enviado.
+              </p>
+              <p className="mt-1 text-xs font-black">
+                Operación: {pago.reporte_pago.numero_operacion || 'No indicada'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="min-w-[260px] rounded-2xl bg-white p-4 ring-1 ring-slate-200">
@@ -459,13 +479,23 @@ function PagoCard({
               </a>
             )}
 
-            <button
-              type="button"
-              onClick={onReport}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
-            >
-              Ya realicé el pago
-            </button>
+            {pago.en_revision ? (
+              <button
+                type="button"
+                disabled
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 text-sm font-black text-amber-700 ring-1 ring-amber-100 opacity-80"
+              >
+                En revisión
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onReport}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
+              >
+                Ya realicé el pago
+              </button>
+            )}
           </div>
         </div>
       </div>

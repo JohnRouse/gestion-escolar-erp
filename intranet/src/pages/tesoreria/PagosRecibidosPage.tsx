@@ -103,7 +103,7 @@ export default function PagosRecibidosPage() {
 
   const [pagos, setPagos] = useState<PagoRecibido[]>([]);
   const [q, setQ] = useState('');
-  const [estado, setEstado] = useState('Pendiente');
+  const [estado, setEstado] = useState('Todos');
   const [medio, setMedio] = useState('Todos');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<PagoRecibido | null>(null);

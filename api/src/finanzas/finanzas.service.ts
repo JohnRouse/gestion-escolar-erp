@@ -2512,12 +2512,27 @@ export class FinanzasService {
           },
         },
         cronogramas: {
-          where: { visible_apoderado: true },
+          where: {
+            visible_apoderado: true,
+          },
           include: {
             concepto: true,
             pagos: true,
+            pagos_recibidos: {
+              where: {
+                estado: {
+                  in: ['Pendiente', 'Identificado', 'Observado'],
+                },
+              },
+              orderBy: {
+                created_at: 'desc',
+              },
+              take: 1,
+            },
           },
-          orderBy: { fecha_vencimiento: 'asc' },
+          orderBy: {
+            fecha_vencimiento: 'asc',
+          },
         },
       },
       orderBy: [{ id_anio: 'desc' }, { id_matricula: 'desc' }],
@@ -2539,6 +2554,10 @@ export class FinanzasService {
           0,
         );
         const saldo = Math.max(Number(monto || 0) - pagado, 0);
+        const reporteReciente = cronograma.pagos_recibidos?.[0] || null;
+        const enRevision =
+          !!reporteReciente &&
+          ['Pendiente', 'Identificado', 'Observado'].includes(reporteReciente.estado);
 
         return {
           id_cronograma: cronograma.id_cronograma,
@@ -2551,6 +2570,21 @@ export class FinanzasService {
           pagado,
           saldo,
           requiere_pago: saldo > 0 && cronograma.estado_pago !== 'Pagado',
+          en_revision: enRevision,
+          reporte_pago: reporteReciente
+            ? {
+                id_pago_recibido: reporteReciente.id_pago_recibido,
+                estado: reporteReciente.estado,
+                monto_recibido: reporteReciente.monto_recibido,
+                medio_pago: reporteReciente.medio_pago,
+                banco_destino: reporteReciente.banco_destino,
+                numero_operacion: reporteReciente.numero_operacion,
+                nombre_pagador: reporteReciente.nombre_pagador,
+                captura_url: reporteReciente.captura_url,
+                fecha_reporte: reporteReciente.created_at,
+                observacion: reporteReciente.observacion,
+              }
+            : null,
           matricula: {
             id_matricula: matricula.id_matricula,
             codigo_matricula: matricula.codigo_matricula,

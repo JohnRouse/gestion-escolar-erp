@@ -65,6 +65,10 @@ export default function ReportarPagoModal({
       });
       setSent(true);
       onSuccess?.();
+
+      window.setTimeout(() => {
+        onClose();
+      }, 1200);
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo enviar el comprobante.');
     } finally {
