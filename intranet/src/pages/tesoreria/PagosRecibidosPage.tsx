@@ -32,6 +32,17 @@ type PagoRecibido = {
   banco_destino?: string | null;
   captura_url?: string | null;
   origen_reporte?: string | null;
+  validacion?: {
+    monto_esperado?: number | null;
+    pagado_actual?: number | null;
+    saldo_actual?: number | null;
+    monto_reportado?: number | null;
+    diferencia?: number | null;
+    monto_coincide?: boolean | null;
+    excede_saldo?: boolean;
+    operacion_duplicada?: boolean;
+    cantidad_operaciones_similares?: number;
+  };
   cronograma?: {
     id_cronograma: number;
     referencia_pago?: string | null;
@@ -94,6 +105,22 @@ function estadoTone(estado: string) {
   if (estado === 'Observado') return 'bg-amber-50 text-amber-700 ring-amber-100';
   if (estado === 'Rechazado') return 'bg-rose-50 text-rose-700 ring-rose-100';
   return 'bg-slate-50 text-slate-600 ring-slate-100';
+}
+
+function validacionTone(pago: PagoRecibido) {
+  if (pago.validacion?.operacion_duplicada) {
+    return { label: 'Operación repetida', className: 'bg-rose-50 text-rose-700 ring-rose-100' };
+  }
+  if (pago.validacion?.excede_saldo) {
+    return { label: 'Monto excede saldo', className: 'bg-amber-50 text-amber-700 ring-amber-100' };
+  }
+  if (pago.validacion?.monto_coincide) {
+    return { label: 'Monto coincide', className: 'bg-emerald-50 text-emerald-700 ring-emerald-100' };
+  }
+  if (pago.validacion?.monto_coincide === false) {
+    return { label: 'Monto distinto', className: 'bg-sky-50 text-sky-700 ring-sky-100' };
+  }
+  return null;
 }
 
 export default function PagosRecibidosPage() {
@@ -335,6 +362,7 @@ export default function PagosRecibidosPage() {
           pagos.map((pago) => {
             const alumno = fullName(pago.estudiante?.persona);
             const apoderado = fullName(pago.apoderado?.persona);
+            const estadoValidacion = validacionTone(pago);
 
             return (
               <article key={pago.id_pago_recibido} className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-100/80">
@@ -354,6 +382,12 @@ export default function PagosRecibidosPage() {
                         <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoTone(pago.estado)}`}>
                           {pago.estado}
                         </span>
+
+                        {estadoValidacion && (
+                          <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoValidacion.className}`}>
+                            {estadoValidacion.label}
+                          </span>
+                        )}
                       </div>
 
                       <p className="mt-1 text-sm font-bold text-slate-500">
@@ -363,6 +397,17 @@ export default function PagosRecibidosPage() {
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         Operación: {pago.numero_operacion || 'Sin operación'} · Pagador: {pago.nombre_pagador || 'Sin nombre'}
                       </p>
+
+                      {pago.validacion && (
+                        <p className="mt-1 text-xs font-bold text-slate-400">
+                          Esperado: {pago.validacion.saldo_actual !== null && pago.validacion.saldo_actual !== undefined
+                            ? formatMoney(pago.validacion.saldo_actual)
+                            : '—'} · Reportado: {formatMoney(pago.validacion.monto_reportado || pago.monto_recibido)}
+                          {pago.validacion.diferencia !== null && pago.validacion.diferencia !== undefined
+                            ? ` · Diferencia: ${formatMoney(pago.validacion.diferencia)}`
+                            : ''}
+                        </p>
+                      )}
 
                       {pago.banco_destino && (
                         <p className="mt-1 text-xs font-bold text-slate-400">
@@ -429,9 +474,59 @@ export default function PagosRecibidosPage() {
               <Info label="Origen" value={selected.origen_reporte || 'Interno'} />
             </div>
 
+            {selected.validacion && (
+              <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Validación rápida
+                    </p>
+                    <h3 className="mt-1 text-base font-black text-slate-950">
+                      {selected.validacion.monto_coincide
+                        ? 'El monto reportado coincide con el saldo.'
+                        : 'Revisa el monto antes de confirmar.'}
+                    </h3>
+                  </div>
+
+                  {selected.validacion.operacion_duplicada && (
+                    <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
+                      Operación repetida
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                  <Info label="Monto esperado" value={
+                    selected.validacion.saldo_actual !== null && selected.validacion.saldo_actual !== undefined
+                      ? formatMoney(selected.validacion.saldo_actual)
+                      : '—'
+                  } />
+                  <Info label="Monto reportado" value={formatMoney(selected.validacion.monto_reportado || selected.monto_recibido)} />
+                  <Info label="Diferencia" value={
+                    selected.validacion.diferencia !== null && selected.validacion.diferencia !== undefined
+                      ? formatMoney(selected.validacion.diferencia)
+                      : '—'
+                  } />
+                  <Info label="Coincidencia" value={selected.validacion.monto_coincide ? 'Sí' : 'Revisar'} />
+                </div>
+
+                {selected.validacion.excede_saldo && (
+                  <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-black text-amber-700 ring-1 ring-amber-100">
+                    El monto reportado excede el saldo pendiente. Revisa antes de confirmar.
+                  </p>
+                )}
+
+                {selected.validacion.operacion_duplicada && (
+                  <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-black text-rose-700 ring-1 ring-rose-100">
+                    Ya existe más de un pago con este número de operación. Revisa antes de confirmar.
+                  </p>
+                )}
+              </div>
+            )}
+
             {selected.captura_url && (
               <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
                       Comprobante adjunto
@@ -440,15 +535,25 @@ export default function PagosRecibidosPage() {
                       Archivo enviado desde el portal público.
                     </p>
                   </div>
-                  <a
-                    href={selected.captura_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
-                  >
-                    <ExternalLink size={16} />
-                    Abrir
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={selected.captura_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                    >
+                      <ExternalLink size={16} />
+                      Abrir
+                    </a>
+
+                    <a
+                      href={selected.captura_url}
+                      download
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-200"
+                    >
+                      Descargar
+                    </a>
+                  </div>
                 </div>
 
                 {selected.captura_url.match(/\.(png|jpg|jpeg|webp)$/i) && (
@@ -457,6 +562,12 @@ export default function PagosRecibidosPage() {
                     alt="Comprobante de pago"
                     className="max-h-80 w-full rounded-2xl object-contain bg-white"
                   />
+                )}
+
+                {selected.captura_url.match(/\.pdf$/i) && (
+                  <div className="rounded-2xl bg-white p-4 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-100">
+                    El comprobante es un PDF. Usa "Abrir" para revisarlo en otra pestaña.
+                  </div>
                 )}
               </div>
             )}

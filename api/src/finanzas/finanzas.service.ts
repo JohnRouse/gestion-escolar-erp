@@ -2030,11 +2030,21 @@ export class FinanzasService {
       ];
     }
 
-    return this.prisma.pagoRecibido.findMany({
+    const pagosRecibidos = await this.prisma.pagoRecibido.findMany({
       where,
       include: {
         colegio: true,
-        cronograma: { include: { concepto: true } },
+        cronograma: {
+          include: {
+            concepto: true,
+            pagos: true,
+            matricula: {
+              include: {
+                estudiante: { include: { persona: true } },
+              },
+            },
+          },
+        },
         matricula: {
           include: {
             colegio: true,
@@ -2061,6 +2071,59 @@ export class FinanzasService {
       },
       orderBy: [{ created_at: 'desc' }, { id_pago_recibido: 'desc' }],
       take: limit,
+    });
+
+    const operaciones = pagosRecibidos
+      .map((item) => this.normalizeEmpty(item.numero_operacion))
+      .filter(Boolean) as string[];
+
+    const conteosOperacion = new Map<string, number>();
+
+    if (operaciones.length) {
+      const agrupados = await this.prisma.pagoRecibido.groupBy({
+        by: ['numero_operacion'],
+        where: {
+          numero_operacion: { in: operaciones },
+          OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
+          estado: { notIn: ['Rechazado'] },
+        },
+        _count: { numero_operacion: true },
+      });
+
+      agrupados.forEach((item) => {
+        if (item.numero_operacion) {
+          conteosOperacion.set(item.numero_operacion, item._count.numero_operacion);
+        }
+      });
+    }
+
+    return pagosRecibidos.map((item) => {
+      const saldo = item.cronograma ? this.saldoCronograma(item.cronograma) : null;
+      const montoReportado = Number(item.monto_recibido || 0);
+      const saldoActual = saldo?.saldo ?? null;
+      const diferencia =
+        saldoActual === null ? null : Number((montoReportado - saldoActual).toFixed(2));
+
+      const cantidadOperaciones = item.numero_operacion
+        ? conteosOperacion.get(item.numero_operacion) || 0
+        : 0;
+
+      return {
+        ...item,
+        validacion: {
+          monto_esperado: saldo?.monto ?? null,
+          pagado_actual: saldo?.pagado ?? null,
+          saldo_actual: saldoActual,
+          monto_reportado: montoReportado,
+          diferencia,
+          monto_coincide:
+            saldoActual !== null ? Math.abs(montoReportado - saldoActual) <= 0.01 : null,
+          excede_saldo:
+            saldoActual !== null ? montoReportado > saldoActual + 0.01 : false,
+          operacion_duplicada: cantidadOperaciones > 1,
+          cantidad_operaciones_similares: cantidadOperaciones,
+        },
+      };
     });
   }
 
