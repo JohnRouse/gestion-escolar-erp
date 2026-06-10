@@ -105,6 +105,9 @@ function buildMensaje(deuda: DeudaRegistro) {
       ? `${window.location.origin}/pago/${deuda.referencia_pago}`
       : '';
 
+  const linkConsulta =
+    typeof window !== 'undefined' ? `${window.location.origin}/consulta-pagos` : '';
+
   return [
     'Estimado padre/madre, le recordamos el pago pendiente:',
     '',
@@ -115,6 +118,7 @@ function buildMensaje(deuda: DeudaRegistro) {
     `Vencimiento: ${formatDate(deuda.fecha_vencimiento)}`,
     '',
     linkPago ? `Puede ver el detalle aquí: ${linkPago}` : '',
+    linkConsulta ? `También puede consultar sus pagos aquí: ${linkConsulta}` : '',
     '',
     'Si paga por Yape/Plin/transferencia, coloque el código de pago en la descripción.',
     '',

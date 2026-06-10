@@ -403,13 +403,6 @@ export class FinanzasController {
     });
   }
 
-  // ── RUTA PÚBLICA PARA LINK DE PAGO ──
-  @Get('public/pagos/:referencia')
-  @UseGuards()
-  async obtenerPagoPublicoPorReferencia(@Param('referencia') referencia: string) {
-    return this.finanzasService.obtenerPagoPublicoPorReferencia(referencia);
-  }
-
   // ── RUTAS PARA DATOS DE COBRO DEL COLEGIO ──
   @Get('datos-cobro')
   @Roles('Admin', 'Director', 'Secretaria')

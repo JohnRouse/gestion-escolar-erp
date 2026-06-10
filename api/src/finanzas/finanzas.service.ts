@@ -2456,4 +2456,186 @@ export class FinanzasService {
       datos_cobro: datos,
     };
   }
+
+  // ── PORTAL PÚBLICO: LISTA DE COLEGIOS ──
+  async listarColegiosPublicos() {
+    const colegios = await this.prisma.colegio.findMany({
+      where: { estado: 'Activo' },
+      select: {
+        id_colegio: true,
+        nombre: true,
+        nombre_corto: true,
+        codigo: true,
+        logo_url: true,
+        color_principal: true,
+      },
+      orderBy: { nombre: 'asc' },
+    });
+
+    return colegios;
+  }
+
+  // ── PORTAL PÚBLICO: CONSULTA DE PAGOS POR DNI ──
+  async consultarPagosPublicosPorDni(colegioId: number, dni: string) {
+    const dniLimpio = String(dni || '').replace(/\D/g, '');
+
+    if (!colegioId) {
+      throw new BadRequestException('Selecciona el colegio.');
+    }
+
+    if (dniLimpio.length !== 8) {
+      throw new BadRequestException('Ingresa un DNI válido de 8 dígitos.');
+    }
+
+    const colegio = await this.prisma.colegio.findFirst({
+      where: { id_colegio: colegioId, estado: 'Activo' },
+      include: { datos_cobro: true },
+    });
+
+    if (!colegio) {
+      throw new NotFoundException('No se encontró el colegio seleccionado.');
+    }
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_colegio: colegioId,
+        estudiante: {
+          persona: { dni: dniLimpio },
+        },
+      },
+      include: {
+        anio: true,
+        estudiante: { include: { persona: true } },
+        seccion: {
+          include: {
+            grado: { include: { nivel: true } },
+          },
+        },
+        cronogramas: {
+          where: { visible_apoderado: true },
+          include: {
+            concepto: true,
+            pagos: true,
+          },
+          orderBy: { fecha_vencimiento: 'asc' },
+        },
+      },
+      orderBy: [{ id_anio: 'desc' }, { id_matricula: 'desc' }],
+    });
+
+    if (!matriculas.length) {
+      throw new NotFoundException(
+        'No encontramos pagos para ese DNI en el colegio seleccionado.',
+      );
+    }
+
+    const alumno = matriculas[0].estudiante.persona;
+
+    const pagos = matriculas.flatMap((matricula) => {
+      return matricula.cronogramas.map((cronograma) => {
+        const monto = this.montoProgramadoCronograma(cronograma);
+        const pagado = cronograma.pagos.reduce(
+          (sum, pago) => sum + Number(pago.monto_pagado || 0),
+          0,
+        );
+        const saldo = Math.max(Number(monto || 0) - pagado, 0);
+
+        return {
+          id_cronograma: cronograma.id_cronograma,
+          referencia_pago: cronograma.referencia_pago,
+          concepto: cronograma.concepto?.nombre_concepto || 'Pago escolar',
+          tipo_concepto: cronograma.concepto?.tipo_concepto || null,
+          estado_pago: cronograma.estado_pago,
+          fecha_vencimiento: cronograma.fecha_vencimiento,
+          monto: Number(monto || 0),
+          pagado,
+          saldo,
+          requiere_pago: saldo > 0 && cronograma.estado_pago !== 'Pagado',
+          matricula: {
+            id_matricula: matricula.id_matricula,
+            codigo_matricula: matricula.codigo_matricula,
+            estado_matricula: matricula.estado_matricula,
+            anio: matricula.anio?.nombre_anio,
+            aula: matricula.seccion
+              ? `${matricula.seccion.grado?.nombre_grado || ''} ${matricula.seccion.letra || ''}`.trim()
+              : null,
+            nivel: matricula.seccion?.grado?.nivel?.nombre_nivel || null,
+          },
+        };
+      });
+    });
+
+    const pagosOrdenados = pagos.sort((a, b) => {
+      if (a.requiere_pago !== b.requiere_pago) {
+        return a.requiere_pago ? -1 : 1;
+      }
+
+      const fa = a.fecha_vencimiento ? new Date(a.fecha_vencimiento).getTime() : 0;
+      const fb = b.fecha_vencimiento ? new Date(b.fecha_vencimiento).getTime() : 0;
+      return fa - fb;
+    });
+
+    const pendientes = pagosOrdenados.filter((pago) => pago.requiere_pago);
+    const totalPendiente = pendientes.reduce(
+      (sum, pago) => sum + Number(pago.saldo || 0),
+      0,
+    );
+
+    const datosCobro = colegio.datos_cobro;
+    const datosCobroPublicos =
+      datosCobro && datosCobro.activo
+        ? {
+            nombre_destinatario: datosCobro.nombre_destinatario,
+            numero_yape: datosCobro.numero_yape,
+            numero_plin: datosCobro.numero_plin,
+            banco_1: datosCobro.banco_1,
+            cuenta_1: datosCobro.cuenta_1,
+            cci_1: datosCobro.cci_1,
+            banco_2: datosCobro.banco_2,
+            cuenta_2: datosCobro.cuenta_2,
+            cci_2: datosCobro.cci_2,
+            qr_yape_url: datosCobro.qr_yape_url,
+            qr_plin_url: datosCobro.qr_plin_url,
+            instrucciones: datosCobro.instrucciones,
+          }
+        : null;
+
+    return {
+      colegio: {
+        id_colegio: colegio.id_colegio,
+        nombre: colegio.nombre,
+        nombre_corto: colegio.nombre_corto,
+        codigo: colegio.codigo,
+        logo_url: colegio.logo_url,
+        color_principal: colegio.color_principal,
+      },
+      alumno: {
+        nombres: alumno.nombres,
+        apellido_paterno: alumno.apellido_paterno,
+        apellido_materno: alumno.apellido_materno,
+      },
+      resumen: {
+        total_pendiente: totalPendiente,
+        cantidad_pendiente: pendientes.length,
+        cantidad_total: pagosOrdenados.length,
+      },
+      matriculas: matriculas.map((matricula) => ({
+        id_matricula: matricula.id_matricula,
+        codigo_matricula: matricula.codigo_matricula,
+        estado_matricula: matricula.estado_matricula,
+        anio: matricula.anio?.nombre_anio,
+        aula: matricula.seccion
+          ? `${matricula.seccion.grado?.nombre_grado || ''} ${matricula.seccion.letra || ''}`.trim()
+          : null,
+        nivel: matricula.seccion?.grado?.nivel?.nombre_nivel || null,
+      })),
+      pagos: pagosOrdenados,
+      datos_cobro: datosCobroPublicos,
+      instrucciones: {
+        mensaje:
+          datosCobroPublicos?.instrucciones ||
+          'Coloca el código de pago en la descripción del Yape, Plin o transferencia.',
+      },
+    };
+  }
 }
