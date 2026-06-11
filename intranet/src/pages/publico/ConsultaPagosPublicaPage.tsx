@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
+  FileText,
   Loader2,
   Printer,
   QrCode,
@@ -45,6 +46,21 @@ type ConsultaResponse = {
   pagos_cubiertos?: any[];
   datos_cobro: any | null;
   instrucciones: { mensaje: string };
+  estado_cuenta?: {
+    total_programado?: number;
+    total_pagado?: number;
+    saldo_pendiente?: number;
+    cantidad_total?: number;
+    cantidad_pagados?: number;
+    cantidad_pendientes?: number;
+    cantidad_vencidos?: number;
+    cantidad_proximos?: number;
+    cantidad_en_revision?: number;
+    cantidad_observados?: number;
+    cantidad_rechazados?: number;
+    anios?: string[];
+    generado_en?: string;
+  };
 };
 
 const inputClass =
@@ -84,6 +100,7 @@ export default function ConsultaPagosPublicaPage() {
   const [copied, setCopied] = useState('');
   const [pagoAReportar, setPagoAReportar] = useState<any | null>(null);
   const [constanciaPago, setConstanciaPago] = useState<any | null>(null);
+  const [estadoCuentaOpen, setEstadoCuentaOpen] = useState(false);
 
   const pagosPorPagar = useMemo(
     () => data?.pagos_para_pagar || (data?.pagos || []).filter((pago) => pago.requiere_pago),
@@ -272,6 +289,47 @@ export default function ConsultaPagosPublicaPage() {
                 </div>
               </div>
 
+              {data.estado_cuenta && (
+                <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                        Estado de cuenta
+                      </p>
+                      <h2 className="mt-2 text-xl font-black text-slate-950">
+                        Resumen financiero del estudiante
+                      </h2>
+                      <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
+                        Vista general de pagos programados, pagados y pendientes.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setEstadoCuentaOpen(true)}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                    >
+                      <FileText size={16} />
+                      Imprimir estado
+                    </button>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 grid-cols-2 md:grid-cols-4">
+                    <Mini label="Programado" value={formatMoney(data.estado_cuenta.total_programado || 0)} />
+                    <Mini label="Pagado" value={formatMoney(data.estado_cuenta.total_pagado || 0)} />
+                    <Mini label="Pendiente" value={formatMoney(data.estado_cuenta.saldo_pendiente || 0)} />
+                    <Mini label="Vencidos" value={String(data.estado_cuenta.cantidad_vencidos || 0)} />
+                  </div>
+
+                  <div className="mt-4 grid gap-3 grid-cols-2 md:grid-cols-4">
+                    <Mini label="En revisión" value={String(data.estado_cuenta.cantidad_en_revision || 0)} />
+                    <Mini label="Observados" value={String(data.estado_cuenta.cantidad_observados || 0)} />
+                    <Mini label="Próximos" value={String(data.estado_cuenta.cantidad_proximos || 0)} />
+                    <Mini label="Pagados" value={String(data.estado_cuenta.cantidad_pagados || 0)} />
+                  </div>
+                </div>
+              )}
+
               <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
                 <h2 className="text-lg font-black text-slate-950">Por pagar ahora</h2>
                 <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
@@ -423,6 +481,13 @@ export default function ConsultaPagosPublicaPage() {
             alumno={data.alumno}
             colegio={data.colegio}
             onClose={() => setConstanciaPago(null)}
+          />
+        )}
+
+        {estadoCuentaOpen && data && (
+          <EstadoCuentaModal
+            data={data}
+            onClose={() => setEstadoCuentaOpen(false)}
           />
         )}
       </section>
@@ -854,6 +919,316 @@ function ConstanciaPagoModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function EstadoCuentaModal({
+  data,
+  onClose,
+}: {
+  data: ConsultaResponse;
+  onClose: () => void;
+}) {
+  const estadoCuenta = data.estado_cuenta;
+  const pagos = data.pagos || [];
+
+  const imprimir = () => {
+    window.print();
+  };
+
+  const estadoPagoTone = (pago: any) => {
+    if (!pago.requiere_pago) return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+    if (pago.en_revision) return 'bg-amber-50 text-amber-700 ring-amber-100';
+    if (pago.reporte_observado) return 'bg-orange-50 text-orange-700 ring-orange-100';
+    if (pago.reporte_rechazado) return 'bg-rose-50 text-rose-700 ring-rose-100';
+    return 'bg-slate-50 text-slate-700 ring-slate-100';
+  };
+
+  const estadoPagoLabel = (pago: any) => {
+    if (!pago.requiere_pago) return 'Pagado';
+    if (pago.en_revision) return 'En revisión';
+    if (pago.reporte_observado) return 'Observado';
+    if (pago.reporte_rechazado) return 'Rechazado';
+    return pago.estado_pago || 'Pendiente';
+  };
+
+  const totalPendiente = Number(estadoCuenta?.saldo_pendiente || 0);
+  const nombreColegio = data.colegio?.nombre || data.colegio?.nombre_corto || 'Institución educativa';
+  const nombreAlumno = fullName(data.alumno);
+
+  return (
+    <>
+      <style>
+        {`
+          @media print {
+            @page {
+              size: A4;
+              margin: 12mm;
+            }
+
+            html,
+            body {
+              background: #ffffff !important;
+            }
+
+            body * {
+              visibility: hidden !important;
+            }
+
+            #estado-cuenta-print,
+            #estado-cuenta-print * {
+              visibility: visible !important;
+            }
+
+            #estado-cuenta-print {
+              position: absolute !important;
+              inset: 0 auto auto 0 !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              box-shadow: none !important;
+            }
+
+            .no-print {
+              display: none !important;
+            }
+
+            .print-table-row {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
+          }
+        `}
+      </style>
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[32px] bg-white p-6 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-100">
+          <div className="no-print flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+                <FileText size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Estado de cuenta
+                </p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">
+                  {nombreAlumno}
+                </h2>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <section
+            id="estado-cuenta-print"
+            className="mt-6 rounded-[28px] border border-slate-100 bg-white p-6 print:mt-0 print:rounded-none print:border-0 print:p-0"
+          >
+            <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
+              <div className="flex items-start gap-4">
+                {data.colegio?.logo_url ? (
+                  <img
+                    src={data.colegio.logo_url}
+                    alt="Logo institucional"
+                    className="h-16 w-16 rounded-2xl object-contain ring-1 ring-slate-200"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-lg font-black text-slate-500 ring-1 ring-slate-200">
+                    IE
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    Estado de cuenta del estudiante
+                  </p>
+                  <h1 className="mt-1 text-2xl font-black text-slate-950">
+                    {nombreColegio}
+                  </h1>
+                  <p className="mt-1 text-sm font-bold text-slate-500">
+                    Documento informativo de pagos escolares
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-950 px-5 py-4 text-right text-white">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
+                  Saldo pendiente
+                </p>
+                <p className="mt-1 text-2xl font-black">
+                  {formatMoney(totalPendiente)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 print:bg-white print:ring-slate-200">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Datos del estudiante
+                </p>
+
+                <div className="mt-3 space-y-2 text-sm">
+                  <p>
+                    <span className="font-black text-slate-500">Alumno:</span>{' '}
+                    <span className="font-bold text-slate-950">{nombreAlumno}</span>
+                  </p>
+                  <p>
+                    <span className="font-black text-slate-500">DNI:</span>{' '}
+                    <span className="font-bold text-slate-950">{data.alumno?.dni || '—'}</span>
+                  </p>
+                  <p>
+                    <span className="font-black text-slate-500">Años visibles:</span>{' '}
+                    <span className="font-bold text-slate-950">
+                      {estadoCuenta?.anios?.join(', ') || '—'}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="font-black text-slate-500">Generado:</span>{' '}
+                    <span className="font-bold text-slate-950">
+                      {formatDate(estadoCuenta?.generado_en)}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 print:bg-white print:ring-slate-200">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Resumen financiero
+                </p>
+
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <ResumenPrint label="Programado" value={formatMoney(estadoCuenta?.total_programado || 0)} />
+                  <ResumenPrint label="Pagado" value={formatMoney(estadoCuenta?.total_pagado || 0)} />
+                  <ResumenPrint label="Pendiente" value={formatMoney(estadoCuenta?.saldo_pendiente || 0)} />
+                  <ResumenPrint label="Vencidos" value={String(estadoCuenta?.cantidad_vencidos || 0)} />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <div className="mb-3 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Cronograma de pagos
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950">
+                    Detalle de conceptos pagados y pendientes
+                  </h2>
+                </div>
+
+                <p className="text-xs font-bold text-slate-400">
+                  Total conceptos: {pagos.length}
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="grid grid-cols-[1.35fr_0.65fr_0.65fr_0.65fr_0.65fr_0.75fr] bg-slate-100 px-3 py-3 text-[10px] font-black uppercase tracking-[0.10em] text-slate-500">
+                  <span>Concepto / Código</span>
+                  <span>Vence</span>
+                  <span className="text-right">Programado</span>
+                  <span className="text-right">Pagado</span>
+                  <span className="text-right">Pendiente</span>
+                  <span className="text-center">Estado</span>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {pagos.map((pago) => (
+                    <div
+                      key={pago.id_cronograma}
+                      className="print-table-row grid grid-cols-[1.35fr_0.65fr_0.65fr_0.65fr_0.65fr_0.75fr] gap-2 px-3 py-3 text-xs"
+                    >
+                      <div>
+                        <p className="font-black text-slate-950">{pago.concepto}</p>
+                        <p className="mt-1 font-bold text-slate-400">
+                          {pago.referencia_pago || 'Sin código'} · {pago.matricula?.aula || 'Aula no indicada'}
+                        </p>
+                      </div>
+
+                      <p className="font-bold text-slate-500">
+                        {formatDate(pago.fecha_vencimiento)}
+                      </p>
+
+                      <p className="text-right font-black text-slate-800">
+                        {formatMoney(pago.monto)}
+                      </p>
+
+                      <p className="text-right font-black text-emerald-700">
+                        {formatMoney(pago.pagado || 0)}
+                      </p>
+
+                      <p className="text-right font-black text-rose-700">
+                        {formatMoney(pago.saldo || 0)}
+                      </p>
+
+                      <div className="text-center">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ${estadoPagoTone(pago)}`}>
+                          {estadoPagoLabel(pago)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 border-t border-slate-200 pt-5 md:grid-cols-[1fr_260px]">
+              <p className="text-xs font-bold leading-5 text-slate-500">
+                Este documento es informativo y refleja los pagos registrados en el sistema al momento de su emisión.
+                Para validación administrativa, la institución puede contrastar los códigos de pago, recibos y operaciones asociadas.
+              </p>
+
+              <div className="rounded-2xl border border-slate-200 p-4 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Área administrativa
+                </p>
+                <div className="mt-8 border-t border-slate-300 pt-2 text-xs font-bold text-slate-500">
+                  Firma / sello
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="no-print mt-5 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200"
+            >
+              Cerrar
+            </button>
+
+            <button
+              type="button"
+              onClick={imprimir}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800"
+            >
+              <Printer size={16} />
+              Imprimir / guardar PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ResumenPrint({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-slate-950">{value}</p>
     </div>
   );
 }

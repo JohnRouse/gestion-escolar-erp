@@ -2821,6 +2821,51 @@ export class FinanzasService {
 
     const pagosCubiertos = pagosOrdenados.filter((pago) => !pago.requiere_pago);
 
+    const pagosVencidos = pagosOrdenados.filter((pago) => {
+      if (!pago.requiere_pago || !pago.fecha_vencimiento) return false;
+      const vencimiento = new Date(pago.fecha_vencimiento);
+      return vencimiento < hoy;
+    });
+
+    const pagosEnRevision = pagosOrdenados.filter((pago) => pago.en_revision);
+    const pagosObservados = pagosOrdenados.filter((pago) => pago.reporte_observado);
+    const pagosRechazados = pagosOrdenados.filter((pago) => pago.reporte_rechazado);
+
+    const totalProgramado = pagosOrdenados.reduce(
+      (sum, pago) => sum + Number(pago.monto || 0),
+      0,
+    );
+
+    const totalPagado = pagosOrdenados.reduce(
+      (sum, pago) => sum + Number(pago.pagado || 0),
+      0,
+    );
+
+    const saldoPendiente = pagosOrdenados.reduce(
+      (sum, pago) => sum + Number(pago.saldo || 0),
+      0,
+    );
+
+    const aniosEstadoCuenta = Array.from(
+      new Set(pagosOrdenados.map((pago) => pago.matricula?.anio).filter(Boolean)),
+    );
+
+    const estadoCuenta = {
+      total_programado: totalProgramado,
+      total_pagado: totalPagado,
+      saldo_pendiente: saldoPendiente,
+      cantidad_total: pagosOrdenados.length,
+      cantidad_pagados: pagosCubiertos.length,
+      cantidad_pendientes: pagosOrdenados.filter((pago) => pago.requiere_pago).length,
+      cantidad_vencidos: pagosVencidos.length,
+      cantidad_proximos: proximosPagos.length,
+      cantidad_en_revision: pagosEnRevision.length,
+      cantidad_observados: pagosObservados.length,
+      cantidad_rechazados: pagosRechazados.length,
+      anios: aniosEstadoCuenta,
+      generado_en: new Date(),
+    };
+
     const totalPorPagar = pagosParaPagar.reduce(
       (sum, pago) => sum + Number(pago.saldo || 0),
       0,
@@ -2863,6 +2908,7 @@ export class FinanzasService {
         apellido_paterno: alumno.apellido_paterno,
         apellido_materno: alumno.apellido_materno,
       },
+      estado_cuenta: estadoCuenta,
       resumen: {
         total_por_pagar: totalPorPagar,
         total_pendiente_programado: totalPendienteProgramado,
