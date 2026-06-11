@@ -270,7 +270,7 @@ export default function ConsultaPagosPublicaPage() {
               <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
                 <h2 className="text-lg font-black text-slate-950">Por pagar ahora</h2>
                 <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-                  Copia el código para pagar. Si ya enviaste tu comprobante, verás el estado “En revisión”.
+                  Copia el código para pagar. Si ya enviaste tu comprobante, verás el estado "En revisión".
                 </p>
 
                 <div className="mt-5 space-y-3">
@@ -304,7 +304,7 @@ export default function ConsultaPagosPublicaPage() {
                 <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
                   <h2 className="text-lg font-black text-slate-950">Próximos pagos publicados</h2>
                   <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-                    Estos conceptos aún no vencen. Se muestran para que puedas planificar, pero no se consideran dentro de “Por pagar ahora”.
+                    Estos conceptos aún no vencen. Se muestran para que puedas planificar, pero no se consideran dentro de "Por pagar ahora".
                   </p>
 
                   <div className="mt-5 space-y-3">
@@ -421,6 +421,14 @@ function PagoCard({
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
                 Comprobante en revisión
               </span>
+            ) : pago.reporte_observado ? (
+              <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700 ring-1 ring-orange-100">
+                Comprobante observado
+              </span>
+            ) : pago.reporte_rechazado ? (
+              <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
+                Comprobante rechazado
+              </span>
             ) : (
               <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
                 Pendiente
@@ -432,14 +440,44 @@ function PagoCard({
           </p>
           <p className="mt-2 text-2xl font-black text-rose-700">{formatMoney(pago.saldo)}</p>
 
-          {pago.en_revision && pago.reporte_pago && (
-            <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-amber-800 ring-1 ring-amber-100">
+          {pago.reporte_pago && (
+            <div
+              className={`mt-3 rounded-2xl p-3 ring-1 ${
+                pago.en_revision
+                  ? 'bg-amber-50 text-amber-800 ring-amber-100'
+                  : pago.reporte_observado
+                    ? 'bg-orange-50 text-orange-800 ring-orange-100'
+                    : pago.reporte_rechazado
+                      ? 'bg-rose-50 text-rose-800 ring-rose-100'
+                      : 'bg-slate-50 text-slate-700 ring-slate-100'
+              }`}
+            >
               <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
-                Reporte recibido
+                {pago.en_revision
+                  ? 'Reporte recibido'
+                  : pago.reporte_observado
+                    ? 'Reporte observado'
+                    : pago.reporte_rechazado
+                      ? 'Reporte rechazado'
+                      : 'Reporte'}
               </p>
+
               <p className="mt-1 text-sm font-bold leading-5">
-                El colegio está revisando el comprobante enviado.
+                {pago.en_revision
+                  ? 'El colegio está revisando el comprobante enviado.'
+                  : pago.reporte_observado
+                    ? 'El colegio observó el comprobante. Puedes corregirlo y enviarlo nuevamente.'
+                    : pago.reporte_rechazado
+                      ? 'El colegio rechazó este reporte. Puedes enviar un nuevo comprobante.'
+                      : 'Revisa el estado del reporte.'}
               </p>
+
+              {pago.reporte_pago.observacion && (
+                <p className="mt-2 rounded-xl bg-white/70 p-2 text-xs font-black">
+                  Observación: {pago.reporte_pago.observacion}
+                </p>
+              )}
+
               <p className="mt-1 text-xs font-black">
                 Operación: {pago.reporte_pago.numero_operacion || 'No indicada'}
               </p>
@@ -491,9 +529,17 @@ function PagoCard({
               <button
                 type="button"
                 onClick={onReport}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black ring-1 transition ${
+                  pago.reporte_observado || pago.reporte_rechazado
+                    ? 'bg-orange-50 text-orange-700 ring-orange-100 hover:bg-orange-100'
+                    : 'bg-emerald-50 text-emerald-700 ring-emerald-100 hover:bg-emerald-100'
+                }`}
               >
-                Ya realicé el pago
+                {pago.reporte_observado
+                  ? 'Corregir comprobante'
+                  : pago.reporte_rechazado
+                    ? 'Enviar nuevo comprobante'
+                    : 'Ya realicé el pago'}
               </button>
             )}
           </div>

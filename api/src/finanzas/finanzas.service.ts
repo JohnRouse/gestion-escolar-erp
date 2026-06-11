@@ -2085,7 +2085,7 @@ export class FinanzasService {
         where: {
           numero_operacion: { in: operaciones },
           OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
-          estado: { notIn: ['Rechazado'] },
+          estado: { notIn: ['Rechazado', 'Reemplazado'] },
         },
         _count: { numero_operacion: true },
       });
@@ -2584,7 +2584,7 @@ export class FinanzasService {
             pagos_recibidos: {
               where: {
                 estado: {
-                  in: ['Pendiente', 'Identificado', 'Observado'],
+                  in: ['Pendiente', 'Identificado', 'Observado', 'Rechazado'],
                 },
               },
               orderBy: {
@@ -2618,9 +2618,13 @@ export class FinanzasService {
         );
         const saldo = Math.max(Number(monto || 0) - pagado, 0);
         const reporteReciente = cronograma.pagos_recibidos?.[0] || null;
+        const estadoReporte = reporteReciente?.estado || null;
         const enRevision =
-          !!reporteReciente &&
-          ['Pendiente', 'Identificado', 'Observado'].includes(reporteReciente.estado);
+          !!estadoReporte && ['Pendiente', 'Identificado'].includes(estadoReporte);
+        const reporteObservado = estadoReporte === 'Observado';
+        const reporteRechazado = estadoReporte === 'Rechazado';
+        const puedeReportarPago =
+          !reporteReciente || reporteObservado || reporteRechazado;
 
         return {
           id_cronograma: cronograma.id_cronograma,
@@ -2634,6 +2638,9 @@ export class FinanzasService {
           saldo,
           requiere_pago: saldo > 0 && cronograma.estado_pago !== 'Pagado',
           en_revision: enRevision,
+          reporte_observado: reporteObservado,
+          reporte_rechazado: reporteRechazado,
+          puede_reportar_pago: puedeReportarPago,
           reporte_pago: reporteReciente
             ? {
                 id_pago_recibido: reporteReciente.id_pago_recibido,
@@ -2838,13 +2845,23 @@ export class FinanzasService {
       where: {
         id_cronograma: cronograma.id_cronograma,
         numero_operacion: numeroOperacion,
-        estado: { notIn: ['Rechazado'] },
+        estado: { in: ['Pendiente', 'Identificado', 'Aplicado'] },
       },
     });
 
     if (duplicado) {
       throw new BadRequestException('Ya existe un reporte con ese número de operación para este pago.');
     }
+
+    await this.prisma.pagoRecibido.updateMany({
+      where: {
+        id_cronograma: cronograma.id_cronograma,
+        estado: { in: ['Observado', 'Rechazado'] },
+      },
+      data: {
+        estado: 'Reemplazado',
+      },
+    });
 
     const idApoderado = cronograma.matricula.estudiante.apoderados?.[0]?.id_apoderado || null;
 

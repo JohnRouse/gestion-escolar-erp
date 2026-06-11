@@ -36,6 +36,9 @@ export default function ReportarPagoModal({
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
+  const esCorreccion = Boolean(pago?.reporte_observado || pago?.reporte_rechazado);
+  const observacionAnterior = pago?.reporte_pago?.observacion || '';
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
@@ -82,9 +85,13 @@ export default function ReportarPagoModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Reporte de pago</p>
-            <h2 className="mt-2 text-xl font-black text-slate-950">Ya realicé el pago</h2>
+            <h2 className="mt-2 text-xl font-black text-slate-950">
+              {esCorreccion ? 'Corregir comprobante' : 'Ya realicé el pago'}
+            </h2>
             <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-              Envía los datos mínimos para que el colegio valide tu comprobante.
+              {esCorreccion
+                ? 'Vuelve a enviar los datos corregidos para que el colegio revise tu comprobante.'
+                : 'Envía los datos mínimos para que el colegio valide tu comprobante.'}
             </p>
           </div>
           <button onClick={onClose} className="rounded-2xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200">
@@ -95,7 +102,9 @@ export default function ReportarPagoModal({
         {sent ? (
           <div className="mt-6 rounded-3xl bg-emerald-50 p-6 text-emerald-800 ring-1 ring-emerald-100">
             <CheckCircle2 size={28} />
-            <h3 className="mt-3 text-lg font-black">Comprobante enviado</h3>
+            <h3 className="mt-3 text-lg font-black">
+              {esCorreccion ? 'Corrección enviada' : 'Comprobante enviado'}
+            </h3>
             <p className="mt-1 text-sm font-bold leading-6">
               El colegio revisará tu reporte y confirmará el pago en el sistema.
             </p>
@@ -111,6 +120,15 @@ export default function ReportarPagoModal({
               <p className="mt-1 text-sm font-bold text-slate-500">{pago.concepto} · {formatMoney(pago.saldo)}</p>
               <p className="mt-1 text-xs font-black text-slate-400">Código: {pago.referencia_pago}</p>
             </div>
+
+            {esCorreccion && observacionAnterior && (
+              <div className="rounded-3xl bg-orange-50 p-4 text-orange-800 ring-1 ring-orange-100">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] opacity-70">
+                  Observación del colegio
+                </p>
+                <p className="mt-1 text-sm font-bold leading-6">{observacionAnterior}</p>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-2xl bg-rose-50 p-3 text-sm font-black text-rose-700 ring-1 ring-rose-100">
@@ -178,7 +196,7 @@ export default function ReportarPagoModal({
               </button>
               <button disabled={loading} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50">
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                Enviar comprobante
+                {esCorreccion ? 'Enviar corrección' : 'Enviar comprobante'}
               </button>
             </div>
           </form>

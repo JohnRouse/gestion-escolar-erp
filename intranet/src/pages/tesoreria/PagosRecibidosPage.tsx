@@ -104,6 +104,7 @@ function estadoTone(estado: string) {
   if (estado === 'Identificado') return 'bg-sky-50 text-sky-700 ring-sky-100';
   if (estado === 'Observado') return 'bg-amber-50 text-amber-700 ring-amber-100';
   if (estado === 'Rechazado') return 'bg-rose-50 text-rose-700 ring-rose-100';
+  if (estado === 'Reemplazado') return 'bg-slate-100 text-slate-500 ring-slate-200';
   return 'bg-slate-50 text-slate-600 ring-slate-100';
 }
 
@@ -334,6 +335,7 @@ export default function PagosRecibidosPage() {
             <option value="Aplicado">Aplicados</option>
             <option value="Observado">Observados</option>
             <option value="Rechazado">Rechazados</option>
+            <option value="Reemplazado">Reemplazados</option>
             <option value="Todos">Todos</option>
           </select>
 
@@ -614,7 +616,7 @@ export default function PagosRecibidosPage() {
                     Identificar
                   </button>
 
-                  <button type="button" onClick={aplicar} disabled={saving || !selected.id_cronograma} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                  <button type="button" onClick={aplicar} disabled={saving || !selected.id_cronograma || selected.estado === 'Reemplazado'} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">
                     {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                     Confirmar pago
                   </button>
