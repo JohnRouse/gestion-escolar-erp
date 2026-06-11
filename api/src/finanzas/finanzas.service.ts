@@ -2904,6 +2904,7 @@ export class FinanzasService {
         color_principal: colegio.color_principal,
       },
       alumno: {
+        dni: alumno.dni,
         nombres: alumno.nombres,
         apellido_paterno: alumno.apellido_paterno,
         apellido_materno: alumno.apellido_materno,
