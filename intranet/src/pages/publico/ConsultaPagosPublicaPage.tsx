@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -7,11 +8,14 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  Printer,
   QrCode,
+  ReceiptText,
   Search,
   ShieldCheck,
   Smartphone,
   WalletCards,
+  X,
 } from 'lucide-react';
 import ReportarPagoModal from '../../components/publico/ReportarPagoModal';
 
@@ -79,6 +83,7 @@ export default function ConsultaPagosPublicaPage() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
   const [pagoAReportar, setPagoAReportar] = useState<any | null>(null);
+  const [constanciaPago, setConstanciaPago] = useState<any | null>(null);
 
   const pagosPorPagar = useMemo(
     () => data?.pagos_para_pagar || (data?.pagos || []).filter((pago) => pago.requiere_pago),
@@ -260,7 +265,7 @@ export default function ConsultaPagosPublicaPage() {
                 </div>
 
                 <div className="mt-5 grid gap-3 grid-cols-2 md:grid-cols-4">
-                  <Mini label="Por pagar ahora" value={String(data.resumen.cantidad_por_pagar ?? data.resumen.cantidad_pendiente)} />
+                  <Mini label="Por pagar ahora" value={String(data.resumen.cantidad_por_pagar ?? 0)} />
                   <Mini label="Próximos pagos" value={String(data.resumen.cantidad_proximos || 0)} />
                   <Mini label="Pagos visibles" value={String(data.resumen.cantidad_total)} />
                   <Mini label="Matrículas" value={String(data.matriculas.length)} />
@@ -345,16 +350,36 @@ export default function ConsultaPagosPublicaPage() {
                   <div className="mt-4 space-y-3">
                     {pagosPagados.slice(0, 8).map((pago) => (
                       <div key={pago.id_cronograma} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="font-black text-slate-900">{pago.concepto}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-black text-slate-900">{pago.concepto}</p>
+                              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                                {pago.estado_pago}
+                              </span>
+                            </div>
+
                             <p className="mt-1 text-xs font-bold text-slate-500">
                               {pago.matricula?.anio} · {pago.matricula?.aula || 'Aula no indicada'}
                             </p>
+
+                            {pago.ultimo_pago && (
+                              <p className="mt-1 text-xs font-bold text-slate-400">
+                                Recibo: {pago.ultimo_pago.codigo_recibo} · Pagado: {formatMoney(pago.ultimo_pago.monto_pagado)} · {formatDate(pago.ultimo_pago.fecha_pago)}
+                              </p>
+                            )}
                           </div>
-                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
-                            {pago.estado_pago}
-                          </span>
+
+                          {pago.ultimo_pago && (
+                            <button
+                              type="button"
+                              onClick={() => setConstanciaPago(pago)}
+                              className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                            >
+                              <ReceiptText size={16} />
+                              Ver constancia
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -389,6 +414,15 @@ export default function ConsultaPagosPublicaPage() {
             dni={dni}
             onClose={() => setPagoAReportar(null)}
             onSuccess={() => consultar()}
+          />
+        )}
+
+        {constanciaPago && data && (
+          <ConstanciaPagoModal
+            pago={constanciaPago}
+            alumno={data.alumno}
+            colegio={data.colegio}
+            onClose={() => setConstanciaPago(null)}
           />
         )}
       </section>
@@ -706,6 +740,131 @@ function Mini({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1.5 text-lg font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function ConstanciaPagoModal({
+  pago,
+  alumno,
+  colegio,
+  onClose,
+}: {
+  pago: any;
+  alumno: any;
+  colegio: any;
+  onClose: () => void;
+}) {
+  const recibo = pago.ultimo_pago;
+
+  const imprimir = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm print:static print:bg-white print:p-0">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[32px] bg-white p-6 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-100 print:max-h-none print:max-w-none print:overflow-visible print:rounded-none print:p-0 print:shadow-none print:ring-0">
+        <div className="flex items-start justify-between gap-4 print:hidden">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+              <ReceiptText size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Constancia de pago
+              </p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">
+                {recibo?.codigo_recibo || 'Recibo de pago'}
+              </h2>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <section className="mt-6 rounded-[28px] border border-slate-100 bg-white p-5 print:mt-0 print:border-slate-300">
+          <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Institución
+              </p>
+              <h3 className="mt-1 text-lg font-black text-slate-950">
+                {colegio?.nombre_corto || colegio?.nombre || 'Colegio'}
+              </h3>
+              <p className="mt-1 text-sm font-bold text-slate-500">
+                Constancia emitida desde el portal de pagos.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-800 ring-1 ring-emerald-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+                Estado
+              </p>
+              <p className="mt-1 text-sm font-black">Pagado</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <InfoPublic label="Recibo" value={recibo?.codigo_recibo || '—'} />
+            <InfoPublic label="Fecha de pago" value={formatDate(recibo?.fecha_pago)} />
+            <InfoPublic label="Alumno" value={fullName(alumno)} />
+            <InfoPublic label="Concepto" value={pago.concepto} />
+            <InfoPublic label="Código de pago" value={pago.referencia_pago || '—'} />
+            <InfoPublic label="Aula" value={pago.matricula?.aula || '—'} />
+            <InfoPublic label="Método" value={recibo?.metodo_pago || '—'} />
+            <InfoPublic label="Operación" value={recibo?.nro_operacion || '—'} />
+          </div>
+
+          <div className="mt-5 rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-100">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+              Monto pagado
+            </p>
+            <p className="mt-2 text-3xl font-black text-slate-950">
+              {formatMoney(recibo?.monto_pagado || pago.pagado)}
+            </p>
+          </div>
+
+          <p className="mt-5 text-xs font-bold leading-5 text-slate-400">
+            Esta constancia refleja un pago registrado en el sistema. Para trámites administrativos, la institución puede validar el código de recibo.
+          </p>
+        </section>
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200"
+          >
+            Cerrar
+          </button>
+
+          <button
+            type="button"
+            onClick={imprimir}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800"
+          >
+            <Printer size={16} />
+            Imprimir / guardar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoPublic({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 print:bg-white print:ring-slate-200">
+      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1.5 text-sm font-black text-slate-900">{value || '—'}</p>
     </div>
   );
 }

@@ -37,11 +37,13 @@ type PagoRecibido = {
     pagado_actual?: number | null;
     saldo_actual?: number | null;
     monto_reportado?: number | null;
+    monto_validacion?: number | null;
     diferencia?: number | null;
     monto_coincide?: boolean | null;
     excede_saldo?: boolean;
     operacion_duplicada?: boolean;
     cantidad_operaciones_similares?: number;
+    finalizado?: boolean;
   };
   cronograma?: {
     id_cronograma: number;
@@ -127,6 +129,10 @@ function estadoTone(estado: string) {
 }
 
 function validacionTone(pago: PagoRecibido) {
+  if (pago.estado === 'Aplicado' || pago.validacion?.finalizado) {
+    return null;
+  }
+
   if (pago.validacion?.operacion_duplicada) {
     return { label: 'Operación repetida', className: 'bg-rose-50 text-rose-700 ring-rose-100' };
   }
@@ -448,12 +454,17 @@ export default function PagosRecibidosPage() {
 
                       {pago.validacion && (
                         <p className="mt-1 text-xs font-bold text-slate-400">
-                          Esperado: {pago.validacion.saldo_actual !== null && pago.validacion.saldo_actual !== undefined
-                            ? formatMoney(pago.validacion.saldo_actual)
-                            : '—'} · Reportado: {formatMoney(pago.validacion.monto_reportado || pago.monto_recibido)}
-                          {pago.validacion.diferencia !== null && pago.validacion.diferencia !== undefined
-                            ? ` · Diferencia: ${formatMoney(pago.validacion.diferencia)}`
-                            : ''}
+                          {pago.estado === 'Aplicado'
+                            ? `Aplicado: ${formatMoney(pago.validacion.monto_reportado || pago.monto_recibido)}`
+                            : `Esperado: ${
+                                pago.validacion.monto_validacion !== null && pago.validacion.monto_validacion !== undefined
+                                  ? formatMoney(pago.validacion.monto_validacion)
+                                  : '—'
+                              } · Reportado: ${formatMoney(pago.validacion.monto_reportado || pago.monto_recibido)}${
+                                pago.validacion.diferencia !== null && pago.validacion.diferencia !== undefined
+                                  ? ` · Diferencia: ${formatMoney(pago.validacion.diferencia)}`
+                                  : ''
+                              }`}
                         </p>
                       )}
 
@@ -493,8 +504,8 @@ export default function PagosRecibidosPage() {
       </section>
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl animate-modal-pop rounded-[30px] bg-white p-6 shadow-2xl shadow-slate-950/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm">
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-3xl animate-modal-pop overflow-y-auto rounded-[30px] bg-white p-4 shadow-2xl shadow-slate-950/20 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
@@ -537,13 +548,15 @@ export default function PagosRecibidosPage() {
                       Validación rápida
                     </p>
                     <h3 className="mt-1 text-base font-black text-slate-950">
-                      {selected.validacion.monto_coincide
-                        ? 'El monto reportado coincide con el saldo.'
-                        : 'Revisa el monto antes de confirmar.'}
+                      {selected.estado === 'Aplicado'
+                        ? 'Pago confirmado correctamente.'
+                        : selected.validacion.monto_coincide
+                          ? 'El monto reportado coincide con el saldo.'
+                          : 'Revisa el monto antes de confirmar.'}
                     </h3>
                   </div>
 
-                  {selected.validacion.operacion_duplicada && (
+                  {selected.estado !== 'Aplicado' && selected.validacion.operacion_duplicada && (
                     <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100">
                       Operación repetida
                     </span>
@@ -551,10 +564,12 @@ export default function PagosRecibidosPage() {
                 </div>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-4">
-                  <Info label="Monto esperado" value={
-                    selected.validacion.saldo_actual !== null && selected.validacion.saldo_actual !== undefined
-                      ? formatMoney(selected.validacion.saldo_actual)
-                      : '—'
+                  <Info label={selected.estado === 'Aplicado' ? 'Monto aplicado' : 'Monto esperado'} value={
+                    selected.estado === 'Aplicado'
+                      ? formatMoney(selected.validacion.monto_reportado || selected.monto_recibido)
+                      : selected.validacion.monto_validacion !== null && selected.validacion.monto_validacion !== undefined
+                        ? formatMoney(selected.validacion.monto_validacion)
+                        : '—'
                   } />
                   <Info label="Monto reportado" value={formatMoney(selected.validacion.monto_reportado || selected.monto_recibido)} />
                   <Info label="Diferencia" value={
@@ -565,13 +580,13 @@ export default function PagosRecibidosPage() {
                   <Info label="Coincidencia" value={selected.validacion.monto_coincide ? 'Sí' : 'Revisar'} />
                 </div>
 
-                {selected.validacion.excede_saldo && (
+                {selected.estado !== 'Aplicado' && selected.validacion.excede_saldo && (
                   <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-black text-amber-700 ring-1 ring-amber-100">
                     El monto reportado excede el saldo pendiente. Revisa antes de confirmar.
                   </p>
                 )}
 
-                {selected.validacion.operacion_duplicada && (
+                {selected.estado !== 'Aplicado' && selected.validacion.operacion_duplicada && (
                   <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-black text-rose-700 ring-1 ring-rose-100">
                     Ya existe más de un pago con este número de operación. Revisa antes de confirmar.
                   </p>
@@ -698,7 +713,7 @@ export default function PagosRecibidosPage() {
               </label>
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <div className="sticky bottom-0 -mx-4 mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
               {selected.estado !== 'Aplicado' && (
                 <>
                   <button type="button" onClick={() => cambiarEstado('Observado')} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 text-sm font-black text-amber-700 ring-1 ring-amber-100 transition hover:bg-amber-100 disabled:opacity-50">

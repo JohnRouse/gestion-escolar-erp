@@ -2158,8 +2158,16 @@ export class FinanzasService {
       const saldo = item.cronograma ? this.saldoCronograma(item.cronograma) : null;
       const montoReportado = Number(item.monto_recibido || 0);
       const saldoActual = saldo?.saldo ?? null;
+      const esAplicado = item.estado === 'Aplicado';
+      const esFinalizado = ['Aplicado', 'Reemplazado', 'Rechazado'].includes(item.estado);
+
+      const montoReferencia =
+        saldoActual === null ? null : esAplicado ? montoReportado : saldoActual;
+
       const diferencia =
-        saldoActual === null ? null : Number((montoReportado - saldoActual).toFixed(2));
+        montoReferencia === null
+          ? null
+          : Number((montoReportado - montoReferencia).toFixed(2));
 
       const cantidadOperaciones = item.numero_operacion
         ? conteosOperacion.get(item.numero_operacion) || 0
@@ -2171,13 +2179,15 @@ export class FinanzasService {
           monto_esperado: saldo?.monto ?? null,
           pagado_actual: saldo?.pagado ?? null,
           saldo_actual: saldoActual,
+          monto_validacion: montoReferencia,
           monto_reportado: montoReportado,
           diferencia,
           monto_coincide:
-            saldoActual !== null ? Math.abs(montoReportado - saldoActual) <= 0.01 : null,
+            montoReferencia !== null ? Math.abs(montoReportado - montoReferencia) <= 0.01 : null,
           excede_saldo:
-            saldoActual !== null ? montoReportado > saldoActual + 0.01 : false,
-          operacion_duplicada: cantidadOperaciones > 1,
+            !esFinalizado && saldoActual !== null ? montoReportado > saldoActual + 0.01 : false,
+          finalizado: esFinalizado,
+          operacion_duplicada: !esAplicado && cantidadOperaciones > 1,
           cantidad_operaciones_similares: cantidadOperaciones,
         },
       };
@@ -2661,7 +2671,11 @@ export class FinanzasService {
           },
           include: {
             concepto: true,
-            pagos: true,
+            pagos: {
+              orderBy: {
+                fecha_pago: 'desc',
+              },
+            },
             pagos_recibidos: {
               where: {
                 estado: {
@@ -2698,6 +2712,7 @@ export class FinanzasService {
           0,
         );
         const saldo = Math.max(Number(monto || 0) - pagado, 0);
+        const ultimoPago = cronograma.pagos?.[0] || null;
         const reporteReciente = cronograma.pagos_recibidos?.[0] || null;
         const estadoReporte = reporteReciente?.estado || null;
         const enRevision =
@@ -2718,6 +2733,18 @@ export class FinanzasService {
           pagado,
           saldo,
           requiere_pago: saldo > 0 && cronograma.estado_pago !== 'Pagado',
+          ultimo_pago: ultimoPago
+            ? {
+                id_transaccion: ultimoPago.id_transaccion,
+                monto_pagado: ultimoPago.monto_pagado,
+                metodo_pago: ultimoPago.metodo_pago,
+                nro_operacion: ultimoPago.nro_operacion,
+                fecha_pago: ultimoPago.fecha_pago,
+                codigo_recibo: `REC-${new Date(ultimoPago.fecha_pago).getFullYear()}-${String(
+                  ultimoPago.id_transaccion,
+                ).padStart(6, '0')}`,
+              }
+            : null,
           en_revision: enRevision,
           reporte_observado: reporteObservado,
           reporte_rechazado: reporteRechazado,
