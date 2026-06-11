@@ -386,6 +386,23 @@ export class FinanzasController {
     });
   }
 
+  // ── RUTA PARA HISTORIAL DE PAGOS RECIBIDOS ──
+  @Get('pagos-recibidos/:id/historial')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarHistorialPagoRecibido(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.listarHistorialPagoRecibido(Number(id), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   // ── RUTA PARA COMPROBANTE DE PAGO ──
   @Get('pagos/:id/comprobante')
   @Roles('Admin', 'Director', 'Secretaria')

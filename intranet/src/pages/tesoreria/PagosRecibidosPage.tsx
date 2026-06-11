@@ -71,6 +71,24 @@ type PagoRecibido = {
   } | null;
 };
 
+type PagoRecibidoHistorial = {
+  id_historial: number;
+  accion: string;
+  estado_anterior?: string | null;
+  estado_nuevo?: string | null;
+  observacion?: string | null;
+  origen?: string | null;
+  created_at: string;
+  usuario?: {
+    username?: string | null;
+    persona?: {
+      nombres?: string | null;
+      apellido_paterno?: string | null;
+      apellido_materno?: string | null;
+    } | null;
+  } | null;
+};
+
 const inputClass =
   'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
 
@@ -139,6 +157,9 @@ export default function PagosRecibidosPage() {
   const [observacion, setObservacion] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [historial, setHistorial] = useState<PagoRecibidoHistorial[]>([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+
   const resumen = useMemo(() => {
     const total = pagos.reduce((sum, item) => sum + Number(item.monto_recibido || 0), 0);
     const pendientes = pagos.filter((item) => item.estado === 'Pendiente').length;
@@ -174,6 +195,29 @@ export default function PagosRecibidosPage() {
     }
   };
 
+  const fetchHistorial = async (idPagoRecibido: number) => {
+    if (!token) return;
+    setHistorialLoading(true);
+
+    try {
+      const res = await axios.get(
+        `/api/tesoreria/pagos-recibidos/${idPagoRecibido}/historial${queryString}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setHistorial(res.data || []);
+    } catch {
+      setHistorial([]);
+    } finally {
+      setHistorialLoading(false);
+    }
+  };
+
+  const usuarioHistorial = (item: PagoRecibidoHistorial) => {
+    const persona = item.usuario?.persona;
+    const nombre = fullName(persona || null);
+    return nombre !== '—' ? nombre : item.usuario?.username || item.origen || 'Sistema';
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(fetchPagos, 450);
     return () => window.clearTimeout(timer);
@@ -184,6 +228,8 @@ export default function PagosRecibidosPage() {
     setSelected(pago);
     setReferencia(pago.referencia_escrita || pago.cronograma?.referencia_pago || '');
     setObservacion(pago.observacion || '');
+    setHistorial([]);
+    fetchHistorial(pago.id_pago_recibido);
   };
 
   const identificar = async () => {
@@ -460,7 +506,14 @@ export default function PagosRecibidosPage() {
                 </div>
               </div>
 
-              <button type="button" onClick={() => setSelected(null)} className="rounded-2xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-500 hover:bg-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected(null);
+                  setHistorial([]);
+                }}
+                className="rounded-2xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-500 hover:bg-slate-200"
+              >
                 Cerrar
               </button>
             </div>
@@ -573,6 +626,53 @@ export default function PagosRecibidosPage() {
                 )}
               </div>
             )}
+
+            <div className="mt-5 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Historial del pago
+                  </p>
+                  <h3 className="mt-1 text-base font-black text-slate-950">
+                    Auditoría de acciones
+                  </h3>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {historialLoading ? (
+                  <p className="text-sm font-bold text-slate-400">Cargando historial...</p>
+                ) : historial.length === 0 ? (
+                  <p className="text-sm font-bold text-slate-400">Aún no hay historial registrado.</p>
+                ) : (
+                  historial.map((item) => (
+                    <div key={item.id_historial} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-black text-slate-800">
+                          {item.accion.replaceAll('_', ' ')}
+                        </p>
+                        <p className="text-xs font-bold text-slate-400">
+                          {formatDateTime(item.created_at)}
+                        </p>
+                      </div>
+
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {usuarioHistorial(item)}
+                        {item.estado_anterior || item.estado_nuevo
+                          ? ` · ${item.estado_anterior || '—'} → ${item.estado_nuevo || '—'}`
+                          : ''}
+                      </p>
+
+                      {item.observacion && (
+                        <p className="mt-2 rounded-xl bg-white p-2 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
+                          {item.observacion}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
 
             <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
               <label>

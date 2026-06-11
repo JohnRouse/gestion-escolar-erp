@@ -63,16 +63,17 @@ model Usuario {
   persona Persona @relation(fields: [id_persona], references: [id_persona])
   rol     Rol     @relation(fields: [id_rol], references: [id_rol])
 
-  tenants                UsuarioTenant[]
-  colegios               UsuarioColegio[]
-  pagos_cajero           PagoTransaccion[]
-  matriculas_registradas Matricula[]         @relation("UsuarioMatriculasRegistradas")
-  matriculas_revisadas   Matricula[]         @relation("UsuarioMatriculasRevisadas")
-  circulares             Circular[]
-  notificaciones         Notificacion[]
-  tokensFCM              TokenFCM[]
-  pagos_recibidos_registrados PagoRecibido[] @relation("PagoRecibidoRegistro")
-  pagos_recibidos_validados   PagoRecibido[] @relation("PagoRecibidoValidacion")
+  tenants                     UsuarioTenant[]
+  colegios                    UsuarioColegio[]
+  pagos_cajero                PagoTransaccion[]
+  matriculas_registradas      Matricula[]             @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas        Matricula[]             @relation("UsuarioMatriculasRevisadas")
+  circulares                  Circular[]
+  notificaciones              Notificacion[]
+  tokensFCM                   TokenFCM[]
+  pagos_recibidos_registrados PagoRecibido[]          @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados   PagoRecibido[]          @relation("PagoRecibidoValidacion")
+  pagos_recibidos_historial   PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
 }
 
 model Tenant {
@@ -85,28 +86,28 @@ model Tenant {
   plan       String   @default("basic") @db.VarChar(30)
   created_at DateTime @default(now())
 
-  colegios     Colegio[]
-  usuarios     UsuarioTenant[]
-  anios        AnioLectivo[]
-  aulas        Aula[]
-  secciones    Seccion[]
-  matriculas   Matricula[]
-  asignaciones AsignacionDocente[]
-  conceptos    ConceptoPago[]
-  circulares   Circular[]
-  eventos      Evento[]
-  staff        Staff[]
-  albumes      Album[]
-  plantillas   PlantillaEvaluacion[]
-  areas        AreaCurricular[]
-  cursos       Curso[]
-  escalas      EscalaCalificacion[]
-  tipos_eval   TipoEvaluacion[]
+  colegios           Colegio[]
+  usuarios           UsuarioTenant[]
+  anios              AnioLectivo[]
+  aulas              Aula[]
+  secciones          Seccion[]
+  matriculas         Matricula[]
+  asignaciones       AsignacionDocente[]
+  conceptos          ConceptoPago[]
+  circulares         Circular[]
+  eventos            Evento[]
+  staff              Staff[]
+  albumes            Album[]
+  plantillas         PlantillaEvaluacion[]
+  areas              AreaCurricular[]
+  cursos             Curso[]
+  escalas            EscalaCalificacion[]
+  tipos_eval         TipoEvaluacion[]
   campanas_matricula CampanaMatricula[]
-  planes_pensiones    PlanPensiones[]
-  campanas_descuento  CampanaDescuento[]
-  ordenes_pago OrdenPago[]
-  pagos_recibidos PagoRecibido[]
+  planes_pensiones   PlanPensiones[]
+  campanas_descuento CampanaDescuento[]
+  ordenes_pago       OrdenPago[]
+  pagos_recibidos    PagoRecibido[]
 }
 
 model Colegio {
@@ -124,30 +125,30 @@ model Colegio {
 
   tenant Tenant @relation(fields: [id_tenant], references: [id_tenant])
 
-  usuarios     UsuarioColegio[]
-  niveles      ColegioNivel[]
-  anios        AnioLectivo[]
-  aulas        Aula[]
-  secciones    Seccion[]
-  matriculas   Matricula[]
-  asignaciones AsignacionDocente[]
-  conceptos    ConceptoPago[]
-  circulares   Circular[]
-  eventos      Evento[]
-  staff        Staff[]
-  albumes      Album[]
-  plantillas   PlantillaEvaluacion[]
-  areas        AreaCurricular[]
-  cursos       Curso[]
-  escalas      EscalaCalificacion[]
-  tipos_eval   TipoEvaluacion[]
+  usuarios            UsuarioColegio[]
+  niveles             ColegioNivel[]
+  anios               AnioLectivo[]
+  aulas               Aula[]
+  secciones           Seccion[]
+  matriculas          Matricula[]
+  asignaciones        AsignacionDocente[]
+  conceptos           ConceptoPago[]
+  circulares          Circular[]
+  eventos             Evento[]
+  staff               Staff[]
+  albumes             Album[]
+  plantillas          PlantillaEvaluacion[]
+  areas               AreaCurricular[]
+  cursos              Curso[]
+  escalas             EscalaCalificacion[]
+  tipos_eval          TipoEvaluacion[]
   codigos_estudiantes EstudianteCodigoColegio[]
-  campanas_matricula CampanaMatricula[]
+  campanas_matricula  CampanaMatricula[]
   planes_pensiones    PlanPensiones[]
   campanas_descuento  CampanaDescuento[]
-  ordenes_pago OrdenPago[]
-  pagos_recibidos PagoRecibido[]
-  datos_cobro  DatosCobroColegio?
+  ordenes_pago        OrdenPago[]
+  pagos_recibidos     PagoRecibido[]
+  datos_cobro         DatosCobroColegio?
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -307,14 +308,14 @@ model AnioLectivo {
   tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
 
-  bimestres    Bimestre[]
-  matriculas   Matricula[]
-  conceptos    ConceptoPago[]
-  asignaciones AsignacionDocente[]
-  eventos      Evento[]
+  bimestres          Bimestre[]
+  matriculas         Matricula[]
+  conceptos          ConceptoPago[]
+  asignaciones       AsignacionDocente[]
+  eventos            Evento[]
   campanas_matricula CampanaMatricula[]
-  planes_pensiones    PlanPensiones[]
-  campanas_descuento  CampanaDescuento[]
+  planes_pensiones   PlanPensiones[]
+  campanas_descuento CampanaDescuento[]
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -360,12 +361,12 @@ model Apoderado {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  estudiantes ApoderadoEstudiante[]
-  pagos       PagoTransaccion[]
-  citas       Cita[]
-  comentarios ComentarioFoto[]
-  reacciones  ReaccionFoto[]
-  ordenes_pago OrdenPago[]
+  estudiantes     ApoderadoEstudiante[]
+  pagos           PagoTransaccion[]
+  citas           Cita[]
+  comentarios     ComentarioFoto[]
+  reacciones      ReaccionFoto[]
+  ordenes_pago    OrdenPago[]
   pagos_recibidos PagoRecibido[]
 }
 
@@ -389,11 +390,11 @@ model Estudiante {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  apoderados   ApoderadoEstudiante[]
-  matriculas   Matricula[]
-  registrosNFC RegistroNFC[]
+  apoderados      ApoderadoEstudiante[]
+  matriculas      Matricula[]
+  registrosNFC    RegistroNFC[]
   codigos_colegio EstudianteCodigoColegio[]
-  ordenes_pago OrdenPago[]
+  ordenes_pago    OrdenPago[]
   pagos_recibidos PagoRecibido[]
 }
 
@@ -424,44 +425,44 @@ model DocenteEspecialidad {
 // ======================================================
 
 model Matricula {
-  id_matricula        Int      @id @default(autoincrement())
-  codigo_matricula    String?  @unique @db.VarChar(40)
-  id_tenant           Int?
-  id_colegio          Int?
-  id_estudiante       Int
-  id_seccion          Int
-  id_anio             Int
-  fecha_matricula     DateTime @default(now())
-  estado_matricula    String   @default("Pre-matriculado") @db.VarChar(20)
-  id_usuario_registro Int?
-  tipo_ingreso                String    @default("Nuevo") @db.VarChar(30)
-  colegio_procedencia         String?   @db.VarChar(150)
-  codigo_modular_procedencia  String?   @db.VarChar(30)
-  grado_procedencia           String?   @db.VarChar(80)
-  observacion_procedencia     String?   @db.VarChar(500)
-  id_matricula_origen       Int?
-  id_colegio_origen         Int?
-  id_anio_origen            Int?
-  tipo_proceso_matricula    String? @db.VarChar(50)
-  estado_revision             String    @default("Por revisar") @db.VarChar(30)
-  id_usuario_revision         Int?
-  fecha_revision              DateTime?
-  observacion_revision        String?   @db.VarChar(500)
+  id_matricula               Int       @id @default(autoincrement())
+  codigo_matricula           String?   @unique @db.VarChar(40)
+  id_tenant                  Int?
+  id_colegio                 Int?
+  id_estudiante              Int
+  id_seccion                 Int
+  id_anio                    Int
+  fecha_matricula            DateTime  @default(now())
+  estado_matricula           String    @default("Pre-matriculado") @db.VarChar(20)
+  id_usuario_registro        Int?
+  tipo_ingreso               String    @default("Nuevo") @db.VarChar(30)
+  colegio_procedencia        String?   @db.VarChar(150)
+  codigo_modular_procedencia String?   @db.VarChar(30)
+  grado_procedencia          String?   @db.VarChar(80)
+  observacion_procedencia    String?   @db.VarChar(500)
+  id_matricula_origen        Int?
+  id_colegio_origen          Int?
+  id_anio_origen             Int?
+  tipo_proceso_matricula     String?   @db.VarChar(50)
+  estado_revision            String    @default("Por revisar") @db.VarChar(30)
+  id_usuario_revision        Int?
+  fecha_revision             DateTime?
+  observacion_revision       String?   @db.VarChar(500)
 
   tenant         Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
   colegio        Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
   estudiante     Estudiante  @relation(fields: [id_estudiante], references: [id_persona])
   seccion        Seccion     @relation(fields: [id_seccion], references: [id_seccion])
   anio           AnioLectivo @relation(fields: [id_anio], references: [id_anio])
-  registrado_por Usuario?   @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
-  revisado_por   Usuario?   @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
+  registrado_por Usuario?    @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
+  revisado_por   Usuario?    @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
 
   notas                  NotaAlumno[]
   asistencias            Asistencia[]
   cronogramas            CronogramaPagos[]
   comentariosBimestrales ComentarioBimestral[]
-  ordenes_pago OrdenPago[]
-  pagos_recibidos PagoRecibido[]
+  ordenes_pago           OrdenPago[]
+  pagos_recibidos        PagoRecibido[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -607,8 +608,8 @@ model ConceptoPago {
   colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
   anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 
-  cronogramas            CronogramaPagos[]
-  detalles_plan_pension  PlanPensionesDetalle[]
+  cronogramas           CronogramaPagos[]
+  detalles_plan_pension PlanPensionesDetalle[]
 
   @@index([id_anio])
   @@index([id_tenant])
@@ -618,24 +619,24 @@ model ConceptoPago {
 }
 
 model CampanaMatricula {
-  id_campana             Int      @id @default(autoincrement())
-  id_tenant              Int?
-  id_colegio             Int?
-  id_anio                Int
-  nombre                 String   @db.VarChar(120)
-  descripcion            String?  @db.VarChar(500)
-  fecha_inicio           DateTime @db.Date
-  fecha_fin              DateTime @db.Date
-  monto_promocional      Decimal? @db.Decimal(10, 2)
-  descuento_monto        Decimal? @db.Decimal(10, 2)
-  tipo_ingreso_aplica    String?  @db.VarChar(160)
-  solo_alumnos_vigentes  Boolean  @default(true)
-  estado                 String   @default("Activo") @db.VarChar(20)
-  created_at             DateTime @default(now())
+  id_campana            Int      @id @default(autoincrement())
+  id_tenant             Int?
+  id_colegio            Int?
+  id_anio               Int
+  nombre                String   @db.VarChar(120)
+  descripcion           String?  @db.VarChar(500)
+  fecha_inicio          DateTime @db.Date
+  fecha_fin             DateTime @db.Date
+  monto_promocional     Decimal? @db.Decimal(10, 2)
+  descuento_monto       Decimal? @db.Decimal(10, 2)
+  tipo_ingreso_aplica   String?  @db.VarChar(160)
+  solo_alumnos_vigentes Boolean  @default(true)
+  estado                String   @default("Activo") @db.VarChar(20)
+  created_at            DateTime @default(now())
 
-  tenant  Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
-  colegio Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
-  anio    AnioLectivo  @relation(fields: [id_anio], references: [id_anio])
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 
   cronogramas CronogramaPagos[]
 
@@ -672,18 +673,18 @@ model PlanPensiones {
 }
 
 model PlanPensionesDetalle {
-  id_plan_detalle    Int      @id @default(autoincrement())
-  id_plan_pension    Int
-  id_concepto        Int
-  mes                Int      @db.TinyInt
-  nombre_mes         String   @db.VarChar(20)
-  fecha_publicacion  DateTime @db.Date
-  fecha_vencimiento  DateTime @db.Date
-  monto_base         Decimal  @db.Decimal(10, 2)
-  estado             String   @default("Programado") @db.VarChar(20)
+  id_plan_detalle   Int      @id @default(autoincrement())
+  id_plan_pension   Int
+  id_concepto       Int
+  mes               Int      @db.TinyInt
+  nombre_mes        String   @db.VarChar(20)
+  fecha_publicacion DateTime @db.Date
+  fecha_vencimiento DateTime @db.Date
+  monto_base        Decimal  @db.Decimal(10, 2)
+  estado            String   @default("Programado") @db.VarChar(20)
 
-  plan      PlanPensiones @relation(fields: [id_plan_pension], references: [id_plan_pension])
-  concepto  ConceptoPago  @relation(fields: [id_concepto], references: [id_concepto])
+  plan     PlanPensiones @relation(fields: [id_plan_pension], references: [id_plan_pension])
+  concepto ConceptoPago  @relation(fields: [id_concepto], references: [id_concepto])
 
   cronogramas CronogramaPagos[]
 
@@ -694,22 +695,22 @@ model PlanPensionesDetalle {
 }
 
 model CampanaDescuento {
-  id_campana_descuento Int      @id @default(autoincrement())
-  id_tenant            Int?
-  id_colegio           Int?
-  id_anio              Int?
-  nombre               String   @db.VarChar(120)
-  descripcion          String?  @db.VarChar(500)
-  fecha_inicio         DateTime @db.Date
-  fecha_fin            DateTime @db.Date
-  tipo_concepto_aplica String?  @db.VarChar(30)
-  tipo_ingreso_aplica  String?  @db.VarChar(160)
-  monto_promocional    Decimal? @db.Decimal(10, 2)
-  descuento_monto      Decimal? @db.Decimal(10, 2)
-  descuento_porcentaje Decimal? @db.Decimal(5, 2)
-  solo_alumnos_vigentes Boolean @default(false)
-  estado               String   @default("Activo") @db.VarChar(20)
-  created_at           DateTime @default(now())
+  id_campana_descuento  Int      @id @default(autoincrement())
+  id_tenant             Int?
+  id_colegio            Int?
+  id_anio               Int?
+  nombre                String   @db.VarChar(120)
+  descripcion           String?  @db.VarChar(500)
+  fecha_inicio          DateTime @db.Date
+  fecha_fin             DateTime @db.Date
+  tipo_concepto_aplica  String?  @db.VarChar(30)
+  tipo_ingreso_aplica   String?  @db.VarChar(160)
+  monto_promocional     Decimal? @db.Decimal(10, 2)
+  descuento_monto       Decimal? @db.Decimal(10, 2)
+  descuento_porcentaje  Decimal? @db.Decimal(5, 2)
+  solo_alumnos_vigentes Boolean  @default(false)
+  estado                String   @default("Activo") @db.VarChar(20)
+  created_at            DateTime @default(now())
 
   tenant  Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
@@ -725,22 +726,22 @@ model CampanaDescuento {
 }
 
 model CronogramaPagos {
-  id_cronograma     Int      @id @default(autoincrement())
-  id_matricula      Int
-  id_concepto       Int
-  fecha_vencimiento DateTime @db.Date
-  estado_pago       String   @default("Pendiente") @db.VarChar(20)
-  monto_base_original    Decimal? @db.Decimal(10, 2)
-  descuento_aplicado    Decimal  @default(0) @db.Decimal(10, 2)
-  monto_programado      Decimal? @db.Decimal(10, 2)
-  id_campana_matricula  Int?
+  id_cronograma           Int       @id @default(autoincrement())
+  id_matricula            Int
+  id_concepto             Int
+  fecha_vencimiento       DateTime  @db.Date
+  estado_pago             String    @default("Pendiente") @db.VarChar(20)
+  monto_base_original     Decimal?  @db.Decimal(10, 2)
+  descuento_aplicado      Decimal   @default(0) @db.Decimal(10, 2)
+  monto_programado        Decimal?  @db.Decimal(10, 2)
+  id_campana_matricula    Int?
   id_plan_pension_detalle Int?
   id_campana_descuento    Int?
-  estado_publicacion      String   @default("Publicado") @db.VarChar(20)
+  estado_publicacion      String    @default("Publicado") @db.VarChar(20)
   fecha_publicacion       DateTime? @db.Date
   fecha_publicado         DateTime?
-  visible_apoderado       Boolean  @default(true)
-  referencia_pago    String?  @unique @db.VarChar(40)
+  visible_apoderado       Boolean   @default(true)
+  referencia_pago         String?   @unique @db.VarChar(40)
 
   matricula            Matricula             @relation(fields: [id_matricula], references: [id_matricula])
   concepto             ConceptoPago          @relation(fields: [id_concepto], references: [id_concepto])
@@ -748,7 +749,7 @@ model CronogramaPagos {
   plan_pension_detalle PlanPensionesDetalle? @relation(fields: [id_plan_pension_detalle], references: [id_plan_detalle])
   campana_descuento    CampanaDescuento?     @relation(fields: [id_campana_descuento], references: [id_campana_descuento])
 
-  pagos PagoTransaccion[]
+  pagos           PagoTransaccion[]
   ordenes_pago    OrdenPago[]
   pagos_recibidos PagoRecibido[]
 
@@ -781,26 +782,26 @@ model PagoTransaccion {
 }
 
 model OrdenPago {
-  id_orden_pago       Int      @id @default(autoincrement())
-  codigo_orden        String   @unique @db.VarChar(40)
+  id_orden_pago       Int       @id @default(autoincrement())
+  codigo_orden        String    @unique @db.VarChar(40)
   id_tenant           Int?
   id_colegio          Int?
   id_cronograma       Int
   id_matricula        Int
   id_estudiante       Int
   id_apoderado        Int?
-  proveedor           String   @default("MANUAL") @db.VarChar(30)
-  metodo              String?  @db.VarChar(30)
-  monto               Decimal  @db.Decimal(10, 2)
-  moneda              String   @default("PEN") @db.VarChar(3)
-  estado              String   @default("Creada") @db.VarChar(20)
-  checkout_url        String?  @db.VarChar(500)
-  qr_url              String?  @db.VarChar(500)
-  provider_order_id   String?  @db.VarChar(120)
-  provider_payment_id String?  @db.VarChar(120)
+  proveedor           String    @default("MANUAL") @db.VarChar(30)
+  metodo              String?   @db.VarChar(30)
+  monto               Decimal   @db.Decimal(10, 2)
+  moneda              String    @default("PEN") @db.VarChar(3)
+  estado              String    @default("Creada") @db.VarChar(20)
+  checkout_url        String?   @db.VarChar(500)
+  qr_url              String?   @db.VarChar(500)
+  provider_order_id   String?   @db.VarChar(120)
+  provider_payment_id String?   @db.VarChar(120)
   provider_response   Json?
   metadata_json       Json?
-  fecha_creacion      DateTime @default(now())
+  fecha_creacion      DateTime  @default(now())
   fecha_expiracion    DateTime?
   fecha_pago          DateTime?
 
@@ -820,38 +821,39 @@ model OrdenPago {
 }
 
 model PagoRecibido {
-  id_pago_recibido      Int      @id @default(autoincrement())
+  id_pago_recibido      Int       @id @default(autoincrement())
   id_tenant             Int?
   id_colegio            Int?
-  medio_pago            String   @default("Yape") @db.VarChar(30)
-  monto_recibido        Decimal  @db.Decimal(10, 2)
+  medio_pago            String    @default("Yape") @db.VarChar(30)
+  monto_recibido        Decimal   @db.Decimal(10, 2)
   fecha_pago_reportada  DateTime
-  nombre_pagador        String?  @db.VarChar(160)
-  telefono_pagador      String?  @db.VarChar(30)
-  numero_operacion      String?  @db.VarChar(80)
-  referencia_escrita    String?  @db.VarChar(80)
-  captura_url           String?  @db.VarChar(500)
-  estado                String   @default("Pendiente") @db.VarChar(20)
+  nombre_pagador        String?   @db.VarChar(160)
+  telefono_pagador      String?   @db.VarChar(30)
+  numero_operacion      String?   @db.VarChar(80)
+  referencia_escrita    String?   @db.VarChar(80)
+  captura_url           String?   @db.VarChar(500)
+  estado                String    @default("Pendiente") @db.VarChar(20)
   id_cronograma         Int?
   id_matricula          Int?
   id_estudiante         Int?
   id_apoderado          Int?
-  observacion           String?  @db.VarChar(600)
+  observacion           String?   @db.VarChar(600)
   id_usuario_registro   Int?
   id_usuario_validacion Int?
   fecha_validacion      DateTime?
-  banco_destino         String?  @db.VarChar(80)
-  origen_reporte        String?  @default("Interno") @db.VarChar(50)
-  created_at            DateTime @default(now())
+  banco_destino         String?   @db.VarChar(80)
+  origen_reporte        String?   @default("Interno") @db.VarChar(50)
+  created_at            DateTime  @default(now())
 
-  tenant         Tenant?          @relation(fields: [id_tenant], references: [id_tenant])
-  colegio        Colegio?         @relation(fields: [id_colegio], references: [id_colegio])
-  cronograma     CronogramaPagos? @relation(fields: [id_cronograma], references: [id_cronograma])
-  matricula      Matricula?       @relation(fields: [id_matricula], references: [id_matricula])
-  estudiante     Estudiante?      @relation(fields: [id_estudiante], references: [id_persona])
-  apoderado      Apoderado?       @relation(fields: [id_apoderado], references: [id_persona])
-  registrado_por Usuario?         @relation("PagoRecibidoRegistro", fields: [id_usuario_registro], references: [id_usuario])
-  validado_por   Usuario?         @relation("PagoRecibidoValidacion", fields: [id_usuario_validacion], references: [id_usuario])
+  tenant         Tenant?                 @relation(fields: [id_tenant], references: [id_tenant])
+  colegio        Colegio?                @relation(fields: [id_colegio], references: [id_colegio])
+  cronograma     CronogramaPagos?        @relation(fields: [id_cronograma], references: [id_cronograma])
+  matricula      Matricula?              @relation(fields: [id_matricula], references: [id_matricula])
+  estudiante     Estudiante?             @relation(fields: [id_estudiante], references: [id_persona])
+  apoderado      Apoderado?              @relation(fields: [id_apoderado], references: [id_persona])
+  registrado_por Usuario?                @relation("PagoRecibidoRegistro", fields: [id_usuario_registro], references: [id_usuario])
+  validado_por   Usuario?                @relation("PagoRecibidoValidacion", fields: [id_usuario_validacion], references: [id_usuario])
+  historial      PagoRecibidoHistorial[]
 
   @@index([id_colegio, estado])
   @@index([referencia_escrita])
@@ -860,6 +862,26 @@ model PagoRecibido {
   @@index([id_matricula])
   @@index([id_estudiante])
   @@index([id_apoderado])
+}
+
+model PagoRecibidoHistorial {
+  id_historial     Int      @id @default(autoincrement())
+  id_pago_recibido Int
+  accion           String   @db.VarChar(40)
+  estado_anterior  String?  @db.VarChar(20)
+  estado_nuevo     String?  @db.VarChar(20)
+  observacion      String?  @db.VarChar(700)
+  metadata_json    Json?
+  id_usuario       Int?
+  origen           String   @default("Interno") @db.VarChar(50)
+  created_at       DateTime @default(now())
+
+  pago_recibido PagoRecibido @relation(fields: [id_pago_recibido], references: [id_pago_recibido], onDelete: Cascade)
+  usuario       Usuario?     @relation("PagoRecibidoHistorialUsuario", fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_pago_recibido, created_at])
+  @@index([id_usuario])
+  @@index([accion])
 }
 
 // ======================================================
@@ -1194,31 +1216,31 @@ model EstudianteCodigoColegio {
 }
 
 model DatosCobroColegio {
-  id_datos_cobro      Int      @id @default(autoincrement())
-  id_colegio          Int      @unique
+  id_datos_cobro Int @id @default(autoincrement())
+  id_colegio     Int @unique
 
-  nombre_destinatario String   @db.VarChar(160)
-  numero_yape         String?  @db.VarChar(30)
-  numero_plin         String?  @db.VarChar(30)
+  nombre_destinatario String  @db.VarChar(160)
+  numero_yape         String? @db.VarChar(30)
+  numero_plin         String? @db.VarChar(30)
 
-  banco_1             String?  @db.VarChar(80)
-  cuenta_1            String?  @db.VarChar(80)
-  cci_1               String?  @db.VarChar(80)
+  banco_1  String? @db.VarChar(80)
+  cuenta_1 String? @db.VarChar(80)
+  cci_1    String? @db.VarChar(80)
 
-  banco_2             String?  @db.VarChar(80)
-  cuenta_2            String?  @db.VarChar(80)
-  cci_2               String?  @db.VarChar(80)
+  banco_2  String? @db.VarChar(80)
+  cuenta_2 String? @db.VarChar(80)
+  cci_2    String? @db.VarChar(80)
 
-  qr_yape_url         String?  @db.VarChar(500)
-  qr_plin_url         String?  @db.VarChar(500)
+  qr_yape_url String? @db.VarChar(500)
+  qr_plin_url String? @db.VarChar(500)
 
-  instrucciones       String?  @db.Text
-  activo              Boolean  @default(true)
+  instrucciones String? @db.Text
+  activo        Boolean @default(true)
 
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  colegio             Colegio  @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
 
   @@index([activo])
 }

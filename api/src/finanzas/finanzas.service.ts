@@ -344,6 +344,33 @@ export class FinanzasService {
     return colegioId;
   }
 
+  private async registrarHistorialPagoRecibido(
+    db: any,
+    params: {
+      idPagoRecibido: number;
+      accion: string;
+      estadoAnterior?: string | null;
+      estadoNuevo?: string | null;
+      observacion?: string | null;
+      metadata?: any;
+      userId?: number | null;
+      origen?: string;
+    },
+  ) {
+    return db.pagoRecibidoHistorial.create({
+      data: {
+        id_pago_recibido: params.idPagoRecibido,
+        accion: params.accion,
+        estado_anterior: params.estadoAnterior || null,
+        estado_nuevo: params.estadoNuevo || null,
+        observacion: this.normalizeEmpty(params.observacion),
+        metadata_json: params.metadata ?? undefined,
+        id_usuario: params.userId || null,
+        origen: params.origen || 'Interno',
+      },
+    });
+  }
+
   // ── FIN HELPERS ────────────────────────────
 
   private async getAniosActivos(scope: FinanzasScope) {
@@ -1913,6 +1940,21 @@ export class FinanzasService {
       include: { cronograma: { include: { concepto: true, matricula: { include: { estudiante: { include: { persona: true } } } } } } },
     });
 
+    await this.registrarHistorialPagoRecibido(this.prisma, {
+      idPagoRecibido: pago.id_pago_recibido,
+      accion: 'REGISTRO_MANUAL',
+      estadoAnterior: null,
+      estadoNuevo: pago.estado,
+      observacion: pago.observacion,
+      userId: params.userId,
+      origen: 'ERP',
+      metadata: {
+        medio_pago: pago.medio_pago,
+        monto_recibido: Number(pago.monto_recibido || 0),
+        numero_operacion: pago.numero_operacion,
+      },
+    });
+
     return { message: cronograma ? 'Pago recibido registrado e identificado por referencia.' : 'Pago recibido registrado como pendiente de identificar.', pago };
   }
 
@@ -1976,6 +2018,21 @@ export class FinanzasService {
           id_apoderado: Number(idApoderado),
           id_usuario_validacion: params.userId,
           fecha_validacion: new Date(),
+        },
+      });
+
+      await this.registrarHistorialPagoRecibido(tx, {
+        idPagoRecibido,
+        accion: 'APLICAR',
+        estadoAnterior: pagoRecibido.estado,
+        estadoNuevo: 'Aplicado',
+        observacion: body.observacion || pagoRecibido.observacion,
+        userId: params.userId,
+        origen: 'ERP',
+        metadata: {
+          id_cronograma: cronograma.id_cronograma,
+          monto_aplicado: montoAplicar,
+          estado_deuda: nuevoEstado,
         },
       });
 
@@ -2189,6 +2246,20 @@ export class FinanzasService {
         },
       });
 
+      await this.registrarHistorialPagoRecibido(tx, {
+        idPagoRecibido,
+        accion: 'IDENTIFICAR',
+        estadoAnterior: pagoRecibido.estado,
+        estadoNuevo: 'Identificado',
+        observacion: actualizado.observacion,
+        userId: params.userId,
+        origen: 'ERP',
+        metadata: {
+          referencia_pago: referencia,
+          id_cronograma: cronograma.id_cronograma,
+        },
+      });
+
       return { message: 'Pago identificado correctamente. Ahora puedes confirmarlo.', pago: actualizado };
     });
   }
@@ -2228,6 +2299,16 @@ export class FinanzasService {
       estado,
       observacion: this.normalizeEmpty(body.observacion) || pago.observacion,
     },
+  });
+
+  await this.registrarHistorialPagoRecibido(this.prisma, {
+    idPagoRecibido,
+    accion: estado === 'Observado' ? 'OBSERVAR' : estado === 'Rechazado' ? 'RECHAZAR' : 'CAMBIO_ESTADO',
+    estadoAnterior: pago.estado,
+    estadoNuevo: estado,
+    observacion: actualizado.observacion,
+    userId: params.userId,
+    origen: 'ERP',
   });
 
   return {
@@ -2841,6 +2922,18 @@ export class FinanzasService {
       throw new NotFoundException('No se encontró el pago escolar para los datos ingresados.');
     }
 
+    const reportesAReemplazar = await this.prisma.pagoRecibido.findMany({
+      where: {
+        id_cronograma: cronograma.id_cronograma,
+        estado: { in: ['Observado', 'Rechazado'] },
+      },
+      select: {
+        id_pago_recibido: true,
+        estado: true,
+        observacion: true,
+      },
+    });
+
     const duplicado = await this.prisma.pagoRecibido.findFirst({
       where: {
         id_cronograma: cronograma.id_cronograma,
@@ -2862,6 +2955,20 @@ export class FinanzasService {
         estado: 'Reemplazado',
       },
     });
+
+    await Promise.all(
+      reportesAReemplazar.map((item) =>
+        this.registrarHistorialPagoRecibido(this.prisma, {
+          idPagoRecibido: item.id_pago_recibido,
+          accion: 'REEMPLAZAR_REPORTE',
+          estadoAnterior: item.estado,
+          estadoNuevo: 'Reemplazado',
+          observacion: item.observacion,
+          userId: null,
+          origen: 'Portal público',
+        }),
+      ),
+    );
 
     const idApoderado = cronograma.matricula.estudiante.apoderados?.[0]?.id_apoderado || null;
 
@@ -2895,9 +3002,62 @@ export class FinanzasService {
       },
     });
 
+    await this.registrarHistorialPagoRecibido(this.prisma, {
+      idPagoRecibido: pago.id_pago_recibido,
+      accion: 'REPORTE_PUBLICO',
+      estadoAnterior: null,
+      estadoNuevo: pago.estado,
+      observacion: 'Comprobante enviado desde portal público.',
+      userId: null,
+      origen: 'Portal público',
+      metadata: {
+        medio_pago: pago.medio_pago,
+        monto_recibido: Number(pago.monto_recibido || 0),
+        numero_operacion: pago.numero_operacion,
+        captura_url: pago.captura_url,
+      },
+    });
+
     return {
       message: 'Comprobante enviado correctamente. El colegio revisará y confirmará el pago.',
       pago,
     };
+  }
+
+  // ── MÉTODO PARA CONSULTAR HISTORIAL DE PAGO RECIBIDO ──
+  async listarHistorialPagoRecibido(idPagoRecibido: number, params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const pago = await this.prisma.pagoRecibido.findFirst({
+      where: {
+        id_pago_recibido: idPagoRecibido,
+        OR: [{ id_colegio: { in: scope.colegioIds } }, { id_colegio: null }],
+      },
+      select: { id_pago_recibido: true },
+    });
+
+    if (!pago) {
+      throw new NotFoundException('No se encontró el pago recibido.');
+    }
+
+    return this.prisma.pagoRecibidoHistorial.findMany({
+      where: { id_pago_recibido: idPagoRecibido },
+      include: {
+        usuario: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: {
+              select: {
+                nombres: true,
+                apellido_paterno: true,
+                apellido_materno: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
   }
 }
