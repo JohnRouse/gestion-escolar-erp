@@ -32,3 +32,5 @@ Thumbs.db
 docs/database/*.png
 docs/flows/*.png
 docs/mockups/*.png
+# Uploads locales / comprobantes
+api/uploads/
