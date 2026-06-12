@@ -933,25 +933,7 @@ function EstadoCuentaModal({
   const estadoCuenta = data.estado_cuenta;
   const pagos = data.pagos || [];
 
-  const imprimir = () => {
-    window.print();
-  };
-
-  const estadoPagoTone = (pago: any) => {
-    if (!pago.requiere_pago) return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
-    if (pago.en_revision) return 'bg-amber-50 text-amber-700 ring-amber-100';
-    if (pago.reporte_observado) return 'bg-orange-50 text-orange-700 ring-orange-100';
-    if (pago.reporte_rechazado) return 'bg-rose-50 text-rose-700 ring-rose-100';
-    return 'bg-slate-50 text-slate-700 ring-slate-100';
-  };
-
-  const estadoPagoLabel = (pago: any) => {
-    if (!pago.requiere_pago) return 'Pagado';
-    if (pago.en_revision) return 'En revisión';
-    if (pago.reporte_observado) return 'Observado';
-    if (pago.reporte_rechazado) return 'Rechazado';
-    return pago.estado_pago || 'Pendiente';
-  };
+  const imprimir = () => window.print();
 
   const nombreColegio = data.colegio?.nombre || data.colegio?.nombre_corto || 'Institución educativa';
   const nombreCorto = data.colegio?.nombre_corto || nombreColegio;
@@ -965,6 +947,22 @@ function EstadoCuentaModal({
     return acc;
   }, {});
 
+  const estadoPagoLabel = (pago: any) => {
+    if (!pago.requiere_pago) return 'Pagado';
+    if (pago.en_revision) return 'En revisión';
+    if (pago.reporte_observado) return 'Observado';
+    if (pago.reporte_rechazado) return 'Rechazado';
+    return pago.estado_pago || 'Pendiente';
+  };
+
+  const estadoPagoClass = (pago: any) => {
+    if (!pago.requiere_pago) return 'text-emerald-700';
+    if (pago.en_revision) return 'text-amber-700';
+    if (pago.reporte_observado) return 'text-orange-700';
+    if (pago.reporte_rechazado) return 'text-rose-700';
+    return 'text-slate-700';
+  };
+
   return (
     <>
       <style>
@@ -972,7 +970,7 @@ function EstadoCuentaModal({
           @media print {
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 9mm;
             }
 
             html,
@@ -991,20 +989,31 @@ function EstadoCuentaModal({
 
             #estado-cuenta-print {
               position: absolute !important;
-              inset: 0 auto auto 0 !important;
+              top: 0 !important;
+              left: 0 !important;
               width: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
               color: #111827 !important;
-              box-shadow: none !important;
             }
 
             .no-print {
               display: none !important;
             }
 
+            .print-section,
             .print-row {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
+
+            table {
+              page-break-inside: auto;
+              border-collapse: collapse;
+            }
+
+            tr {
               break-inside: avoid !important;
               page-break-inside: avoid !important;
             }
@@ -1038,12 +1047,9 @@ function EstadoCuentaModal({
             </button>
           </div>
 
-          <section
-            id="estado-cuenta-print"
-            className="mt-6 bg-white text-slate-950 print:mt-0"
-          >
+          <section id="estado-cuenta-print" className="mt-6 bg-white text-slate-950 print:mt-0">
             <div className="rounded-[26px] border border-slate-200 bg-white p-5 print:rounded-none print:border-0 print:p-0">
-              <div className="grid grid-cols-[90px_1fr_120px] items-start gap-4 border-b-4 border-sky-900 pb-4">
+              <div className="grid grid-cols-[88px_1fr_100px] items-start gap-4 border-b-[3px] border-sky-900 pb-4">
                 <div className="flex justify-center">
                   {data.colegio?.logo_url ? (
                     <img
@@ -1059,7 +1065,7 @@ function EstadoCuentaModal({
                 </div>
 
                 <div className="text-center">
-                  <p className="text-xl font-black uppercase tracking-wide text-slate-700">
+                  <p className="text-lg font-black uppercase tracking-wide text-slate-700">
                     Colegio Privado
                   </p>
                   <h1 className="mt-1 text-4xl font-black uppercase tracking-wide text-sky-900">
@@ -1076,23 +1082,25 @@ function EstadoCuentaModal({
                 <div className="h-20 border border-slate-400 bg-white" />
               </div>
 
-              <div className="mt-4 grid grid-cols-[1fr_190px] gap-4">
-                <div className="rounded-2xl border border-slate-300">
-                  <div className="grid grid-cols-[120px_1fr_120px_1fr] border-b border-slate-300 text-sm">
+              <div className="print-section mt-4 grid grid-cols-[1fr_190px] gap-4">
+                <div className="overflow-hidden rounded-2xl border border-slate-300">
+                  <div className="grid grid-cols-[120px_1fr_90px_1fr] border-b border-slate-300 text-xs">
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">Código</div>
                     <div className="px-3 py-2 font-bold">{data.matriculas?.[0]?.codigo_matricula || '—'}</div>
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">DNI</div>
                     <div className="px-3 py-2 font-bold">{data.alumno?.dni || '—'}</div>
                   </div>
 
-                  <div className="grid grid-cols-[170px_1fr] border-b border-slate-300 text-sm">
+                  <div className="grid grid-cols-[150px_1fr] border-b border-slate-300 text-xs">
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">Apellidos y nombres</div>
                     <div className="px-3 py-2 font-bold uppercase">{nombreAlumno}</div>
                   </div>
 
-                  <div className="grid grid-cols-[120px_1fr_120px_1fr] text-sm">
+                  <div className="grid grid-cols-[120px_1fr_90px_1fr] text-xs">
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">Nivel / aula</div>
-                    <div className="px-3 py-2 font-bold">{data.matriculas?.[0]?.nivel || '—'} · {data.matriculas?.[0]?.aula || '—'}</div>
+                    <div className="px-3 py-2 font-bold">
+                      {data.matriculas?.[0]?.nivel || '—'} · {data.matriculas?.[0]?.aula || '—'}
+                    </div>
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">Emitido</div>
                     <div className="px-3 py-2 font-bold">{formatDate(estadoCuenta?.generado_en)}</div>
                   </div>
@@ -1102,16 +1110,14 @@ function EstadoCuentaModal({
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
                     Saldo pendiente
                   </p>
-                  <p className="mt-2 text-3xl font-black">
-                    {formatMoney(totalPendiente)}
-                  </p>
+                  <p className="mt-2 text-3xl font-black">{formatMoney(totalPendiente)}</p>
                   <p className="mt-2 text-xs font-bold text-white/60">
                     Al {formatDate(estadoCuenta?.generado_en)}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-4 gap-3">
+              <div className="print-section mt-4 grid grid-cols-4 gap-3">
                 <ResumenBanco label="Total programado" value={formatMoney(estadoCuenta?.total_programado || 0)} />
                 <ResumenBanco label="Total pagado" value={formatMoney(estadoCuenta?.total_pagado || 0)} />
                 <ResumenBanco label="Total pendiente" value={formatMoney(estadoCuenta?.saldo_pendiente || 0)} />
@@ -1135,53 +1141,52 @@ function EstadoCuentaModal({
                 </div>
 
                 {Object.entries(pagosPorAnio).map(([anio, items]) => (
-                  <div key={anio} className="mb-4 overflow-hidden rounded-2xl border border-slate-300">
+                  <div key={anio} className="print-section mb-4 overflow-hidden rounded-2xl border border-slate-300">
                     <div className="bg-sky-900 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
                       {anio}
                     </div>
 
-                    <div className="grid grid-cols-[1.25fr_0.65fr_0.65fr_0.65fr_0.65fr_0.75fr_0.75fr] bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.10em] text-slate-600">
-                      <span>Concepto / código</span>
-                      <span>Vence</span>
-                      <span className="text-right">Importe</span>
-                      <span className="text-right">Pagado</span>
-                      <span className="text-right">Pendiente</span>
-                      <span>Fecha pago</span>
-                      <span className="text-center">Estado</span>
-                    </div>
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-slate-100 text-[10px] uppercase tracking-[0.08em] text-slate-600">
+                        <tr>
+                          <th className="w-[28%] px-3 py-2 text-left font-black">Concepto / código</th>
+                          <th className="w-[11%] px-2 py-2 text-left font-black">Vence</th>
+                          <th className="w-[12%] px-2 py-2 text-right font-black">Importe</th>
+                          <th className="w-[12%] px-2 py-2 text-right font-black">Pagado</th>
+                          <th className="w-[12%] px-2 py-2 text-right font-black">Pendiente</th>
+                          <th className="w-[12%] px-2 py-2 text-left font-black">Fecha pago</th>
+                          <th className="w-[13%] px-2 py-2 text-center font-black">Estado</th>
+                        </tr>
+                      </thead>
 
-                    <div className="divide-y divide-slate-200">
-                      {items.map((pago: any) => (
-                        <div
-                          key={pago.id_cronograma}
-                          className="print-row grid grid-cols-[1.25fr_0.65fr_0.65fr_0.65fr_0.65fr_0.75fr_0.75fr] gap-2 px-3 py-2 text-[11px]"
-                        >
-                          <div>
-                            <p className="font-black text-slate-950">{pago.concepto}</p>
-                            <p className="mt-0.5 font-bold text-slate-500">
-                              {pago.referencia_pago || 'Sin código'} · {pago.matricula?.aula || 'Aula no indicada'}
-                            </p>
-                          </div>
-
-                          <p className="font-bold text-slate-600">{formatDate(pago.fecha_vencimiento)}</p>
-                          <p className="text-right font-black text-slate-800">{formatMoney(pago.monto)}</p>
-                          <p className="text-right font-black text-emerald-700">{formatMoney(pago.pagado || 0)}</p>
-                          <p className="text-right font-black text-rose-700">{formatMoney(pago.saldo || 0)}</p>
-                          <p className="font-bold text-slate-600">{pago.ultimo_pago?.fecha_pago ? formatDate(pago.ultimo_pago.fecha_pago) : '—'}</p>
-
-                          <div className="text-center">
-                            <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ${estadoPagoTone(pago)}`}>
+                      <tbody className="divide-y divide-slate-200">
+                        {items.map((pago: any) => (
+                          <tr key={pago.id_cronograma} className="print-row align-top">
+                            <td className="px-3 py-2">
+                              <p className="font-black text-slate-950">{pago.concepto}</p>
+                              <p className="mt-0.5 font-bold text-slate-500">
+                                {pago.referencia_pago || 'Sin código'} · {pago.matricula?.aula || 'Aula no indicada'}
+                              </p>
+                            </td>
+                            <td className="px-2 py-2 font-bold text-slate-600">{formatDate(pago.fecha_vencimiento)}</td>
+                            <td className="px-2 py-2 text-right font-black text-slate-800">{formatMoney(pago.monto)}</td>
+                            <td className="px-2 py-2 text-right font-black text-emerald-700">{formatMoney(pago.pagado || 0)}</td>
+                            <td className="px-2 py-2 text-right font-black text-rose-700">{formatMoney(pago.saldo || 0)}</td>
+                            <td className="px-2 py-2 font-bold text-slate-600">
+                              {pago.ultimo_pago?.fecha_pago ? formatDate(pago.ultimo_pago.fecha_pago) : '—'}
+                            </td>
+                            <td className={`px-2 py-2 text-center font-black ${estadoPagoClass(pago)}`}>
                               {estadoPagoLabel(pago)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-4 border-t border-slate-300 pt-4 md:grid-cols-[1fr_260px]">
+              <div className="print-section mt-5 grid gap-4 border-t border-slate-300 pt-4 md:grid-cols-[1fr_250px]">
                 <p className="text-xs font-bold leading-5 text-slate-600">
                   Este estado de cuenta es informativo y refleja los importes programados, pagos registrados y saldos pendientes visibles en el portal de pagos.
                   Para validación administrativa, la institución puede contrastar códigos de pago, recibos y operaciones asociadas.

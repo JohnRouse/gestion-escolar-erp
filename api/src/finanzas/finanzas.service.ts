@@ -2667,7 +2667,9 @@ export class FinanzasService {
         },
         cronogramas: {
           where: {
-            visible_apoderado: true,
+            NOT: {
+              estado_publicacion: 'Anulado',
+            },
           },
           include: {
             concepto: true,
@@ -2733,6 +2735,9 @@ export class FinanzasService {
           pagado,
           saldo,
           requiere_pago: saldo > 0 && cronograma.estado_pago !== 'Pagado',
+          estado_publicacion: cronograma.estado_publicacion,
+          visible_apoderado: cronograma.visible_apoderado,
+          fecha_publicacion: cronograma.fecha_publicacion,
           ultimo_pago: ultimoPago
             ? {
                 id_transaccion: ultimoPago.id_transaccion,
