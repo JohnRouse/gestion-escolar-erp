@@ -970,7 +970,7 @@ function EstadoCuentaModal({
           @media print {
             @page {
               size: A4;
-              margin: 9mm;
+              margin: 8mm;
             }
 
             html,
@@ -1002,7 +1002,16 @@ function EstadoCuentaModal({
               display: none !important;
             }
 
-            .print-section,
+            .print-section {
+              break-inside: auto !important;
+              page-break-inside: auto !important;
+            }
+
+            .print-keep {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
+
             .print-row {
               break-inside: avoid !important;
               page-break-inside: avoid !important;
@@ -1048,27 +1057,27 @@ function EstadoCuentaModal({
           </div>
 
           <section id="estado-cuenta-print" className="mt-6 bg-white text-slate-950 print:mt-0">
-            <div className="rounded-[26px] border border-slate-200 bg-white p-5 print:rounded-none print:border-0 print:p-0">
-              <div className="grid grid-cols-[88px_1fr_100px] items-start gap-4 border-b-[3px] border-sky-900 pb-4">
+            <div className="rounded-[26px] border border-slate-200 bg-white p-4 print:rounded-none print:border-0 print:p-0">
+              <div className="grid grid-cols-[72px_1fr_86px] items-start gap-3 border-b-[3px] border-sky-900 pb-3">
                 <div className="flex justify-center">
                   {data.colegio?.logo_url ? (
                     <img
                       src={data.colegio.logo_url}
                       alt="Logo institucional"
-                      className="h-20 w-20 object-contain"
+                      className="h-16 w-16 object-contain"
                     />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center border border-slate-300 bg-slate-50 text-lg font-black text-slate-500">
+                    <div className="flex h-16 w-16 items-center justify-center border border-slate-300 bg-slate-50 text-base font-black text-slate-500">
                       IE
                     </div>
                   )}
                 </div>
 
                 <div className="text-center">
-                  <p className="text-lg font-black uppercase tracking-wide text-slate-700">
+                  <p className="text-base font-black uppercase tracking-wide text-slate-700">
                     Colegio Privado
                   </p>
-                  <h1 className="mt-1 text-4xl font-black uppercase tracking-wide text-sky-900">
+                  <h1 className="mt-0.5 text-3xl font-black uppercase tracking-wide text-sky-900">
                     {nombreCorto}
                   </h1>
                   <p className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
@@ -1079,10 +1088,10 @@ function EstadoCuentaModal({
                   </p>
                 </div>
 
-                <div className="h-20 border border-slate-400 bg-white" />
+                <div className="h-16 border border-slate-400 bg-white" />
               </div>
 
-              <div className="print-section mt-4 grid grid-cols-[1fr_190px] gap-4">
+              <div className="print-keep mt-3 grid grid-cols-[1fr_170px] gap-3">
                 <div className="overflow-hidden rounded-2xl border border-slate-300">
                   <div className="grid grid-cols-[120px_1fr_90px_1fr] border-b border-slate-300 text-xs">
                     <div className="bg-slate-100 px-3 py-2 font-black text-slate-600">Código</div>
@@ -1106,18 +1115,18 @@ function EstadoCuentaModal({
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                <div className="rounded-2xl bg-slate-950 p-3 text-white">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
                     Saldo pendiente
                   </p>
-                  <p className="mt-2 text-3xl font-black">{formatMoney(totalPendiente)}</p>
+                  <p className="mt-1 text-2xl font-black">{formatMoney(totalPendiente)}</p>
                   <p className="mt-2 text-xs font-bold text-white/60">
                     Al {formatDate(estadoCuenta?.generado_en)}
                   </p>
                 </div>
               </div>
 
-              <div className="print-section mt-4 grid grid-cols-4 gap-3">
+              <div className="print-keep mt-3 grid grid-cols-4 gap-2">
                 <ResumenBanco label="Total programado" value={formatMoney(estadoCuenta?.total_programado || 0)} />
                 <ResumenBanco label="Total pagado" value={formatMoney(estadoCuenta?.total_pagado || 0)} />
                 <ResumenBanco label="Total pendiente" value={formatMoney(estadoCuenta?.saldo_pendiente || 0)} />
@@ -1141,41 +1150,41 @@ function EstadoCuentaModal({
                 </div>
 
                 {Object.entries(pagosPorAnio).map(([anio, items]) => (
-                  <div key={anio} className="print-section mb-4 overflow-hidden rounded-2xl border border-slate-300">
+                  <div key={anio} className="mb-3 overflow-hidden rounded-2xl border border-slate-300">
                     <div className="bg-sky-900 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
                       {anio}
                     </div>
 
-                    <table className="w-full text-[11px]">
-                      <thead className="bg-slate-100 text-[10px] uppercase tracking-[0.08em] text-slate-600">
+                    <table className="w-full text-[10px]">
+                      <thead className="bg-slate-100 text-[9px] uppercase tracking-[0.06em] text-slate-600">
                         <tr>
-                          <th className="w-[28%] px-3 py-2 text-left font-black">Concepto / código</th>
-                          <th className="w-[11%] px-2 py-2 text-left font-black">Vence</th>
-                          <th className="w-[12%] px-2 py-2 text-right font-black">Importe</th>
-                          <th className="w-[12%] px-2 py-2 text-right font-black">Pagado</th>
-                          <th className="w-[12%] px-2 py-2 text-right font-black">Pendiente</th>
-                          <th className="w-[12%] px-2 py-2 text-left font-black">Fecha pago</th>
-                          <th className="w-[13%] px-2 py-2 text-center font-black">Estado</th>
+                          <th className="w-[28%] px-3 py-1.5 text-left font-black">Concepto / código</th>
+                          <th className="w-[11%] px-2 py-1.5 text-left font-black">Vence</th>
+                          <th className="w-[12%] px-2 py-1.5 text-right font-black">Importe</th>
+                          <th className="w-[12%] px-2 py-1.5 text-right font-black">Pagado</th>
+                          <th className="w-[12%] px-2 py-1.5 text-right font-black">Pendiente</th>
+                          <th className="w-[12%] px-2 py-1.5 text-left font-black">Fecha pago</th>
+                          <th className="w-[13%] px-2 py-1.5 text-center font-black">Estado</th>
                         </tr>
                       </thead>
 
                       <tbody className="divide-y divide-slate-200">
                         {items.map((pago: any) => (
                           <tr key={pago.id_cronograma} className="print-row align-top">
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-1.5">
                               <p className="font-black text-slate-950">{pago.concepto}</p>
                               <p className="mt-0.5 font-bold text-slate-500">
                                 {pago.referencia_pago || 'Sin código'} · {pago.matricula?.aula || 'Aula no indicada'}
                               </p>
                             </td>
-                            <td className="px-2 py-2 font-bold text-slate-600">{formatDate(pago.fecha_vencimiento)}</td>
-                            <td className="px-2 py-2 text-right font-black text-slate-800">{formatMoney(pago.monto)}</td>
-                            <td className="px-2 py-2 text-right font-black text-emerald-700">{formatMoney(pago.pagado || 0)}</td>
-                            <td className="px-2 py-2 text-right font-black text-rose-700">{formatMoney(pago.saldo || 0)}</td>
-                            <td className="px-2 py-2 font-bold text-slate-600">
+                            <td className="px-2 py-1.5 font-bold text-slate-600">{formatDate(pago.fecha_vencimiento)}</td>
+                            <td className="px-2 py-1.5 text-right font-black text-slate-800">{formatMoney(pago.monto)}</td>
+                            <td className="px-2 py-1.5 text-right font-black text-emerald-700">{formatMoney(pago.pagado || 0)}</td>
+                            <td className="px-2 py-1.5 text-right font-black text-rose-700">{formatMoney(pago.saldo || 0)}</td>
+                            <td className="px-2 py-1.5 font-bold text-slate-600">
                               {pago.ultimo_pago?.fecha_pago ? formatDate(pago.ultimo_pago.fecha_pago) : '—'}
                             </td>
-                            <td className={`px-2 py-2 text-center font-black ${estadoPagoClass(pago)}`}>
+                            <td className={`px-2 py-1.5 text-center font-black ${estadoPagoClass(pago)}`}>
                               {estadoPagoLabel(pago)}
                             </td>
                           </tr>
@@ -1186,7 +1195,7 @@ function EstadoCuentaModal({
                 ))}
               </div>
 
-              <div className="print-section mt-5 grid gap-4 border-t border-slate-300 pt-4 md:grid-cols-[1fr_250px]">
+              <div className="print-keep mt-4 grid gap-3 border-t border-slate-300 pt-3 md:grid-cols-[1fr_230px]">
                 <p className="text-xs font-bold leading-5 text-slate-600">
                   Este estado de cuenta es informativo y refleja los importes programados, pagos registrados y saldos pendientes visibles en el portal de pagos.
                   Para validación administrativa, la institución puede contrastar códigos de pago, recibos y operaciones asociadas.
@@ -1196,7 +1205,7 @@ function EstadoCuentaModal({
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Área administrativa
                   </p>
-                  <div className="mt-9 border-t border-slate-400 pt-2 text-xs font-bold text-slate-600">
+                  <div className="mt-6 border-t border-slate-400 pt-2 text-xs font-bold text-slate-600">
                     Firma / sello
                   </div>
                 </div>
@@ -1230,11 +1239,11 @@ function EstadoCuentaModal({
 
 function ResumenBanco({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-300 bg-slate-50 p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+    <div className="rounded-xl border border-slate-300 bg-slate-50 p-2.5">
+      <p className="text-[9px] font-black uppercase tracking-[0.10em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-slate-950">{value}</p>
+      <p className="mt-0.5 text-sm font-black text-slate-950">{value}</p>
     </div>
   );
 }
