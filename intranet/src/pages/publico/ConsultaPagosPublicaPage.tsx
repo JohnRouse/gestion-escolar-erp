@@ -933,7 +933,7 @@ function EstadoCuentaModal({
   const estadoCuenta = data.estado_cuenta;
   const pagos = data.pagos || [];
 
-  const imprimir = () => window.print();
+  const imprimir = () => imprimirEstadoCuentaPdf(data);
 
   const nombreColegio = data.colegio?.nombre || data.colegio?.nombre_corto || 'Institución educativa';
   const nombreCorto = data.colegio?.nombre_corto || nombreColegio;
@@ -1257,4 +1257,247 @@ function InfoPublic({ label, value }: { label: string; value: string }) {
       <p className="mt-1.5 text-sm font-black text-slate-900">{value || '—'}</p>
     </div>
   );
+}
+
+// ── Helper para imprimir estado de cuenta como documento independiente ──
+function imprimirEstadoCuentaPdf(data: ConsultaResponse) {
+  const estadoCuenta = data.estado_cuenta;
+  const pagos = data.pagos || [];
+
+  const escapeHtml = (value: any) =>
+    String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+  const nombreColegio = data.colegio?.nombre || data.colegio?.nombre_corto || 'Institución educativa';
+  const nombreCorto = data.colegio?.nombre_corto || nombreColegio;
+  const nombreAlumno = fullName(data.alumno);
+  const totalPendiente = Number(estadoCuenta?.saldo_pendiente || 0);
+
+  const estadoPagoLabel = (pago: any) => {
+    if (!pago.requiere_pago) return 'Pagado';
+    if (pago.en_revision) return 'En revisión';
+    if (pago.reporte_observado) return 'Observado';
+    if (pago.reporte_rechazado) return 'Rechazado';
+    return pago.estado_pago || 'Pendiente';
+  };
+
+  const estadoClass = (pago: any) => {
+    if (!pago.requiere_pago) return 'ok';
+    if (pago.en_revision) return 'warn';
+    if (pago.reporte_observado) return 'orange';
+    if (pago.reporte_rechazado) return 'bad';
+    return 'neutral';
+  };
+
+  const pagosPorAnio = pagos.reduce((acc: Record<string, any[]>, pago: any) => {
+    const anio = pago.matricula?.anio || 'Sin año';
+    if (!acc[anio]) acc[anio] = [];
+    acc[anio].push(pago);
+    return acc;
+  }, {});
+
+  const logo = data.colegio?.logo_url
+    ? `<img src="${escapeHtml(data.colegio.logo_url)}" alt="Logo institucional" class="logo-img" />`
+    : `<div class="logo-box">IE</div>`;
+
+  const tablas = Object.entries(pagosPorAnio).map(([anio, items]) => {
+    const rows = items.map((pago: any) => {
+      const fechaPago = pago.ultimo_pago?.fecha_pago ? formatDate(pago.ultimo_pago.fecha_pago) : '—';
+
+      return `
+        <tr>
+          <td class="concepto">
+            <strong>${escapeHtml(pago.concepto)}</strong>
+            <small>${escapeHtml(pago.referencia_pago || 'Sin código')} · ${escapeHtml(pago.matricula?.aula || 'Aula no indicada')}</small>
+          </td>
+          <td>${escapeHtml(formatDate(pago.fecha_vencimiento))}</td>
+          <td class="num">${escapeHtml(formatMoney(pago.monto))}</td>
+          <td class="num paid">${escapeHtml(formatMoney(pago.pagado || 0))}</td>
+          <td class="num pending">${escapeHtml(formatMoney(pago.saldo || 0))}</td>
+          <td>${escapeHtml(fechaPago)}</td>
+          <td class="state ${estadoClass(pago)}">${escapeHtml(estadoPagoLabel(pago))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <section class="year-section">
+        <div class="year-title">${escapeHtml(anio)}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Concepto / código</th>
+              <th>Vence</th>
+              <th class="num">Importe</th>
+              <th class="num">Pagado</th>
+              <th class="num">Pendiente</th>
+              <th>Fecha pago</th>
+              <th class="center">Estado</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+    `;
+  }).join('');
+
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Estado de cuenta - ${escapeHtml(nombreAlumno)}</title>
+  <style>
+    @page { size: A4; margin: 8mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; color: #111827; font-family: Arial, Helvetica, sans-serif; background: #fff; }
+    .document { width: 100%; background: #fff; }
+    .header { display: grid; grid-template-columns: 76px 1fr 90px; gap: 12px; align-items: start; padding-bottom: 10px; border-bottom: 3px solid #075985; }
+    .logo-box,.photo-box { height: 66px; border: 1px solid #94a3b8; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #475569; background: #f8fafc; }
+    .logo-img { width: 66px; height: 66px; object-fit: contain; }
+    .school { text-align: center; }
+    .school .type { font-size: 14px; font-weight: 900; text-transform: uppercase; color: #334155; letter-spacing: .04em; }
+    .school .name { margin-top: 2px; font-size: 28px; line-height: 1; font-weight: 900; color: #075985; text-transform: uppercase; letter-spacing: .04em; }
+    .school .doc { margin-top: 5px; font-size: 10px; font-weight: 900; color: #475569; text-transform: uppercase; letter-spacing: .22em; }
+    .school .years { margin-top: 4px; font-size: 11px; font-weight: 900; color: #334155; }
+    .info-row { display: grid; grid-template-columns: 1fr 176px; gap: 10px; margin-top: 10px; break-inside: avoid; }
+    .student-table { border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
+    .student-line { display: grid; grid-template-columns: 115px 1fr 80px 1fr; border-bottom: 1px solid #cbd5e1; min-height: 26px; font-size: 10px; }
+    .student-line:last-child { border-bottom: 0; }
+    .student-label { background: #f1f5f9; padding: 7px 9px; font-weight: 900; color: #475569; }
+    .student-value { padding: 7px 9px; font-weight: 800; }
+    .balance { background: #020617; color: #fff; border-radius: 10px; padding: 12px; min-height: 86px; }
+    .balance small { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .16em; color: rgba(255,255,255,.62); font-weight: 900; }
+    .balance strong { display: block; margin-top: 6px; font-size: 25px; line-height: 1; font-weight: 900; }
+    .balance span { display: block; margin-top: 8px; font-size: 10px; color: rgba(255,255,255,.65); font-weight: 800; }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; break-inside: avoid; }
+    .summary-card { border: 1px solid #cbd5e1; border-radius: 9px; padding: 9px; background: #f8fafc; }
+    .summary-card small { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: .16em; color: #64748b; font-weight: 900; }
+    .summary-card strong { display: block; margin-top: 5px; font-size: 12px; color: #020617; font-weight: 900; }
+    .section-head { margin-top: 13px; display: flex; justify-content: space-between; align-items: end; break-inside: avoid; }
+    .section-head small { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: #64748b; font-weight: 900; }
+    .section-head h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.1; color: #020617; }
+    .total-concepts { font-size: 10px; color: #64748b; font-weight: 800; }
+    .year-section { margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; page-break-inside: auto; }
+    .year-title { background: #075985; color: white; padding: 7px 10px; font-size: 10px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+    thead { display: table-header-group; background: #f1f5f9; }
+    th { padding: 6px 7px; text-align: left; color: #475569; font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #cbd5e1; }
+    td { padding: 6px 7px; border-bottom: 1px solid #e2e8f0; vertical-align: top; font-weight: 800; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    .concepto strong { display: block; font-size: 9.5px; color: #020617; }
+    .concepto small { display: block; margin-top: 2px; font-size: 8.5px; color: #64748b; font-weight: 900; }
+    .num { text-align: right; white-space: nowrap; }
+    .center { text-align: center; }
+    .paid { color: #047857; }
+    .pending { color: #be123c; }
+    .state { text-align: center; font-size: 9px; white-space: nowrap; font-weight: 900; }
+    .state.ok { color: #047857; }
+    .state.warn { color: #b45309; }
+    .state.orange { color: #c2410c; }
+    .state.bad { color: #be123c; }
+    .state.neutral { color: #334155; }
+    .footer { margin-top: 12px; display: grid; grid-template-columns: 1fr 220px; gap: 14px; padding-top: 10px; border-top: 1px solid #cbd5e1; break-inside: avoid; page-break-inside: avoid; }
+    .note { font-size: 10px; line-height: 1.5; color: #475569; font-weight: 800; }
+    .signature { border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 14px 10px; text-align: center; min-height: 78px; }
+    .signature small { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: .18em; color: #64748b; font-weight: 900; }
+    .signature div { margin-top: 28px; border-top: 1px solid #94a3b8; padding-top: 7px; font-size: 10px; font-weight: 800; color: #475569; }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <header class="header">
+      <div>${logo}</div>
+      <div class="school">
+        <div class="type">Colegio Privado</div>
+        <div class="name">${escapeHtml(nombreCorto)}</div>
+        <div class="doc">Estado de cuenta escolar</div>
+        <div class="years">${escapeHtml(estadoCuenta?.anios?.join(' · ') || 'Año escolar')}</div>
+      </div>
+      <div class="photo-box"></div>
+    </header>
+
+    <section class="info-row">
+      <div class="student-table">
+        <div class="student-line">
+          <div class="student-label">Código</div>
+          <div class="student-value">${escapeHtml(data.matriculas?.[0]?.codigo_matricula || '—')}</div>
+          <div class="student-label">DNI</div>
+          <div class="student-value">${escapeHtml(data.alumno?.dni || '—')}</div>
+        </div>
+        <div class="student-line" style="grid-template-columns: 150px 1fr;">
+          <div class="student-label">Apellidos y nombres</div>
+          <div class="student-value">${escapeHtml(nombreAlumno.toUpperCase())}</div>
+        </div>
+        <div class="student-line">
+          <div class="student-label">Nivel / aula</div>
+          <div class="student-value">${escapeHtml(data.matriculas?.[0]?.nivel || '—')} · ${escapeHtml(data.matriculas?.[0]?.aula || '—')}</div>
+          <div class="student-label">Emitido</div>
+          <div class="student-value">${escapeHtml(formatDate(estadoCuenta?.generado_en))}</div>
+        </div>
+      </div>
+
+      <div class="balance">
+        <small>Saldo pendiente</small>
+        <strong>${escapeHtml(formatMoney(totalPendiente))}</strong>
+        <span>Al ${escapeHtml(formatDate(estadoCuenta?.generado_en))}</span>
+      </div>
+    </section>
+
+    <section class="summary">
+      <div class="summary-card"><small>Total programado</small><strong>${escapeHtml(formatMoney(estadoCuenta?.total_programado || 0))}</strong></div>
+      <div class="summary-card"><small>Total pagado</small><strong>${escapeHtml(formatMoney(estadoCuenta?.total_pagado || 0))}</strong></div>
+      <div class="summary-card"><small>Total pendiente</small><strong>${escapeHtml(formatMoney(estadoCuenta?.saldo_pendiente || 0))}</strong></div>
+      <div class="summary-card"><small>Pagos vencidos</small><strong>${escapeHtml(String(estadoCuenta?.cantidad_vencidos || 0))}</strong></div>
+    </section>
+
+    <section class="section-head">
+      <div>
+        <small>Detalle de movimientos</small>
+        <h2>Cronograma de pagos por año escolar</h2>
+      </div>
+      <div class="total-concepts">Total conceptos: ${escapeHtml(String(pagos.length))}</div>
+    </section>
+
+    ${tablas}
+
+    <footer class="footer">
+      <p class="note">
+        Este estado de cuenta es informativo y refleja los importes programados, pagos registrados y saldos pendientes visibles en el portal de pagos.
+        Para validación administrativa, la institución puede contrastar códigos de pago, recibos y operaciones asociadas.
+      </p>
+      <div class="signature">
+        <small>Área administrativa</small>
+        <div>Firma / sello</div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    window.onload = function () {
+      setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 300);
+    };
+    window.onafterprint = function () {
+      window.close();
+    };
+  </script>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank', 'width=950,height=1200');
+
+  if (!printWindow) {
+    alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para generar el PDF.');
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
 }
