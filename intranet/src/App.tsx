@@ -25,6 +25,7 @@ import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracion
 import ValidarPagosPage from './pages/tesoreria/ValidarPagosPage';
 import CobranzasPage from './pages/tesoreria/CobranzasPage';
 import PagosRecibidosPage from './pages/tesoreria/PagosRecibidosPage';
+import EstadoCuentaInternoPage from './pages/tesoreria/EstadoCuentaInternoPage';
 import PagoPublicoPage from './pages/publico/PagoPublicoPage';
 import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
@@ -72,6 +73,7 @@ function AppRoutes() {
 <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
 <Route path="/tesoreria/validar-pagos" element={<ValidarPagosPage />} />
 <Route path="/tesoreria/pagos-recibidos" element={<PagosRecibidosPage />} />
+<Route path="/tesoreria/estado-cuenta" element={<EstadoCuentaInternoPage />} />
 <Route path="/matricula/historial" element={<MatriculasHistorialPage />} />
 <Route path="/tesoreria/cobranzas" element={<CobranzasPage />} />
 <Route path="/matricula/renovacion" element={<RenovacionMatriculaPage />} />

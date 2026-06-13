@@ -479,9 +479,47 @@ export class FinanzasService {
       where: { id_matricula: matriculaId },
       include: {
         colegio: true,
+        anio: true,
         estudiante: { include: { persona: true } },
+        seccion: {
+          include: {
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
         cronogramas: {
-          include: { concepto: true, pagos: true },
+          where: {
+            NOT: {
+              estado_publicacion: 'Anulado',
+            },
+          },
+          include: {
+            concepto: true,
+            pagos: {
+              orderBy: { fecha_pago: 'desc' },
+              include: {
+                cajero: {
+                  select: {
+                    id_usuario: true,
+                    username: true,
+                    persona: {
+                      select: {
+                        nombres: true,
+                        apellido_paterno: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            pagos_recibidos: {
+              orderBy: { created_at: 'desc' },
+              take: 1,
+            },
+          },
           orderBy: { fecha_vencimiento: 'asc' },
         },
       },
@@ -496,6 +534,9 @@ export class FinanzasService {
       }
     }
 
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
     const deudas = matricula.cronogramas.map((cron) => {
       const totalPagado = cron.pagos.reduce(
         (total, pago) => total + Number(pago.monto_pagado),
@@ -503,11 +544,23 @@ export class FinanzasService {
       );
       const montoProgramado = this.montoProgramadoCronograma(cron);
       const saldo = Math.max(0, montoProgramado - totalPagado);
+      const ultimoPago = cron.pagos?.[0] || null;
+      const ultimoReporte = cron.pagos_recibidos?.[0] || null;
+      const vencimiento = new Date(cron.fecha_vencimiento);
+      vencimiento.setHours(0, 0, 0, 0);
+
+      const estadoCalculado =
+        saldo <= 0
+          ? 'Pagado'
+          : vencimiento < hoy
+            ? 'Vencido'
+            : cron.estado_pago || 'Pendiente';
 
       return {
         id_cronograma: cron.id_cronograma,
         referencia_pago: cron.referencia_pago,
         concepto: cron.concepto.nombre_concepto,
+        tipo_concepto: cron.concepto.tipo_concepto,
         fecha_vencimiento: cron.fecha_vencimiento,
         monto_base: Number(cron.concepto.monto_base),
         monto_base_original: cron.monto_base_original ? Number(cron.monto_base_original) : Number(cron.concepto.monto_base),
@@ -515,31 +568,107 @@ export class FinanzasService {
         monto_programado: montoProgramado,
         total_pagado: totalPagado,
         saldo,
-        estado: cron.estado_pago,
+        estado: estadoCalculado,
+        estado_pago: cron.estado_pago,
         estado_publicacion: cron.estado_publicacion,
         visible_apoderado: cron.visible_apoderado,
         fecha_publicacion: cron.fecha_publicacion,
+        ultimo_pago: ultimoPago
+          ? {
+              id_transaccion: ultimoPago.id_transaccion,
+              monto_pagado: Number(ultimoPago.monto_pagado || 0),
+              fecha_pago: ultimoPago.fecha_pago,
+              metodo_pago: ultimoPago.metodo_pago,
+              nro_operacion: ultimoPago.nro_operacion,
+              cajero: ultimoPago.cajero,
+              codigo_recibo: `REC-${new Date(ultimoPago.fecha_pago).getFullYear()}-${String(
+                ultimoPago.id_transaccion,
+              ).padStart(6, '0')}`,
+            }
+          : null,
+        ultimo_reporte: ultimoReporte
+          ? {
+              id_pago_recibido: ultimoReporte.id_pago_recibido,
+              estado: ultimoReporte.estado,
+              monto_recibido: Number(ultimoReporte.monto_recibido || 0),
+              medio_pago: ultimoReporte.medio_pago,
+              numero_operacion: ultimoReporte.numero_operacion,
+              nombre_pagador: ultimoReporte.nombre_pagador,
+              created_at: ultimoReporte.created_at,
+              observacion: ultimoReporte.observacion,
+              origen_reporte: ultimoReporte.origen_reporte,
+            }
+          : null,
         pagos: cron.pagos.map((p) => ({
+          id_transaccion: p.id_transaccion,
           monto: Number(p.monto_pagado),
           fecha: p.fecha_pago,
           metodo: p.metodo_pago,
+          nro_operacion: p.nro_operacion,
+          cajero: p.cajero,
         })),
       };
     });
 
-    const totalPendiente = deudas
-      .filter((d) => d.estado === 'Pendiente' || d.estado === 'Vencido')
-      .reduce((sum, d) => sum + d.saldo, 0);
+    const totalProgramado = deudas.reduce((sum, item) => sum + Number(item.monto_programado || 0), 0);
+    const totalPagado = deudas.reduce((sum, item) => sum + Number(item.total_pagado || 0), 0);
+    const totalPendiente = deudas.reduce((sum, item) => sum + Number(item.saldo || 0), 0);
+    const vencidos = deudas.filter((item) => item.saldo > 0 && item.estado === 'Vencido');
+    const pendientes = deudas.filter((item) => item.saldo > 0 && item.estado !== 'Vencido');
+    const pagados = deudas.filter((item) => item.saldo <= 0);
+    const enRevision = deudas.filter((item) =>
+      ['Pendiente', 'Identificado'].includes(item.ultimo_reporte?.estado || ''),
+    );
+    const observados = deudas.filter((item) => item.ultimo_reporte?.estado === 'Observado');
+
+    const persona = matricula.estudiante?.persona;
 
     return {
       id_matricula: matricula.id_matricula,
       id_colegio: matricula.id_colegio,
-      colegio: matricula.colegio?.nombre || null,
-      alumno: matricula.estudiante
-        ? `${matricula.estudiante.persona.nombres} ${matricula.estudiante.persona.apellido_paterno}`.trim()
+      colegio: matricula.colegio
+        ? {
+            id_colegio: matricula.colegio.id_colegio,
+            nombre: matricula.colegio.nombre,
+            nombre_corto: matricula.colegio.nombre_corto,
+            codigo: matricula.colegio.codigo,
+            logo_url: matricula.colegio.logo_url,
+          }
         : null,
-      estado_matricula: matricula.estado_matricula,
+      alumno: persona
+        ? {
+            id_persona: persona.id_persona,
+            dni: persona.dni,
+            nombres: persona.nombres,
+            apellido_paterno: persona.apellido_paterno,
+            apellido_materno: persona.apellido_materno,
+          }
+        : null,
+      matricula: {
+        id_matricula: matricula.id_matricula,
+        codigo_matricula: matricula.codigo_matricula,
+        estado_matricula: matricula.estado_matricula,
+        fecha_matricula: matricula.fecha_matricula,
+        anio: matricula.anio?.nombre_anio || null,
+        nivel: matricula.seccion?.grado?.nivel?.nombre_nivel || null,
+        grado: matricula.seccion?.grado?.nombre_grado || null,
+        seccion: matricula.seccion?.letra || null,
+        aula: matricula.seccion
+          ? `${matricula.seccion.grado?.nombre_grado || ''} ${matricula.seccion.letra || ''}`.trim()
+          : null,
+      },
       deudas,
+      resumen: {
+        total_programado: totalProgramado,
+        total_pagado: totalPagado,
+        total_pendiente: totalPendiente,
+        cantidad_total: deudas.length,
+        cantidad_pagados: pagados.length,
+        cantidad_pendientes: pendientes.length,
+        cantidad_vencidos: vencidos.length,
+        cantidad_en_revision: enRevision.length,
+        cantidad_observados: observados.length,
+      },
       total_pendiente: totalPendiente,
     };
   }

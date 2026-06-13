@@ -74,11 +74,12 @@ const menuComunicacion: NavItem[] = [
 
 const menuFinanzas: NavItem[] = [
   { title: 'Tesorería', icon: Wallet, path: '/tesoreria', roles: ['Admin', 'Secretaria', 'Director'], children: [
-    { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
-    { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
-    { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
-    { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
-    { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
+      { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
+  { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
+  { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
+  { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
+  { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+  { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
   ]},
 ];
 
