@@ -1124,8 +1124,9 @@ export class AcademicosService {
         continue;
       }
 
+      // ── CAMBIO: vencimiento inmediato (mismo día a las 12:00) ──
       const fechaVenc = new Date();
-      fechaVenc.setDate(fechaVenc.getDate() + 1);
+      fechaVenc.setHours(12, 0, 0, 0);
 
       const creado = await tx.cronogramaPagos.create({
         data: {
@@ -2463,8 +2464,9 @@ export class AcademicosService {
         }
 
         for (const concepto of conceptos) {
+          // ── CAMBIO: vencimiento inmediato (mismo día a las 12:00) ──
           const fechaVenc = new Date();
-          fechaVenc.setDate(fechaVenc.getDate() + 1);
+          fechaVenc.setHours(12, 0, 0, 0);
 
           await this.crearCronogramaMatriculaConMonto(tx, {
             idMatricula: matricula.id_matricula,

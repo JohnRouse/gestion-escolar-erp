@@ -2968,8 +2968,13 @@ export class FinanzasService {
 
     const pagosVisiblesPortal = pagosOrdenados.filter((pago) => pago.visible_portal);
 
+    // ── REEMPLAZO: Matrícula siempre en “Por pagar ahora” ──
     const pagosParaPagar = pagosVisiblesPortal.filter((pago) => {
       if (!pago.requiere_pago) return false;
+
+      const esMatricula = pago.tipo_concepto === 'MATRICULA';
+
+      if (esMatricula) return true;
       if (!pago.fecha_vencimiento) return true;
 
       const vencimiento = new Date(pago.fecha_vencimiento);
@@ -2980,6 +2985,10 @@ export class FinanzasService {
 
     const proximosPagos = pagosVisiblesPortal.filter((pago) => {
       if (!pago.requiere_pago) return false;
+
+      const esMatricula = pago.tipo_concepto === 'MATRICULA';
+
+      if (esMatricula) return false;
       if (!pago.fecha_vencimiento) return false;
 
       const vencimiento = new Date(pago.fecha_vencimiento);
@@ -2987,6 +2996,7 @@ export class FinanzasService {
 
       return vencimiento > hoy;
     });
+    // ── FIN REEMPLAZO ────────────────────────────────
 
     const pagosCubiertos = pagosVisiblesPortal.filter((pago) => !pago.requiere_pago);
     const pagosCubiertosEstadoCuenta = pagosOrdenados.filter((pago) => !pago.requiere_pago);
