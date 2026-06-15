@@ -845,7 +845,7 @@ export class AcademicosService {
 
       if (existente) continue;
 
-      await tx.cronogramaPagos.create({
+      const creado = await tx.cronogramaPagos.create({
         data: {
           id_matricula: matricula.id_matricula,
           id_concepto: concepto.id_concepto,
@@ -857,6 +857,8 @@ export class AcademicosService {
           estado_pago: 'Pendiente',
         },
       });
+
+      await this.asegurarReferenciaPagoCronogramaAcademico(tx, creado.id_cronograma);
 
       creados++;
     }
@@ -1035,7 +1037,7 @@ export class AcademicosService {
       descuentoAplicado = Math.max(montoBase - montoProgramado, 0);
     }
 
-    return tx.cronogramaPagos.create({
+    const creado = await tx.cronogramaPagos.create({
       data: {
         id_matricula: params.idMatricula,
         id_concepto: params.concepto.id_concepto,
@@ -1047,6 +1049,12 @@ export class AcademicosService {
         id_campana_matricula: campana?.id_campana || null,
         id_campana_descuento: campanaDescuento?.id_campana_descuento || null,
       },
+    });
+
+    await this.asegurarReferenciaPagoCronogramaAcademico(tx, creado.id_cronograma);
+
+    return tx.cronogramaPagos.findUnique({
+      where: { id_cronograma: creado.id_cronograma },
     });
   }
 
@@ -1132,6 +1140,8 @@ export class AcademicosService {
         },
       });
 
+      await this.asegurarReferenciaPagoCronogramaAcademico(tx, creado.id_cronograma);
+
       primerCronograma = primerCronograma || creado;
     }
 
@@ -1149,6 +1159,92 @@ export class AcademicosService {
   }
 
   // ── FIN HELPERS ──────────────────────────────────────
+
+  // ── NUEVOS HELPERS PARA REFERENCIA DE PAGO ─────────────
+
+  private getPrefijoPagoColegio(colegio?: {
+    codigo?: string | null;
+    nombre_corto?: string | null;
+    nombre?: string | null;
+    id_colegio?: number | null;
+  } | null) {
+    const base =
+      colegio?.codigo ||
+      colegio?.nombre_corto ||
+      colegio?.nombre ||
+      (colegio?.id_colegio ? `COL${colegio.id_colegio}` : 'COL');
+
+    const limpio = String(base)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    return (limpio || 'COL').slice(0, 6);
+  }
+
+  private async asegurarReferenciaPagoCronogramaAcademico(
+    tx: Prisma.TransactionClient,
+    idCronograma: number,
+  ) {
+    const cronograma = await tx.cronogramaPagos.findUnique({
+      where: { id_cronograma: idCronograma },
+      include: {
+        matricula: {
+          include: {
+            colegio: true,
+            anio: true,
+          },
+        },
+      },
+    });
+
+    if (!cronograma) {
+      throw new BadRequestException('No se encontró el cronograma para generar el código de pago.');
+    }
+
+    if (cronograma.referencia_pago) {
+      return cronograma.referencia_pago;
+    }
+
+    const prefijoColegio = this.getPrefijoPagoColegio(cronograma.matricula.colegio);
+    const anio = this.getAnioCorteDeRegistro(cronograma.matricula.anio);
+    const prefijo = `${prefijoColegio}-PG-${anio}`;
+
+    const existentes = await tx.cronogramaPagos.count({
+      where: {
+        referencia_pago: {
+          startsWith: `${prefijo}-`,
+        },
+      },
+    });
+
+    for (let intento = 1; intento <= 2000; intento += 1) {
+      const referencia = `${prefijo}-${String(existentes + intento).padStart(6, '0')}`;
+
+      try {
+        await tx.cronogramaPagos.update({
+          where: { id_cronograma: idCronograma },
+          data: { referencia_pago: referencia },
+        });
+
+        return referencia;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new BadRequestException('No se pudo generar un código de pago único.');
+  }
+
+  // ── FIN NUEVOS HELPERS ───────────────────────────────
 
   private handlePersonaPrismaError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

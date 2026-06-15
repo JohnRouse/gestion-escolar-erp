@@ -4,11 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "dev:cloud": "vite --host 0.0.0.0 --port 3002",
+  "build": "vite build",
+  "build:check": "tsc -b && vite build",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "preview:cloud": "vite preview --host 0.0.0.0 --port 3002",
+  "stable:cloud": "vite build --emptyOutDir && vite preview --host 0.0.0.0 --port 3002"
+},
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",
     "axios": "^1.17.0",
