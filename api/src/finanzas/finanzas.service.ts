@@ -2867,17 +2867,26 @@ export class FinanzasService {
         if (vencimiento) vencimiento.setHours(0, 0, 0, 0);
 
         const esPagado = saldo <= 0 || cronograma.estado_pago === 'Pagado';
-        const visiblePorFecha =
-          !!vencimiento && vencimiento <= limiteVisibilidadAutomatica;
         const visibleManual = Boolean(cronograma.visible_apoderado);
 
-        const visiblePortal = esPagado || visibleManual || visiblePorFecha;
+        const visiblePorFecha =
+          !!vencimiento && vencimiento <= limiteVisibilidadAutomatica;
 
-        const motivoVisibilidad = esPagado
-          ? 'PAGADO'
-          : visibleManual
-            ? 'MANUAL'
-            : visiblePorFecha
+        const visiblePorVencimiento =
+          !!vencimiento && vencimiento <= hoy;
+
+        const visiblePortal =
+          visibleManual ||
+          visiblePorVencimiento ||
+          (!esPagado && visiblePorFecha);
+
+        const motivoVisibilidad = visibleManual
+          ? esPagado
+            ? 'PAGADO_VISIBLE'
+            : 'MANUAL'
+          : visiblePorVencimiento
+            ? 'VENCIDO_O_ACTUAL'
+            : !esPagado && visiblePorFecha
               ? 'VENTANA_5_DIAS'
               : 'OCULTO';
 
@@ -2979,7 +2988,8 @@ export class FinanzasService {
       return vencimiento > hoy;
     });
 
-    const pagosCubiertos = pagosOrdenados.filter((pago) => !pago.requiere_pago);
+    const pagosCubiertos = pagosVisiblesPortal.filter((pago) => !pago.requiere_pago);
+    const pagosCubiertosEstadoCuenta = pagosOrdenados.filter((pago) => !pago.requiere_pago);
 
     const pagosVencidos = pagosOrdenados.filter((pago) => {
       if (!pago.requiere_pago || !pago.fecha_vencimiento) return false;
@@ -3015,7 +3025,7 @@ export class FinanzasService {
       total_pagado: totalPagado,
       saldo_pendiente: saldoPendiente,
       cantidad_total: pagosOrdenados.length,
-      cantidad_pagados: pagosCubiertos.length,
+      cantidad_pagados: pagosCubiertosEstadoCuenta.length,
       cantidad_pendientes: pagosOrdenados.filter((pago) => pago.requiere_pago).length,
       cantidad_vencidos: pagosVencidos.length,
       cantidad_proximos: proximosPagos.length,
