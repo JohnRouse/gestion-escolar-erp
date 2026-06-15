@@ -113,7 +113,7 @@ export default function ConsultaPagosPublicaPage() {
   );
 
   const pagosPagados = useMemo(
-    () => data?.pagos_cubiertos || (data?.pagos || []).filter((pago) => !pago.requiere_pago),
+    () => data?.pagos_cubiertos || [],
     [data],
   );
 
