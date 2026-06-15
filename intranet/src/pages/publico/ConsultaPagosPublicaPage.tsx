@@ -365,9 +365,9 @@ export default function ConsultaPagosPublicaPage() {
 
               {proximosPagos.length > 0 && (
                 <div className="rounded-[34px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-                  <h2 className="text-lg font-black text-slate-950">Próximos pagos publicados</h2>
+                  <h2 className="text-lg font-black text-slate-950">Próximos a pagar</h2>
                   <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
-                    Estos conceptos aún no vencen. Se muestran para que puedas planificar, pero no se consideran dentro de "Por pagar ahora".
+                    Estos conceptos están próximos a vencer o fueron habilitados por Tesorería. Te ayudan a planificar, pero aún no se consideran dentro de "Por pagar ahora".
                   </p>
 
                   <div className="mt-5 space-y-3">
@@ -1293,7 +1293,7 @@ function imprimirEstadoCuentaPdf(data: ConsultaResponse) {
     return 'neutral';
   };
 
-  const pagosPorAnio = pagos.reduce((acc: Record<string, any[]>, pago: any) => {
+  const pagosPorAnio = pagos.reduce<Record<string, any[]>>((acc, pago: any) => {
     const anio = pago.matricula?.anio || 'Sin año';
     if (!acc[anio]) acc[anio] = [];
     acc[anio].push(pago);
@@ -1305,7 +1305,9 @@ function imprimirEstadoCuentaPdf(data: ConsultaResponse) {
     : `<div class="logo-box">IE</div>`;
 
   const tablas = Object.entries(pagosPorAnio).map(([anio, items]) => {
-    const rows = items.map((pago: any) => {
+    const pagosDelAnio = items as any[];
+
+    const rows = pagosDelAnio.map((pago: any) => {
       const fechaPago = pago.ultimo_pago?.fecha_pago ? formatDate(pago.ultimo_pago.fecha_pago) : '—';
 
       return `

@@ -2835,6 +2835,14 @@ export class FinanzasService {
 
     const alumno = matriculas[0].estudiante.persona;
 
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const diasAnticipacionPortal = 5;
+    const limiteVisibilidadAutomatica = new Date(hoy);
+    limiteVisibilidadAutomatica.setDate(hoy.getDate() + diasAnticipacionPortal);
+    limiteVisibilidadAutomatica.setHours(23, 59, 59, 999);
+
     const pagos = matriculas.flatMap((matricula) => {
       return matricula.cronogramas.map((cronograma) => {
         const monto = this.montoProgramadoCronograma(cronograma);
@@ -2853,6 +2861,26 @@ export class FinanzasService {
         const puedeReportarPago =
           !reporteReciente || reporteObservado || reporteRechazado;
 
+        const vencimiento = cronograma.fecha_vencimiento
+          ? new Date(cronograma.fecha_vencimiento)
+          : null;
+        if (vencimiento) vencimiento.setHours(0, 0, 0, 0);
+
+        const esPagado = saldo <= 0 || cronograma.estado_pago === 'Pagado';
+        const visiblePorFecha =
+          !!vencimiento && vencimiento <= limiteVisibilidadAutomatica;
+        const visibleManual = Boolean(cronograma.visible_apoderado);
+
+        const visiblePortal = esPagado || visibleManual || visiblePorFecha;
+
+        const motivoVisibilidad = esPagado
+          ? 'PAGADO'
+          : visibleManual
+            ? 'MANUAL'
+            : visiblePorFecha
+              ? 'VENTANA_5_DIAS'
+              : 'OCULTO';
+
         return {
           id_cronograma: cronograma.id_cronograma,
           referencia_pago: cronograma.referencia_pago,
@@ -2867,6 +2895,9 @@ export class FinanzasService {
           estado_publicacion: cronograma.estado_publicacion,
           visible_apoderado: cronograma.visible_apoderado,
           fecha_publicacion: cronograma.fecha_publicacion,
+          visible_portal: visiblePortal,
+          motivo_visibilidad: motivoVisibilidad,
+          dias_anticipacion_portal: diasAnticipacionPortal,
           ultimo_pago: ultimoPago
             ? {
                 id_transaccion: ultimoPago.id_transaccion,
@@ -2926,31 +2957,26 @@ export class FinanzasService {
       return fa - fb;
     });
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const pagosVisiblesPortal = pagosOrdenados.filter((pago) => pago.visible_portal);
 
-    const finMesActual = new Date(
-      hoy.getFullYear(),
-      hoy.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
-
-    const pagosParaPagar = pagosOrdenados.filter((pago) => {
+    const pagosParaPagar = pagosVisiblesPortal.filter((pago) => {
       if (!pago.requiere_pago) return false;
       if (!pago.fecha_vencimiento) return true;
+
       const vencimiento = new Date(pago.fecha_vencimiento);
-      return vencimiento <= finMesActual;
+      vencimiento.setHours(0, 0, 0, 0);
+
+      return vencimiento <= hoy;
     });
 
-    const proximosPagos = pagosOrdenados.filter((pago) => {
+    const proximosPagos = pagosVisiblesPortal.filter((pago) => {
       if (!pago.requiere_pago) return false;
       if (!pago.fecha_vencimiento) return false;
+
       const vencimiento = new Date(pago.fecha_vencimiento);
-      return vencimiento > finMesActual;
+      vencimiento.setHours(0, 0, 0, 0);
+
+      return vencimiento > hoy;
     });
 
     const pagosCubiertos = pagosOrdenados.filter((pago) => !pago.requiere_pago);
@@ -3050,7 +3076,8 @@ export class FinanzasService {
         cantidad_por_pagar: pagosParaPagar.length,
         cantidad_proximos: proximosPagos.length,
         cantidad_pagados: pagosCubiertos.length,
-        cantidad_total: pagosOrdenados.length,
+        cantidad_total: pagosVisiblesPortal.length,
+        cantidad_total_cronograma: pagosOrdenados.length,
       },
       matriculas: matriculas.map((matricula) => ({
         id_matricula: matricula.id_matricula,
@@ -3063,6 +3090,7 @@ export class FinanzasService {
         nivel: matricula.seccion?.grado?.nivel?.nombre_nivel || null,
       })),
       pagos: pagosOrdenados,
+      pagos_visibles: pagosVisiblesPortal,
       pagos_para_pagar: pagosParaPagar,
       proximos_pagos: proximosPagos,
       pagos_cubiertos: pagosCubiertos,
@@ -3072,6 +3100,57 @@ export class FinanzasService {
           datosCobroPublicos?.instrucciones ||
           'Coloca el código de pago en la descripción del Yape, Plin o transferencia.',
       },
+    };
+  }
+
+  async actualizarVisibilidadCronogramaApoderado(
+    idCronograma: number,
+    body: { visible_apoderado?: boolean },
+    params: ScopeParams,
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        id_cronograma: idCronograma,
+        matricula: {
+          id_colegio: { in: scope.colegioIds },
+        },
+      },
+      include: {
+        concepto: true,
+        matricula: {
+          include: {
+            estudiante: { include: { persona: true } },
+            colegio: true,
+          },
+        },
+      },
+    });
+
+    if (!cronograma) {
+      throw new NotFoundException('No se encontró el cronograma.');
+    }
+
+    const visible = body.visible_apoderado === true;
+
+    const actualizado = await this.prisma.cronogramaPagos.update({
+      where: { id_cronograma: idCronograma },
+      data: {
+        visible_apoderado: visible,
+        estado_publicacion: visible ? 'Publicado' : 'Programado',
+        fecha_publicacion: visible ? new Date() : null,
+      },
+      include: {
+        concepto: true,
+      },
+    });
+
+    return {
+      message: visible
+        ? 'El concepto ahora es visible para el apoderado.'
+        : 'El concepto fue ocultado del listado público normal.',
+      cronograma: actualizado,
     };
   }
 

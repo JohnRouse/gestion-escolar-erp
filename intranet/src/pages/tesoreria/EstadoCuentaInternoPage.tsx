@@ -145,6 +145,7 @@ export default function EstadoCuentaInternoPage() {
   const [buscando, setBuscando] = useState(false);
   const [cargandoEstado, setCargandoEstado] = useState(false);
   const [error, setError] = useState('');
+  const [savingVisibilityId, setSavingVisibilityId] = useState<number | null>(null);
 
   const deudasPorAnio = useMemo(() => {
     const grupos: Record<string, any[]> = {};
@@ -203,6 +204,28 @@ export default function EstadoCuentaInternoPage() {
       setError(err.response?.data?.message || 'No se pudo cargar el estado de cuenta.');
     } finally {
       setCargandoEstado(false);
+    }
+  };
+
+  const toggleVisibilidadCronograma = async (item: any) => {
+    if (!token || !estado) return;
+
+    setSavingVisibilityId(item.id_cronograma);
+
+    try {
+      const nextVisible = !item.visible_apoderado;
+
+      await axios.patch(
+        `/api/tesoreria/cronogramas/${item.id_cronograma}/visibilidad-apoderado${queryString}`,
+        { visible_apoderado: nextVisible },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      await cargarEstadoCuenta(estado.id_matricula);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No se pudo actualizar la visibilidad.');
+    } finally {
+      setSavingVisibilityId(null);
     }
   };
 
@@ -394,9 +417,32 @@ export default function EstadoCuentaInternoPage() {
                             <td className="px-4 py-3">
                               <p className="font-black text-slate-900">{item.concepto}</p>
                               <p className="mt-1 text-xs font-bold text-slate-400">{item.referencia_pago || 'Sin código'}</p>
-                              {!item.visible_apoderado && (
-                                <p className="mt-1 text-[11px] font-black text-amber-600">No visible al apoderado</p>
+                              <p className={`mt-1 text-[11px] font-black ${
+                                item.visible_apoderado ? 'text-emerald-600' : 'text-amber-600'
+                              }`}>
+                                {item.visible_apoderado ? 'Visible al apoderado' : 'No visible al apoderado'}
+                              </p>
+                              {item.motivo_visibilidad === 'VENTANA_5_DIAS' && (
+                                <p className="mt-1 text-[11px] font-black text-sky-600">
+                                  Se mostrará automáticamente por fecha próxima
+                                </p>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => toggleVisibilidadCronograma(item)}
+                                disabled={savingVisibilityId === item.id_cronograma}
+                                className={`mt-2 inline-flex h-8 items-center rounded-xl px-3 text-[11px] font-black transition disabled:opacity-60 ${
+                                  item.visible_apoderado
+                                    ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100 hover:bg-amber-100'
+                                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100'
+                                }`}
+                              >
+                                {savingVisibilityId === item.id_cronograma
+                                  ? 'Guardando...'
+                                  : item.visible_apoderado
+                                    ? 'Ocultar al apoderado'
+                                    : 'Hacer visible'}
+                              </button>
                             </td>
                             <td className="px-4 py-3 font-bold text-slate-500">{formatDate(item.fecha_vencimiento)}</td>
                             <td className="px-4 py-3 text-right font-black text-slate-900">{formatMoney(item.monto_programado)}</td>

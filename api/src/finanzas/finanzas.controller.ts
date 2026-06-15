@@ -205,6 +205,27 @@ export class FinanzasController {
     });
   }
 
+  @Patch('cronogramas/:id/visibilidad-apoderado')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async actualizarVisibilidadCronogramaApoderado(
+    @Param('id') id: string,
+    @Body() body: { visible_apoderado?: boolean },
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.actualizarVisibilidadCronogramaApoderado(
+      Number(id),
+      body,
+      {
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId ? Number(colegioId) : undefined,
+      },
+    );
+  }
+
   @Get('campanas-descuento')
   @Roles('Admin', 'Director', 'Secretaria')
   async listarCampanasDescuento(
