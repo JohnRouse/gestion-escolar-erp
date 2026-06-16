@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Query, Body, UseGuards, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
@@ -62,179 +62,274 @@ export class PlantillasController {
     return this.prisma.plantillaEvaluacion.delete({ where: { id_plantilla: Number(id) } });
   }
 
-  @Post(':id/aplicar')
-@Roles('Admin', 'Director', 'Profesor')
-async aplicar(
-  @Param('id') id: string,
-  @Body() body: { id_asignacion: number; id_unidad: number; modo?: 'reemplazar' | 'agregar' },
-) {
-  const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
-    where: { id_plantilla: Number(id) },
-    include: { detalles: true },
-  });
-  if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
+  @Get('recomendada')
+  @Roles('Admin', 'Director', 'Profesor')
+  async getRecomendada(
+    @Query('asignacion_id') asignacionId?: string,
+  ) {
+    const idAsignacion = Number(asignacionId);
 
-  // Si el modo es "reemplazar", eliminar las evaluaciones existentes de esa asignación y unidad
-  if (body.modo === 'reemplazar') {
-    await this.prisma.evaluacionDetalle.deleteMany({
-      where: {
-        id_asignacion: body.id_asignacion,
-        id_unidad: body.id_unidad,
-      },
-    });
-  }
+    if (!Number.isInteger(idAsignacion) || idAsignacion <= 0) {
+      throw new BadRequestException('Selecciona una asignación válida para buscar plantilla.');
+    }
 
-  const evaluaciones = await Promise.all(
-    plantilla.detalles.map((detalle) =>
-      this.prisma.evaluacionDetalle.create({
-        data: {
-          id_asignacion: body.id_asignacion,
-          id_unidad: body.id_unidad,
-          id_tipo_eval: detalle.id_tipo_eval,
-          descripcion_actividad: detalle.descripcion,
-        },
-      })
-    )
-  );
-
-  return { message: 'Plantilla aplicada', total: evaluaciones.length, modo: body.modo || 'agregar' };
-}
-
-@Post(':id/aplicar-anio')
-@Roles('Admin', 'Director')
-async aplicarAnio(
-  @Param('id') id: string,
-  @Body() body: { id_anio: number },
-) {
-  const idPlantilla = Number(id);
-  const idAnio = Number(body.id_anio);
-
-  const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
-    where: { id_plantilla: idPlantilla },
-    include: {
-      detalles: {
-        orderBy: { orden: 'asc' },
-      },
-      nivel: true,
-      curso: true,
-    },
-  });
-
-  if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
-
-  const anio = await this.prisma.anioLectivo.findUnique({
-    where: { id_anio: idAnio },
-    include: {
-      bimestres: {
-        include: {
-          unidades: true,
-        },
-      },
-    },
-  });
-
-  if (!anio) throw new NotFoundException('Año lectivo no encontrado');
-
-  const unidades = anio.bimestres
-    .flatMap((bimestre) => bimestre.unidades)
-    .sort((a, b) => a.numero - b.numero);
-
-  if (unidades.length === 0) {
-    return {
-      message: 'El año lectivo no tiene unidades configuradas',
-      asignaciones: 0,
-      unidades: 0,
-      evaluacionesCreadas: 0,
-      evaluacionesExistentes: 0,
-    };
-  }
-
-  const whereAsignaciones: any = {
-    id_anio: idAnio,
-  };
-
-  if (plantilla.id_nivel) {
-    whereAsignaciones.seccion = {
-      grado: {
-        id_nivel: plantilla.id_nivel,
-      },
-    };
-  }
-
-  if (plantilla.id_curso) {
-    whereAsignaciones.id_curso = plantilla.id_curso;
-  }
-
-  const asignaciones = await this.prisma.asignacionDocente.findMany({
-    where: whereAsignaciones,
-    include: {
-      curso: true,
-      seccion: {
-        include: {
-          grado: {
-            include: {
-              nivel: true,
+    const asignacion = await this.prisma.asignacionDocente.findUnique({
+      where: { id_asignacion: idAsignacion },
+      include: {
+        curso: true,
+        seccion: {
+          include: {
+            grado: {
+              include: {
+                nivel: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    });
 
-  let evaluacionesCreadas = 0;
-  let evaluacionesExistentes = 0;
+    if (!asignacion) throw new NotFoundException('Asignación no encontrada');
 
-  await this.prisma.$transaction(async (tx) => {
-    for (const asignacion of asignaciones) {
-      for (const unidad of unidades) {
-        for (const detalle of plantilla.detalles) {
-          const existente = await tx.evaluacionDetalle.findFirst({
-            where: {
-              id_asignacion: asignacion.id_asignacion,
-              id_unidad: unidad.id_unidad,
-              id_tipo_eval: detalle.id_tipo_eval,
-              descripcion_actividad: detalle.descripcion,
-            },
-          });
+    const baseWhere: any = {
+      OR: [
+        { id_colegio: asignacion.id_colegio },
+        { id_colegio: null },
+      ],
+    };
 
-          if (existente) {
-            evaluacionesExistentes++;
-            continue;
-          }
+    const plantillas = await this.prisma.plantillaEvaluacion.findMany({
+      where: baseWhere,
+      include: {
+        detalles: {
+          include: { tipo: true },
+          orderBy: { orden: 'asc' },
+        },
+        nivel: true,
+        curso: true,
+      },
+      orderBy: { nombre: 'asc' },
+    });
 
-          await tx.evaluacionDetalle.create({
-            data: {
-              id_asignacion: asignacion.id_asignacion,
-              id_unidad: unidad.id_unidad,
-              id_tipo_eval: detalle.id_tipo_eval,
-              descripcion_actividad: detalle.descripcion,
-            },
-          });
+    const porCurso = plantillas.find(
+      (plantilla) => plantilla.id_curso === asignacion.id_curso,
+    );
 
-          evaluacionesCreadas++;
-        }
-      }
+    const porNivel = plantillas.find(
+      (plantilla) =>
+        !plantilla.id_curso &&
+        plantilla.id_nivel === asignacion.seccion.grado.id_nivel,
+    );
+
+    const global = plantillas.find(
+      (plantilla) => !plantilla.id_curso && !plantilla.id_nivel,
+    );
+
+    const seleccionada = porCurso || porNivel || global || null;
+
+    if (!seleccionada) {
+      return {
+        plantilla: null,
+        asignacion: {
+          id_asignacion: asignacion.id_asignacion,
+          curso: asignacion.curso.nombre_curso,
+          nivel: asignacion.seccion.grado.nivel.nombre_nivel,
+          grado: asignacion.seccion.grado.nombre_grado,
+          seccion: asignacion.seccion.letra,
+        },
+      };
     }
-  });
 
-  return {
-    message: 'Plantilla aplicada al año lectivo correctamente',
-    plantilla: {
-      id_plantilla: plantilla.id_plantilla,
-      nombre: plantilla.nombre,
-      alcance: plantilla.id_curso
+    return {
+      plantilla: seleccionada,
+      alcance: seleccionada.id_curso
         ? 'curso'
-        : plantilla.id_nivel
+        : seleccionada.id_nivel
           ? 'nivel'
           : 'global',
-      nivel: plantilla.nivel?.nombre_nivel || null,
-      curso: plantilla.curso?.nombre_curso || null,
-    },
-    asignaciones: asignaciones.length,
-    unidades: unidades.length,
-    evaluacionesCreadas,
-    evaluacionesExistentes,
-  };
-}
+      asignacion: {
+        id_asignacion: asignacion.id_asignacion,
+        curso: asignacion.curso.nombre_curso,
+        nivel: asignacion.seccion.grado.nivel.nombre_nivel,
+        grado: asignacion.seccion.grado.nombre_grado,
+        seccion: asignacion.seccion.letra,
+      },
+    };
+  }
+
+  @Post(':id/aplicar')
+  @Roles('Admin', 'Director')
+  async aplicar(
+    @Param('id') id: string,
+    @Body() body: { id_asignacion: number; id_unidad: number; modo?: 'reemplazar' | 'agregar' },
+  ) {
+    const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
+      where: { id_plantilla: Number(id) },
+      include: { detalles: true },
+    });
+    if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
+
+    // Si el modo es "reemplazar", eliminar las evaluaciones existentes de esa asignación y unidad
+    if (body.modo === 'reemplazar') {
+      await this.prisma.evaluacionDetalle.deleteMany({
+        where: {
+          id_asignacion: body.id_asignacion,
+          id_unidad: body.id_unidad,
+        },
+      });
+    }
+
+    const evaluaciones = await Promise.all(
+      plantilla.detalles.map((detalle) =>
+        this.prisma.evaluacionDetalle.create({
+          data: {
+            id_asignacion: body.id_asignacion,
+            id_unidad: body.id_unidad,
+            id_tipo_eval: detalle.id_tipo_eval,
+            descripcion_actividad: detalle.descripcion,
+          },
+        })
+      )
+    );
+
+    return { message: 'Plantilla aplicada', total: evaluaciones.length, modo: body.modo || 'agregar' };
+  }
+
+  @Post(':id/aplicar-anio')
+  @Roles('Admin', 'Director')
+  async aplicarAnio(
+    @Param('id') id: string,
+    @Body() body: { id_anio: number },
+  ) {
+    const idPlantilla = Number(id);
+    const idAnio = Number(body.id_anio);
+
+    const plantilla = await this.prisma.plantillaEvaluacion.findUnique({
+      where: { id_plantilla: idPlantilla },
+      include: {
+        detalles: {
+          orderBy: { orden: 'asc' },
+        },
+        nivel: true,
+        curso: true,
+      },
+    });
+
+    if (!plantilla) throw new NotFoundException('Plantilla no encontrada');
+
+    const anio = await this.prisma.anioLectivo.findUnique({
+      where: { id_anio: idAnio },
+      include: {
+        bimestres: {
+          include: {
+            unidades: true,
+          },
+        },
+      },
+    });
+
+    if (!anio) throw new NotFoundException('Año lectivo no encontrado');
+
+    const unidades = anio.bimestres
+      .flatMap((bimestre) => bimestre.unidades)
+      .sort((a, b) => a.numero - b.numero);
+
+    if (unidades.length === 0) {
+      return {
+        message: 'El año lectivo no tiene unidades configuradas',
+        asignaciones: 0,
+        unidades: 0,
+        evaluacionesCreadas: 0,
+        evaluacionesExistentes: 0,
+      };
+    }
+
+    const whereAsignaciones: any = {
+      id_anio: idAnio,
+    };
+
+    if (plantilla.id_nivel) {
+      whereAsignaciones.seccion = {
+        grado: {
+          id_nivel: plantilla.id_nivel,
+        },
+      };
+    }
+
+    if (plantilla.id_curso) {
+      whereAsignaciones.id_curso = plantilla.id_curso;
+    }
+
+    const asignaciones = await this.prisma.asignacionDocente.findMany({
+      where: whereAsignaciones,
+      include: {
+        curso: true,
+        seccion: {
+          include: {
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let evaluacionesCreadas = 0;
+    let evaluacionesExistentes = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const asignacion of asignaciones) {
+        for (const unidad of unidades) {
+          for (const detalle of plantilla.detalles) {
+            const existente = await tx.evaluacionDetalle.findFirst({
+              where: {
+                id_asignacion: asignacion.id_asignacion,
+                id_unidad: unidad.id_unidad,
+                id_tipo_eval: detalle.id_tipo_eval,
+                descripcion_actividad: detalle.descripcion,
+              },
+            });
+
+            if (existente) {
+              evaluacionesExistentes++;
+              continue;
+            }
+
+            await tx.evaluacionDetalle.create({
+              data: {
+                id_asignacion: asignacion.id_asignacion,
+                id_unidad: unidad.id_unidad,
+                id_tipo_eval: detalle.id_tipo_eval,
+                descripcion_actividad: detalle.descripcion,
+              },
+            });
+
+            evaluacionesCreadas++;
+          }
+        }
+      }
+    });
+
+    return {
+      message: 'Plantilla aplicada al año lectivo correctamente',
+      plantilla: {
+        id_plantilla: plantilla.id_plantilla,
+        nombre: plantilla.nombre,
+        alcance: plantilla.id_curso
+          ? 'curso'
+          : plantilla.id_nivel
+            ? 'nivel'
+            : 'global',
+        nivel: plantilla.nivel?.nombre_nivel || null,
+        curso: plantilla.curso?.nombre_curso || null,
+      },
+      asignaciones: asignaciones.length,
+      unidades: unidades.length,
+      evaluacionesCreadas,
+      evaluacionesExistentes,
+    };
+  }
 
 }

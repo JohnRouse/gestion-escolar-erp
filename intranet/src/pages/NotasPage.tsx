@@ -21,6 +21,7 @@ import {
   Calendar,
   BookOpen,
   Zap,
+  Printer,
 } from 'lucide-react';
 
 interface Asignacion {
@@ -149,7 +150,7 @@ function getNotaColor(value: unknown) {
 }
 
 export default function NotasPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { queryParams, scopeLabel } = useSchool();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
@@ -167,6 +168,8 @@ export default function NotasPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
   const [nuevaEvalTipo, setNuevaEvalTipo] = useState('3');
+
+  const esVistaGestion = ['Admin', 'Director', 'Secretaria'].includes(user?.rol || '');
 
   useEffect(() => {
     if (!token) return;
@@ -334,8 +337,14 @@ export default function NotasPage() {
     try { await axios.delete(`/api/calificaciones/evaluaciones/${idEval}`, { headers: { Authorization: `Bearer ${token}` } }); cargarGrilla(); } catch (err: any) { alert(err.response?.data?.message || 'Error al eliminar'); }
   };
 
-  const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 appearance-none";
-  const labelClass = "mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-neutral-400";
+  const imprimirGrilla = () => {
+    window.print();
+  };
+
+  const inputClass = "h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 appearance-none";
+  const labelClass = "mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400";
+  const primaryButtonClass = "inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const secondaryButtonClass = "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className="w-full space-y-6">
@@ -348,6 +357,41 @@ export default function NotasPage() {
         .modal-overlay-exit { animation: modalOverlayOut 0.15s ease-in forwards; }
         .modal-panel-enter { animation: modalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .modal-panel-exit { animation: modalPanelOut 0.15s ease-in forwards; }
+
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+
+          #notas-print-area,
+          #notas-print-area * {
+            visibility: visible;
+          }
+
+          #notas-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: 0 !important;
+            box-shadow: none !important;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+
+          #notas-print-area input {
+            border: 1px solid #cbd5e1 !important;
+            background: white !important;
+            color: #0f172a !important;
+          }
+
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+        }
       `}</style>
 
       <PageHeader
@@ -357,10 +401,19 @@ export default function NotasPage() {
         icon={BookOpenCheck}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={openModal} disabled={!asignacionId} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="button" onClick={openModal} disabled={!asignacionId} className={secondaryButtonClass}>
               <Plus size={16} /> Agregar evaluación
             </button>
-            <button type="button" onClick={guardarNotas} disabled={saving || !grilla} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+            <button
+              type="button"
+              onClick={imprimirGrilla}
+              disabled={!grilla}
+              className={secondaryButtonClass}
+            >
+              <Printer size={16} />
+              Imprimir / PDF
+            </button>
+            <button type="button" onClick={guardarNotas} disabled={saving || !grilla} className={primaryButtonClass}>
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
@@ -369,7 +422,7 @@ export default function NotasPage() {
       />
 
       {/* Filtros principales */}
-      <section className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <section className="no-print rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="grid gap-4 lg:grid-cols-4">
           <label className="block">
             <span className={labelClass}><School size={14} /> Salón</span>
@@ -408,7 +461,7 @@ export default function NotasPage() {
               {!loadingAsignaciones && cursosPorSalon.length === 0 && <option value="">Sin cursos asignados</option>}
               {cursosPorSalon.map((a) => (
                 <option key={a.id_asignacion} value={a.id_asignacion}>
-                  {a.curso}{a.docente ? ` · ${a.docente}` : ''}
+                  {a.curso}{esVistaGestion && a.docente ? ` · ${a.docente}` : ''}
                 </option>
               ))}
             </select>
@@ -419,28 +472,28 @@ export default function NotasPage() {
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Salón Actual</span>
-              <School className="h-4 w-4 text-[#CCF32F]" />
+              <School className="h-4 w-4 text-blue-600" />
             </div>
             <p className="text-xl font-semibold text-neutral-900">{asignacionActual?.seccion || salonSeleccionado || '—'}</p>
           </div>
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Alumnos</span>
-              <UsersRound className="h-4 w-4 text-[#CCF32F]" />
+              <UsersRound className="h-4 w-4 text-emerald-600" />
             </div>
             <p className="text-xl font-semibold text-neutral-900">{alumnosCount}</p>
           </div>
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Evaluaciones</span>
-              <Table2 className="h-4 w-4 text-[#CCF32F]" />
+              <Table2 className="h-4 w-4 text-indigo-600" />
             </div>
             <p className="text-xl font-semibold text-neutral-900">{evaluacionesCount}</p>
           </div>
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Promedio</span>
-              <Sparkles className="h-4 w-4 text-[#CCF32F]" />
+              <Sparkles className="h-4 w-4 text-violet-600" />
             </div>
             <p className="text-xl font-semibold text-neutral-900">{promedioGeneral ?? '—'}</p>
           </div>
@@ -449,7 +502,7 @@ export default function NotasPage() {
 
       {/* Mensaje */}
       {mensaje && (
-        <div className={`flex items-center gap-3 rounded-2xl p-4 text-sm font-medium ring-1 ${
+        <div className={`no-print flex items-center gap-3 rounded-2xl p-4 text-sm font-medium ring-1 ${
           mensaje.tipo === 'exito' ? 'bg-emerald-50 text-emerald-600 ring-emerald-200/60' : 'bg-red-50 text-red-600 ring-red-200/60'
         }`}>
           {mensaje.tipo === 'exito' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -459,7 +512,7 @@ export default function NotasPage() {
 
       {/* Error y mensajes de asignaciones vacías */}
       {asignacionesError && (
-        <div className="rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-600 ring-1 ring-red-200/60">
+        <div className="no-print rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-600 ring-1 ring-red-200/60">
           <div className="flex items-start gap-3">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <div>
@@ -471,7 +524,7 @@ export default function NotasPage() {
       )}
 
       {!loadingAsignaciones && !asignacionesError && asignaciones.length === 0 && (
-        <section className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-6 py-5 text-sm text-amber-800">
+        <section className="no-print rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-6 py-5 text-sm text-amber-800">
           <div className="flex items-start gap-3">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <div>
@@ -496,8 +549,8 @@ export default function NotasPage() {
           <div className="space-y-3">{[1, 2, 3, 4, 5, 6].map((i) => (<div key={i} className="h-12 w-full rounded-xl bg-neutral-100 animate-pulse" />))}</div>
         </div>
       ) : grilla ? (
-        <section className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <div className="flex flex-col gap-4 border-b border-neutral-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <section id="notas-print-area" className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="no-print flex flex-col gap-4 border-b border-neutral-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">{grilla.asignacion?.curso || asignacionActual?.curso || 'Grilla de notas'}</h2>
               <p className="mt-1 text-sm text-neutral-500">{grilla.asignacion?.seccion || asignacionActual?.seccion || 'Salón no especificado'} · {periodoActual.label} · Unidad {unidadId}</p>
@@ -510,66 +563,143 @@ export default function NotasPage() {
 
           {grilla.evaluaciones.length === 0 ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#CCF32F]/10 text-[#CCF32F] mb-4"><Plus size={28} /></div>
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Plus size={28} /></div>
               <h3 className="text-base font-semibold text-neutral-900">Aún no hay evaluaciones</h3>
-              <p className="mt-2 max-w-md text-sm text-neutral-500">Crea la primera evaluación para iniciar el registro de notas de esta unidad.</p>
-              <button type="button" onClick={openModal} className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98]"><Plus size={16} /> Crear evaluación</button>
+              <p className="mt-2 max-w-md text-sm text-neutral-500">
+                Puedes crear una evaluación manual.
+              </p>
+              <button type="button" onClick={openModal} className={`${primaryButtonClass} mt-6`}>
+                <Plus size={16} /> Crear evaluación
+              </button>
             </div>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-sm">
-                <thead>
-                  <tr>
-                    <th rowSpan={2} className="sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
-                    <th rowSpan={2} className="sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
-                    {gruposEvaluaciones.map((grupo) => {
-                      const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                      return (<th key={grupo.nombre} colSpan={grupo.evaluaciones.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header}`}>{grupo.nombre}</th>);
-                    })}
-                    <th rowSpan={2} className="sticky right-0 z-30 w-24 border-b border-l border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">Prom.</th>
-                  </tr>
-                  <tr>
-                    {gruposEvaluaciones.flatMap((grupo) => {
-                      const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                      return grupo.evaluaciones.map((eva) => (
-                        <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader}`}>
-                          <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
-                            <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{eva.descripcion}</span>
-                            <button type="button" onClick={() => eliminarEvaluacion(eva.id)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-300 opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100" title="Eliminar evaluación"><Trash2 size={13} /></button>
-                          </div>
-                        </th>
-                      ));
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {grilla.grilla.map((fila, index) => {
-                    const promedio = calcularPromedioFila(fila, grilla.evaluaciones);
-                    const promedioTexto = formatearNotaEntera(promedio);
-                    return (
-                      <tr key={fila.id_matricula} className="group hover:bg-neutral-50/50 transition-colors">
-                        <td className="sticky left-0 z-20 border-b border-r border-neutral-100 bg-white px-3 py-2.5 text-center text-xs font-medium text-neutral-400 group-hover:bg-neutral-50/50 transition-colors">{index + 1}</td>
-                        <td className="sticky left-[56px] z-20 border-b border-r border-neutral-100 bg-white px-4 py-2.5 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
-                          <p className="text-sm font-medium text-neutral-800 truncate max-w-[230px]">{fila.alumno}</p>
-                          <p className="text-[11px] text-neutral-400">Matrícula #{fila.id_matricula}</p>
-                        </td>
-                        {gruposEvaluaciones.flatMap((grupo) => {
+            <>
+              {/* Vista móvil: tarjetas por alumno */}
+              <div className="space-y-4 p-4 lg:hidden">
+                {grilla.grilla.map((fila, index) => {
+                  const promedio = calcularPromedioFila(fila, grilla.evaluaciones);
+                  const promedioTexto = formatearNotaEntera(promedio);
+
+                  return (
+                    <article
+                      key={fila.id_matricula}
+                      className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-neutral-400">
+                            Alumno {index + 1}
+                          </p>
+                          <h3 className="mt-1 text-sm font-black text-neutral-900">
+                            {fila.alumno}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-neutral-400">
+                            Matrícula #{fila.id_matricula}
+                          </p>
+                        </div>
+
+                        <span className={`inline-flex min-w-[3.5rem] items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold tabular-nums ring-1 ${getPromedioClass(promedio)}`}>
+                          {promedioTexto}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 space-y-4">
+                        {gruposEvaluaciones.map((grupo) => {
                           const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                          return grupo.evaluaciones.map((eva) => (
-                            <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell}`}>
-                              <input type="text" inputMode="numeric" pattern="[0-9]*" value={formatearNotaEntera(fila[eva.id])} onFocus={(e) => e.currentTarget.select()} onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)} className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 ${getNotaColor(fila[eva.id])}`} aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`} />
-                            </td>
-                          ));
+
+                          return (
+                            <div key={grupo.nombre} className="rounded-2xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
+                              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${style.subHeader}`}>
+                                {grupo.nombre}
+                              </p>
+
+                              <div className="mt-3 grid gap-3">
+                                {grupo.evaluaciones.map((eva) => (
+                                  <label key={eva.id} className="grid grid-cols-[1fr_76px] items-center gap-3">
+                                    <span className="text-xs font-bold leading-4 text-neutral-600">
+                                      {eva.descripcion}
+                                    </span>
+
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={formatearNotaEntera(fila[eva.id])}
+                                      onFocus={(e) => e.currentTarget.select()}
+                                      onChange={(e) =>
+                                        handleNotaChange(fila.id_matricula, eva.id, e.target.value)
+                                      }
+                                      className={`h-10 rounded-xl border text-center text-sm font-black tabular-nums outline-none transition-all focus:ring-2 ${getNotaColor(fila[eva.id])}`}
+                                      aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
                         })}
-                        <td className="sticky right-0 z-20 border-b border-l border-neutral-100 bg-white px-3 py-2.5 text-center align-middle shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
-                          <span className={`inline-flex min-w-[3.5rem] items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold tabular-nums ring-1 ${getPromedioClass(promedio)}`}>{promedioTexto}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Vista desktop: tabla */}
+              <div className="hidden overflow-auto lg:block">
+                <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-sm">
+                  <thead>
+                    <tr>
+                      <th rowSpan={2} className="sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
+                      <th rowSpan={2} className="sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
+                      {gruposEvaluaciones.map((grupo) => {
+                        const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
+                        return (<th key={grupo.nombre} colSpan={grupo.evaluaciones.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header}`}>{grupo.nombre}</th>);
+                      })}
+                      <th rowSpan={2} className="sticky right-0 z-30 w-24 border-b border-l border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">Prom.</th>
+                    </tr>
+                    <tr>
+                      {gruposEvaluaciones.flatMap((grupo) => {
+                        const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
+                        return grupo.evaluaciones.map((eva) => (
+                          <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader}`}>
+                            <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
+                              <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{eva.descripcion}</span>
+                              <button type="button" onClick={() => eliminarEvaluacion(eva.id)} className="no-print flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-300 opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100" title="Eliminar evaluación"><Trash2 size={13} /></button>
+                            </div>
+                          </th>
+                        ));
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grilla.grilla.map((fila, index) => {
+                      const promedio = calcularPromedioFila(fila, grilla.evaluaciones);
+                      const promedioTexto = formatearNotaEntera(promedio);
+                      return (
+                        <tr key={fila.id_matricula} className="group hover:bg-neutral-50/50 transition-colors">
+                          <td className="sticky left-0 z-20 border-b border-r border-neutral-100 bg-white px-3 py-2.5 text-center text-xs font-medium text-neutral-400 group-hover:bg-neutral-50/50 transition-colors">{index + 1}</td>
+                          <td className="sticky left-[56px] z-20 border-b border-r border-neutral-100 bg-white px-4 py-2.5 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
+                            <p className="text-sm font-medium text-neutral-800 truncate max-w-[230px]">{fila.alumno}</p>
+                            <p className="text-[11px] text-neutral-400">Matrícula #{fila.id_matricula}</p>
+                          </td>
+                          {gruposEvaluaciones.flatMap((grupo) => {
+                            const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
+                            return grupo.evaluaciones.map((eva) => (
+                              <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell}`}>
+                                <input type="text" inputMode="numeric" pattern="[0-9]*" value={formatearNotaEntera(fila[eva.id])} onFocus={(e) => e.currentTarget.select()} onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)} className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 ${getNotaColor(fila[eva.id])}`} aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`} />
+                              </td>
+                            ));
+                          })}
+                          <td className="sticky right-0 z-20 border-b border-l border-neutral-100 bg-white px-3 py-2.5 text-center align-middle shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
+                            <span className={`inline-flex min-w-[3.5rem] items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold tabular-nums ring-1 ${getPromedioClass(promedio)}`}>{promedioTexto}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       ) : (
@@ -582,13 +712,13 @@ export default function NotasPage() {
 
       {/* ═══ Modal de Nueva Evaluación ═══ */}
       {modalOpen && (
-        <div className={`fixed inset-0 z-[80] flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+        <div className={`no-print fixed inset-0 z-[80] flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
           <div className={`relative bg-white rounded-2xl shadow-2xl ring-1 ring-neutral-200/50 w-full max-w-lg overflow-hidden flex flex-col ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#CCF32F]/10 px-3 py-1 text-xs font-semibold text-neutral-800 mb-3"><Plus size={13} /> Nueva evaluación</div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100"><Plus size={13} /> Nueva evaluación</div>
                 <h2 className="text-xl font-semibold text-neutral-900 tracking-tight">Agregar evaluación</h2>
                 <p className="mt-1 text-sm text-neutral-400">{periodoActual.label}, unidad {unidadId}.</p>
               </div>
@@ -599,23 +729,23 @@ export default function NotasPage() {
             <div className="space-y-5 px-6 py-5">
               <div>
                 <label className={labelClass}>Descripción</label>
-                <input type="text" value={nuevaEvalDesc} onChange={(e) => setNuevaEvalDesc(e.target.value)} className="h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400" placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..." autoFocus />
+                <input type="text" value={nuevaEvalDesc} onChange={(e) => setNuevaEvalDesc(e.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300" placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..." autoFocus />
               </div>
 
               <div>
                 <label className={labelClass}>Tipo de evaluación</label>
-                <select value={nuevaEvalTipo} onChange={(e) => setNuevaEvalTipo(e.target.value)} className="h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 appearance-none cursor-pointer">
+                <select value={nuevaEvalTipo} onChange={(e) => setNuevaEvalTipo(e.target.value)} className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300">
                   {tipoEvaluaciones.map((tipo) => (<option key={tipo.id} value={tipo.id}>{tipo.label}</option>))}
                 </select>
               </div>
 
-              <div className="rounded-2xl bg-[#CCF32F]/5 ring-1 ring-[#CCF32F]/20 p-4">
+              <div className="rounded-2xl bg-blue-50/60 p-4 ring-1 ring-blue-100">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Prácticas existentes</p>
                     <p className="mt-1.5 text-sm font-semibold text-neutral-800">Siguiente: Práctica {siguientePractica}</p>
                   </div>
-                  <button type="button" onClick={() => { setNuevaEvalTipo('3'); setNuevaEvalDesc(`Práctica ${siguientePractica}`); }} className="shrink-0 rounded-xl bg-[#CCF32F] px-3 py-2 text-xs font-semibold text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98]">Usar</button>
+                  <button type="button" onClick={() => { setNuevaEvalTipo('3'); setNuevaEvalDesc(`Práctica ${siguientePractica}`); }} className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition-all duration-150 hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]">Usar</button>
                 </div>
                 <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
                   {practicasExistentes.length === 0 ? (
@@ -628,7 +758,7 @@ export default function NotasPage() {
             {/* Modal Footer */}
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 bg-neutral-50/50 px-6 py-4 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={closeModal} className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">Cancelar</button>
-              <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className="h-11 rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"><Plus size={16} /> Crear evaluación</button>
+              <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className={primaryButtonClass}><Plus size={16} /> Crear evaluación</button>
             </div>
           </div>
         </div>

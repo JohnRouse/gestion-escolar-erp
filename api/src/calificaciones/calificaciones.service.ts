@@ -128,7 +128,11 @@ export class CalificacionesService {
     });
 
     const matriculas = await this.prisma.matricula.findMany({
-      where: { id_seccion: asignacion.id_seccion, id_anio: asignacion.id_anio, estado_matricula: 'Activo' },
+      where: {
+        id_seccion: asignacion.id_seccion,
+        id_anio: asignacion.id_anio,
+        estado_matricula: 'Activo',
+      },
       include: {
         estudiante: { include: { persona: true } },
         notas: {
@@ -138,21 +142,63 @@ export class CalificacionesService {
       },
     });
 
-    const grilla = matriculas.map(mat => {
+    const matriculasOrdenadas = [...matriculas].sort((a, b) => {
+      const personaA = a.estudiante.persona;
+      const personaB = b.estudiante.persona;
+
+      const nombreA = [
+        personaA.apellido_paterno,
+        personaA.apellido_materno,
+        personaA.nombres,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('es-PE');
+
+      const nombreB = [
+        personaB.apellido_paterno,
+        personaB.apellido_materno,
+        personaB.nombres,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('es-PE');
+
+      return nombreA.localeCompare(nombreB, 'es-PE');
+    });
+
+    const grilla = matriculasOrdenadas.map((mat) => {
+      const persona = mat.estudiante.persona;
+
       const fila: any = {
         id_matricula: mat.id_matricula,
-        alumno: `${mat.estudiante.persona.nombres} ${mat.estudiante.persona.apellido_paterno}`,
+        alumno: [
+          persona.nombres,
+          persona.apellido_paterno,
+          persona.apellido_materno,
+        ]
+          .filter(Boolean)
+          .join(' '),
       };
-      evaluaciones.forEach(ev => {
-        const nota = mat.notas.find(n => n.id_evaluacion_det === ev.id_evaluacion_det);
-        fila[ev.id_evaluacion_det] = nota ? Number(nota.valor_nota) : null;
+
+      evaluaciones.forEach((ev) => {
+        const nota = mat.notas.find(
+          (n) => n.id_evaluacion_det === ev.id_evaluacion_det,
+        );
+
+        // Si aún no existe nota registrada, la grilla muestra 00.
+        fila[ev.id_evaluacion_det] = nota ? Number(nota.valor_nota) : 0;
       });
-      const notasValidas = evaluaciones
-        .map(ev => fila[ev.id_evaluacion_det])
-        .filter(v => v !== null) as number[];
-      fila.promedio = notasValidas.length > 0
-        ? notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length
-        : null;
+
+      const notasValidas = evaluaciones.map((ev) =>
+        Number(fila[ev.id_evaluacion_det] || 0),
+      );
+
+      fila.promedio =
+        notasValidas.length > 0
+          ? notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length
+          : 0;
+
       return fila;
     });
 
