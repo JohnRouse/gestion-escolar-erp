@@ -2061,12 +2061,14 @@ export class FinanzasService {
   }
 
   async listarGestionesCobranza(
-    idCronograma: number,
+    idCronogramaOrGestion: number,
     params: ScopeParams,
   ) {
     const scope = await this.resolveScope(params);
 
-    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+    let idCronograma = Number(idCronogramaOrGestion);
+
+    const cronogramaDirecto = await this.prisma.cronogramaPagos.findFirst({
       where: {
         id_cronograma: idCronograma,
         matricula: {
@@ -2078,8 +2080,26 @@ export class FinanzasService {
       },
     });
 
-    if (!cronograma) {
-      throw new NotFoundException('No se encontró la deuda seleccionada.');
+    if (!cronogramaDirecto) {
+      const gestion = await this.prisma.cobranzaGestion.findFirst({
+        where: {
+          id_gestion: Number(idCronogramaOrGestion),
+          cronograma: {
+            matricula: {
+              id_colegio: { in: scope.colegioIds },
+            },
+          },
+        },
+        select: {
+          id_cronograma: true,
+        },
+      });
+
+      if (!gestion) {
+        throw new NotFoundException('No se encontró la deuda o gestión seleccionada.');
+      }
+
+      idCronograma = gestion.id_cronograma;
     }
 
     return this.prisma.cobranzaGestion.findMany({
@@ -2095,6 +2115,7 @@ export class FinanzasService {
               select: {
                 nombres: true,
                 apellido_paterno: true,
+                apellido_materno: true,
               },
             },
           },

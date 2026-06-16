@@ -467,7 +467,7 @@ export default function AgendaCobranzasPage() {
                   className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
                 >
                   <CalendarClock size={16} />
-                  Ver historial
+                  Ver historial{item.historial_count ? ` (${item.historial_count})` : ''}
                 </button>
               </div>
             </article>
