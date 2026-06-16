@@ -2263,7 +2263,7 @@ export class FinanzasService {
           orderBy: {
             fecha_gestion: 'desc',
           },
-          take: 1,
+          take: 20,
           include: {
             usuario: {
               select: {
@@ -2317,8 +2317,14 @@ export class FinanzasService {
 
     const rows = cronogramas
       .map((cronograma) => {
-        const gestion = cronograma.gestiones_cobranza?.[0] || null;
-        if (!gestion) return null;
+        const ultimaGestion = cronograma.gestiones_cobranza?.[0] || null;
+        if (!ultimaGestion) return null;
+
+        const gestionConProximaFecha =
+          cronograma.gestiones_cobranza?.find((item) => Boolean(item.fecha_programada)) || null;
+
+        const fechaProgramadaAgenda =
+          gestionConProximaFecha?.fecha_programada || null;
 
         const monto = this.montoProgramadoCronograma(cronograma);
         const pagado = cronograma.pagos.reduce(
@@ -2334,8 +2340,8 @@ export class FinanzasService {
 
         let estadoAgenda = 'Sin fecha';
 
-        if (gestion.fecha_programada) {
-          const fecha = new Date(gestion.fecha_programada);
+        if (fechaProgramadaAgenda) {
+          const fecha = new Date(fechaProgramadaAgenda);
           const fechaDia = new Date(fecha);
           fechaDia.setHours(0, 0, 0, 0);
 
@@ -2345,17 +2351,19 @@ export class FinanzasService {
         }
 
         return {
-          id_gestion: gestion.id_gestion,
-          id_cronograma: cronograma.id_cronograma,
-          canal: gestion.canal,
-          estado_contacto: gestion.estado_contacto,
-          telefono: gestion.telefono || apoderado?.telefono || null,
-          mensaje: gestion.mensaje,
-          observacion: gestion.observacion,
-          fecha_gestion: gestion.fecha_gestion,
-          fecha_programada: gestion.fecha_programada,
+          id_gestion: ultimaGestion.id_gestion,
+          id_gestion_proximo_seguimiento: gestionConProximaFecha?.id_gestion || null,
+          canal: ultimaGestion.canal,
+          estado_contacto: ultimaGestion.estado_contacto,
+          telefono: ultimaGestion.telefono || apoderado?.telefono || null,
+          mensaje: ultimaGestion.mensaje,
+          observacion: ultimaGestion.observacion,
+          fecha_gestion: ultimaGestion.fecha_gestion,
+          fecha_programada: fechaProgramadaAgenda,
+          proximo_seguimiento: fechaProgramadaAgenda,
           estado_agenda: estadoAgenda,
-          usuario: gestion.usuario,
+          usuario: ultimaGestion.usuario,
+          historial_count: cronograma.gestiones_cobranza?.length || 0,
           deuda: {
             referencia_pago: cronograma.referencia_pago,
             concepto: cronograma.concepto?.nombre_concepto || 'Pago escolar',

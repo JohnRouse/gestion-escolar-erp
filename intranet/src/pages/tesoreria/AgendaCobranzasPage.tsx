@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Copy, Loader2, MessageCircle, RefreshCw, Search } from 'lucide-react';
+import { CalendarClock, Copy, Loader2, MessageCircle, RefreshCw, Search } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import PersonAvatar from '../../components/PersonAvatar';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,8 @@ type AgendaItem = {
   fecha_gestion?: string | null;
   fecha_programada?: string | null;
   estado_agenda: string;
+  proximo_seguimiento?: string | null;
+  historial_count?: number;
   deuda: {
     referencia_pago?: string | null;
     concepto: string;
@@ -43,6 +45,24 @@ type AgendaItem = {
     colegio?: string | null;
     aula?: string | null;
   };
+};
+
+type HistorialGestion = {
+  id_gestion: number;
+  canal: string;
+  estado_contacto: string;
+  telefono?: string | null;
+  mensaje?: string | null;
+  observacion?: string | null;
+  fecha_gestion?: string | null;
+  fecha_programada?: string | null;
+  usuario?: {
+    username?: string | null;
+    persona?: {
+      nombres?: string | null;
+      apellido_paterno?: string | null;
+    } | null;
+  } | null;
 };
 
 const inputClass =
@@ -122,6 +142,15 @@ function badgeAgenda(estado: string) {
   return 'bg-slate-50 text-slate-600 ring-slate-100';
 }
 
+const nombreUsuarioGestion = (gestion?: HistorialGestion | null) => {
+  if (!gestion) return '—';
+  const persona = gestion.usuario?.persona;
+  const nombre = persona
+    ? `${persona.nombres || ''} ${persona.apellido_paterno || ''}`.trim()
+    : '';
+  return nombre || gestion.usuario?.username || 'Usuario no identificado';
+};
+
 export default function AgendaCobranzasPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
@@ -138,6 +167,11 @@ export default function AgendaCobranzasPage() {
   const [mensajeItem, setMensajeItem] = useState<AgendaItem | null>(null);
   const [mensajeTexto, setMensajeTexto] = useState('');
   const [mensajeModo, setMensajeModo] = useState<'copiar' | 'whatsapp'>('copiar');
+
+  // Historial
+  const [historialItem, setHistorialItem] = useState<AgendaItem | null>(null);
+  const [historial, setHistorial] = useState<HistorialGestion[]>([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   const totalSaldo = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.deuda.saldo || 0), 0),
@@ -225,6 +259,31 @@ export default function AgendaCobranzasPage() {
     setMensajeItem(null);
   };
 
+  const abrirHistorial = async (item: AgendaItem) => {
+    if (!token) return;
+
+    setHistorialItem(item);
+    setHistorial([]);
+    setLoadingHistorial(true);
+
+    try {
+      const res = await axios.get(
+        `/api/tesoreria/cobranzas/${item.id_cronograma}/historial${queryString}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setHistorial(res.data || []);
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'No se cargó el historial',
+        message: error.response?.data?.message || 'Revisa el backend.',
+      });
+    } finally {
+      setLoadingHistorial(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -301,8 +360,9 @@ export default function AgendaCobranzasPage() {
         {!loading &&
           items.map((item) => (
             <article
-              key={item.id_gestion}
-              className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100"
+              key={item.id_cronograma}
+              onClick={() => abrirHistorial(item)}
+              className="cursor-pointer rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
@@ -319,7 +379,7 @@ export default function AgendaCobranzasPage() {
                         {fullName(item.alumno)}
                       </h3>
                       <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${badgeAgenda(item.estado_agenda)}`}>
-                        {item.estado_agenda}
+                        {item.estado_agenda === 'Sin fecha' ? 'Sin seguimiento programado' : item.estado_agenda}
                       </span>
                     </div>
 
@@ -359,7 +419,11 @@ export default function AgendaCobranzasPage() {
 
                   <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Programado</p>
-                    <p className="mt-1 text-lg font-black text-slate-900">{formatDateTime(item.fecha_programada)}</p>
+                    <p className="mt-1 text-lg font-black text-slate-900">
+                      {item.proximo_seguimiento || item.fecha_programada
+                        ? formatDateTime(item.proximo_seguimiento || item.fecha_programada)
+                        : 'Sin seguimiento programado'}
+                    </p>
                   </div>
 
                   <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
@@ -392,6 +456,18 @@ export default function AgendaCobranzasPage() {
                 >
                   <MessageCircle size={16} />
                   Abrir WhatsApp
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    abrirHistorial(item);
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
+                >
+                  <CalendarClock size={16} />
+                  Ver historial
                 </button>
               </div>
             </article>
@@ -446,6 +522,119 @@ export default function AgendaCobranzasPage() {
               >
                 {mensajeModo === 'copiar' ? 'Copiar mensaje editado' : 'Abrir WhatsApp con este mensaje'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de historial completo */}
+      {historialItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-100">
+            <div className="border-b border-slate-100 p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                    Historial de seguimiento
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-950">
+                    {fullName(historialItem.alumno)}
+                  </h2>
+                  <p className="mt-1 text-sm font-bold text-slate-500">
+                    {historialItem.deuda.concepto} · {formatMoney(historialItem.deuda.saldo)}
+                  </p>
+                  <p className="mt-1 text-xs font-black text-slate-400">
+                    Código: {historialItem.deuda.referencia_pago || 'Sin código'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setHistorialItem(null)}
+                  className="rounded-2xl bg-slate-50 px-4 py-2 text-sm font-black text-slate-600 ring-1 ring-slate-100"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[62vh] overflow-y-auto p-6">
+              {loadingHistorial && (
+                <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
+                  <Loader2 className="mx-auto mb-3 animate-spin" />
+                  Cargando historial...
+                </div>
+              )}
+
+              {!loadingHistorial && !historial.length && (
+                <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
+                  Todavía no hay gestiones registradas.
+                </div>
+              )}
+
+              {!loadingHistorial && historial.length > 0 && (
+                <div className="relative space-y-4">
+                  {historial.map((gestion, index) => (
+                    <div
+                      key={gestion.id_gestion}
+                      className="relative rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
+                              {gestion.canal}
+                            </span>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-100">
+                              {gestion.estado_contacto}
+                            </span>
+                            {index === 0 && (
+                              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                                Última gestión
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="mt-3 text-sm font-black text-slate-950">
+                            Registrado por: {nombreUsuarioGestion(gestion)}
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            Fecha de gestión: {formatDateTime(gestion.fecha_gestion)}
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            Próximo seguimiento: {gestion.fecha_programada ? formatDateTime(gestion.fecha_programada) : 'Sin fecha programada'}
+                          </p>
+
+                          {gestion.telefono && (
+                            <p className="mt-1 text-xs font-bold text-slate-500">
+                              Teléfono usado: {gestion.telefono}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {gestion.observacion && (
+                        <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-100">
+                          {gestion.observacion}
+                        </div>
+                      )}
+
+                      {gestion.mensaje && (
+                        <details className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                          <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                            Ver mensaje enviado
+                          </summary>
+                          <pre className="mt-3 whitespace-pre-wrap text-xs font-semibold leading-5 text-slate-600">
+                            {gestion.mensaje}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
