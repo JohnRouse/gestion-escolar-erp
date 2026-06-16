@@ -2188,7 +2188,7 @@ export class FinanzasService {
     };
   }
 
-  // ── NUEVO MÉTODO: AGENDA DE COBRANZAS ──
+  // ── AGENDA DE COBRANZAS (UNA SOLA TARJETA POR DEUDA) ──
   async listarAgendaCobranzas(
     params: ScopeParams & {
       estado?: string;
@@ -2203,6 +2203,9 @@ export class FinanzasService {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
+    const finHoy = new Date(hoy);
+    finHoy.setHours(23, 59, 59, 999);
+
     const en7Dias = new Date(hoy);
     en7Dias.setDate(hoy.getDate() + 7);
     en7Dias.setHours(23, 59, 59, 999);
@@ -2210,79 +2213,95 @@ export class FinanzasService {
     const desde = params.desde ? new Date(`${params.desde}T00:00:00.000-05:00`) : null;
     const hasta = params.hasta ? new Date(`${params.hasta}T23:59:59.999-05:00`) : null;
 
-    const where: any = {
-      cronograma: {
+    const andWhere: any[] = [
+      {
         matricula: {
           id_colegio: { in: scope.colegioIds },
         },
       },
-    };
+      {
+        gestiones_cobranza: {
+          some: {},
+        },
+      },
+    ];
 
-    if (desde || hasta) {
-      where.fecha_programada = {};
-      if (desde) where.fecha_programada.gte = desde;
-      if (hasta) where.fecha_programada.lte = hasta;
-    } else if (params.estado === 'Hoy') {
-      const finHoy = new Date(hoy);
-      finHoy.setHours(23, 59, 59, 999);
-      where.fecha_programada = { gte: hoy, lte: finHoy };
-    } else if (params.estado === 'Vencidos') {
-      where.fecha_programada = { lt: hoy };
-    } else if (params.estado === 'Próximos') {
-      where.fecha_programada = { gt: hoy, lte: en7Dias };
-    } else if (params.estado === 'Sin fecha') {
-      where.fecha_programada = null;
-    } else {
-      where.OR = [
-        { fecha_programada: null },
-        { fecha_programada: { lte: en7Dias } },
-      ];
+    if (params.q?.trim()) {
+      const q = params.q.trim();
+
+      andWhere.push({
+        OR: [
+          { referencia_pago: { contains: q } },
+          { concepto: { nombre_concepto: { contains: q } } },
+          { matricula: { codigo_matricula: { contains: q } } },
+          {
+            matricula: {
+              estudiante: {
+                persona: {
+                  OR: [
+                    { dni: { contains: q } },
+                    { nombres: { contains: q } },
+                    { apellido_paterno: { contains: q } },
+                    { apellido_materno: { contains: q } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      });
     }
 
-    const gestiones = await this.prisma.cobranzaGestion.findMany({
-      where,
+    const cronogramas = await this.prisma.cronogramaPagos.findMany({
+      where: {
+        AND: andWhere,
+      },
       include: {
-        usuario: {
-          select: {
-            id_usuario: true,
-            username: true,
-            persona: {
+        concepto: true,
+        pagos: true,
+        gestiones_cobranza: {
+          orderBy: {
+            fecha_gestion: 'desc',
+          },
+          take: 1,
+          include: {
+            usuario: {
               select: {
-                nombres: true,
-                apellido_paterno: true,
+                id_usuario: true,
+                username: true,
+                persona: {
+                  select: {
+                    nombres: true,
+                    apellido_paterno: true,
+                  },
+                },
               },
             },
           },
         },
-        cronograma: {
+        matricula: {
           include: {
-            concepto: true,
-            pagos: true,
-            matricula: {
+            colegio: true,
+            anio: true,
+            estudiante: {
               include: {
-                colegio: true,
-                anio: true,
-                estudiante: {
+                persona: true,
+                apoderados: {
                   include: {
-                    persona: true,
-                    apoderados: {
+                    apoderado: {
                       include: {
-                        apoderado: {
-                          include: {
-                            persona: true,
-                          },
-                        },
+                        persona: true,
                       },
                     },
                   },
                 },
-                seccion: {
+              },
+            },
+            seccion: {
+              include: {
+                grado: {
                   include: {
-                    grado: {
-                      include: {
-                        nivel: true,
-                      },
-                    },
+                    nivel: true,
                   },
                 },
               },
@@ -2290,24 +2309,25 @@ export class FinanzasService {
           },
         },
       },
-      orderBy: [
-        { fecha_programada: 'asc' },
-        { fecha_gestion: 'desc' },
-      ],
-      take: Math.min(Math.max(Number(params.limit || 100), 20), 300),
+      orderBy: {
+        fecha_vencimiento: 'asc',
+      },
+      take: 500,
     });
 
-    const q = params.q?.trim().toLowerCase();
+    const rows = cronogramas
+      .map((cronograma) => {
+        const gestion = cronograma.gestiones_cobranza?.[0] || null;
+        if (!gestion) return null;
 
-    const rows = gestiones
-      .map((gestion) => {
-        const cronograma = gestion.cronograma;
         const monto = this.montoProgramadoCronograma(cronograma);
         const pagado = cronograma.pagos.reduce(
           (sum, pago) => sum + Number(pago.monto_pagado || 0),
           0,
         );
         const saldo = Math.max(Number(monto || 0) - pagado, 0);
+
+        if (saldo <= 0) return null;
 
         const apoderado =
           cronograma.matricula.estudiante.apoderados?.[0]?.apoderado?.persona || null;
@@ -2356,34 +2376,61 @@ export class FinanzasService {
               cronograma.matricula.colegio?.nombre_corto ||
               cronograma.matricula.colegio?.nombre,
             aula: cronograma.matricula.seccion
-              ? `${cronograma.matricula.seccion.grado?.nombre_grado || ''} ${cronograma.matricula.seccion.letra || ''}`.trim()
+              ? `${cronograma.matricula.seccion.grado?.nombre_grado || ''} ${
+                  cronograma.matricula.seccion.letra || ''
+                }`.trim()
               : null,
           },
         };
       })
-      .filter((item) => item.deuda.saldo > 0)
-      .filter((item) => {
-        if (!q) return true;
-        const texto = [
-          item.deuda.referencia_pago,
-          item.deuda.concepto,
-          item.alumno?.dni,
-          item.alumno?.nombres,
-          item.alumno?.apellido_paterno,
-          item.alumno?.apellido_materno,
-          item.apoderado?.nombres,
-          item.apoderado?.apellido_paterno,
-          item.telefono,
-          item.matricula?.codigo_matricula,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
+      .filter(Boolean) as any[];
 
-        return texto.includes(q);
-      });
+    const filtrados = rows.filter((item) => {
+      const fecha = item.fecha_programada ? new Date(item.fecha_programada) : null;
 
-    const resumen = rows.reduce(
+      if (desde || hasta) {
+        if (!fecha) return false;
+        if (desde && fecha < desde) return false;
+        if (hasta && fecha > hasta) return false;
+        return true;
+      }
+
+      if (params.estado === 'Hoy') {
+        if (!fecha) return false;
+        return fecha >= hoy && fecha <= finHoy;
+      }
+
+      if (params.estado === 'Vencidos') {
+        if (!fecha) return false;
+        return fecha < hoy;
+      }
+
+      if (params.estado === 'Próximos') {
+        if (!fecha) return false;
+        return fecha > finHoy && fecha <= en7Dias;
+      }
+
+      if (params.estado === 'Sin fecha') {
+        return !fecha;
+      }
+
+      return !fecha || fecha <= en7Dias;
+    });
+
+    filtrados.sort((a, b) => {
+      const aTime = a.fecha_programada
+        ? new Date(a.fecha_programada).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      const bTime = b.fecha_programada
+        ? new Date(b.fecha_programada).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
+
+    const limit = Math.min(Math.max(Number(params.limit || 100), 20), 300);
+    const data = filtrados.slice(0, limit);
+
+    const resumen = data.reduce(
       (acc, item) => {
         acc.total_saldo += Number(item.deuda.saldo || 0);
         acc.total += 1;
@@ -2405,7 +2452,7 @@ export class FinanzasService {
 
     return {
       resumen,
-      data: rows,
+      data,
     };
   }
 

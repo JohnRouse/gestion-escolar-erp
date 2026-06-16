@@ -134,6 +134,11 @@ export default function AgendaCobranzasPage() {
   const [estado, setEstado] = useState('Todos');
   const [copied, setCopied] = useState<Record<number, boolean>>({});
 
+  // Editor de mensaje
+  const [mensajeItem, setMensajeItem] = useState<AgendaItem | null>(null);
+  const [mensajeTexto, setMensajeTexto] = useState('');
+  const [mensajeModo, setMensajeModo] = useState<'copiar' | 'whatsapp'>('copiar');
+
   const totalSaldo = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.deuda.saldo || 0), 0),
     [items],
@@ -154,7 +159,23 @@ export default function AgendaCobranzasPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setItems(res.data?.data || []);
+      const rawItems: AgendaItem[] = res.data?.data || [];
+      const map = new Map<number, AgendaItem>();
+
+      rawItems.forEach((item) => {
+        const prev = map.get(item.id_cronograma);
+
+        const currentTime = item.fecha_gestion ? new Date(item.fecha_gestion).getTime() : 0;
+        const prevTime = prev?.fecha_gestion ? new Date(prev.fecha_gestion).getTime() : 0;
+
+        if (!prev || currentTime >= prevTime) {
+          map.set(item.id_cronograma, item);
+        }
+      });
+
+      const unicos = Array.from(map.values());
+
+      setItems(unicos);
       setResumen(res.data?.resumen || null);
     } catch (error: any) {
       showToast({
@@ -173,29 +194,35 @@ export default function AgendaCobranzasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, queryString, q, estado]);
 
-  const copiarMensaje = async (item: AgendaItem) => {
-    await navigator.clipboard.writeText(buildMensaje(item));
-    setCopied((current) => ({ ...current, [item.id_gestion]: true }));
-
-    showToast({
-      type: 'success',
-      title: 'Mensaje copiado',
-      message: 'Ya puedes pegarlo en WhatsApp.',
-    });
-
-    window.setTimeout(() => {
-      setCopied((current) => ({ ...current, [item.id_gestion]: false }));
-    }, 1800);
+  const abrirEditorMensaje = (item: AgendaItem, modo: 'copiar' | 'whatsapp') => {
+    setMensajeItem(item);
+    setMensajeModo(modo);
+    setMensajeTexto(buildMensaje(item));
   };
 
-  const abrirWhatsapp = (item: AgendaItem) => {
-    const telefono = phoneClean(item.telefono || item.apoderado?.telefono);
-    const mensaje = buildMensaje(item);
+  const confirmarMensaje = async () => {
+    if (!mensajeItem) return;
+
+    if (mensajeModo === 'copiar') {
+      await navigator.clipboard.writeText(mensajeTexto);
+
+      showToast({
+        type: 'success',
+        title: 'Mensaje copiado',
+        message: 'Se copió el mensaje editado.',
+      });
+
+      setMensajeItem(null);
+      return;
+    }
+
+    const telefono = phoneClean(mensajeItem.telefono || mensajeItem.apoderado?.telefono);
     const url = telefono
-      ? `https://wa.me/51${telefono}?text=${encodeURIComponent(mensaje)}`
-      : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+      ? `https://wa.me/51${telefono}?text=${encodeURIComponent(mensajeTexto)}`
+      : `https://wa.me/?text=${encodeURIComponent(mensajeTexto)}`;
 
     window.open(url, '_blank', 'noopener,noreferrer');
+    setMensajeItem(null);
   };
 
   return (
@@ -280,11 +307,11 @@ export default function AgendaCobranzasPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
                   <PersonAvatar
-  persona={item.alumno}
-  size="lg"
-  rounded="2xl"
-  className="mt-1"
-/>
+                    persona={item.alumno}
+                    size="lg"
+                    rounded="2xl"
+                    className="mt-1"
+                  />
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -345,7 +372,10 @@ export default function AgendaCobranzasPage() {
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => copiarMensaje(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    abrirEditorMensaje(item, 'copiar');
+                  }}
                   className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white"
                 >
                   <Copy size={16} />
@@ -354,7 +384,10 @@ export default function AgendaCobranzasPage() {
 
                 <button
                   type="button"
-                  onClick={() => abrirWhatsapp(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    abrirEditorMensaje(item, 'whatsapp');
+                  }}
                   className="inline-flex h-11 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white"
                 >
                   <MessageCircle size={16} />
@@ -364,6 +397,59 @@ export default function AgendaCobranzasPage() {
             </article>
           ))}
       </section>
+
+      {/* Modal editor de mensaje */}
+      {mensajeItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="w-full max-w-2xl rounded-[30px] bg-white p-6 shadow-2xl ring-1 ring-slate-100">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  Preparar mensaje
+                </p>
+                <h2 className="mt-2 text-xl font-black text-slate-950">
+                  {fullName(mensajeItem.alumno)}
+                </h2>
+                <p className="mt-1 text-sm font-bold text-slate-500">
+                  {mensajeItem.deuda.concepto} · {formatMoney(mensajeItem.deuda.saldo)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMensajeItem(null)}
+                className="rounded-2xl bg-slate-50 px-4 py-2 text-sm font-black text-slate-600 ring-1 ring-slate-100"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <textarea
+              className="mt-5 min-h-[280px] w-full rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm font-semibold leading-6 text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+              value={mensajeTexto}
+              onChange={(event) => setMensajeTexto(event.target.value)}
+            />
+
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setMensajeItem(null)}
+                className="h-11 rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-100"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmarMensaje}
+                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white"
+              >
+                {mensajeModo === 'copiar' ? 'Copiar mensaje editado' : 'Abrir WhatsApp con este mensaje'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

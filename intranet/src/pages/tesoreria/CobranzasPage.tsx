@@ -168,6 +168,7 @@ export default function CobranzasPage() {
     estado_contacto: 'Mensaje enviado',
     observacion: '',
     fecha_programada: '',
+    mensaje: '',
   });
 
   const totalVisible = useMemo(() => {
@@ -279,7 +280,7 @@ export default function CobranzasPage() {
           observacion: gestionForm.observacion,
           fecha_programada: gestionForm.fecha_programada || null,
           telefono: gestionDeuda.apoderado?.telefono || null,
-          mensaje: buildMensaje(gestionDeuda),
+          mensaje: gestionForm.mensaje || buildMensaje(gestionDeuda),
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -296,6 +297,7 @@ export default function CobranzasPage() {
         estado_contacto: 'Mensaje enviado',
         observacion: '',
         fecha_programada: '',
+        mensaje: '',
       });
       fetchRegistros();
     } catch (error: any) {
@@ -531,7 +533,16 @@ export default function CobranzasPage() {
 
                       <button
                         type="button"
-                        onClick={() => setGestionDeuda(deuda)}
+                        onClick={() => {
+                          setGestionDeuda(deuda);
+                          setGestionForm({
+                            canal: 'WhatsApp',
+                            estado_contacto: 'Mensaje enviado',
+                            observacion: '',
+                            fecha_programada: '',
+                            mensaje: buildMensaje(deuda),
+                          });
+                        }}
                         className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
                       >
                         <History size={16} />
@@ -641,6 +652,18 @@ export default function CobranzasPage() {
                 value={gestionForm.fecha_programada}
                 onChange={(event) =>
                   setGestionForm((current) => ({ ...current, fecha_programada: event.target.value }))
+                }
+              />
+
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Mensaje a enviar / guardar
+              </label>
+              <textarea
+                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                placeholder="Edita el mensaje antes de guardarlo o enviarlo."
+                value={gestionForm.mensaje}
+                onChange={(event) =>
+                  setGestionForm((current) => ({ ...current, mensaje: event.target.value }))
                 }
               />
 
