@@ -75,6 +75,7 @@ const menuComunicacion: NavItem[] = [
 const menuFinanzas: NavItem[] = [
   { title: 'Tesorería', icon: Wallet, path: '/tesoreria', roles: ['Admin', 'Secretaria', 'Director'], children: [
       { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
+      { title: 'Agenda de cobranzas', path: '/tesoreria/agenda-cobranzas' },
   { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
   { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
   { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },

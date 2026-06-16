@@ -24,6 +24,7 @@ import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';
 import ValidarPagosPage from './pages/tesoreria/ValidarPagosPage';
 import CobranzasPage from './pages/tesoreria/CobranzasPage';
+import AgendaCobranzasPage from './pages/tesoreria/AgendaCobranzasPage';
 import PagosRecibidosPage from './pages/tesoreria/PagosRecibidosPage';
 import EstadoCuentaInternoPage from './pages/tesoreria/EstadoCuentaInternoPage';
 import PagoPublicoPage from './pages/publico/PagoPublicoPage';
@@ -76,6 +77,7 @@ function AppRoutes() {
 <Route path="/tesoreria/estado-cuenta" element={<EstadoCuentaInternoPage />} />
 <Route path="/matricula/historial" element={<MatriculasHistorialPage />} />
 <Route path="/tesoreria/cobranzas" element={<CobranzasPage />} />
+<Route path="/tesoreria/agenda-cobranzas" element={<AgendaCobranzasPage />} />
 <Route path="/matricula/renovacion" element={<RenovacionMatriculaPage />} />
 <Route path="/comunidad/alumnos" element={<AlumnosPage />} />
 <Route path="/comunidad/apoderados" element={<ApoderadosPage />} />

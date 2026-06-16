@@ -349,6 +349,31 @@ export class FinanzasController {
     });
   }
 
+  @Get('cobranzas/agenda')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarAgendaCobranzas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('estado') estado?: string,
+    @Query('q') q?: string,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.finanzasService.listarAgendaCobranzas({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      estado,
+      q,
+      desde,
+      hasta,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
   @Post('pagos-recibidos')
   @Roles('Admin', 'Director', 'Secretaria')
   async registrarPagoRecibido(
