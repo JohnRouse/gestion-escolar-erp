@@ -192,6 +192,39 @@ export class FinanzasService {
     return clean ? clean : null;
   }
 
+  private crearFechaSeguimiento(value?: string | null) {
+    const clean = this.normalizeEmpty(value);
+
+    if (!clean) return null;
+
+    // Cuando el frontend envía solo fecha: YYYY-MM-DD
+    // la guardamos al mediodía UTC para evitar desfases por zona horaria.
+    const soloFecha = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (soloFecha) {
+      const [, year, month, day] = soloFecha;
+
+      return new Date(
+        Date.UTC(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          12,
+          0,
+          0,
+        ),
+      );
+    }
+
+    const fecha = new Date(clean);
+
+    if (Number.isNaN(fecha.getTime())) {
+      throw new BadRequestException('Fecha de seguimiento inválida.');
+    }
+
+    return fecha;
+  }
+
   private montoProgramadoCronograma(cronograma: any) {
     return Number(cronograma.monto_programado ?? cronograma.concepto?.monto_base ?? 0);
   }
@@ -2190,7 +2223,7 @@ export class FinanzasService {
         telefono,
         mensaje: this.normalizeEmpty(body.mensaje),
         observacion: this.normalizeEmpty(body.observacion),
-        fecha_programada: body.fecha_programada ? new Date(body.fecha_programada) : null,
+        fecha_programada: this.crearFechaSeguimiento(body.fecha_programada),
         fecha_gestion: body.fecha_gestion ? new Date(body.fecha_gestion) : new Date(),
       },
       include: {

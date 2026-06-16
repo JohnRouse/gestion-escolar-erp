@@ -393,7 +393,7 @@ export default function AgendaCobranzasPage() {
                         {fullName(item.alumno)}
                       </h3>
                       <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${badgeAgenda(item.estado_agenda)}`}>
-                        {item.estado_agenda === 'Sin fecha' ? 'Sin seguimiento programado' : item.estado_agenda}
+                        {item.estado_agenda === 'Sin fecha' ? 'Sin próximo seguimiento' : item.estado_agenda}
                       </span>
                     </div>
 
@@ -432,17 +432,23 @@ export default function AgendaCobranzasPage() {
                   </div>
 
                   <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Programado</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      Próximo seguimiento
+                    </p>
                     <p className="mt-1 text-lg font-black text-slate-900">
                       {item.proximo_seguimiento || item.fecha_programada
-                        ? formatDateTime(item.proximo_seguimiento || item.fecha_programada)
-                        : 'Sin seguimiento programado'}
+                        ? formatDate(item.proximo_seguimiento || item.fecha_programada)
+                        : 'Sin próximo seguimiento'}
                     </p>
                   </div>
 
                   <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Vence</p>
-                    <p className="mt-1 text-lg font-black text-slate-900">{formatDate(item.deuda.fecha_vencimiento)}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      Vencimiento de deuda
+                    </p>
+                    <p className="mt-1 text-lg font-black text-slate-900">
+                      {formatDate(item.deuda.fecha_vencimiento)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -618,7 +624,7 @@ export default function AgendaCobranzasPage() {
                           </p>
 
                           <p className="mt-1 text-xs font-bold text-slate-500">
-                            Próximo seguimiento: {gestion.fecha_programada ? formatDateTime(gestion.fecha_programada) : 'Sin fecha programada'}
+                            Próximo seguimiento: {gestion.fecha_programada ? formatDate(gestion.fecha_programada) : 'Sin próximo seguimiento'}
                           </p>
 
                           {gestion.telefono && (

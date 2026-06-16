@@ -507,7 +507,10 @@ export default function CobranzasPage() {
                   <div className="grid gap-3 sm:grid-cols-3 xl:w-[560px]">
                     <Mini label={pagado ? 'Pagado' : 'Saldo'} value={formatMoney(pagado ? deuda.pagado : deuda.saldo)} tone={pagado ? 'emerald' : 'rose'} />
                     <Mini label="Total" value={formatMoney(deuda.monto)} />
-                    <Mini label={pagado ? 'Fecha pago' : 'Vence'} value={pagado ? formatDateTime(deuda.ultimo_pago?.fecha_pago) : formatDate(deuda.fecha_vencimiento)} />
+                    <Mini
+                      label={pagado ? 'Fecha pago' : 'Vencimiento'}
+                      value={pagado ? formatDateTime(deuda.ultimo_pago?.fecha_pago) : formatDate(deuda.fecha_vencimiento)}
+                    />
                   </div>
                 </div>
 
@@ -644,10 +647,10 @@ export default function CobranzasPage() {
               </select>
 
               <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Próximo seguimiento
+                Fecha de próximo seguimiento
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 className={inputClass}
                 value={gestionForm.fecha_programada}
                 onChange={(event) =>
