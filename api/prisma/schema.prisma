@@ -74,6 +74,7 @@ model Usuario {
   pagos_recibidos_registrados PagoRecibido[]          @relation("PagoRecibidoRegistro")
   pagos_recibidos_validados   PagoRecibido[]          @relation("PagoRecibidoValidacion")
   pagos_recibidos_historial   PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
+  gestiones_cobranza          CobranzaGestion[]       @relation("CobranzaGestionUsuario")
 }
 
 model Tenant {
@@ -749,9 +750,10 @@ model CronogramaPagos {
   plan_pension_detalle PlanPensionesDetalle? @relation(fields: [id_plan_pension_detalle], references: [id_plan_detalle])
   campana_descuento    CampanaDescuento?     @relation(fields: [id_campana_descuento], references: [id_campana_descuento])
 
-  pagos           PagoTransaccion[]
-  ordenes_pago    OrdenPago[]
-  pagos_recibidos PagoRecibido[]
+  pagos              PagoTransaccion[]
+  ordenes_pago       OrdenPago[]
+  pagos_recibidos    PagoRecibido[]
+  gestiones_cobranza CobranzaGestion[]
 
   @@unique([id_matricula, id_concepto], name: "uq_cronograma_matricula_concepto")
   @@index([fecha_vencimiento, estado_pago])
@@ -882,6 +884,32 @@ model PagoRecibidoHistorial {
   @@index([id_pago_recibido, created_at])
   @@index([id_usuario])
   @@index([accion])
+}
+
+// ======================================================
+// COBRANZA
+// ======================================================
+
+model CobranzaGestion {
+  id_gestion       Int      @id @default(autoincrement())
+  id_cronograma    Int
+  id_usuario       Int?
+  canal            String   @default("WhatsApp") @db.VarChar(30)
+  estado_contacto  String   @default("Mensaje enviado") @db.VarChar(40)
+  telefono         String?  @db.VarChar(30)
+  mensaje          String?  @db.Text
+  observacion      String?  @db.VarChar(600)
+  fecha_programada DateTime?
+  fecha_gestion    DateTime @default(now())
+  created_at       DateTime @default(now())
+
+  cronograma CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
+  usuario    Usuario?        @relation("CobranzaGestionUsuario", fields: [id_usuario], references: [id_usuario])
+
+  @@index([id_cronograma, fecha_gestion])
+  @@index([id_usuario])
+  @@index([estado_contacto])
+  @@index([fecha_programada])
 }
 
 // ======================================================

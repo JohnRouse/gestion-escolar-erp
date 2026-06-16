@@ -316,6 +316,39 @@ export class FinanzasController {
     });
   }
 
+  @Get('cobranzas/:id/historial')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async listarGestionesCobranza(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.listarGestionesCobranza(Number(id), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Post('cobranzas/:id/gestiones')
+  @Roles('Admin', 'Director', 'Secretaria')
+  async registrarGestionCobranza(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.registrarGestionCobranza(Number(id), body, {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope: scope || body.scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    });
+  }
+
   @Post('pagos-recibidos')
   @Roles('Admin', 'Director', 'Secretaria')
   async registrarPagoRecibido(

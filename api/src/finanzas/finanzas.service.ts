@@ -1922,6 +1922,26 @@ export class FinanzasService {
             fecha_pago: 'desc',
           },
         },
+        gestiones_cobranza: {
+          orderBy: {
+            fecha_gestion: 'desc',
+          },
+          take: 1,
+          include: {
+            usuario: {
+              select: {
+                id_usuario: true,
+                username: true,
+                persona: {
+                  select: {
+                    nombres: true,
+                    apellido_paterno: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         matricula: {
           include: {
             colegio: true,
@@ -1950,6 +1970,7 @@ export class FinanzasService {
       const apoderadoPrincipal =
         deuda.matricula.estudiante.apoderados?.[0]?.apoderado?.persona || null;
       const ultimoPago = deuda.pagos?.[0] || null;
+      const ultimaGestion = (deuda as any).gestiones_cobranza?.[0] || null;
 
       return {
         id_cronograma: deuda.id_cronograma,
@@ -1996,6 +2017,18 @@ export class FinanzasService {
               fecha_pago: ultimoPago.fecha_pago,
             }
           : null,
+        ultima_gestion: ultimaGestion
+          ? {
+              id_gestion: ultimaGestion.id_gestion,
+              canal: ultimaGestion.canal,
+              estado_contacto: ultimaGestion.estado_contacto,
+              telefono: ultimaGestion.telefono,
+              observacion: ultimaGestion.observacion,
+              fecha_gestion: ultimaGestion.fecha_gestion,
+              fecha_programada: ultimaGestion.fecha_programada,
+              usuario: ultimaGestion.usuario,
+            }
+          : null,
       };
     });
 
@@ -2025,6 +2058,134 @@ export class FinanzasService {
     }
 
     return rows;
+  }
+
+  async listarGestionesCobranza(
+    idCronograma: number,
+    params: ScopeParams,
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        id_cronograma: idCronograma,
+        matricula: {
+          id_colegio: { in: scope.colegioIds },
+        },
+      },
+      select: {
+        id_cronograma: true,
+      },
+    });
+
+    if (!cronograma) {
+      throw new NotFoundException('No se encontró la deuda seleccionada.');
+    }
+
+    return this.prisma.cobranzaGestion.findMany({
+      where: {
+        id_cronograma: idCronograma,
+      },
+      include: {
+        usuario: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: {
+              select: {
+                nombres: true,
+                apellido_paterno: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        fecha_gestion: 'desc',
+      },
+    });
+  }
+
+  async registrarGestionCobranza(
+    idCronograma: number,
+    body: any,
+    params: ScopeParams,
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const cronograma = await this.prisma.cronogramaPagos.findFirst({
+      where: {
+        id_cronograma: idCronograma,
+        matricula: {
+          id_colegio: { in: scope.colegioIds },
+        },
+      },
+      include: {
+        concepto: true,
+        matricula: {
+          include: {
+            estudiante: {
+              include: {
+                persona: true,
+                apoderados: {
+                  include: {
+                    apoderado: {
+                      include: {
+                        persona: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cronograma) {
+      throw new NotFoundException('No se encontró la deuda seleccionada.');
+    }
+
+    const canal = this.normalizeEmpty(body.canal) || 'WhatsApp';
+    const estadoContacto = this.normalizeEmpty(body.estado_contacto) || 'Mensaje enviado';
+    const telefono =
+      this.normalizeEmpty(body.telefono) ||
+      cronograma.matricula.estudiante.apoderados?.[0]?.apoderado?.persona?.telefono ||
+      null;
+
+    const gestion = await this.prisma.cobranzaGestion.create({
+      data: {
+        id_cronograma: idCronograma,
+        id_usuario: params.userId,
+        canal,
+        estado_contacto: estadoContacto,
+        telefono,
+        mensaje: this.normalizeEmpty(body.mensaje),
+        observacion: this.normalizeEmpty(body.observacion),
+        fecha_programada: body.fecha_programada ? new Date(body.fecha_programada) : null,
+        fecha_gestion: body.fecha_gestion ? new Date(body.fecha_gestion) : new Date(),
+      },
+      include: {
+        usuario: {
+          select: {
+            id_usuario: true,
+            username: true,
+            persona: {
+              select: {
+                nombres: true,
+                apellido_paterno: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      message: 'Gestión de cobranza registrada correctamente.',
+      gestion,
+    };
   }
 
   async registrarPagoRecibido(body: any, params: ScopeParams) {

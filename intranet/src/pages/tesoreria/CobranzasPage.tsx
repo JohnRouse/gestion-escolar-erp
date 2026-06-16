@@ -60,6 +60,16 @@ type DeudaRegistro = {
       };
     };
   };
+  ultima_gestion?: {
+    id_gestion: number;
+    canal: string;
+    estado_contacto: string;
+    telefono?: string | null;
+    observacion?: string | null;
+    fecha_gestion?: string | null;
+    fecha_programada?: string | null;
+    usuario?: any;
+  } | null;
 };
 
 const inputClass =
@@ -150,6 +160,15 @@ export default function CobranzasPage() {
   const [copiadas, setCopiadas] = useState<Record<number, boolean>>({});
   const [comprobante, setComprobante] = useState<any | null>(null);
   const [loadingComprobante, setLoadingComprobante] = useState<number | null>(null);
+
+  const [gestionDeuda, setGestionDeuda] = useState<DeudaRegistro | null>(null);
+  const [guardandoGestion, setGuardandoGestion] = useState(false);
+  const [gestionForm, setGestionForm] = useState({
+    canal: 'WhatsApp',
+    estado_contacto: 'Mensaje enviado',
+    observacion: '',
+    fecha_programada: '',
+  });
 
   const totalVisible = useMemo(() => {
     return registros.reduce((sum, item) => {
@@ -244,6 +263,50 @@ export default function CobranzasPage() {
       : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const guardarGestion = async () => {
+    if (!token || !gestionDeuda) return;
+
+    setGuardandoGestion(true);
+
+    try {
+      await axios.post(
+        `/api/tesoreria/cobranzas/${gestionDeuda.id_cronograma}/gestiones${queryString}`,
+        {
+          canal: gestionForm.canal,
+          estado_contacto: gestionForm.estado_contacto,
+          observacion: gestionForm.observacion,
+          fecha_programada: gestionForm.fecha_programada || null,
+          telefono: gestionDeuda.apoderado?.telefono || null,
+          mensaje: buildMensaje(gestionDeuda),
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      showToast({
+        type: 'success',
+        title: 'Gestión registrada',
+        message: 'Se guardó el seguimiento de cobranza.',
+      });
+
+      setGestionDeuda(null);
+      setGestionForm({
+        canal: 'WhatsApp',
+        estado_contacto: 'Mensaje enviado',
+        observacion: '',
+        fecha_programada: '',
+      });
+      fetchRegistros();
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'No se guardó la gestión',
+        message: error.response?.data?.message || 'Revisa el backend.',
+      });
+    } finally {
+      setGuardandoGestion(false);
+    }
   };
 
   const copiarTodos = async () => {
@@ -425,6 +488,17 @@ export default function CobranzasPage() {
                           {deuda.ultimo_pago.nro_operacion ? ` · Op: ${deuda.ultimo_pago.nro_operacion}` : ''}
                         </p>
                       )}
+
+                      {deuda.ultima_gestion && (
+                        <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
+                          <span>Última gestión:</span>
+                          <span>{deuda.ultima_gestion.canal}</span>
+                          <span>·</span>
+                          <span>{deuda.ultima_gestion.estado_contacto}</span>
+                          <span>·</span>
+                          <span>{formatDateTime(deuda.ultima_gestion.fecha_gestion)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -453,6 +527,15 @@ export default function CobranzasPage() {
                       <button type="button" onClick={() => abrirWhatsapp(deuda)} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700">
                         <MessageCircle size={16} />
                         Abrir WhatsApp
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setGestionDeuda(deuda)}
+                        className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
+                      >
+                        <History size={16} />
+                        Registrar gestión
                       </button>
 
                       <a href="/tesoreria/validar-pagos" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-sky-50 px-4 text-sm font-black text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100">
@@ -487,6 +570,112 @@ export default function CobranzasPage() {
           comprobante={comprobante}
           onClose={() => setComprobante(null)}
         />
+      )}
+
+      {gestionDeuda && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-100">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  Seguimiento de cobranza
+                </p>
+                <h2 className="mt-2 text-xl font-black text-slate-950">
+                  {fullName(gestionDeuda.alumno)}
+                </h2>
+                <p className="mt-1 text-sm font-bold text-slate-500">
+                  {gestionDeuda.concepto} · {formatMoney(gestionDeuda.saldo)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setGestionDeuda(null)}
+                className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-black text-slate-500 ring-1 ring-slate-100"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Canal
+              </label>
+              <select
+                className={inputClass}
+                value={gestionForm.canal}
+                onChange={(event) =>
+                  setGestionForm((current) => ({ ...current, canal: event.target.value }))
+                }
+              >
+                <option>WhatsApp</option>
+                <option>Llamada</option>
+                <option>Presencial</option>
+                <option>Correo</option>
+              </select>
+
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Estado
+              </label>
+              <select
+                className={inputClass}
+                value={gestionForm.estado_contacto}
+                onChange={(event) =>
+                  setGestionForm((current) => ({ ...current, estado_contacto: event.target.value }))
+                }
+              >
+                <option>Mensaje enviado</option>
+                <option>Respondió</option>
+                <option>No respondió</option>
+                <option>Promesa de pago</option>
+                <option>Requiere seguimiento</option>
+                <option>No contactar</option>
+              </select>
+
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Próximo seguimiento
+              </label>
+              <input
+                type="datetime-local"
+                className={inputClass}
+                value={gestionForm.fecha_programada}
+                onChange={(event) =>
+                  setGestionForm((current) => ({ ...current, fecha_programada: event.target.value }))
+                }
+              />
+
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Observación
+              </label>
+              <textarea
+                className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                placeholder="Ejemplo: se envió WhatsApp, indicó que pagará el viernes."
+                value={gestionForm.observacion}
+                onChange={(event) =>
+                  setGestionForm((current) => ({ ...current, observacion: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setGestionDeuda(null)}
+                className="h-11 rounded-2xl bg-slate-50 px-4 text-sm font-black text-slate-600 ring-1 ring-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={guardarGestion}
+                disabled={guardandoGestion}
+                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-60"
+              >
+                {guardandoGestion ? 'Guardando...' : 'Guardar gestión'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
