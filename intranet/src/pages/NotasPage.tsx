@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
 import {
   Plus,
@@ -24,8 +25,20 @@ import {
 
 interface Asignacion {
   id_asignacion: number;
+  id_docente?: number;
+  id_curso?: number;
+  id_seccion?: number;
+  id_anio?: number;
+  id_colegio?: number;
   curso: string;
   seccion: string;
+  grado?: string | null;
+  nivel?: string | null;
+  letra?: string | null;
+  anio?: string | null;
+  colegio?: string | null;
+  docente?: string | null;
+  matriculados?: number;
 }
 
 interface Evaluacion {
@@ -137,6 +150,7 @@ function getNotaColor(value: unknown) {
 
 export default function NotasPage() {
   const { token } = useAuth();
+  const { queryParams, scopeLabel } = useSchool();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
   const [asignacionId, setAsignacionId] = useState<number | null>(null);
@@ -144,8 +158,10 @@ export default function NotasPage() {
   const [unidadId, setUnidadId] = useState(1);
   const [grilla, setGrilla] = useState<GrillaData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingAsignaciones, setLoadingAsignaciones] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
+  const [asignacionesError, setAsignacionesError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -154,13 +170,52 @@ export default function NotasPage() {
 
   useEffect(() => {
     if (!token) return;
-    axios.get('/api/academicos/docente/asignaciones', { headers: { Authorization: `Bearer ${token}` } })
+
+    let cancelled = false;
+
+    setLoadingAsignaciones(true);
+    setAsignacionesError(null);
+
+    axios
+      .get('/api/academicos/docente/asignaciones', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: queryParams,
+      })
       .then((res) => {
-        const data: Asignacion[] = res.data || [];
+        if (cancelled) return;
+
+        const data: Asignacion[] = Array.isArray(res.data) ? res.data : [];
         setAsignaciones(data);
-        if (data.length > 0) { setSalonSeleccionado(data[0].seccion); setAsignacionId(data[0].id_asignacion); }
-      }).catch(() => {});
-  }, [token]);
+
+        if (data.length > 0) {
+          setSalonSeleccionado(data[0].seccion);
+          setAsignacionId(data[0].id_asignacion);
+        } else {
+          setSalonSeleccionado('');
+          setAsignacionId(null);
+          setGrilla(null);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
+        console.error('Error cargando asignaciones docentes para notas:', err);
+        setAsignaciones([]);
+        setSalonSeleccionado('');
+        setAsignacionId(null);
+        setGrilla(null);
+        setAsignacionesError(
+          err.response?.data?.message || 'No se pudieron cargar las asignaciones docentes.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAsignaciones(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, queryParams]);
 
   const salones = useMemo(() => {
     const unicos = new Map<string, string>();
@@ -298,7 +353,7 @@ export default function NotasPage() {
       <PageHeader
         eyebrow="Registro de notas por unidad"
         title="Registro de Notas"
-        description="Grilla dinámica por salón, bimestre, unidad y curso."
+        description={`Grilla dinámica por salón, bimestre, unidad y curso. Contexto activo: ${scopeLabel}.`}
         icon={BookOpenCheck}
         actions={
           <div className="flex flex-wrap items-center gap-3">
@@ -318,8 +373,14 @@ export default function NotasPage() {
         <div className="grid gap-4 lg:grid-cols-4">
           <label className="block">
             <span className={labelClass}><School size={14} /> Salón</span>
-            <select className={inputClass} value={salonSeleccionado} onChange={(e) => handleSalonChange(e.target.value)}>
-              {salones.length === 0 && <option value="">Sin salones</option>}
+            <select
+              className={inputClass}
+              value={salonSeleccionado}
+              onChange={(e) => handleSalonChange(e.target.value)}
+              disabled={loadingAsignaciones || asignaciones.length === 0}
+            >
+              {loadingAsignaciones && <option value="">Cargando salones...</option>}
+              {!loadingAsignaciones && salones.length === 0 && <option value="">Sin salones asignados</option>}
               {salones.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
@@ -337,9 +398,19 @@ export default function NotasPage() {
           </label>
           <label className="block">
             <span className={labelClass}><BookOpen size={14} /> Curso</span>
-            <select className={inputClass} value={asignacionId ?? ''} onChange={(e) => handleCursoChange(Number(e.target.value))}>
-              {cursosPorSalon.length === 0 && <option value="">Sin cursos</option>}
-              {cursosPorSalon.map((a) => <option key={a.id_asignacion} value={a.id_asignacion}>{a.curso}</option>)}
+            <select
+              className={inputClass}
+              value={asignacionId ?? ''}
+              onChange={(e) => handleCursoChange(Number(e.target.value))}
+              disabled={loadingAsignaciones || cursosPorSalon.length === 0}
+            >
+              {loadingAsignaciones && <option value="">Cargando cursos...</option>}
+              {!loadingAsignaciones && cursosPorSalon.length === 0 && <option value="">Sin cursos asignados</option>}
+              {cursosPorSalon.map((a) => (
+                <option key={a.id_asignacion} value={a.id_asignacion}>
+                  {a.curso}{a.docente ? ` · ${a.docente}` : ''}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -384,6 +455,35 @@ export default function NotasPage() {
           {mensaje.tipo === 'exito' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           {mensaje.texto}
         </div>
+      )}
+
+      {/* Error y mensajes de asignaciones vacías */}
+      {asignacionesError && (
+        <div className="rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-600 ring-1 ring-red-200/60">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold">No se pudieron cargar las asignaciones.</p>
+              <p className="mt-1 text-red-500">{asignacionesError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loadingAsignaciones && !asignacionesError && asignaciones.length === 0 && (
+        <section className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-6 py-5 text-sm text-amber-800">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-black">Aún no hay asignaciones docentes para este contexto.</p>
+              <p className="mt-1 leading-6">
+                Para usar Registro de Notas no basta con tener grados, secciones y cursos configurados.
+                También debe existir una relación entre docente, curso, sección, año lectivo e institución.
+              </p>
+              <p className="mt-2 font-bold">Siguiente paso: crear el módulo de asignación docente.</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Grilla */}

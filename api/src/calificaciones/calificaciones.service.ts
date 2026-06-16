@@ -103,13 +103,28 @@ export class CalificacionesService {
   async getGrillaUnidad(unidadId: number, asignacionId: number) {
     const asignacion = await this.prisma.asignacionDocente.findUnique({
       where: { id_asignacion: asignacionId },
-      include: { seccion: true, curso: true },
+      include: {
+        curso: true,
+        seccion: {
+          include: {
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
 
     const evaluaciones = await this.prisma.evaluacionDetalle.findMany({
       where: { id_asignacion: asignacionId, id_unidad: unidadId },
-      orderBy: { fecha_evaluacion: 'asc' },
+      include: { tipo: true },
+      orderBy: [
+        { fecha_evaluacion: 'asc' },
+        { id_evaluacion_det: 'asc' },
+      ],
     });
 
     const matriculas = await this.prisma.matricula.findMany({
@@ -141,9 +156,29 @@ export class CalificacionesService {
       return fila;
     });
 
+    const grado = asignacion.seccion?.grado;
+    const nivel = grado?.nivel;
+    const seccionNombre = grado
+      ? `${grado.nombre_grado} "${asignacion.seccion.letra}"${nivel?.nombre_nivel ? ` · ${nivel.nombre_nivel}` : ''}`
+      : asignacion.seccion.letra;
+
     return {
-      asignacion: { seccion: asignacion.seccion.letra, curso: asignacion.curso.nombre_curso },
-      evaluaciones: evaluaciones.map(ev => ({ id: ev.id_evaluacion_det, descripcion: ev.descripcion_actividad })),
+      asignacion: {
+        seccion: seccionNombre,
+        curso: asignacion.curso.nombre_curso,
+      },
+      evaluaciones: evaluaciones.map((ev) => ({
+        id: ev.id_evaluacion_det,
+        descripcion: ev.descripcion_actividad,
+        tipo: ev.tipo?.nombre_tipo,
+        nombre_tipo: ev.tipo?.nombre_tipo,
+        tipo_evaluacion: ev.tipo
+          ? {
+              nombre: ev.tipo.nombre_tipo,
+              descripcion: ev.tipo.nombre_tipo,
+            }
+          : null,
+      })),
       grilla,
     };
   }

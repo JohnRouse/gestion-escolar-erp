@@ -30,6 +30,7 @@ import EstadoCuentaInternoPage from './pages/tesoreria/EstadoCuentaInternoPage';
 import PagoPublicoPage from './pages/publico/PagoPublicoPage';
 import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
+import ModuloPendientePage, { moduloIcons } from './pages/ModuloPendientePage';
 
 
 function AppRoutes() {
@@ -65,10 +66,115 @@ function AppRoutes() {
 <Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
 <Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
 <Route path="/asistencia" element={<AsistenciaPage />} />
+<Route
+  path="/calendario"
+  element={
+    <ModuloPendientePage
+      modulo="Calendario institucional"
+      descripcion="Agenda eventos, actividades, feriados, reuniones y fechas importantes por institución o grupo educativo."
+      icon={moduloIcons.calendario}
+      acciones={[
+        'Registrar eventos por institución',
+        'Filtrar actividades por rol y sede',
+        'Mostrar eventos en dashboard y portal de padres',
+      ]}
+    />
+  }
+/>
+<Route
+  path="/horario"
+  element={
+    <ModuloPendientePage
+      modulo="Horario académico"
+      descripcion="Organiza horarios por sección, curso, docente, aula y periodo académico."
+      icon={moduloIcons.horario}
+      acciones={[
+        'Crear bloques horarios por sección',
+        'Asignar docente, curso y aula',
+        'Evitar cruces de horario',
+      ]}
+    />
+  }
+/>
 <Route path="/notas" element={<NotasPage />} />
+<Route
+  path="/notas/comentarios"
+  element={
+    <ModuloPendientePage
+      modulo="Comentarios de notas"
+      descripcion="Registra observaciones bimestrales por alumno para acompañar las calificaciones y libretas."
+      icon={moduloIcons.comentarios}
+      acciones={[
+        'Buscar alumno por sección',
+        'Registrar comentario por bimestre',
+        'Mostrar observaciones en libreta y portal de padres',
+      ]}
+    />
+  }
+/>
 <Route path="/circulares" element={<CircularesPage />} />
 <Route path="/configuracion" element={<ConfiguracionPage />} />
 <Route path="/docentes" element={<DocentesPage />} />
+<Route
+  path="/staff"
+  element={
+    <ModuloPendientePage
+      modulo="Staff institucional"
+      descripcion="Administra personal administrativo, auxiliares, coordinación, soporte y otros colaboradores."
+      icon={moduloIcons.staff}
+      acciones={[
+        'Registrar personal no docente',
+        'Asignar rol institucional',
+        'Definir acceso por institución o sede',
+      ]}
+    />
+  }
+/>
+<Route
+  path="/citas"
+  element={
+    <ModuloPendientePage
+      modulo="Citas y entrevistas"
+      descripcion="Gestiona reuniones con padres, docentes, tutores o coordinación según disponibilidad."
+      icon={moduloIcons.citas}
+      acciones={[
+        'Programar citas por rol',
+        'Confirmar asistencia',
+        'Registrar acuerdos y observaciones',
+      ]}
+    />
+  }
+/>
+<Route
+  path="/enfermeria"
+  element={
+    <ModuloPendientePage
+      modulo="Enfermería"
+      descripcion="Registra atenciones, alertas médicas, medicación autorizada y observaciones de salud escolar."
+      icon={moduloIcons.enfermeria}
+      acciones={[
+        'Crear ficha médica del alumno',
+        'Registrar atenciones diarias',
+        'Notificar incidentes al apoderado',
+      ]}
+    />
+  }
+/>
+<Route
+  path="/notificaciones"
+  element={
+    <ModuloPendientePage
+      modulo="Notificaciones"
+      descripcion="Centraliza avisos internos, alertas del sistema y comunicaciones enviadas a usuarios."
+      icon={moduloIcons.notificaciones}
+      acciones={[
+        'Listar alertas por usuario',
+        'Marcar notificaciones como leídas',
+        'Conectar avisos de pagos, notas y matrícula',
+      ]}
+    />
+  }
+/>
 <Route path="/perfil" element={<PerfilPage />} />
 <Route path="/reportes" element={<ReportesPage />} />
 <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />

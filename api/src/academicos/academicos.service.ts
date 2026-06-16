@@ -2484,11 +2484,190 @@ export class AcademicosService {
     });
   }
 
+  // ── ASIGNACIONES DOCENTES / NOTAS ─────────────────────
+
+  private async resolveContextoAcademicoUsuario(params: {
+    userId: number;
+    scope?: string;
+    colegioId?: number;
+  }) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: params.userId },
+      include: {
+        colegios: {
+          where: { estado: 'Activo' },
+          include: { colegio: true },
+          orderBy: { es_principal: 'desc' },
+        },
+      },
+    });
+
+    const colegios = usuario?.colegios || [];
+    const permitidoIds = colegios.map((item) => item.id_colegio);
+
+    const targetId =
+      params.colegioId ||
+      (params.scope === 'all' ? undefined : permitidoIds[0]);
+
+    if (targetId && !permitidoIds.includes(targetId)) {
+      throw new BadRequestException('No tienes acceso al colegio seleccionado.');
+    }
+
+    return {
+      colegioId: targetId,
+      permitidoIds,
+    };
+  }
+
+  private async resolverAnioAcademicoActivo(params: {
+    anioId?: number;
+    colegioId?: number;
+    permitidoIds: number[];
+  }) {
+    if (params.anioId) return params.anioId;
+
+    const whereColegio = params.colegioId
+      ? { id_colegio: params.colegioId }
+      : { id_colegio: { in: params.permitidoIds } };
+
+    const enCurso = await this.prisma.anioLectivo.findFirst({
+      where: {
+        ...whereColegio,
+        estado: { in: ['En curso', 'Abierto', 'Planificación'] },
+      },
+      orderBy: { fecha_inicio: 'desc' },
+    });
+
+    if (enCurso) return enCurso.id_anio;
+
+    const ultimo = await this.prisma.anioLectivo.findFirst({
+      where: whereColegio,
+      orderBy: { fecha_inicio: 'desc' },
+    });
+
+    return ultimo?.id_anio;
+  }
+
+  async getAsignacionesDocenteNotas(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    anioId?: number;
+    docenteId?: number;
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    if (!contexto.permitidoIds.length) return [];
+
+    const anioId = await this.resolverAnioAcademicoActivo({
+      anioId: params.anioId,
+      colegioId: contexto.colegioId,
+      permitidoIds: contexto.permitidoIds,
+    });
+
+    if (!anioId) return [];
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: params.userId },
+      include: { persona: { include: { docentes: true } } },
+    });
+
+    const docenteUsuario = usuario?.persona?.docentes?.[0];
+
+    const where: any = {
+      id_anio: anioId,
+      id_colegio: contexto.colegioId
+        ? contexto.colegioId
+        : { in: contexto.permitidoIds },
+    };
+
+    if (params.rol === 'Profesor') {
+      if (!docenteUsuario) return [];
+      where.id_docente = docenteUsuario.id_persona;
+    } else if (params.docenteId) {
+      where.id_docente = params.docenteId;
+    }
+
+    const asignaciones = await this.prisma.asignacionDocente.findMany({
+      where,
+      include: {
+        colegio: true,
+        anio: true,
+        docente: { include: { persona: true } },
+        curso: { include: { area: true } },
+        seccion: {
+          include: {
+            grado: { include: { nivel: true } },
+            matriculas: {
+              where: { estado_matricula: { in: ['Activo', 'Matriculado'] } },
+              select: { id_matricula: true },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { colegio: { nombre: 'asc' } },
+        { seccion: { grado: { nombre_grado: 'asc' } } },
+        { seccion: { letra: 'asc' } },
+        { curso: { nombre_curso: 'asc' } },
+      ],
+    });
+
+    return asignaciones.map((asignacion) => {
+      const grado = asignacion.seccion?.grado;
+      const nivel = grado?.nivel;
+      const seccionNombre = grado
+        ? `${grado.nombre_grado} "${asignacion.seccion.letra}"${nivel?.nombre_nivel ? ` · ${nivel.nombre_nivel}` : ''}`
+        : asignacion.seccion?.letra || 'Sección';
+
+      const docenteNombre = asignacion.docente?.persona
+        ? [
+            asignacion.docente.persona.nombres,
+            asignacion.docente.persona.apellido_paterno,
+            asignacion.docente.persona.apellido_materno,
+          ].filter(Boolean).join(' ')
+        : 'Docente sin nombre';
+
+      return {
+        id_asignacion: asignacion.id_asignacion,
+        id_docente: asignacion.id_docente,
+        id_curso: asignacion.id_curso,
+        id_seccion: asignacion.id_seccion,
+        id_anio: asignacion.id_anio,
+        id_colegio: asignacion.id_colegio,
+        curso: asignacion.curso?.nombre_curso || 'Curso sin nombre',
+        area: asignacion.curso?.area?.nombre_area || null,
+        seccion: seccionNombre,
+        grado: grado?.nombre_grado || null,
+        nivel: nivel?.nombre_nivel || null,
+        letra: asignacion.seccion?.letra || null,
+        anio: asignacion.anio?.nombre_anio || null,
+        colegio: asignacion.colegio?.nombre_corto || asignacion.colegio?.nombre || null,
+        docente: docenteNombre,
+        matriculados: asignacion.seccion?.matriculas?.length || 0,
+      };
+    });
+  }
+
   // ── ASISTENCIA ────────────────────────────────────────
 
-  async getSeccionesDocente(docenteId: number, anioId: number) {
+  async getSeccionesDocente(docenteId: number, anioId?: number) {
+    const anioActivo =
+      anioId ||
+      (await this.prisma.anioLectivo.findFirst({
+        where: { estado: { in: ['En curso', 'Abierto', 'Planificación'] } },
+        orderBy: { fecha_inicio: 'desc' },
+      }))?.id_anio;
+
+    if (!anioActivo) return [];
+
     const asignaciones = await this.prisma.asignacionDocente.findMany({
-      where: { id_docente: docenteId, id_anio: anioId },
+      where: { id_docente: docenteId, id_anio: anioActivo },
       distinct: ['id_seccion'],
       select: { seccion: true },
     });

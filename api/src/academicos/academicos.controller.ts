@@ -901,9 +901,32 @@ export class AcademicosController {
     );
   }
 
+  @Get('docente/asignaciones')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director', 'Profesor')
+  async getAsignacionesDocenteNotas(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+    @Query('docente_id') docenteId?: string,
+  ) {
+    return this.academicosService.getAsignacionesDocenteNotas({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      anioId: anioId ? Number(anioId) : undefined,
+      docenteId: docenteId ? Number(docenteId) : undefined,
+    });
+  }
+
   @Get('docente/secciones')
   @UseGuards(AuthGuard('jwt'))
-  async getSeccionesDocente(@Request() req) {
+  async getSeccionesDocente(
+    @Request() req,
+    @Query('anio_id') anioId?: string,
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: req.user.userId },
       include: {
@@ -919,7 +942,10 @@ export class AcademicosController {
 
     if (!docente) throw new NotFoundException('No se encontró docente');
 
-    return this.academicosService.getSeccionesDocente(docente.id_persona, 1);
+    return this.academicosService.getSeccionesDocente(
+      docente.id_persona,
+      anioId ? Number(anioId) : undefined,
+    );
   }
 
   @Get('padres/horario')
