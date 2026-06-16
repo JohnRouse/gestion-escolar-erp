@@ -262,17 +262,31 @@ export default function AgendaCobranzasPage() {
   const abrirHistorial = async (item: AgendaItem) => {
     if (!token) return;
 
+    const idCronograma = Number(item.id_cronograma);
+
+    if (!Number.isInteger(idCronograma) || idCronograma <= 0) {
+      console.error('AgendaItem sin id_cronograma:', item);
+
+      showToast({
+        type: 'error',
+        title: 'No se puede abrir el historial',
+        message: 'Este registro no tiene un ID de cronograma válido.',
+      });
+
+      return;
+    }
+
     setHistorialItem(item);
     setHistorial([]);
     setLoadingHistorial(true);
 
     try {
       const res = await axios.get(
-        `/api/tesoreria/cobranzas/${item.id_cronograma}/historial${queryString}`,
+        `/api/tesoreria/cobranzas/${idCronograma}/historial${queryString}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setHistorial(res.data || []);
+      setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error: any) {
       showToast({
         type: 'error',

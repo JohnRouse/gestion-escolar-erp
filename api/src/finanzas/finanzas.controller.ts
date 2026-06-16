@@ -10,6 +10,7 @@ import {
   Query,
   Delete,
   Put,
+  BadRequestException,
 } from '@nestjs/common';
 import { FinanzasService } from './finanzas.service';
 import { RegistrarPagoDto } from './dto/registrar-pago.dto';
@@ -324,7 +325,13 @@ export class FinanzasController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.finanzasService.listarGestionesCobranza(Number(id), {
+    const idCronograma = Number(id);
+
+    if (!Number.isInteger(idCronograma) || idCronograma <= 0) {
+      throw new BadRequestException('ID de cobranza inválido.');
+    }
+
+    return this.finanzasService.listarGestionesCobranza(idCronograma, {
       userId: req.user.userId,
       rol: req.user.rol,
       scope,

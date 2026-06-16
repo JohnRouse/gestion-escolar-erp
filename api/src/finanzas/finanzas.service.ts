@@ -2066,7 +2066,13 @@ export class FinanzasService {
   ) {
     const scope = await this.resolveScope(params);
 
-    let idCronograma = Number(idCronogramaOrGestion);
+    const idBase = Number(idCronogramaOrGestion);
+
+    if (!Number.isInteger(idBase) || idBase <= 0) {
+      throw new BadRequestException('ID de cobranza inválido.');
+    }
+
+    let idCronograma = idBase;
 
     const cronogramaDirecto = await this.prisma.cronogramaPagos.findFirst({
       where: {
@@ -2083,7 +2089,7 @@ export class FinanzasService {
     if (!cronogramaDirecto) {
       const gestion = await this.prisma.cobranzaGestion.findFirst({
         where: {
-          id_gestion: Number(idCronogramaOrGestion),
+          id_gestion: idBase,
           cronograma: {
             matricula: {
               id_colegio: { in: scope.colegioIds },
@@ -2372,6 +2378,7 @@ export class FinanzasService {
         }
 
         return {
+          id_cronograma: cronograma.id_cronograma,
           id_gestion: ultimaGestion.id_gestion,
           id_gestion_proximo_seguimiento: gestionConProximaFecha?.id_gestion || null,
           canal: ultimaGestion.canal,
