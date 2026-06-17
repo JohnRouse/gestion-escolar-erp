@@ -2516,7 +2516,8 @@ export class AcademicosService {
       grado: grado?.nombre_grado || null,
       nivel: nivel?.nombre_nivel || null,
       anio: asignacion.anio?.nombre_anio || null,
-      colegio: asignacion.colegio?.nombre_corto || asignacion.colegio?.nombre || null,
+      colegio: asignacion.colegio?.nombre || asignacion.colegio?.nombre_corto || null,
+      colegio_nombre_corto: asignacion.colegio?.nombre_corto || null,
       matriculados: asignacion.seccion?.matriculas?.length || 0,
       evaluaciones: asignacion.evaluaciones?.length || 0,
     };
@@ -2877,7 +2878,8 @@ export class AcademicosService {
         nivel: nivel?.nombre_nivel || null,
         letra: asignacion.seccion?.letra || null,
         anio: asignacion.anio?.nombre_anio || null,
-        colegio: asignacion.colegio?.nombre_corto || asignacion.colegio?.nombre || null,
+        colegio: asignacion.colegio?.nombre || asignacion.colegio?.nombre_corto || null,
+        colegio_nombre_corto: asignacion.colegio?.nombre_corto || null,
         docente: docenteNombre,
         matriculados: asignacion.seccion?.matriculas?.length || 0,
       };
