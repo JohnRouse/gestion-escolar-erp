@@ -582,23 +582,21 @@ export default function NotasPage() {
 
           {grilla.evaluaciones.length === 0 ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-500"><Plus size={28} /></div>
-              <h3 className="text-base font-semibold text-neutral-900">Aún no hay evaluaciones cargadas</h3>
-              <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500">
-                Dirección o Administración debe cargar la plantilla inicial antes de iniciar el registro de notas de esta unidad.
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                <Plus size={24} />
+              </div>
+              <h4 className="text-base font-black text-slate-950">Aún no hay plantilla cargada</h4>
+              <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+                Dirección o Administración debe aplicar una plantilla para esta unidad antes de iniciar el registro de notas.
               </p>
-              {puedeGestionarEvaluaciones ? (
+              {['Admin', 'Director'].includes(user?.rol || '') && (
                 <button
                   type="button"
-                  onClick={openModal}
-                  className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0"
+                  onClick={() => window.location.assign('/configuracion?tab=plantillas')}
+                  className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800"
                 >
-                  <Plus size={16} /> Crear evaluación manual
+                  Ir a plantillas
                 </button>
-              ) : (
-                <div className="mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-100">
-                  Solicita a Dirección que habilite la plantilla de evaluaciones.
-                </div>
               )}
             </div>
           ) : (
