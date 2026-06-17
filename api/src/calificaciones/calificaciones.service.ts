@@ -58,7 +58,13 @@ export class CalificacionesService {
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
 
     const matriculasValidas = await this.prisma.matricula.findMany({
-      where: { id_seccion: asignacion.id_seccion, id_anio: asignacion.id_anio, estado_matricula: 'Activo' },
+      where: {
+        id_seccion: asignacion.id_seccion,
+        id_anio: asignacion.id_anio,
+        estado_matricula: {
+          in: ['Activo', 'Matriculado'],
+        },
+      },
       select: { id_matricula: true },
     });
     const idsValidas = new Set(matriculasValidas.map(m => m.id_matricula));
@@ -127,11 +133,15 @@ export class CalificacionesService {
       ],
     });
 
+    const estadosPermitidosNotas = ['Activo', 'Matriculado'];
+
     const matriculas = await this.prisma.matricula.findMany({
       where: {
         id_seccion: asignacion.id_seccion,
         id_anio: asignacion.id_anio,
-        estado_matricula: 'Activo',
+        estado_matricula: {
+          in: estadosPermitidosNotas,
+        },
       },
       include: {
         estudiante: { include: { persona: true } },
@@ -146,7 +156,7 @@ export class CalificacionesService {
       const personaA = a.estudiante.persona;
       const personaB = b.estudiante.persona;
 
-      const nombreA = [
+      const textoA = [
         personaA.apellido_paterno,
         personaA.apellido_materno,
         personaA.nombres,
@@ -155,7 +165,7 @@ export class CalificacionesService {
         .join(' ')
         .toLocaleLowerCase('es-PE');
 
-      const nombreB = [
+      const textoB = [
         personaB.apellido_paterno,
         personaB.apellido_materno,
         personaB.nombres,
@@ -164,21 +174,21 @@ export class CalificacionesService {
         .join(' ')
         .toLocaleLowerCase('es-PE');
 
-      return nombreA.localeCompare(nombreB, 'es-PE');
+      return textoA.localeCompare(textoB, 'es-PE');
     });
 
-    const grilla = matriculasOrdenadas.map((mat) => {
+    const grilla = matriculasOrdenadas.map(mat => {
       const persona = mat.estudiante.persona;
+      const alumnoNombre = [
+        `${persona.apellido_paterno || ''} ${persona.apellido_materno || ''}`.trim(),
+        persona.nombres,
+      ]
+        .filter(Boolean)
+        .join(', ');
 
       const fila: any = {
         id_matricula: mat.id_matricula,
-        alumno: [
-          persona.nombres,
-          persona.apellido_paterno,
-          persona.apellido_materno,
-        ]
-          .filter(Boolean)
-          .join(' '),
+        alumno: alumnoNombre,
       };
 
       evaluaciones.forEach((ev) => {

@@ -8,6 +8,7 @@ import {
   Layers3,
   ListChecks,
   Settings,
+  ClipboardList,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -18,15 +19,24 @@ import ConceptosPagoTab from './ConceptosPagoTab';
 import EscalaTab from './EscalaTab';
 import TiposEvalTab from './TiposEvalTab';
 import AniosLectivosTab from './AniosLectivosTab';
+import PlantillasEvaluacionTab from './PlantillasEvaluacionTab';
+
+const CONFIG_GROUPS = [
+  { key: 'tiempo', label: 'Tiempo académico' },
+  { key: 'estructura', label: 'Estructura académica' },
+  { key: 'evaluacion', label: 'Evaluación y notas' },
+  { key: 'finanzas', label: 'Finanzas' },
+] as const;
 
 const TABS = [
-  { key: 'anios', label: 'Años lectivos', icon: CalendarDays },
-  { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap },
-  { key: 'secciones', label: 'Secciones', icon: Building2 },
-  { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck },
-  { key: 'pagos', label: 'Conceptos de Pago', icon: CreditCard },
-  { key: 'escala', label: 'Escala de Calificación', icon: Layers3 },
-  { key: 'tipos', label: 'Tipos de Evaluación', icon: ListChecks },
+  { key: 'anios', label: 'Años lectivos', icon: CalendarDays, group: 'tiempo' },
+  { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap, group: 'estructura' },
+  { key: 'secciones', label: 'Secciones', icon: Building2, group: 'estructura' },
+  { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck, group: 'estructura' },
+  { key: 'escala', label: 'Escala de Calificación', icon: Layers3, group: 'evaluacion' },
+  { key: 'tipos', label: 'Tipos de Evaluación', icon: ListChecks, group: 'evaluacion' },
+  { key: 'plantillas', label: 'Plantillas de Evaluación', icon: ClipboardList, group: 'evaluacion' },
+  { key: 'pagos', label: 'Conceptos de Pago', icon: CreditCard, group: 'finanzas' },
 ];
 
 export default function ConfiguracionPage() {
@@ -45,6 +55,7 @@ export default function ConfiguracionPage() {
   };
 
   const tabActual = TABS.find((tab) => tab.key === tabActivo) || TABS[0];
+  const grupoActivo = tabActual.group;
 
   return (
     <div className="w-full space-y-6">
@@ -67,8 +78,32 @@ export default function ConfiguracionPage() {
 
       <section className="overflow-hidden rounded-[30px] border border-white bg-white/90 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
         <div className="border-b border-slate-100 px-4 pt-4">
+          {/* Categorías principales */}
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {CONFIG_GROUPS.map((group) => {
+              const active = grupoActivo === group.key;
+              const firstTab = TABS.find((tab) => tab.group === group.key);
+
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  onClick={() => firstTab && setTab(firstTab.key)}
+                  className={`inline-flex h-9 shrink-0 items-center rounded-2xl px-3 text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
+                    active
+                      ? 'bg-slate-950 text-white shadow-sm'
+                      : 'bg-slate-50 text-slate-400 ring-1 ring-slate-100 hover:bg-white hover:text-slate-700'
+                  }`}
+                >
+                  {group.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Pestañas del grupo activo */}
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-            {TABS.map((tab) => {
+            {TABS.filter((tab) => tab.group === grupoActivo).map((tab) => {
               const Icon = tab.icon;
               const active = tabActivo === tab.key;
 
@@ -77,10 +112,10 @@ export default function ConfiguracionPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setTab(tab.key)}
-                  className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-bold transition-all ${
+                  className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-bold transition-all duration-200 ${
                     active
-                      ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25'
-                      : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100 hover:bg-white hover:text-slate-800 hover:shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                      : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100 hover:-translate-y-0.5 hover:bg-white hover:text-slate-800 hover:shadow-sm'
                   }`}
                 >
                   <Icon size={16} />
@@ -99,6 +134,7 @@ export default function ConfiguracionPage() {
           {tabActivo === 'pagos' && <ConceptosPagoTab />}
           {tabActivo === 'escala' && <EscalaTab />}
           {tabActivo === 'tipos' && <TiposEvalTab />}
+          {tabActivo === 'plantillas' && <PlantillasEvaluacionTab />}
         </div>
       </section>
     </div>

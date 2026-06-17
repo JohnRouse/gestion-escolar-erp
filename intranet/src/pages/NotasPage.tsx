@@ -169,7 +169,8 @@ export default function NotasPage() {
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
   const [nuevaEvalTipo, setNuevaEvalTipo] = useState('3');
 
-  const esVistaGestion = ['Admin', 'Director', 'Secretaria'].includes(user?.rol || '');
+  const esProfesor = user?.rol === 'Profesor';
+  const puedeGestionarEvaluaciones = ['Admin', 'Director'].includes(user?.rol || '');
 
   useEffect(() => {
     if (!token) return;
@@ -245,6 +246,11 @@ export default function NotasPage() {
   }, [token, asignacionId, unidadId]);
 
   useEffect(() => { cargarGrilla(); }, [cargarGrilla]);
+
+  const getCursoLabel = (asignacion: Asignacion) => {
+    if (esProfesor || !asignacion.docente) return asignacion.curso;
+    return `${asignacion.curso} · ${asignacion.docente}`;
+  };
 
   const alumnosCount = grilla?.grilla.length ?? 0;
   const evaluacionesCount = grilla?.evaluaciones.length ?? 0;
@@ -341,10 +347,8 @@ export default function NotasPage() {
     window.print();
   };
 
-  const inputClass = "h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 appearance-none";
+  const inputClass = "h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300 appearance-none";
   const labelClass = "mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400";
-  const primaryButtonClass = "inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
-  const secondaryButtonClass = "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className="w-full space-y-6">
@@ -359,15 +363,10 @@ export default function NotasPage() {
         .modal-panel-exit { animation: modalPanelOut 0.15s ease-in forwards; }
 
         @media print {
-          body * {
-            visibility: hidden;
-          }
-
-          #notas-print-area,
-          #notas-print-area * {
-            visibility: visible;
-          }
-
+          body { background: white !important; }
+          aside, header, nav, .no-print { display: none !important; }
+          .print-card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+          input { border: 1px solid #cbd5e1 !important; color: black !important; background: white !important; }
           #notas-print-area {
             position: absolute;
             left: 0;
@@ -376,21 +375,19 @@ export default function NotasPage() {
             border: 0 !important;
             box-shadow: none !important;
           }
-
-          .no-print {
-            display: none !important;
-          }
-
-          #notas-print-area input {
-            border: 1px solid #cbd5e1 !important;
-            background: white !important;
-            color: #0f172a !important;
-          }
-
           @page {
             size: A4 landscape;
             margin: 10mm;
           }
+        }
+
+        @keyframes softFadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .soft-fade-up {
+          animation: softFadeUp 0.28s ease-out both;
         }
       `}</style>
 
@@ -401,19 +398,31 @@ export default function NotasPage() {
         icon={BookOpenCheck}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={openModal} disabled={!asignacionId} className={secondaryButtonClass}>
-              <Plus size={16} /> Agregar evaluación
-            </button>
+            {puedeGestionarEvaluaciones && (
+              <button
+                type="button"
+                onClick={openModal}
+                disabled={!asignacionId}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                <Plus size={16} /> Agregar evaluación
+              </button>
+            )}
             <button
               type="button"
               onClick={imprimirGrilla}
               disabled={!grilla}
-              className={secondaryButtonClass}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
               <Printer size={16} />
               Imprimir / PDF
             </button>
-            <button type="button" onClick={guardarNotas} disabled={saving || !grilla} className={primaryButtonClass}>
+            <button
+              type="button"
+              onClick={guardarNotas}
+              disabled={saving || !grilla}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
@@ -422,7 +431,7 @@ export default function NotasPage() {
       />
 
       {/* Filtros principales */}
-      <section className="no-print rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <section className="no-print rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] soft-fade-up">
         <div className="grid gap-4 lg:grid-cols-4">
           <label className="block">
             <span className={labelClass}><School size={14} /> Salón</span>
@@ -461,7 +470,7 @@ export default function NotasPage() {
               {!loadingAsignaciones && cursosPorSalon.length === 0 && <option value="">Sin cursos asignados</option>}
               {cursosPorSalon.map((a) => (
                 <option key={a.id_asignacion} value={a.id_asignacion}>
-                  {a.curso}{esVistaGestion && a.docente ? ` · ${a.docente}` : ''}
+                  {getCursoLabel(a)}
                 </option>
               ))}
             </select>
@@ -472,7 +481,7 @@ export default function NotasPage() {
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Salón Actual</span>
-              <School className="h-4 w-4 text-blue-600" />
+              <School className="h-4 w-4 text-blue-500" />
             </div>
             <p className="text-xl font-semibold text-neutral-900">{asignacionActual?.seccion || salonSeleccionado || '—'}</p>
           </div>
@@ -541,7 +550,7 @@ export default function NotasPage() {
 
       {/* Grilla */}
       {loading ? (
-        <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] soft-fade-up">
           <div className="mb-6 flex items-center justify-between">
             <div className="space-y-2"><div className="h-5 w-40 rounded-lg bg-neutral-100 animate-pulse" /><div className="h-4 w-56 rounded-lg bg-neutral-100 animate-pulse" /></div>
             <div className="h-11 w-32 rounded-2xl bg-neutral-100 animate-pulse" />
@@ -549,7 +558,7 @@ export default function NotasPage() {
           <div className="space-y-3">{[1, 2, 3, 4, 5, 6].map((i) => (<div key={i} className="h-12 w-full rounded-xl bg-neutral-100 animate-pulse" />))}</div>
         </div>
       ) : grilla ? (
-        <section id="notas-print-area" className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <section id="notas-print-area" className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] soft-fade-up">
           <div className="no-print flex flex-col gap-4 border-b border-neutral-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">{grilla.asignacion?.curso || asignacionActual?.curso || 'Grilla de notas'}</h2>
@@ -563,14 +572,24 @@ export default function NotasPage() {
 
           {grilla.evaluaciones.length === 0 ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Plus size={28} /></div>
-              <h3 className="text-base font-semibold text-neutral-900">Aún no hay evaluaciones</h3>
-              <p className="mt-2 max-w-md text-sm text-neutral-500">
-                Puedes crear una evaluación manual.
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-500"><Plus size={28} /></div>
+              <h3 className="text-base font-semibold text-neutral-900">Aún no hay evaluaciones cargadas</h3>
+              <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500">
+                Dirección o Administración debe cargar la plantilla inicial antes de iniciar el registro de notas de esta unidad.
               </p>
-              <button type="button" onClick={openModal} className={`${primaryButtonClass} mt-6`}>
-                <Plus size={16} /> Crear evaluación
-              </button>
+              {puedeGestionarEvaluaciones ? (
+                <button
+                  type="button"
+                  onClick={openModal}
+                  className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0"
+                >
+                  <Plus size={16} /> Crear evaluación manual
+                </button>
+              ) : (
+                <div className="mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-100">
+                  Solicita a Dirección que habilite la plantilla de evaluaciones.
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -664,7 +683,16 @@ export default function NotasPage() {
                           <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader}`}>
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
                               <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{eva.descripcion}</span>
-                              <button type="button" onClick={() => eliminarEvaluacion(eva.id)} className="no-print flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-300 opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100" title="Eliminar evaluación"><Trash2 size={13} /></button>
+                              {puedeGestionarEvaluaciones && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarEvaluacion(eva.id)}
+                                  className="no-print flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-300 opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100"
+                                  title="Eliminar evaluación"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
                             </div>
                           </th>
                         ));
@@ -703,7 +731,7 @@ export default function NotasPage() {
           )}
         </section>
       ) : (
-        <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-12 text-center">
+        <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-12 text-center soft-fade-up">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-300 mb-4"><BookOpenCheck size={28} /></div>
           <h3 className="text-base font-semibold text-neutral-900">Selecciona un salón y curso</h3>
           <p className="mt-2 max-w-md text-sm text-neutral-500">Al elegir salón, bimestre, unidad y curso aparecerá la grilla de calificaciones.</p>
@@ -729,17 +757,17 @@ export default function NotasPage() {
             <div className="space-y-5 px-6 py-5">
               <div>
                 <label className={labelClass}>Descripción</label>
-                <input type="text" value={nuevaEvalDesc} onChange={(e) => setNuevaEvalDesc(e.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300" placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..." autoFocus />
+                <input type="text" value={nuevaEvalDesc} onChange={(e) => setNuevaEvalDesc(e.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300" placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..." autoFocus />
               </div>
 
               <div>
                 <label className={labelClass}>Tipo de evaluación</label>
-                <select value={nuevaEvalTipo} onChange={(e) => setNuevaEvalTipo(e.target.value)} className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300">
+                <select value={nuevaEvalTipo} onChange={(e) => setNuevaEvalTipo(e.target.value)} className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300">
                   {tipoEvaluaciones.map((tipo) => (<option key={tipo.id} value={tipo.id}>{tipo.label}</option>))}
                 </select>
               </div>
 
-              <div className="rounded-2xl bg-blue-50/60 p-4 ring-1 ring-blue-100">
+              <div className="rounded-2xl bg-blue-50/70 ring-1 ring-blue-100 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Prácticas existentes</p>
@@ -758,7 +786,7 @@ export default function NotasPage() {
             {/* Modal Footer */}
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 bg-neutral-50/50 px-6 py-4 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={closeModal} className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">Cancelar</button>
-              <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className={primaryButtonClass}><Plus size={16} /> Crear evaluación</button>
+              <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"><Plus size={16} /> Crear evaluación</button>
             </div>
           </div>
         </div>

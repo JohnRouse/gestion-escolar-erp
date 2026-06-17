@@ -10,13 +10,29 @@ export class PlantillasController {
 
   @Get()
   @Roles('Admin', 'Director')
-  async findAll() {
+  async findAll(
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const where: any = {};
+
+    if (scope !== 'all' && colegioId) {
+      where.id_colegio = Number(colegioId);
+    }
+
     return this.prisma.plantillaEvaluacion.findMany({
+      where,
       include: {
         detalles: { include: { tipo: true }, orderBy: { orden: 'asc' } },
         nivel: true,
         curso: true,
+        colegio: true,
+        tenant: true,
       },
+      orderBy: [
+        { id_colegio: 'asc' },
+        { nombre: 'asc' },
+      ],
     });
   }
 
@@ -24,6 +40,8 @@ export class PlantillasController {
   @Roles('Admin', 'Director')
   async create(@Body() body: {
     nombre: string;
+    id_tenant?: number;
+    id_colegio?: number;
     id_nivel?: number;
     id_curso?: number;
     detalles: { id_tipo_eval: number; descripcion: string; orden: number }[];
@@ -31,6 +49,8 @@ export class PlantillasController {
     return this.prisma.plantillaEvaluacion.create({
       data: {
         nombre: body.nombre,
+        id_tenant: body.id_tenant || null,
+        id_colegio: body.id_colegio || null,
         id_nivel: body.id_nivel || null,
         id_curso: body.id_curso || null,
         detalles: { create: body.detalles },
@@ -47,6 +67,8 @@ export class PlantillasController {
       where: { id_plantilla: Number(id) },
       data: {
         nombre: body.nombre,
+        id_tenant: body.id_tenant || null,
+        id_colegio: body.id_colegio || null,
         id_nivel: body.id_nivel || null,
         id_curso: body.id_curso || null,
         detalles: { create: body.detalles },
@@ -247,6 +269,14 @@ export class PlantillasController {
     const whereAsignaciones: any = {
       id_anio: idAnio,
     };
+
+    if (plantilla.id_tenant) {
+      whereAsignaciones.id_tenant = plantilla.id_tenant;
+    }
+
+    if (plantilla.id_colegio) {
+      whereAsignaciones.id_colegio = plantilla.id_colegio;
+    }
 
     if (plantilla.id_nivel) {
       whereAsignaciones.seccion = {
