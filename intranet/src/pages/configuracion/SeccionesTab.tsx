@@ -152,15 +152,20 @@ export default function SeccionesTab() {
       return;
     }
 
+    const separator = queryString ? '&' : '?';
+
     axios
-      .get(`/api/academicos/grados?nivel_id=${nivelSeleccionado}`, authHeader)
+      .get(
+        `/api/academicos/grados${queryString}${separator}nivel_id=${nivelSeleccionado}`,
+        authHeader,
+      )
       .then((res) => {
         setGrados(res.data);
         setGradoSeleccionado(null);
         setSecciones([]);
       })
       .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los grados.' }));
-  }, [nivelSeleccionado, token, authHeader]);
+  }, [nivelSeleccionado, token, authHeader, queryString]);
 
   const cargarSecciones = async () => {
     if (!token || !gradoSeleccionado || !anioSeleccionado) return;

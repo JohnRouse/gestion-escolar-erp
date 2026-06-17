@@ -45,13 +45,37 @@ const actionButtonClass =
 
 export default function NivelesGradosTab() {
   const { token } = useAuth();
-  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
+
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const [colegioGestionId, setColegioGestionId] = useState('');
+
+  const colegioGestionActualId = Number(
+    mostrarSelectorInstitucion
+      ? colegioGestionId
+      : colegioConfigId || colegios[0]?.id_colegio || 0,
+  );
+
+  const scopedQuery = useMemo(() => {
+    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+
+    if (colegioGestionActualId) {
+      params.set('colegio_id', String(colegioGestionActualId));
+    }
+
+    return `?${params.toString()}`;
+  }, [queryString, colegioGestionActualId]);
+
+  const nombreColegioGestion = useMemo(() => {
+    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
+    return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
+  }, [colegios, colegioGestionActualId, scopeLabel]);
 
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [grados, setGrados] = useState<Record<number, Grado[]>>({});
@@ -83,7 +107,7 @@ export default function NivelesGradosTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get(`/api/academicos/niveles${queryString}`, authHeader);
+      const res = await axios.get(`/api/academicos/niveles${scopedQuery}`, authHeader);
       setNiveles(res.data);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' });
@@ -95,8 +119,7 @@ export default function NivelesGradosTab() {
   const fetchGrados = async (nivelId: number, force = false) => {
     if (!token || (!force && grados[nivelId])) return;
     try {
-      const separator = queryString ? '&' : '?';
-      const res = await axios.get(`/api/academicos/grados${queryString}${separator}nivel_id=${nivelId}`, authHeader);
+      const res = await axios.get(`/api/academicos/grados${scopedQuery}&nivel_id=${nivelId}`, authHeader);
       setGrados((prev) => ({ ...prev, [nivelId]: res.data }));
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los grados del nivel.' });
@@ -108,7 +131,13 @@ export default function NivelesGradosTab() {
     setGrados({});
     fetchNiveles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString]);
+  }, [token, scopedQuery]);
+
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
 
   const toggleExpand = (nivelId: number) => {
     if (expanded === nivelId) {
@@ -157,10 +186,10 @@ export default function NivelesGradosTab() {
           );
         } else {
           await axios.post(
-            `/api/academicos/niveles${queryString}`,
+            `/api/academicos/niveles${scopedQuery}`,
             {
               nombre_nivel: cleanName,
-              id_colegio: colegioConfigId || undefined,
+              id_colegio: colegioGestionActualId || undefined,
               id_tenant: tenant?.id_tenant || undefined,
             },
             authHeader,
@@ -176,11 +205,11 @@ export default function NivelesGradosTab() {
           );
         } else {
           await axios.post(
-            `/api/academicos/grados${queryString}`,
+            `/api/academicos/grados${scopedQuery}`,
             {
               nombre_grado: cleanName,
               id_nivel: modal.nivel.id_nivel,
-              id_colegio: colegioConfigId || undefined,
+              id_colegio: colegioGestionActualId || undefined,
             },
             authHeader
           );
@@ -206,7 +235,7 @@ export default function NivelesGradosTab() {
 
   const ejecutarEliminarNivel = async (nivel: Nivel) => {
     try {
-      await axios.delete(`/api/academicos/niveles/${nivel.id_nivel}${queryString}`, authHeader);
+      await axios.delete(`/api/academicos/niveles/${nivel.id_nivel}${scopedQuery}`, authHeader);
       setNiveles((prev) => prev.filter((item) => item.id_nivel !== nivel.id_nivel));
       setExpanded((prev) => (prev === nivel.id_nivel ? null : prev));
       setGrados((prev) => {
@@ -225,7 +254,7 @@ export default function NivelesGradosTab() {
 
   const ejecutarEliminarGrado = async (nivel: Nivel, grado: Grado) => {
     try {
-      await axios.delete(`/api/academicos/grados/${grado.id_grado}${queryString}`, authHeader);
+      await axios.delete(`/api/academicos/grados/${grado.id_grado}${scopedQuery}`, authHeader);
       await fetchGrados(nivel.id_nivel, true);
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el grado.' });
@@ -255,7 +284,7 @@ export default function NivelesGradosTab() {
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Niveles educativos</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Ordena Inicial, Primaria y Secundaria con sus grados respectivos. Contexto: {scopeLabel}.
+            Ordena Inicial, Primaria y Secundaria con sus grados respectivos. Contexto: {nombreColegioGestion}.
           </p>
         </div>
         <button
@@ -266,6 +295,31 @@ export default function NivelesGradosTab() {
           <Plus size={17} /> Nuevo nivel
         </button>
       </div>
+
+      {mostrarSelectorInstitucion && (
+        <section className={`${panelClass} p-4`}>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Institución para gestionar
+            </span>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              value={colegioGestionId}
+              onChange={(event) => setColegioGestionId(event.target.value)}
+            >
+              {colegios.map((colegio) => (
+                <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                  {colegio.nombre || colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="mt-2 text-xs font-semibold text-gray-500">
+            En vista consolidada, primero elige la institución para evitar mezclar grados entre colegios.
+          </p>
+        </section>
+      )}
 
       {mensaje && !modal && (
         <div

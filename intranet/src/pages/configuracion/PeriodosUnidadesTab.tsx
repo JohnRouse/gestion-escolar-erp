@@ -304,6 +304,7 @@ export default function PeriodosUnidadesTab() {
 
       setPeriodos(res.data?.periodos || []);
       setEditando(null);
+      await cargarPeriodos(idAnio);
       showToast({ type: 'success', title: 'Cambios guardados', message: 'La estructura académica fue actualizada.' });
     } catch (error: any) {
       setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo guardar la edición.' });

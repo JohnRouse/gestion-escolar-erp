@@ -1596,6 +1596,95 @@ async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
   return { message: 'Grado retirado de la institución correctamente.' };
 }
 
+async eliminarNivelConfig(
+    params: ScopeParams & {
+      idNivel: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const colegioId =
+      params.colegioId ||
+      (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
+
+    if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+      throw new BadRequestException(
+        'Selecciona una institución para retirar el nivel.',
+      );
+    }
+
+    const nivel = await this.prisma.nivel.findUnique({
+      where: { id_nivel: params.idNivel },
+    });
+
+    if (!nivel) throw new NotFoundException('Nivel no encontrado.');
+
+    const secciones = await this.prisma.seccion.count({
+      where: {
+        id_colegio: colegioId,
+        grado: { id_nivel: params.idNivel },
+      },
+    });
+
+    if (secciones > 0) {
+      throw new BadRequestException(
+        'No se puede retirar un nivel que tiene secciones en esta institución.',
+      );
+    }
+
+    const gradosDelNivel = await this.prisma.grado.findMany({
+      where: { id_nivel: params.idNivel },
+      select: { id_grado: true },
+    });
+
+    const gradoIds = gradosDelNivel.map((grado) => grado.id_grado);
+
+    if (gradoIds.length > 0) {
+      await this.prisma.colegioGrado.deleteMany({
+        where: {
+          id_colegio: colegioId,
+          id_grado: { in: gradoIds },
+        },
+      });
+    }
+
+    await this.prisma.colegioNivel.deleteMany({
+      where: {
+        id_colegio: colegioId,
+        id_nivel: params.idNivel,
+      },
+    });
+
+    const otrosColegiosNivel = await this.prisma.colegioNivel.count({
+      where: { id_nivel: params.idNivel },
+    });
+
+    const otrosColegiosGrados = gradoIds.length
+      ? await this.prisma.colegioGrado.count({
+          where: { id_grado: { in: gradoIds } },
+        })
+      : 0;
+
+    const seccionesGlobales = await this.prisma.seccion.count({
+      where: { grado: { id_nivel: params.idNivel } },
+    });
+
+    if (otrosColegiosNivel === 0 && otrosColegiosGrados === 0 && seccionesGlobales === 0) {
+      if (gradoIds.length > 0) {
+        await this.prisma.grado.deleteMany({
+          where: { id_grado: { in: gradoIds } },
+        });
+      }
+
+      await this.prisma.nivel.delete({
+        where: { id_nivel: params.idNivel },
+      });
+    }
+
+    return { message: 'Nivel retirado de la institución correctamente.' };
+  }
+
+
   async getSecciones(
     params: ScopeParams & { gradoId?: number; anioId?: number },
   ) {
@@ -2566,22 +2655,30 @@ async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
   // ── PERIODOS Y UNIDADES ACADÉMICAS ─────────────────────────────
 
   private mapPeriodoUnidad(periodo: any) {
+    const nombrePeriodo = periodo.nombre || `Periodo ${periodo.numero}`;
+
     return {
       id_bimestre: periodo.id_bimestre,
       numero: periodo.numero,
+      nombre: nombrePeriodo,
       fecha_inicio: periodo.fecha_inicio,
       fecha_fin: periodo.fecha_fin,
-      label: `Periodo ${periodo.numero}`,
+      label: nombrePeriodo,
       unidades: (periodo.unidades || [])
         .sort((a: any, b: any) => a.numero - b.numero)
-        .map((unidad: any) => ({
-          id_unidad: unidad.id_unidad,
-          numero: unidad.numero,
-          fecha_inicio: unidad.fecha_inicio,
-          fecha_fin: unidad.fecha_fin,
-          estado_abierto: unidad.estado_abierto,
-          label: `Unidad ${unidad.numero}`,
-        })),
+        .map((unidad: any) => {
+          const nombreUnidad = unidad.nombre || `Unidad ${unidad.numero}`;
+
+          return {
+            id_unidad: unidad.id_unidad,
+            numero: unidad.numero,
+            nombre: nombreUnidad,
+            fecha_inicio: unidad.fecha_inicio,
+            fecha_fin: unidad.fecha_fin,
+            estado_abierto: unidad.estado_abierto,
+            label: nombreUnidad,
+          };
+        }),
     };
   }
 
@@ -2690,6 +2787,12 @@ async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
       throw new BadRequestException('Las unidades por periodo deben estar entre 1 y 12.');
     }
 
+    const nombrePeriodoBase =
+      String((params.body as any).nombre_periodo_base || 'Periodo').trim() || 'Periodo';
+
+    const nombreUnidadBase =
+      String((params.body as any).nombre_unidad_base || 'Unidad').trim() || 'Unidad';
+
     const anio = await this.prisma.anioLectivo.findUnique({
       where: { id_anio: idAnio },
       include: {
@@ -2762,6 +2865,7 @@ async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
           data: {
             id_anio: idAnio,
             numero: i + 1,
+            nombre: `${nombrePeriodoBase} ${i + 1}`,
             fecha_inicio: periodosFechas[i].desde,
             fecha_fin: periodosFechas[i].hasta,
           },
@@ -2778,6 +2882,7 @@ async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
             data: {
               id_bimestre: periodoCreado.id_bimestre,
               numero: j + 1,
+              nombre: `${nombreUnidadBase} ${j + 1}`,
               fecha_inicio: unidadesFechas[j].desde,
               fecha_fin: unidadesFechas[j].hasta,
               estado_abierto: i === 0 && j === 0,

@@ -90,25 +90,18 @@ export class AcademicosController {
   @Delete('niveles/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
-  async deleteNivel(@Param('id') id: string) {
-    const nivel = await this.prisma.nivel.findUnique({
-      where: { id_nivel: Number(id) },
-    });
-
-    if (!nivel) throw new NotFoundException('Nivel no encontrado');
-
-    const grados = await this.prisma.grado.count({
-      where: { id_nivel: Number(id) },
-    });
-
-    if (grados > 0) {
-      throw new BadRequestException(
-        'No se puede eliminar un nivel con grados asignados',
-      );
-    }
-
-    return this.prisma.nivel.delete({
-      where: { id_nivel: Number(id) },
+  async deleteNivel(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.eliminarNivelConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idNivel: Number(id),
     });
   }
 
