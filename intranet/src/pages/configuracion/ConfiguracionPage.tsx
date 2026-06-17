@@ -9,6 +9,7 @@ import {
   ListChecks,
   Settings,
   ClipboardList,
+  UserRoundCheck,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -20,6 +21,7 @@ import EscalaTab from './EscalaTab';
 import TiposEvalTab from './TiposEvalTab';
 import AniosLectivosTab from './AniosLectivosTab';
 import PlantillasEvaluacionTab from './PlantillasEvaluacionTab';
+import AsignacionesDocentesTab from './AsignacionesDocentesTab';
 
 const CONFIG_GROUPS = [
   { key: 'tiempo', label: 'Tiempo académico' },
@@ -33,6 +35,7 @@ const TABS = [
   { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap, group: 'estructura' },
   { key: 'secciones', label: 'Secciones', icon: Building2, group: 'estructura' },
   { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck, group: 'estructura' },
+  { key: 'asignaciones', label: 'Asignaciones docentes', icon: UserRoundCheck, group: 'estructura' },
   { key: 'escala', label: 'Escala de Calificación', icon: Layers3, group: 'evaluacion' },
   { key: 'tipos', label: 'Tipos de Evaluación', icon: ListChecks, group: 'evaluacion' },
   { key: 'plantillas', label: 'Plantillas de Evaluación', icon: ClipboardList, group: 'evaluacion' },
@@ -131,6 +134,7 @@ export default function ConfiguracionPage() {
           {tabActivo === 'niveles' && <NivelesGradosTab />}
           {tabActivo === 'secciones' && <SeccionesTab />}
           {tabActivo === 'cursos' && <CursosTab />}
+          {tabActivo === 'asignaciones' && <AsignacionesDocentesTab />}
           {tabActivo === 'pagos' && <ConceptosPagoTab />}
           {tabActivo === 'escala' && <EscalaTab />}
           {tabActivo === 'tipos' && <TiposEvalTab />}

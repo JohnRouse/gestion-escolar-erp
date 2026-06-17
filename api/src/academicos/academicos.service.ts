@@ -2484,6 +2484,236 @@ export class AcademicosService {
     });
   }
 
+  // ── ASIGNACIONES DOCENTES: GESTIÓN ADMIN / DIRECCIÓN ───────────
+
+  private mapAsignacionDocenteGestion(asignacion: any) {
+    const grado = asignacion.seccion?.grado;
+    const nivel = grado?.nivel;
+
+    const seccionNombre = grado
+      ? `${grado.nombre_grado} "${asignacion.seccion.letra}"${nivel?.nombre_nivel ? ` · ${nivel.nombre_nivel}` : ''}`
+      : asignacion.seccion?.letra || 'Sección';
+
+    const docenteNombre = asignacion.docente?.persona
+      ? [
+          asignacion.docente.persona.nombres,
+          asignacion.docente.persona.apellido_paterno,
+          asignacion.docente.persona.apellido_materno,
+        ].filter(Boolean).join(' ')
+      : 'Docente sin nombre';
+
+    return {
+      id_asignacion: asignacion.id_asignacion,
+      id_docente: asignacion.id_docente,
+      id_curso: asignacion.id_curso,
+      id_seccion: asignacion.id_seccion,
+      id_anio: asignacion.id_anio,
+      id_colegio: asignacion.id_colegio,
+      docente: docenteNombre,
+      curso: asignacion.curso?.nombre_curso || 'Curso sin nombre',
+      area: asignacion.curso?.area?.nombre_area || null,
+      seccion: seccionNombre,
+      grado: grado?.nombre_grado || null,
+      nivel: nivel?.nombre_nivel || null,
+      anio: asignacion.anio?.nombre_anio || null,
+      colegio: asignacion.colegio?.nombre_corto || asignacion.colegio?.nombre || null,
+      matriculados: asignacion.seccion?.matriculas?.length || 0,
+      evaluaciones: asignacion.evaluaciones?.length || 0,
+    };
+  }
+
+  async listarAsignacionesDocentesGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    anioId?: number;
+    docenteId?: number;
+    seccionId?: number;
+    cursoId?: number;
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    if (!contexto.permitidoIds.length) return [];
+
+    const where: any = {
+      id_colegio: contexto.colegioId
+        ? contexto.colegioId
+        : { in: contexto.permitidoIds },
+    };
+
+    if (params.anioId) where.id_anio = params.anioId;
+    if (params.docenteId) where.id_docente = params.docenteId;
+    if (params.seccionId) where.id_seccion = params.seccionId;
+    if (params.cursoId) where.id_curso = params.cursoId;
+
+    const asignaciones = await this.prisma.asignacionDocente.findMany({
+      where,
+      include: {
+        colegio: true,
+        anio: true,
+        docente: { include: { persona: true } },
+        curso: { include: { area: true } },
+        evaluaciones: { select: { id_evaluacion_det: true } },
+        seccion: {
+          include: {
+            grado: { include: { nivel: true } },
+            matriculas: {
+              where: { estado_matricula: { in: ['Activo', 'Matriculado'] } },
+              select: { id_matricula: true },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { anio: { fecha_inicio: 'desc' } },
+        { colegio: { nombre: 'asc' } },
+        { seccion: { letra: 'asc' } },
+        { curso: { nombre_curso: 'asc' } },
+      ],
+    });
+
+    return asignaciones.map((item) => this.mapAsignacionDocenteGestion(item));
+  }
+
+  async crearAsignacionDocenteGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    body: {
+      id_docente: number;
+      id_curso: number;
+      id_seccion: number;
+      id_anio: number;
+      id_colegio?: number;
+    };
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const idDocente = Number(params.body.id_docente);
+    const idCurso = Number(params.body.id_curso);
+    const idSeccion = Number(params.body.id_seccion);
+    const idAnio = Number(params.body.id_anio);
+
+    if (!idDocente || !idCurso || !idSeccion || !idAnio) {
+      throw new BadRequestException('Selecciona docente, curso, sección y año lectivo.');
+    }
+
+    const [docente, curso, seccion, anio] = await Promise.all([
+      this.prisma.docente.findUnique({ where: { id_persona: idDocente }, include: { persona: true } }),
+      this.prisma.curso.findUnique({ where: { id_curso: idCurso } }),
+      this.prisma.seccion.findUnique({ where: { id_seccion: idSeccion }, include: { grado: { include: { nivel: true } } } }),
+      this.prisma.anioLectivo.findUnique({ where: { id_anio: idAnio } }),
+    ]);
+
+    if (!docente) throw new NotFoundException('Docente no encontrado.');
+    if (!curso) throw new NotFoundException('Curso no encontrado.');
+    if (!seccion) throw new NotFoundException('Sección no encontrada.');
+    if (!anio) throw new NotFoundException('Año lectivo no encontrado.');
+
+    const idColegio = Number(params.body.id_colegio || params.colegioId || seccion.id_colegio || anio.id_colegio);
+
+    if (!idColegio || !contexto.permitidoIds.includes(idColegio)) {
+      throw new BadRequestException('No tienes acceso a la institución seleccionada.');
+    }
+
+    if (seccion.id_colegio && seccion.id_colegio !== idColegio) {
+      throw new BadRequestException('La sección no pertenece a la institución seleccionada.');
+    }
+
+    if (anio.id_colegio && anio.id_colegio !== idColegio) {
+      throw new BadRequestException('El año lectivo no pertenece a la institución seleccionada.');
+    }
+
+    const duplicado = await this.prisma.asignacionDocente.findFirst({
+      where: {
+        id_docente: idDocente,
+        id_curso: idCurso,
+        id_seccion: idSeccion,
+        id_anio: idAnio,
+        id_colegio: idColegio,
+      },
+    });
+
+    if (duplicado) {
+      throw new BadRequestException('Esta asignación docente ya existe.');
+    }
+
+    const creado = await this.prisma.asignacionDocente.create({
+      data: {
+        id_tenant: anio.id_tenant || seccion.id_tenant || curso.id_tenant || null,
+        id_colegio: idColegio,
+        id_docente: idDocente,
+        id_curso: idCurso,
+        id_seccion: idSeccion,
+        id_anio: idAnio,
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        docente: { include: { persona: true } },
+        curso: { include: { area: true } },
+        evaluaciones: { select: { id_evaluacion_det: true } },
+        seccion: {
+          include: {
+            grado: { include: { nivel: true } },
+            matriculas: { where: { estado_matricula: { in: ['Activo', 'Matriculado'] } }, select: { id_matricula: true } },
+          },
+        },
+      },
+    });
+
+    return this.mapAsignacionDocenteGestion(creado);
+  }
+
+  async eliminarAsignacionDocenteGestion(params: {
+    idAsignacion: number;
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+  }) {
+    if (!Number.isInteger(params.idAsignacion) || params.idAsignacion <= 0) {
+      throw new BadRequestException('ID de asignación inválido.');
+    }
+
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const asignacion = await this.prisma.asignacionDocente.findUnique({
+      where: { id_asignacion: params.idAsignacion },
+      include: { evaluaciones: { select: { id_evaluacion_det: true } } },
+    });
+
+    if (!asignacion) throw new NotFoundException('Asignación no encontrada.');
+
+    if (asignacion.id_colegio && !contexto.permitidoIds.includes(asignacion.id_colegio)) {
+      throw new BadRequestException('No tienes acceso a esta asignación.');
+    }
+
+    if (asignacion.evaluaciones.length > 0) {
+      throw new BadRequestException('No se puede eliminar la asignación porque ya tiene evaluaciones asociadas. Primero revisa el registro de notas.');
+    }
+
+    await this.prisma.asignacionDocente.delete({ where: { id_asignacion: params.idAsignacion } });
+
+    return { message: 'Asignación docente eliminada correctamente.', id_asignacion: params.idAsignacion };
+  }
+
+  // ── FIN NUEVOS MÉTODOS ─────────────────────────────────
+
   // ── ASIGNACIONES DOCENTES / NOTAS ─────────────────────
 
   private async resolveContextoAcademicoUsuario(params: {

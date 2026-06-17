@@ -533,17 +533,27 @@ export default function NotasPage() {
       )}
 
       {!loadingAsignaciones && !asignacionesError && asignaciones.length === 0 && (
-        <section className="no-print rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-6 py-5 text-sm text-amber-800">
-          <div className="flex items-start gap-3">
-            <AlertCircle size={18} className="mt-0.5 shrink-0" />
-            <div>
-              <p className="font-black">Aún no hay asignaciones docentes para este contexto.</p>
-              <p className="mt-1 leading-6">
-                Para usar Registro de Notas no basta con tener grados, secciones y cursos configurados.
-                También debe existir una relación entre docente, curso, sección, año lectivo e institución.
-              </p>
-              <p className="mt-2 font-bold">Siguiente paso: crear el módulo de asignación docente.</p>
+        <section className="rounded-3xl border border-dashed border-amber-200 bg-amber-50/80 px-6 py-5 text-sm text-amber-900 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-black">Aún no hay asignaciones docentes para este contexto.</p>
+                <p className="mt-1 max-w-3xl leading-6 text-amber-800">
+                  Para usar Registro de Notas no basta con tener grados, secciones y cursos configurados.
+                  También debe existir una relación entre docente, curso, sección, año lectivo e institución.
+                </p>
+                <p className="mt-2 font-bold">Siguiente paso: crea la asignación desde Configuración.</p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => window.location.assign('/configuracion?tab=asignaciones')}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-4 text-xs font-black text-white shadow-[0_14px_28px_-18px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Ir a asignaciones
+            </button>
           </div>
         </section>
       )}

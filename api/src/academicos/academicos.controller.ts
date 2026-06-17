@@ -901,6 +901,75 @@ export class AcademicosController {
     );
   }
 
+  // ── ASIGNACIONES DOCENTES: GESTIÓN ADMIN / DIRECCIÓN ───────────
+
+  @Get('asignaciones-docentes')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async listarAsignacionesDocentesGestion(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+    @Query('docente_id') docenteId?: string,
+    @Query('seccion_id') seccionId?: string,
+    @Query('curso_id') cursoId?: string,
+  ) {
+    return this.academicosService.listarAsignacionesDocentesGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      anioId: anioId ? Number(anioId) : undefined,
+      docenteId: docenteId ? Number(docenteId) : undefined,
+      seccionId: seccionId ? Number(seccionId) : undefined,
+      cursoId: cursoId ? Number(cursoId) : undefined,
+    });
+  }
+
+  @Post('asignaciones-docentes')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async crearAsignacionDocenteGestion(
+    @Request() req,
+    @Body()
+    body: {
+      id_docente: number;
+      id_curso: number;
+      id_seccion: number;
+      id_anio: number;
+      id_colegio?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearAsignacionDocenteGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      body,
+    });
+  }
+
+  @Delete('asignaciones-docentes/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async eliminarAsignacionDocenteGestion(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.eliminarAsignacionDocenteGestion({
+      idAsignacion: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
   @Get('docente/asignaciones')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director', 'Profesor')
