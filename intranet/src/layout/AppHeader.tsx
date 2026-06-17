@@ -20,8 +20,39 @@ import {
   Zap,
 } from 'lucide-react';
 
-function generarAvatar(nombre: string): string {
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nombre)}&backgroundColor=0f172a,2563eb,f1f5f9&textColor=ffffff,ffffff,0f172a&radius=50`;
+function obtenerPartesNombre(nombre?: string | null): string[] {
+  return (nombre || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function obtenerApellidoPaterno(nombre?: string | null): string {
+  const partes = obtenerPartesNombre(nombre);
+
+  if (partes.length >= 4) return partes[partes.length - 2];
+  if (partes.length >= 2) return partes[1];
+
+  return partes[0] || 'Usuario';
+}
+
+function obtenerInicialesUsuario(nombre?: string | null): string {
+  const partes = obtenerPartesNombre(nombre);
+  const primeraInicial = partes[0]?.slice(0, 1) || 'U';
+  const apellidoPaterno = obtenerApellidoPaterno(nombre);
+  const apellidoInicial = apellidoPaterno?.slice(0, 1) || '';
+
+  return `${primeraInicial}${apellidoInicial}`.toUpperCase();
+}
+
+function obtenerNombreCortoUsuario(nombre?: string | null): string {
+  const partes = obtenerPartesNombre(nombre);
+  const primerNombre = partes[0] || 'Usuario';
+  const apellidoPaterno = obtenerApellidoPaterno(nombre);
+
+  if (!apellidoPaterno || apellidoPaterno === primerNombre) return primerNombre;
+
+  return `${primerNombre} ${apellidoPaterno}`;  // ← primer nombre completo + apellido
 }
 
 const iconButtonClass =
@@ -48,10 +79,15 @@ export default function AppHeader() {
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const avatarSrc = user?.avatar_url || generarAvatar(user?.nombre || 'Usuario');
   const userName = user?.nombre || 'Usuario';
-  const firstName = userName.split(' ')[0];
+  const userShortName = obtenerNombreCortoUsuario(userName);
+  const userInitials = obtenerInicialesUsuario(userName);
   const userRole = user?.rol || 'Admin';
+  const avatarUrl =
+    (user as any)?.avatar_url ||
+    (user as any)?.foto_url ||
+    (user as any)?.foto_perfil_url ||
+    null;
 
   const canShowSchoolSelector = colegios.length > 0;
 
@@ -244,13 +280,13 @@ export default function AppHeader() {
           )}
 
           <form
-            className="hidden h-11 w-[min(28rem,42vw)] items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 text-sm transition-all duration-200 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10 md:flex"
+            className="hidden h-11 w-[min(26rem,42vw)] items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 px-4 text-sm transition-all duration-200 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10 md:flex"
             onSubmit={(event) => {
               event.preventDefault();
               handleSearch((event.currentTarget.elements.namedItem('search') as HTMLInputElement).value);
             }}
           >
-            <Search size={17} className="text-slate-400" />
+            <Search size={17} className="shrink-0 text-slate-400" />
             <input
               ref={searchInputRef}
               name="search"
@@ -258,9 +294,6 @@ export default function AppHeader() {
               placeholder="Buscar alumno o DNI..."
               className="h-full min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
-            <kbd className="hidden rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-bold text-slate-400 shadow-sm lg:inline-flex">
-              ⌘K
-            </kbd>
           </form>
         </div>
 
@@ -289,13 +322,19 @@ export default function AppHeader() {
               aria-expanded={dropdownOpen}
               className="group flex h-11 items-center gap-2.5 rounded-2xl border border-transparent bg-transparent py-1 pl-1 pr-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200/70 hover:bg-slate-50"
             >
-              <img
-                src={avatarSrc}
-                alt={userName}
-                className="h-9 w-9 rounded-2xl object-cover ring-1 ring-slate-200/70"
-              />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={userName}
+                  className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-200/70"
+                />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200/70">
+                  {userInitials}
+                </span>
+              )}
               <div className="hidden min-w-0 text-left leading-tight sm:block">
-                <p className="max-w-28 truncate text-sm font-bold text-slate-800">{firstName}</p>
+                <p className="max-w-28 truncate text-sm font-semibold text-slate-800">{userShortName}</p>
                 <p className="max-w-28 truncate text-xs font-medium text-slate-500">{userRole}</p>
               </div>
               <ChevronDown
@@ -310,11 +349,17 @@ export default function AppHeader() {
                 <div className="header-dropdown-enter absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-2xl shadow-slate-950/10">
                   <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={avatarSrc}
-                        alt={userName}
-                        className="h-12 w-12 rounded-2xl object-cover ring-1 ring-slate-200/70"
-                      />
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={userName}
+                          className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200/70"
+                        />
+                      ) : (
+                        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-sm font-black text-slate-700 ring-1 ring-slate-200/70">
+                          {userInitials}
+                        </span>
+                      )}
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black text-slate-950">{userName}</p>
                         <p className="truncate text-xs font-medium text-slate-500">

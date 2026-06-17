@@ -304,24 +304,33 @@ export default function AppSidebar() {
           isCollapsed ? 'w-[5.5rem]' : 'w-72'
         )}
       >
-        <div className="flex h-[calc(100vh-24px)] flex-col rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl">
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-3">
+        <div className="flex h-[calc(100vh-24px)] flex-col rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl overflow-hidden">
+          {/* Cabecera institucional alineada a la izquierda */}
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4">
             <button
               type="button"
               onClick={() => handleNavigate('/dashboard')}
               className={cx(
-                'group flex min-w-0 items-center rounded-2xl transition-all duration-200 hover:bg-slate-50',
-                isCollapsed ? 'h-11 w-11 justify-center' : 'gap-3 px-2 py-2'
+                'group flex min-w-0 items-center rounded-2xl text-left transition-all duration-200 hover:bg-slate-50',
+                isCollapsed ? 'h-10 w-full justify-center px-1' : 'w-full justify-start px-2 py-2'
               )}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-sm shadow-slate-950/15">
-                SM
-              </span>
-
-              {!isCollapsed && (
-                <span className="min-w-0 text-left">
-                  <span className="block truncate text-base font-black tracking-tight text-slate-950">SMV</span>
-                  <span className="block truncate text-[11px] font-semibold text-slate-400">Gestión escolar</span>
+              {!isCollapsed ? (
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-black tracking-[-0.02em] text-slate-950">
+                    Colegios Santa María
+                  </span>
+                  <span className="block truncate text-[11px] font-semibold text-slate-400">
+                    Gestión Escolar
+                  </span>
+                </span>
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/70">
+                  <img
+                    src="https://i.ibb.co/DfvXnNKY/logo-sm-victoria.jpg"
+                    alt="Logo SMV"
+                    className="h-full w-full object-contain"
+                  />
                 </span>
               )}
             </button>
@@ -330,7 +339,7 @@ export default function AppSidebar() {
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 active:scale-95"
                 title="Contraer menú"
               >
                 <PanelLeft size={18} />
@@ -343,7 +352,7 @@ export default function AppSidebar() {
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="flex h-9 w-9 items-center justify-center rounded-2xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700"
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 active:scale-95"
                 title="Expandir menú"
               >
                 <PanelLeft size={18} className="rotate-180" />
@@ -351,7 +360,10 @@ export default function AppSidebar() {
             </div>
           )}
 
-          <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 scrollbar-hide">
+          <nav
+            className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-5 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
