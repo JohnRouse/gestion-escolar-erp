@@ -9,6 +9,7 @@ import {
   Clock3,
   Loader2,
   Lock,
+  Pencil,
   RefreshCcw,
   ShieldCheck,
   Sparkles,
@@ -17,6 +18,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface ColegioBasico {
   id_colegio: number;
@@ -37,6 +39,7 @@ interface Anio {
 interface Unidad {
   id_unidad: number;
   numero: number;
+  nombre?: string;
   label: string;
   fecha_inicio: string;
   fecha_fin: string;
@@ -46,6 +49,7 @@ interface Unidad {
 interface Periodo {
   id_bimestre: number;
   numero: number;
+  nombre?: string;
   label: string;
   fecha_inicio: string;
   fecha_fin: string;
@@ -94,6 +98,13 @@ export default function PeriodosUnidadesTab() {
   const [unidadesPorPeriodo, setUnidadesPorPeriodo] = useState(2);
   const [reemplazar, setReemplazar] = useState(false);
 
+  const [confirmGenerarOpen, setConfirmGenerarOpen] = useState(false);
+  const [editando, setEditando] = useState<
+    | { tipo: 'periodo'; id: number; nombre: string; fecha_inicio: string; fecha_fin: string }
+    | { tipo: 'unidad'; id: number; nombre: string; fecha_inicio: string; fecha_fin: string }
+    | null
+  >(null);
+
   const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
   const colegioSeleccionadoId = Number(
     mostrarSelectorInstitucion
@@ -114,6 +125,15 @@ export default function PeriodosUnidadesTab() {
   const unidades = useMemo(() => periodos.flatMap((periodo) => periodo.unidades), [periodos]);
   const unidadAbierta = unidades.find((unidad) => unidad.estado_abierto);
   const totalUnidades = unidades.length;
+
+  const toInputDate = (value?: string) => value ? String(value).slice(0, 10) : '';
+
+  const nombrePeriodoBase =
+    modelo === 'bimestral'
+      ? 'Bimestre'
+      : modelo === 'trimestral'
+        ? 'Trimestre'
+        : 'Periodo';
 
   const queryConColegio = () => {
     const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
@@ -214,22 +234,6 @@ export default function PeriodosUnidadesTab() {
       return;
     }
 
-    if (periodos.length > 0 && !reemplazar) {
-      setMensaje({
-        type: 'error',
-        text: 'Este año ya tiene periodos creados. Marca "reemplazar estructura" si deseas regenerarlos.',
-      });
-      return;
-    }
-
-    const ok = confirm(
-      periodos.length > 0
-        ? 'Se reemplazará la estructura actual del año. Solo se permite si no tiene evaluaciones. ¿Continuar?'
-        : 'Se generará la estructura académica del año. ¿Continuar?',
-    );
-
-    if (!ok) return;
-
     setGenerando(true);
     setMensaje(null);
 
@@ -244,6 +248,8 @@ export default function PeriodosUnidadesTab() {
           cantidad_periodos: Number(cantidadPeriodos),
           unidades_por_periodo: Number(unidadesPorPeriodo),
           reemplazar,
+          nombre_periodo_base: nombrePeriodoBase,
+          nombre_unidad_base: 'Unidad',
         },
         authHeader,
       );
@@ -263,6 +269,44 @@ export default function PeriodosUnidadesTab() {
       });
     } finally {
       setGenerando(false);
+    }
+  };
+
+  const pedirConfirmacionGenerar = () => {
+    if (periodos.length > 0 && !reemplazar) {
+      setMensaje({
+        type: 'error',
+        text: 'Este año ya tiene periodos creados. Marca "reemplazar estructura" si deseas regenerarlos.',
+      });
+      return;
+    }
+    setConfirmGenerarOpen(true);
+  };
+
+  const guardarEdicion = async () => {
+    if (!token || !editando) return;
+    try {
+      const params = queryConColegio();
+      const url =
+        editando.tipo === 'periodo'
+          ? `/api/academicos/periodos/${editando.id}${params}`
+          : `/api/academicos/unidades/${editando.id}/detalle${params}`;
+
+      const res = await axios.patch<PeriodosResponse>(
+        url,
+        {
+          nombre: editando.nombre,
+          fecha_inicio: editando.fecha_inicio,
+          fecha_fin: editando.fecha_fin,
+        },
+        authHeader,
+      );
+
+      setPeriodos(res.data?.periodos || []);
+      setEditando(null);
+      showToast({ type: 'success', title: 'Cambios guardados', message: 'La estructura académica fue actualizada.' });
+    } catch (error: any) {
+      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo guardar la edición.' });
     }
   };
 
@@ -467,7 +511,7 @@ export default function PeriodosUnidadesTab() {
           </p>
           <button
             type="button"
-            onClick={generarEstructura}
+            onClick={pedirConfirmacionGenerar}
             disabled={generando}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.85)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -507,11 +551,29 @@ export default function PeriodosUnidadesTab() {
                     onClick={() => setExpanded((prev) => ({ ...prev, [periodo.id_bimestre]: !abierto }))}
                     className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
                   >
-                    <div>
-                      <h5 className="font-black text-slate-950">{periodo.label}</h5>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {formatDate(periodo.fecha_inicio)} - {formatDate(periodo.fecha_fin)} · {periodo.unidades.length} unidad(es)
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h5 className="font-black text-slate-950">{periodo.nombre || periodo.label}</h5>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {formatDate(periodo.fecha_inicio)} - {formatDate(periodo.fecha_fin)} · {periodo.unidades.length} unidad(es)
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditando({
+                            tipo: 'periodo',
+                            id: periodo.id_bimestre,
+                            nombre: periodo.nombre || periodo.label,
+                            fecha_inicio: toInputDate(periodo.fecha_inicio),
+                            fecha_fin: toInputDate(periodo.fecha_fin),
+                          });
+                        }}
+                        className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-slate-700"
+                      >
+                        <Pencil size={15} />
+                      </button>
                     </div>
                     {abierto ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
                   </button>
@@ -529,7 +591,7 @@ export default function PeriodosUnidadesTab() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-black text-slate-950">{unidad.label}</p>
+                              <p className="font-black text-slate-950">{unidad.nombre || unidad.label}</p>
                               <p className="mt-1 text-xs font-semibold text-slate-500">
                                 {formatDate(unidad.fecha_inicio)} - {formatDate(unidad.fecha_fin)}
                               </p>
@@ -546,7 +608,20 @@ export default function PeriodosUnidadesTab() {
                             </span>
                           </div>
 
-                          <div className="mt-4 flex justify-end">
+                          <div className="mt-4 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditando({
+                                tipo: 'unidad',
+                                id: unidad.id_unidad,
+                                nombre: unidad.nombre || unidad.label,
+                                fecha_inicio: toInputDate(unidad.fecha_inicio),
+                                fecha_fin: toInputDate(unidad.fecha_fin),
+                              })}
+                              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 transition-all duration-200 hover:bg-slate-50"
+                            >
+                              Editar
+                            </button>
                             {unidad.estado_abierto ? (
                               <button
                                 type="button"
@@ -575,6 +650,72 @@ export default function PeriodosUnidadesTab() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={confirmGenerarOpen}
+        title={periodos.length > 0 ? 'Reemplazar estructura académica' : 'Generar estructura académica'}
+        description={
+          periodos.length > 0
+            ? 'Se reemplazarán los periodos y unidades actuales. Solo se permitirá si todavía no hay evaluaciones vinculadas.'
+            : `Se generará una estructura ${modelo} para el año seleccionado.`
+        }
+        tone={periodos.length > 0 ? 'warning' : 'neutral'}
+        confirmLabel={periodos.length > 0 ? 'Sí, reemplazar' : 'Generar estructura'}
+        loading={generando}
+        onCancel={() => setConfirmGenerarOpen(false)}
+        onConfirm={async () => {
+          setConfirmGenerarOpen(false);
+          await generarEstructura();
+        }}
+      />
+
+      {editando && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h5 className="text-sm font-black text-slate-950">
+              Editar {editando.tipo === 'periodo' ? 'periodo' : 'unidad'}
+            </h5>
+            <div className="mt-4 space-y-3">
+              <label className={labelClass}>Nombre</label>
+              <input
+                className={inputClass}
+                value={editando.nombre}
+                onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
+              />
+              <label className={labelClass}>Fecha inicio</label>
+              <input
+                type="date"
+                className={inputClass}
+                value={editando.fecha_inicio}
+                onChange={(e) => setEditando({ ...editando, fecha_inicio: e.target.value })}
+              />
+              <label className={labelClass}>Fecha fin</label>
+              <input
+                type="date"
+                className={inputClass}
+                value={editando.fecha_fin}
+                onChange={(e) => setEditando({ ...editando, fecha_fin: e.target.value })}
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditando(null)}
+                className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={guardarEdicion}
+                className="inline-flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

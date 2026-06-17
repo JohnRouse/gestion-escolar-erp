@@ -128,6 +128,7 @@ model Colegio {
 
   usuarios            UsuarioColegio[]
   niveles             ColegioNivel[]
+  grados              ColegioGrado[]
   anios               AnioLectivo[]
   aulas               Aula[]
   secciones           Seccion[]
@@ -192,6 +193,18 @@ model ColegioNivel {
   @@id([id_colegio, id_nivel])
 }
 
+model ColegioGrado {
+  id_colegio Int
+  id_grado   Int
+  estado     String @default("Activo") @db.VarChar(20)
+
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+  grado   Grado   @relation(fields: [id_grado], references: [id_grado], onDelete: Cascade)
+
+  @@id([id_colegio, id_grado])
+  @@index([id_grado])
+}
+
 // ======================================================
 // ESTRUCTURA ACADÉMICA
 // ======================================================
@@ -213,6 +226,7 @@ model Grado {
 
   nivel     Nivel     @relation(fields: [id_nivel], references: [id_nivel])
   secciones Seccion[]
+  colegios  ColegioGrado[]
 }
 
 model Aula {
@@ -325,6 +339,7 @@ model AnioLectivo {
 model Bimestre {
   id_bimestre  Int      @id @default(autoincrement())
   numero       Int      @db.TinyInt
+  nombre       String?  @db.VarChar(80)
   fecha_inicio DateTime @db.Date
   fecha_fin    DateTime @db.Date
   id_anio      Int
@@ -340,6 +355,7 @@ model Bimestre {
 model Unidad {
   id_unidad      Int      @id @default(autoincrement())
   numero         Int      @db.TinyInt
+  nombre         String?  @db.VarChar(80)
   fecha_inicio   DateTime @db.Date
   fecha_fin      DateTime @db.Date
   id_bimestre    Int
@@ -530,6 +546,7 @@ model EvaluacionDetalle {
   id_unidad             Int
   id_tipo_eval          Int
   descripcion_actividad String?   @db.VarChar(100)
+  grupo_evaluacion      String?   @db.VarChar(50)
   fecha_evaluacion      DateTime? @db.Date
 
   asignacion AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
@@ -1216,11 +1233,12 @@ model PlantillaEvaluacion {
 }
 
 model PlantillaEvaluacionDetalle {
-  id_detalle   Int    @id @default(autoincrement())
-  id_plantilla Int
-  id_tipo_eval Int
-  descripcion  String @db.VarChar(200)
-  orden        Int    @default(1)
+  id_detalle        Int    @id @default(autoincrement())
+  id_plantilla      Int
+  id_tipo_eval      Int
+  descripcion       String @db.VarChar(200)
+  grupo_evaluacion  String @default("Trabajo en clase") @db.VarChar(50)
+  orden             Int    @default(1)
 
   plantilla PlantillaEvaluacion @relation(fields: [id_plantilla], references: [id_plantilla])
   tipo      TipoEvaluacion      @relation(fields: [id_tipo_eval], references: [id_tipo_eval])

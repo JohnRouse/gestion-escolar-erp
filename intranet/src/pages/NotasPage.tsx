@@ -45,6 +45,7 @@ interface Asignacion {
 interface Evaluacion {
   id: number;
   descripcion: string;
+  grupo_evaluacion?: string;
   tipo?: string;
   nombre_tipo?: string;
   tipo_evaluacion?: {
@@ -93,8 +94,6 @@ const tipoEvaluaciones = [
   { id: '4', label: 'Examen' },
 ];
 
-const grupoOrden = ['TRABAJO EN CLASE', 'PRÁCTICAS', 'OTRAS EVALUACIONES', 'EXAMEN'];
-
 const grupoStyles: Record<string, { header: string; subHeader: string; cell: string; accent: string }> = {
   'TRABAJO EN CLASE': {
     header: 'bg-amber-50 text-amber-700',
@@ -114,25 +113,18 @@ const grupoStyles: Record<string, { header: string; subHeader: string; cell: str
     cell: 'bg-rose-50/15',
     accent: 'bg-rose-400',
   },
-  'OTRAS EVALUACIONES': {
-    header: 'bg-neutral-50 text-neutral-600',
-    subHeader: 'bg-neutral-50/60 text-neutral-600',
-    cell: 'bg-neutral-50/30',
-    accent: 'bg-neutral-400',
-  },
 };
 
 function normalizeText(text: string) {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-function inferirGrupoEvaluacion(evaluacion: Evaluacion) {
-  const texto = normalizeText([evaluacion.descripcion, evaluacion.tipo, evaluacion.nombre_tipo, evaluacion.tipo_evaluacion?.nombre, evaluacion.tipo_evaluacion?.descripcion].filter(Boolean).join(' '));
-  if (texto.includes('pract')) return 'PRÁCTICAS';
-  if (texto.includes('exam')) return 'EXAMEN';
-  if (texto.includes('cuaderno') || texto.includes('texto') || texto.includes('interv') || texto.includes('expos') || texto.includes('particip') || texto.includes('tarea') || texto.includes('clase')) return 'TRABAJO EN CLASE';
-  return 'OTRAS EVALUACIONES';
-}
+const getGrupoEvaluacion = (evaluacion: Evaluacion) => {
+  const texto = `${evaluacion.grupo_evaluacion || ''} ${evaluacion.descripcion || ''} ${evaluacion.tipo || ''}`.toLowerCase();
+  if (texto.includes('práctica') || texto.includes('practica')) return 'PRÁCTICAS';
+  if (texto.includes('examen')) return 'EXAMEN';
+  return 'TRABAJO EN CLASE';
+};
 
 function normalizarNotaEntera(value: unknown) {
   if (value === '' || value === null || value === undefined) return 0;
@@ -376,19 +368,22 @@ export default function NotasPage() {
     return formatearNotaEntera(Math.round(promedio));
   }, [grilla]);
 
-  const gruposEvaluaciones = useMemo(() => {
-    if (!grilla?.evaluaciones.length) return [];
-    const agrupadas = grilla.evaluaciones.reduce<Record<string, Evaluacion[]>>((acc, eva) => {
-      const grupo = inferirGrupoEvaluacion(eva);
-      if (!acc[grupo]) acc[grupo] = [];
-      acc[grupo].push(eva);
-      return acc;
-    }, {});
-    return grupoOrden.filter((g) => agrupadas[g]?.length).map((g) => ({ nombre: g, evaluaciones: agrupadas[g] }));
+  const evaluacionesAgrupadas = useMemo(() => {
+    const grupos = new Map<string, Evaluacion[]>();
+
+    (grilla?.evaluaciones || []).forEach((evaluacion) => {
+      const grupo = getGrupoEvaluacion(evaluacion);
+      const actuales = grupos.get(grupo) || [];
+      actuales.push(evaluacion);
+      grupos.set(grupo, actuales);
+    });
+
+    const orden = ['TRABAJO EN CLASE', 'PRÁCTICAS', 'EXAMEN'];
+    return Array.from(grupos.entries()).sort(([a], [b]) => orden.indexOf(a) - orden.indexOf(b));
   }, [grilla]);
 
   const practicasExistentes = useMemo(() => {
-    return (grilla?.evaluaciones || []).filter((e) => inferirGrupoEvaluacion(e) === 'PRÁCTICAS');
+    return (grilla?.evaluaciones || []).filter((e) => getGrupoEvaluacion(e) === 'PRÁCTICAS');
   }, [grilla]);
 
   const siguientePractica = useMemo(() => {
@@ -813,17 +808,17 @@ export default function NotasPage() {
                       </div>
 
                       <div className="mt-4 space-y-4">
-                        {gruposEvaluaciones.map((grupo) => {
-                          const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
+                        {evaluacionesAgrupadas.map(([grupoNombre, items]) => {
+                          const style = grupoStyles[grupoNombre] || {};
 
                           return (
-                            <div key={grupo.nombre} className="rounded-2xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
-                              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${style.subHeader}`}>
-                                {grupo.nombre}
+                            <div key={grupoNombre} className="rounded-2xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
+                              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${style.subHeader || ''}`}>
+                                {grupoNombre}
                               </p>
 
                               <div className="mt-3 grid gap-3">
-                                {grupo.evaluaciones.map((eva) => (
+                                {items.map((eva) => (
                                   <label key={eva.id} className="grid grid-cols-[1fr_76px] items-center gap-3">
                                     <span className="text-xs font-bold leading-4 text-neutral-600">
                                       {eva.descripcion}
@@ -861,17 +856,21 @@ export default function NotasPage() {
                     <tr>
                       <th rowSpan={2} className="sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
                       <th rowSpan={2} className="sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
-                      {gruposEvaluaciones.map((grupo) => {
-                        const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                        return (<th key={grupo.nombre} colSpan={grupo.evaluaciones.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header}`}>{grupo.nombre}</th>);
+                      {evaluacionesAgrupadas.map(([grupoNombre, items]) => {
+                        const style = grupoStyles[grupoNombre] || {};
+                        return (
+                          <th key={grupoNombre} colSpan={items.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header || ''}`}>
+                            {grupoNombre}
+                          </th>
+                        );
                       })}
                       <th rowSpan={2} className="sticky right-0 z-30 w-24 border-b border-l border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">Prom.</th>
                     </tr>
                     <tr>
-                      {gruposEvaluaciones.flatMap((grupo) => {
-                        const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                        return grupo.evaluaciones.map((eva) => (
-                          <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader}`}>
+                      {evaluacionesAgrupadas.flatMap(([grupoNombre, items]) => {
+                        const style = grupoStyles[grupoNombre] || {};
+                        return items.map((eva) => (
+                          <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader || ''}`}>
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
                               <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{eva.descripcion}</span>
                               {puedeGestionarEvaluaciones && (
@@ -901,24 +900,26 @@ export default function NotasPage() {
                             <p className="text-sm font-medium text-neutral-800 truncate max-w-[230px]">{fila.alumno}</p>
                             <p className="text-[11px] text-neutral-400">Matrícula #{fila.id_matricula}</p>
                           </td>
-                          {gruposEvaluaciones.flatMap((grupo) => {
-                            const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
-                            return grupo.evaluaciones.map((eva) => (
-                              <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell}`}>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  value={formatearNotaEntera(fila[eva.id])}
-                                  onFocus={(e) => e.currentTarget.select()}
-                                  onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
-                                  disabled={!unidadAbierta}
-                                  className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
-                                  aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
-                                />
-                              </td>
-                            ));
-                          })}
+                          {evaluacionesAgrupadas.flatMap(([_, items]) =>
+                            items.map((eva) => {
+                              const style = grupoStyles[getGrupoEvaluacion(eva)] || {};
+                              return (
+                                <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell || ''}`}>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={formatearNotaEntera(fila[eva.id])}
+                                    onFocus={(e) => e.currentTarget.select()}
+                                    onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
+                                    disabled={!unidadAbierta}
+                                    className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
+                                    aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
+                                  />
+                                </td>
+                              );
+                            })
+                          )}
                           <td className="sticky right-0 z-20 border-b border-l border-neutral-100 bg-white px-3 py-2.5 text-center align-middle shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
                             <span className={`inline-flex min-w-[3.5rem] items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold tabular-nums ring-1 ${getPromedioClass(promedio)}`}>{promedioTexto}</span>
                           </td>

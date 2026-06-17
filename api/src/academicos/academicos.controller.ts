@@ -114,27 +114,41 @@ export class AcademicosController {
 
   // ── GRADOS ───────────────────────────────────────────
   @Get('grados')
-  getGrados(@Query('nivel_id') nivelId: string) {
-    return this.academicosService.getGrados(Number(nivelId));
-  }
+@UseGuards(AuthGuard('jwt'))
+getGrados(
+  @Request() req,
+  @Query('nivel_id') nivelId: string,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.getGrados({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    nivelId: Number(nivelId),
+    scope,
+    colegioId: colegioId ? Number(colegioId) : undefined,
+  });
+}
 
-  @Post('grados')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async createGrado(@Body() body: { nombre_grado: string; id_nivel: number }) {
-    const nivel = await this.prisma.nivel.findUnique({
-      where: { id_nivel: body.id_nivel },
-    });
-
-    if (!nivel) throw new NotFoundException('Nivel no encontrado');
-
-    return this.prisma.grado.create({
-      data: {
-        nombre_grado: body.nombre_grado,
-        id_nivel: body.id_nivel,
-      },
-    });
-  }
+@Post('grados')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async createGrado(
+  @Request() req,
+  @Body() body: { nombre_grado: string; id_nivel: number; id_colegio?: number },
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.crearGradoConfig({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope,
+    colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    nombreGrado: body.nombre_grado,
+    idNivel: Number(body.id_nivel),
+    idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+  });
+}
 
   @Put('grados/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -160,29 +174,22 @@ export class AcademicosController {
   }
 
   @Delete('grados/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async deleteGrado(@Param('id') id: string) {
-    const grado = await this.prisma.grado.findUnique({
-      where: { id_grado: Number(id) },
-    });
-
-    if (!grado) throw new NotFoundException('Grado no encontrado');
-
-    const secciones = await this.prisma.seccion.count({
-      where: { id_grado: Number(id) },
-    });
-
-    if (secciones > 0) {
-      throw new BadRequestException(
-        'No se puede eliminar un grado con secciones asignadas',
-      );
-    }
-
-    return this.prisma.grado.delete({
-      where: { id_grado: Number(id) },
-    });
-  }
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteGrado(
+  @Param('id') id: string,
+  @Request() req,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.eliminarGradoConfig({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope,
+    colegioId: colegioId ? Number(colegioId) : undefined,
+    idGrado: Number(id),
+  });
+}
 
   // ── SECCIONES ────────────────────────────────────────
   @Get('secciones')
@@ -932,6 +939,8 @@ export class AcademicosController {
       cantidad_periodos: number;
       unidades_por_periodo: number;
       reemplazar?: boolean;
+      nombre_periodo_base?: string;
+      nombre_unidad_base?: string;
     },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
@@ -962,6 +971,46 @@ export class AcademicosController {
       colegioId: colegioId ? Number(colegioId) : undefined,
       idUnidad: Number(id),
       estadoAbierto: Boolean(body.estado_abierto),
+    });
+  }
+
+  @Patch('periodos/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async actualizarPeriodoAcademico(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.actualizarPeriodoAcademicoGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idPeriodo: Number(id),
+      body,
+    });
+  }
+
+  @Patch('unidades/:id/detalle')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async actualizarUnidadAcademica(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.actualizarUnidadAcademicaGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idUnidad: Number(id),
+      body,
     });
   }
 

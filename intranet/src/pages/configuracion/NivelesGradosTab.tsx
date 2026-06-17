@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   BookOpen,
@@ -60,6 +61,11 @@ export default function NivelesGradosTab() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [nombre, setNombre] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<
+    | { type: 'nivel'; nivel: Nivel }
+    | { type: 'grado'; nivel: Nivel; grado: Grado }
+    | null
+  >(null);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -89,7 +95,8 @@ export default function NivelesGradosTab() {
   const fetchGrados = async (nivelId: number, force = false) => {
     if (!token || (!force && grados[nivelId])) return;
     try {
-      const res = await axios.get(`/api/academicos/grados?nivel_id=${nivelId}`, authHeader);
+      const separator = queryString ? '&' : '?';
+      const res = await axios.get(`/api/academicos/grados${queryString}${separator}nivel_id=${nivelId}`, authHeader);
       setGrados((prev) => ({ ...prev, [nivelId]: res.data }));
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los grados del nivel.' });
@@ -169,8 +176,12 @@ export default function NivelesGradosTab() {
           );
         } else {
           await axios.post(
-            '/api/academicos/grados',
-            { nombre_grado: cleanName, id_nivel: modal.nivel.id_nivel },
+            `/api/academicos/grados${queryString}`,
+            {
+              nombre_grado: cleanName,
+              id_nivel: modal.nivel.id_nivel,
+              id_colegio: colegioConfigId || undefined,
+            },
             authHeader
           );
         }
@@ -193,10 +204,9 @@ export default function NivelesGradosTab() {
     }
   };
 
-  const eliminarNivel = async (nivel: Nivel) => {
-    if (!confirm(`¿Eliminar el nivel "${nivel.nombre_nivel}"?`)) return;
+  const ejecutarEliminarNivel = async (nivel: Nivel) => {
     try {
-      await axios.delete(`/api/academicos/niveles/${nivel.id_nivel}`, authHeader);
+      await axios.delete(`/api/academicos/niveles/${nivel.id_nivel}${queryString}`, authHeader);
       setNiveles((prev) => prev.filter((item) => item.id_nivel !== nivel.id_nivel));
       setExpanded((prev) => (prev === nivel.id_nivel ? null : prev));
       setGrados((prev) => {
@@ -209,14 +219,21 @@ export default function NivelesGradosTab() {
     }
   };
 
-  const eliminarGrado = async (nivel: Nivel, grado: Grado) => {
-    if (!confirm(`¿Eliminar el grado "${grado.nombre_grado}"?`)) return;
+  const eliminarNivel = (nivel: Nivel) => {
+    setConfirmDelete({ type: 'nivel', nivel });
+  };
+
+  const ejecutarEliminarGrado = async (nivel: Nivel, grado: Grado) => {
     try {
-      await axios.delete(`/api/academicos/grados/${grado.id_grado}`, authHeader);
+      await axios.delete(`/api/academicos/grados/${grado.id_grado}${queryString}`, authHeader);
       await fetchGrados(nivel.id_nivel, true);
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el grado.' });
     }
+  };
+
+  const eliminarGrado = (nivel: Nivel, grado: Grado) => {
+    setConfirmDelete({ type: 'grado', nivel, grado });
   };
 
   if (loading) {
@@ -480,6 +497,30 @@ export default function NivelesGradosTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={
+          confirmDelete?.type === 'grado'
+            ? `Retirar grado "${confirmDelete.grado.nombre_grado}"`
+            : `Retirar nivel "${confirmDelete?.nivel.nombre_nivel || ''}"`
+        }
+        description={
+          confirmDelete?.type === 'grado'
+            ? 'Se retirará este grado solo de la institución actual. No afectará a otros colegios.'
+            : 'Se retirará este nivel de la institución actual si no tiene secciones vinculadas.'
+        }
+        tone="danger"
+        confirmLabel="Sí, retirar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={async () => {
+          const item = confirmDelete;
+          setConfirmDelete(null);
+          if (!item) return;
+          if (item.type === 'grado') await ejecutarEliminarGrado(item.nivel, item.grado);
+          else await ejecutarEliminarNivel(item.nivel);
+        }}
+      />
     </div>
   );
 }

@@ -105,6 +105,14 @@ export class CalificacionesService {
     return { message: 'Notas guardadas correctamente', total: dto.notas.length };
   }
 
+  // ── Helper para inferir grupo de evaluación ─────
+  private inferirGrupoEvaluacion(nombre?: string | null) {
+    const texto = String(nombre || '').toLowerCase();
+    if (texto.includes('práctica') || texto.includes('practica')) return 'Prácticas';
+    if (texto.includes('examen')) return 'Examen';
+    return 'Trabajo en clase';
+  }
+
   // ── Modo Grilla (Unidad completa) ─────────────────
   async getGrillaUnidad(unidadId: number, asignacionId: number) {
     const asignacion = await this.prisma.asignacionDocente.findUnique({
@@ -226,6 +234,9 @@ export class CalificacionesService {
       evaluaciones: evaluaciones.map((ev) => ({
         id: ev.id_evaluacion_det,
         descripcion: ev.descripcion_actividad,
+        grupo_evaluacion:
+          (ev as any).grupo_evaluacion ||
+          this.inferirGrupoEvaluacion(ev.descripcion_actividad || ev.tipo?.nombre_tipo),
         tipo: ev.tipo?.nombre_tipo,
         nombre_tipo: ev.tipo?.nombre_tipo,
         tipo_evaluacion: ev.tipo

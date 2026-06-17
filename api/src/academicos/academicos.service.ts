@@ -1518,11 +1518,83 @@ export class AcademicosService {
     return nivel;
   }
 
-  async getGrados(nivelId: number) {
+  async getGrados(params: ScopeParams & { nivelId: number }) {
+  const scope = await this.resolveScope(params);
+  if (!params.nivelId) return [];
+
+  if (scope.tipo === 'colegio' && scope.colegioIds[0]) {
     return this.prisma.grado.findMany({
-      where: { id_nivel: nivelId },
+      where: {
+        id_nivel: params.nivelId,
+        colegios: { some: { id_colegio: scope.colegioIds[0], estado: 'Activo' } },
+      },
+      orderBy: { id_grado: 'asc' },
     });
   }
+
+  return this.prisma.grado.findMany({
+    where: { id_nivel: params.nivelId },
+    orderBy: { id_grado: 'asc' },
+  });
+}
+
+async crearGradoConfig(params: ScopeParams & { nombreGrado: string; idNivel: number; idColegio?: number }) {
+  const scope = await this.resolveScope(params);
+  const nombre = this.normalizeEmpty(params.nombreGrado);
+  if (!nombre) throw new BadRequestException('Ingresa el nombre del grado.');
+
+  const colegioId = params.idColegio || params.colegioId || (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
+  if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+    throw new BadRequestException('Selecciona una institución válida para el grado.');
+  }
+
+  const nivel = await this.prisma.nivel.findUnique({ where: { id_nivel: params.idNivel } });
+  if (!nivel) throw new NotFoundException('Nivel no encontrado.');
+
+  let grado = await this.prisma.grado.findFirst({ where: { id_nivel: params.idNivel, nombre_grado: nombre } });
+  if (!grado) {
+    grado = await this.prisma.grado.create({ data: { id_nivel: params.idNivel, nombre_grado: nombre } });
+  }
+
+  await this.prisma.colegioNivel.upsert({
+    where: { id_colegio_id_nivel: { id_colegio: colegioId, id_nivel: params.idNivel } },
+    update: {},
+    create: { id_colegio: colegioId, id_nivel: params.idNivel },
+  });
+
+  await this.prisma.colegioGrado.upsert({
+    where: { id_colegio_id_grado: { id_colegio: colegioId, id_grado: grado.id_grado } },
+    update: { estado: 'Activo' },
+    create: { id_colegio: colegioId, id_grado: grado.id_grado, estado: 'Activo' },
+  });
+
+  return grado;
+}
+
+async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
+  const scope = await this.resolveScope(params);
+  const colegioId = params.colegioId || (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
+
+  if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+    throw new BadRequestException('Selecciona una institución válida.');
+  }
+
+  const secciones = await this.prisma.seccion.count({ where: { id_colegio: colegioId, id_grado: params.idGrado } });
+  if (secciones > 0) {
+    throw new BadRequestException('No se puede retirar un grado que tiene secciones en esta institución.');
+  }
+
+  await this.prisma.colegioGrado.deleteMany({ where: { id_colegio: colegioId, id_grado: params.idGrado } });
+
+  const otrosUsos = await this.prisma.colegioGrado.count({ where: { id_grado: params.idGrado } });
+  const seccionesGlobales = await this.prisma.seccion.count({ where: { id_grado: params.idGrado } });
+
+  if (otrosUsos === 0 && seccionesGlobales === 0) {
+    await this.prisma.grado.delete({ where: { id_grado: params.idGrado } });
+  }
+
+  return { message: 'Grado retirado de la institución correctamente.' };
+}
 
   async getSecciones(
     params: ScopeParams & { gradoId?: number; anioId?: number },
@@ -1603,6 +1675,13 @@ export class AcademicosService {
     });
 
     if (!grado) throw new NotFoundException('Grado no encontrado');
+
+    // Asegurar que el grado esté vinculado a la institución
+    await this.prisma.colegioGrado.upsert({
+      where: { id_colegio_id_grado: { id_colegio: colegioId, id_grado: params.idGrado } },
+      update: { estado: 'Activo' },
+      create: { id_colegio: colegioId, id_grado: params.idGrado, estado: 'Activo' },
+    });
 
     const letra = String(params.letra || '').trim().toUpperCase();
 
@@ -2775,6 +2854,146 @@ export class AcademicosService {
           estado_abierto: params.estadoAbierto,
         },
       });
+    });
+
+    return this.listarPeriodosUnidadesGestion({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: idColegio || params.colegioId,
+      anioId: unidad.bimestre.id_anio,
+    });
+  }
+
+    private parseFechaConfig(value?: string) {
+    if (!value) return undefined;
+
+    const fecha = new Date(`${value}T00:00:00`);
+
+    if (Number.isNaN(fecha.getTime())) {
+      throw new BadRequestException('La fecha ingresada no es válida.');
+    }
+
+    return fecha;
+  }
+
+  async actualizarPeriodoAcademicoGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    idPeriodo: number;
+    body: {
+      nombre?: string;
+      fecha_inicio?: string;
+      fecha_fin?: string;
+    };
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const periodo = await this.prisma.bimestre.findUnique({
+      where: { id_bimestre: params.idPeriodo },
+      include: { anio: true },
+    });
+
+    if (!periodo) {
+      throw new NotFoundException('Periodo no encontrado.');
+    }
+
+    const idColegio = periodo.anio.id_colegio;
+
+    if (idColegio && !contexto.permitidoIds.includes(idColegio)) {
+      throw new BadRequestException('No tienes acceso a este periodo.');
+    }
+
+    const fechaInicio = this.parseFechaConfig(params.body.fecha_inicio);
+    const fechaFin = this.parseFechaConfig(params.body.fecha_fin);
+
+    const fechaInicioFinal = fechaInicio || periodo.fecha_inicio;
+    const fechaFinFinal = fechaFin || periodo.fecha_fin;
+
+    if (fechaFinFinal < fechaInicioFinal) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
+    }
+
+    await this.prisma.bimestre.update({
+      where: { id_bimestre: params.idPeriodo },
+      data: {
+        nombre: params.body.nombre?.trim() || undefined,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      },
+    });
+
+    return this.listarPeriodosUnidadesGestion({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: idColegio || params.colegioId,
+      anioId: periodo.id_anio,
+    });
+  }
+
+  async actualizarUnidadAcademicaGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    idUnidad: number;
+    body: {
+      nombre?: string;
+      fecha_inicio?: string;
+      fecha_fin?: string;
+    };
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const unidad = await this.prisma.unidad.findUnique({
+      where: { id_unidad: params.idUnidad },
+      include: {
+        bimestre: {
+          include: {
+            anio: true,
+          },
+        },
+      },
+    });
+
+    if (!unidad) {
+      throw new NotFoundException('Unidad no encontrada.');
+    }
+
+    const idColegio = unidad.bimestre.anio.id_colegio;
+
+    if (idColegio && !contexto.permitidoIds.includes(idColegio)) {
+      throw new BadRequestException('No tienes acceso a esta unidad.');
+    }
+
+    const fechaInicio = this.parseFechaConfig(params.body.fecha_inicio);
+    const fechaFin = this.parseFechaConfig(params.body.fecha_fin);
+
+    const fechaInicioFinal = fechaInicio || unidad.fecha_inicio;
+    const fechaFinFinal = fechaFin || unidad.fecha_fin;
+
+    if (fechaFinFinal < fechaInicioFinal) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
+    }
+
+    await this.prisma.unidad.update({
+      where: { id_unidad: params.idUnidad },
+      data: {
+        nombre: params.body.nombre?.trim() || undefined,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      },
     });
 
     return this.listarPeriodosUnidadesGestion({

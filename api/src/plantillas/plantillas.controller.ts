@@ -252,6 +252,26 @@ export class PlantillasController {
     };
   }
 
+  // ── Helper para normalizar grupo de evaluación ─────────────────
+  private normalizarGrupoEvaluacion(value?: string | null) {
+    const texto = String(value || '').trim();
+    if (['Trabajo en clase', 'Prácticas', 'Examen'].includes(texto)) return texto;
+    const lower = texto.toLowerCase();
+    if (lower.includes('práctica') || lower.includes('practica')) return 'Prácticas';
+    if (lower.includes('examen')) return 'Examen';
+    return 'Trabajo en clase';
+  }
+
+  private prepararDetallesPlantilla(detalles: any[] = []) {
+    return detalles.map((detalle, index) => ({
+      id_tipo_eval: Number(detalle.id_tipo_eval),
+      descripcion: String(detalle.descripcion || '').trim(),
+      grupo_evaluacion: this.normalizarGrupoEvaluacion(detalle.grupo_evaluacion || detalle.descripcion),
+      orden: Number(detalle.orden || index + 1),
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   @Get()
   @Roles('Admin', 'Director')
   async findAll(
@@ -326,7 +346,7 @@ export class PlantillasController {
     id_colegio?: number;
     id_nivel?: number;
     id_curso?: number;
-    detalles: { id_tipo_eval: number; descripcion: string; orden: number }[];
+    detalles: { id_tipo_eval: number; descripcion: string; orden: number; grupo_evaluacion?: string }[];
   }) {
     if (!body.nombre?.trim()) {
       throw new BadRequestException('Escribe el nombre de la plantilla.');
@@ -343,7 +363,7 @@ export class PlantillasController {
         id_colegio: body.id_colegio || null,
         id_nivel: body.id_nivel || null,
         id_curso: body.id_curso || null,
-        detalles: { create: body.detalles },
+        detalles: { create: this.prepararDetallesPlantilla(body.detalles) },
       },
       include: { detalles: { include: { tipo: true }, orderBy: { orden: 'asc' } } },
     });
@@ -366,7 +386,7 @@ export class PlantillasController {
         id_colegio: body.id_colegio || null,
         id_nivel: body.id_nivel || null,
         id_curso: body.id_curso || null,
-        detalles: { create: body.detalles || [] },
+        detalles: { create: this.prepararDetallesPlantilla(body.detalles || []) },
       },
       include: { detalles: { include: { tipo: true }, orderBy: { orden: 'asc' } } },
     });
@@ -447,6 +467,7 @@ export class PlantillasController {
               id_unidad: Number(body.id_unidad),
               id_tipo_eval: detalle.id_tipo_eval,
               descripcion_actividad: detalle.descripcion,
+              grupo_evaluacion: this.normalizarGrupoEvaluacion((detalle as any).grupo_evaluacion || detalle.descripcion),
             },
           });
 
