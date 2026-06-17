@@ -151,7 +151,7 @@ function getNotaColor(value: unknown) {
 
 export default function NotasPage() {
   const { token, user } = useAuth();
-  const { queryParams, scopeLabel } = useSchool();
+  const { queryParams, scopeLabel, activeScope } = useSchool();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
   const [asignacionId, setAsignacionId] = useState<number | null>(null);
@@ -171,6 +171,20 @@ export default function NotasPage() {
 
   const esProfesor = user?.rol === 'Profesor';
   const puedeGestionarEvaluaciones = ['Admin', 'Director'].includes(user?.rol || '');
+
+  // Ayudantes para diferenciar salones en vista consolidada
+  const esVistaConsolidada = activeScope.tipo === 'todos';
+
+  const getSalonKey = useCallback((asignacion: Asignacion) => {
+    return `${asignacion.id_colegio || 'sin-colegio'}-${asignacion.id_seccion || asignacion.seccion}`;
+  }, []);
+
+  const getSalonLabel = useCallback((asignacion: Asignacion) => {
+    if (esVistaConsolidada && asignacion.colegio) {
+      return `${asignacion.seccion} · ${asignacion.colegio}`;
+    }
+    return asignacion.seccion;
+  }, [esVistaConsolidada]);
 
   useEffect(() => {
     if (!token) return;
@@ -192,7 +206,7 @@ export default function NotasPage() {
         setAsignaciones(data);
 
         if (data.length > 0) {
-          setSalonSeleccionado(data[0].seccion);
+          setSalonSeleccionado(getSalonKey(data[0]));
           setAsignacionId(data[0].id_asignacion);
         } else {
           setSalonSeleccionado('');
@@ -219,18 +233,33 @@ export default function NotasPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, queryParams]);
+  }, [token, queryParams, getSalonKey]);
 
+  // Lista de salones con clave única (colegio + sección)
   const salones = useMemo(() => {
-    const unicos = new Map<string, string>();
-    asignaciones.forEach((a) => { if (a.seccion) unicos.set(a.seccion, a.seccion); });
+    const unicos = new Map<string, { key: string; label: string }>();
+
+    asignaciones.forEach((asignacion) => {
+      if (!asignacion.seccion) return;
+
+      const key = getSalonKey(asignacion);
+
+      if (!unicos.has(key)) {
+        unicos.set(key, {
+          key,
+          label: getSalonLabel(asignacion),
+        });
+      }
+    });
+
     return Array.from(unicos.values());
-  }, [asignaciones]);
+  }, [asignaciones, getSalonKey, getSalonLabel]);
 
   const cursosPorSalon = useMemo(() => {
     if (!salonSeleccionado) return asignaciones;
-    return asignaciones.filter((a) => a.seccion === salonSeleccionado);
-  }, [asignaciones, salonSeleccionado]);
+
+    return asignaciones.filter((asignacion) => getSalonKey(asignacion) === salonSeleccionado);
+  }, [asignaciones, salonSeleccionado, getSalonKey]);
 
   const asignacionActual = useMemo(() => asignaciones.find((a) => a.id_asignacion === asignacionId), [asignaciones, asignacionId]);
   const periodoActual = useMemo(() => periodos.find((p) => p.id === periodoId) || periodos[0], [periodoId]);
@@ -288,16 +317,16 @@ export default function NotasPage() {
     return 'bg-red-50 text-red-600 ring-red-200/60';
   };
 
-  const handleSalonChange = (seccion: string) => {
-    setSalonSeleccionado(seccion);
-    const primera = asignaciones.find((a) => a.seccion === seccion);
+  const handleSalonChange = (salonKey: string) => {
+    setSalonSeleccionado(salonKey);
+    const primera = asignaciones.find((asignacion) => getSalonKey(asignacion) === salonKey);
     setAsignacionId(primera?.id_asignacion ?? null);
   };
 
   const handleCursoChange = (idAsignacion: number) => {
     setAsignacionId(idAsignacion);
     const asig = asignaciones.find((a) => a.id_asignacion === idAsignacion);
-    if (asig) setSalonSeleccionado(asig.seccion);
+    if (asig) setSalonSeleccionado(getSalonKey(asig));
   };
 
   const handlePeriodoChange = (idPeriodo: number) => {
@@ -443,7 +472,11 @@ export default function NotasPage() {
             >
               {loadingAsignaciones && <option value="">Cargando salones...</option>}
               {!loadingAsignaciones && salones.length === 0 && <option value="">Sin salones asignados</option>}
-              {salones.map((s) => <option key={s} value={s}>{s}</option>)}
+              {salones.map((salon) => (
+                <option key={salon.key} value={salon.key}>
+                  {salon.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block">
@@ -483,7 +516,9 @@ export default function NotasPage() {
               <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Salón Actual</span>
               <School className="h-4 w-4 text-blue-500" />
             </div>
-            <p className="text-xl font-semibold text-neutral-900">{asignacionActual?.seccion || salonSeleccionado || '—'}</p>
+            <p className="text-xl font-semibold text-neutral-900">
+              {asignacionActual ? getSalonLabel(asignacionActual) : '—'}
+            </p>
           </div>
           <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
             <div className="flex items-center justify-between">

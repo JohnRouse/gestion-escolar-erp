@@ -5,6 +5,8 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   BookOpenCheck,
   CheckCircle2,
   ClipboardList,
@@ -61,6 +63,7 @@ export default function PlantillasEvaluacionTab() {
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -190,9 +193,29 @@ export default function PlantillasEvaluacionTab() {
     setDetalles(plantilla.detalles?.length ? plantilla.detalles.slice().sort((a, b) => a.orden - b.orden).map((d, i) => ({ id_tipo_eval: d.id_tipo_eval || d.tipo?.id_tipo_eval || tipoDefault || 0, descripcion: d.descripcion || '', orden: d.orden || i + 1 })) : [detalleVacio(1, tipoDefault)]);
   };
   const closeModal = () => { if (!saving) { setModal(null); resetForm(); } };
-  const addDetalle = () => setDetalles((c) => [...c, detalleVacio(c.length + 1, tipoDefault)]);
-  const updateDetalle = (index: number, patch: Partial<PlantillaDetalle>) => setDetalles((c) => c.map((d, i) => i === index ? { ...d, ...patch } : d));
-  const removeDetalle = (index: number) => setDetalles((c) => c.filter((_, i) => i !== index).map((d, i) => ({ ...d, orden: i + 1 })));
+  const renumerarDetalles = (items: PlantillaDetalle[]) =>
+    items.map((detalle, index) => ({ ...detalle, orden: index + 1 }));
+
+  const addDetalle = () =>
+    setDetalles((current) => renumerarDetalles([...current, detalleVacio(current.length + 1, tipoDefault)]));
+
+  const updateDetalle = (index: number, patch: Partial<PlantillaDetalle>) =>
+    setDetalles((current) => current.map((detalle, idx) => idx === index ? { ...detalle, ...patch } : detalle));
+
+  const removeDetalle = (index: number) =>
+    setDetalles((current) => renumerarDetalles(current.filter((_, idx) => idx !== index)));
+
+  const moveDetalle = (index: number, direction: 'up' | 'down') => {
+    setDetalles((current) => {
+      const next = [...current];
+      const target = direction === 'up' ? index - 1 : index + 1;
+
+      if (target < 0 || target >= next.length) return current;
+
+      [next[index], next[target]] = [next[target], next[index]];
+      return renumerarDetalles(next);
+    });
+  };
 
   const handleSave = async () => {
     if (!token || !modal) return;
@@ -228,14 +251,34 @@ export default function PlantillasEvaluacionTab() {
 
   const aplicarPlantilla = async () => {
     if (!preview) return revisarCobertura();
-    if (!confirm(`Se aplicará la plantilla a ${preview.cobertura.faltantes} asignación(es) pendiente(s). ¿Continuar?`)) return;
+
+    if (preview.cobertura.faltantes <= 0) {
+      setMensaje({
+        type: 'success',
+        text: 'No hay asignaciones pendientes. La cobertura de esta plantilla ya está completa.',
+      });
+      return;
+    }
+
+    setConfirmApplyOpen(true);
+  };
+
+  const confirmarAplicacionPlantilla = async () => {
+    if (!preview) return;
+
     setApplying(true);
+    setMensaje(null);
+
     try {
       const res = await axios.post(`/api/plantillas/${idPlantillaAplicar}/aplicar-alcance`, payloadAplicacion(), authHeader);
       setPreview({ plantilla: preview.plantilla, cobertura: res.data.cobertura });
+      setConfirmApplyOpen(false);
       showToast({ type: 'success', title: 'Plantilla aplicada', message: `${res.data.evaluacionesCreadas} evaluaciones creadas y ${res.data.notasCreadas} notas iniciales en 00.` });
-    } catch (error: any) { setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo aplicar la plantilla.' }); }
-    finally { setApplying(false); }
+    } catch (error: any) {
+      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo aplicar la plantilla.' });
+    } finally {
+      setApplying(false);
+    }
   };
 
   const resetFiltrosAlcance = (next: Alcance) => { setAlcance(next); setFNivel(''); setFGrado(''); setFSeccion(''); setFCurso(''); setFAsignacion(''); setPreview(null); };
@@ -281,7 +324,87 @@ export default function PlantillasEvaluacionTab() {
       <div className={`${panelClass} p-4 soft-fade-up`}><div className="relative max-w-md"><Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10" placeholder="Buscar plantilla, curso, nivel o evaluación..." value={search} onChange={(e)=>setSearch(e.target.value)}/></div></div>
       {plantillasFiltradas.length===0 ? <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center soft-fade-up`}><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400"><ClipboardList size={25}/></div><h4 className="text-base font-black text-slate-900">No hay plantillas para mostrar</h4><p className="mt-1 max-w-md text-sm text-slate-500">Crea una plantilla inicial para que pueda aplicarse a cursos, niveles o a toda una institución.</p></div> : <div className="grid gap-4 xl:grid-cols-2 soft-fade-up">{plantillasFiltradas.map((plantilla)=><article key={plantilla.id_plantilla} className={`${panelClass} overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)]`}><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4"><div className="min-w-0"><h4 className="truncate text-base font-black text-slate-950">{plantilla.nombre}</h4><p className="mt-1 text-sm text-slate-500">{plantilla.curso?.nombre_curso || plantilla.nivel?.nombre_nivel || 'Alcance general'}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={()=>openEdit(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><Pencil size={16}/></button><button type="button" onClick={()=>handleDelete(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={16}/></button></div></div><div className="space-y-2 px-5 py-4">{(plantilla.detalles||[]).slice().sort((a,b)=>a.orden-b.orden).map((detalle,index)=><div key={`${plantilla.id_plantilla}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100"><div><p className="text-sm font-bold text-slate-900">{String(index+1).padStart(2,'0')}. {detalle.descripcion}</p><p className="mt-0.5 text-xs font-semibold text-slate-400">{detalle.tipo?.nombre_tipo || 'Tipo no especificado'}</p></div></div>)}</div></article>)}</div>}
 
-      {modal && <div className="fixed inset-0 z-[80] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={closeModal}/><div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up"><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5"><div><div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100"><ClipboardList size={13}/> {modal.mode==='edit'?'Editar plantilla':'Nueva plantilla'}</div><h2 className="mt-3 text-xl font-black text-slate-950">Plantilla de evaluación</h2><p className="mt-1 text-sm text-slate-500">Configura las columnas iniciales que usará Dirección al aplicar plantillas.</p></div><button type="button" onClick={closeModal} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X size={17}/></button></div><div className="space-y-5 overflow-y-auto px-6 py-5">{mensaje && modal && <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${mensaje.type==='error'?'bg-red-50 text-red-700 ring-1 ring-red-100':'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>{mensaje.text}</div>}<div className="grid gap-4 md:grid-cols-3"><label className="block md:col-span-3"><span className={labelClass}>Nombre de la plantilla</span><input className={inputClass} value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Ej. Plantilla general de Comunicación"/></label><label className="block"><span className={labelClass}>Nivel sugerido</span><select className={inputClass} value={idNivel} onChange={(e)=>setIdNivel(e.target.value)}><option value="">Todos los niveles</option>{niveles.map(n=><option key={n.id_nivel} value={n.id_nivel}>{n.nombre_nivel}</option>)}</select></label><label className="block md:col-span-2"><span className={labelClass}>Curso sugerido</span><select className={inputClass} value={idCurso} onChange={(e)=>setIdCurso(e.target.value)}><option value="">Todos los cursos</option>{cursos.map(c=><option key={c.id_curso} value={c.id_curso}>{c.nombre_curso}</option>)}</select></label></div><div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Evaluaciones iniciales</p><p className="mt-1 text-xs font-semibold text-slate-500">Estas columnas aparecerán en Registro de Notas cuando Dirección aplique la plantilla.</p></div><button type="button" onClick={addDetalle} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"><Plus size={15}/> Agregar</button></div><div className="space-y-3">{detalles.map((detalle,index)=><div key={index} className="grid gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100 md:grid-cols-[140px_1fr_44px]"><select className={inputClass} value={detalle.id_tipo_eval||''} onChange={(e)=>updateDetalle(index,{id_tipo_eval:Number(e.target.value)})}><option value="">Tipo</option>{tipos.map(t=><option key={t.id_tipo_eval} value={t.id_tipo_eval}>{t.nombre_tipo}</option>)}</select><input className={inputClass} value={detalle.descripcion} onChange={(e)=>updateDetalle(index,{descripcion:e.target.value})} placeholder="Ej. Cuaderno, Práctica 1, Examen"/><button type="button" onClick={()=>removeDetalle(index)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-300 transition hover:bg-red-50 hover:text-red-500" disabled={detalles.length===1}><Trash2 size={16}/></button></div>)}</div></div></div><div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeModal} className="h-11 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200">Cancelar</button><button type="button" onClick={handleSave} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">{saving?<Loader2 size={17} className="animate-spin"/>:<Save size={17}/>} Guardar plantilla</button></div></div></div>}
+      {modal && <div className="fixed inset-0 z-[80] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={closeModal}/><div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up"><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5"><div><div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100"><ClipboardList size={13}/> {modal.mode==='edit'?'Editar plantilla':'Nueva plantilla'}</div><h2 className="mt-3 text-xl font-black text-slate-950">Plantilla de evaluación</h2><p className="mt-1 text-sm text-slate-500">Configura las columnas iniciales que usará Dirección al aplicar plantillas.</p></div><button type="button" onClick={closeModal} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X size={17}/></button></div><div className="space-y-5 overflow-y-auto px-6 py-5">{mensaje && modal && <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${mensaje.type==='error'?'bg-red-50 text-red-700 ring-1 ring-red-100':'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>{mensaje.text}</div>}<div className="grid gap-4 md:grid-cols-3"><label className="block md:col-span-3"><span className={labelClass}>Nombre de la plantilla</span><input className={inputClass} value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Ej. Plantilla general de Comunicación"/></label><label className="block"><span className={labelClass}>Nivel sugerido</span><select className={inputClass} value={idNivel} onChange={(e)=>setIdNivel(e.target.value)}><option value="">Todos los niveles</option>{niveles.map(n=><option key={n.id_nivel} value={n.id_nivel}>{n.nombre_nivel}</option>)}</select></label><label className="block md:col-span-2"><span className={labelClass}>Curso sugerido</span><select className={inputClass} value={idCurso} onChange={(e)=>setIdCurso(e.target.value)}><option value="">Todos los cursos</option>{cursos.map(c=><option key={c.id_curso} value={c.id_curso}>{c.nombre_curso}</option>)}</select></label></div><div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Evaluaciones iniciales</p><p className="mt-1 text-xs font-semibold text-slate-500">Estas columnas aparecerán en Registro de Notas cuando Dirección aplique la plantilla.</p></div><button type="button" onClick={addDetalle} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"><Plus size={15}/> Agregar</button></div><div className="space-y-3">
+                  {detalles.map((detalle,index)=>(
+                    <div key={index} className="grid gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100 md:grid-cols-[72px_140px_1fr_94px_44px]">
+                      <div className="flex h-11 items-center justify-center rounded-2xl bg-slate-50 text-sm font-black tabular-nums text-slate-700 ring-1 ring-slate-100">
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                      <select className={inputClass} value={detalle.id_tipo_eval||''} onChange={(e)=>updateDetalle(index,{id_tipo_eval:Number(e.target.value)})}>
+                        <option value="">Tipo</option>
+                        {tipos.map(t=><option key={t.id_tipo_eval} value={t.id_tipo_eval}>{t.nombre_tipo}</option>)}
+                      </select>
+                      <input className={inputClass} value={detalle.descripcion} onChange={(e)=>updateDetalle(index,{descripcion:e.target.value})} placeholder={`Evaluación ${index + 1}: Cuaderno, Práctica 1, Examen...`}/>
+                      <div className="flex items-center justify-center gap-1">
+                        <button type="button" onClick={()=>moveDetalle(index,'up')} disabled={index===0} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30" title="Subir evaluación">
+                          <ArrowUp size={15}/>
+                        </button>
+                        <button type="button" onClick={()=>moveDetalle(index,'down')} disabled={index===detalles.length-1} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30" title="Bajar evaluación">
+                          <ArrowDown size={15}/>
+                        </button>
+                      </div>
+                      <button type="button" onClick={()=>removeDetalle(index)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-300 transition hover:bg-red-50 hover:text-red-500" disabled={detalles.length===1}>
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
+                  ))}
+                </div></div></div><div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeModal} className="h-11 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200">Cancelar</button><button type="button" onClick={handleSave} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">{saving?<Loader2 size={17} className="animate-spin"/>:<Save size={17}/>} Guardar plantilla</button></div></div></div>}
+      {confirmApplyOpen && preview && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={() => !applying && setConfirmApplyOpen(false)} />
+          <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1 text-xs font-black text-violet-700 ring-1 ring-violet-100">
+                <ShieldCheck size={13} /> Confirmar aplicación
+              </div>
+              <h3 className="mt-3 text-xl font-black tracking-[-0.02em] text-slate-950">Aplicar plantilla</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Se aplicará <strong>{preview.plantilla.nombre}</strong> a las asignaciones pendientes de la cobertura revisada.
+              </p>
+            </div>
+
+            <div className="grid gap-3 px-6 py-5 sm:grid-cols-3">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Total</p>
+                <p className="mt-2 text-2xl font-black text-slate-950">{preview.cobertura.total}</p>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Cubiertas</p>
+                <p className="mt-2 text-2xl font-black text-emerald-700">{preview.cobertura.cubiertas}</p>
+              </div>
+              <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-600">Pendientes</p>
+                <p className="mt-2 text-2xl font-black text-amber-700">{preview.cobertura.faltantes}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-amber-50/80 px-5 py-4 mx-6 text-sm leading-6 text-amber-900 ring-1 ring-amber-100">
+              Al confirmar, el sistema creará las evaluaciones y las notas iniciales en <strong>00</strong> para los alumnos matriculados o activos.
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmApplyOpen(false)}
+                disabled={applying}
+                className="h-11 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarAplicacionPlantilla}
+                disabled={applying}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
+              >
+                {applying ? <Loader2 size={17} className="animate-spin"/> : <ShieldCheck size={17}/>}
+                {applying ? 'Aplicando...' : 'Sí, aplicar plantilla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

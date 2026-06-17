@@ -2795,13 +2795,73 @@ export class AcademicosService {
 
     if (!contexto.permitidoIds.length) return [];
 
-    const anioId = await this.resolverAnioAcademicoActivo({
-      anioId: params.anioId,
-      colegioId: contexto.colegioId,
-      permitidoIds: contexto.permitidoIds,
-    });
+    let anioWhere: any = {};
 
-    if (!anioId) return [];
+    if (params.anioId) {
+      anioWhere = { id_anio: params.anioId };
+    } else if (contexto.colegioId) {
+      const anioId = await this.resolverAnioAcademicoActivo({
+        colegioId: contexto.colegioId,
+        permitidoIds: contexto.permitidoIds,
+      });
+
+      if (!anioId) return [];
+
+      anioWhere = { id_anio: anioId };
+    } else {
+      const aniosActivos = await this.prisma.anioLectivo.findMany({
+        where: {
+          id_colegio: { in: contexto.permitidoIds },
+          estado: { in: ['En curso', 'Abierto', 'Planificación'] },
+        },
+        select: {
+          id_anio: true,
+          id_colegio: true,
+          fecha_inicio: true,
+        },
+        orderBy: [
+          { id_colegio: 'asc' },
+          { fecha_inicio: 'desc' },
+        ],
+      });
+
+      const anioPorColegio = new Map<number, number>();
+
+      for (const anio of aniosActivos) {
+        if (anio.id_colegio && !anioPorColegio.has(anio.id_colegio)) {
+          anioPorColegio.set(anio.id_colegio, anio.id_anio);
+        }
+      }
+
+      if (anioPorColegio.size === 0) {
+        const ultimosAnios = await this.prisma.anioLectivo.findMany({
+          where: {
+            id_colegio: { in: contexto.permitidoIds },
+          },
+          select: {
+            id_anio: true,
+            id_colegio: true,
+            fecha_inicio: true,
+          },
+          orderBy: [
+            { id_colegio: 'asc' },
+            { fecha_inicio: 'desc' },
+          ],
+        });
+
+        for (const anio of ultimosAnios) {
+          if (anio.id_colegio && !anioPorColegio.has(anio.id_colegio)) {
+            anioPorColegio.set(anio.id_colegio, anio.id_anio);
+          }
+        }
+      }
+
+      const anioIds = Array.from(anioPorColegio.values());
+
+      if (!anioIds.length) return [];
+
+      anioWhere = { id_anio: { in: anioIds } };
+    }
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: params.userId },
@@ -2811,7 +2871,7 @@ export class AcademicosService {
     const docenteUsuario = usuario?.persona?.docentes?.[0];
 
     const where: any = {
-      id_anio: anioId,
+      ...anioWhere,
       id_colegio: contexto.colegioId
         ? contexto.colegioId
         : { in: contexto.permitidoIds },
