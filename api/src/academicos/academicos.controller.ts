@@ -901,6 +901,88 @@ export class AcademicosController {
     );
   }
 
+  // ── PERIODOS Y UNIDADES ACADÉMICAS ─────────────────────────────
+  @Get('periodos-unidades')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async listarPeriodosUnidades(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+    @Query('anio_id') anioId?: string,
+  ) {
+    return this.academicosService.listarPeriodosUnidadesGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      anioId: anioId ? Number(anioId) : undefined,
+    });
+  }
+
+  @Post('periodos-unidades/generar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async generarPeriodosUnidades(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio: number;
+      id_colegio?: number;
+      cantidad_periodos: number;
+      unidades_por_periodo: number;
+      reemplazar?: boolean;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.generarPeriodosUnidadesGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      body,
+    });
+  }
+
+  @Patch('unidades/:id/estado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async actualizarEstadoUnidad(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { estado_abierto: boolean },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.actualizarEstadoUnidadGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idUnidad: Number(id),
+      estadoAbierto: Boolean(body.estado_abierto),
+    });
+  }
+
+  @Get('asignaciones/:id/periodos')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director', 'Profesor')
+  async getPeriodosPorAsignacionNotas(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getPeriodosPorAsignacionNotas({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idAsignacion: Number(id),
+    });
+  }
+
   // ── ASIGNACIONES DOCENTES: GESTIÓN ADMIN / DIRECCIÓN ───────────
 
   @Get('asignaciones-docentes')

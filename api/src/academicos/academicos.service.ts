@@ -2484,6 +2484,369 @@ export class AcademicosService {
     });
   }
 
+  // ── PERIODOS Y UNIDADES ACADÉMICAS ─────────────────────────────
+
+  private mapPeriodoUnidad(periodo: any) {
+    return {
+      id_bimestre: periodo.id_bimestre,
+      numero: periodo.numero,
+      fecha_inicio: periodo.fecha_inicio,
+      fecha_fin: periodo.fecha_fin,
+      label: `Periodo ${periodo.numero}`,
+      unidades: (periodo.unidades || [])
+        .sort((a: any, b: any) => a.numero - b.numero)
+        .map((unidad: any) => ({
+          id_unidad: unidad.id_unidad,
+          numero: unidad.numero,
+          fecha_inicio: unidad.fecha_inicio,
+          fecha_fin: unidad.fecha_fin,
+          estado_abierto: unidad.estado_abierto,
+          label: `Unidad ${unidad.numero}`,
+        })),
+    };
+  }
+
+  private repartirRangosFechas(fechaInicio: Date, fechaFin: Date, cantidad: number) {
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    const totalMs = fin.getTime() - inicio.getTime();
+    const paso = Math.floor(totalMs / cantidad);
+
+    return Array.from({ length: cantidad }, (_, index) => {
+      const desde = new Date(inicio.getTime() + paso * index);
+      const hasta =
+        index === cantidad - 1
+          ? new Date(fin)
+          : new Date(inicio.getTime() + paso * (index + 1) - 24 * 60 * 60 * 1000);
+
+      return { desde, hasta };
+    });
+  }
+
+  async listarPeriodosUnidadesGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    anioId?: number;
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    if (!contexto.permitidoIds.length) return { anio: null, periodos: [] };
+
+    if (!params.anioId) {
+      return { anio: null, periodos: [] };
+    }
+
+    const anio = await this.prisma.anioLectivo.findFirst({
+      where: {
+        id_anio: params.anioId,
+        id_colegio: contexto.colegioId
+          ? contexto.colegioId
+          : { in: contexto.permitidoIds },
+      },
+      include: {
+        colegio: true,
+        bimestres: {
+          include: {
+            unidades: true,
+          },
+          orderBy: {
+            numero: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!anio) {
+      throw new NotFoundException('Año lectivo no encontrado o sin acceso.');
+    }
+
+    return {
+      anio: {
+        id_anio: anio.id_anio,
+        nombre_anio: anio.nombre_anio,
+        estado: anio.estado,
+        fecha_inicio: anio.fecha_inicio,
+        fecha_fin: anio.fecha_fin,
+        colegio: anio.colegio?.nombre || anio.colegio?.nombre_corto || null,
+        id_colegio: anio.id_colegio,
+      },
+      periodos: anio.bimestres.map((periodo) => this.mapPeriodoUnidad(periodo)),
+    };
+  }
+
+  async generarPeriodosUnidadesGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    body: {
+      id_anio: number;
+      id_colegio?: number;
+      cantidad_periodos: number;
+      unidades_por_periodo: number;
+      reemplazar?: boolean;
+    };
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const idAnio = Number(params.body.id_anio);
+    const cantidadPeriodos = Number(params.body.cantidad_periodos);
+    const unidadesPorPeriodo = Number(params.body.unidades_por_periodo);
+
+    if (!idAnio) throw new BadRequestException('Selecciona el año lectivo.');
+    if (!Number.isInteger(cantidadPeriodos) || cantidadPeriodos < 1 || cantidadPeriodos > 12) {
+      throw new BadRequestException('La cantidad de periodos debe estar entre 1 y 12.');
+    }
+    if (!Number.isInteger(unidadesPorPeriodo) || unidadesPorPeriodo < 1 || unidadesPorPeriodo > 12) {
+      throw new BadRequestException('Las unidades por periodo deben estar entre 1 y 12.');
+    }
+
+    const anio = await this.prisma.anioLectivo.findUnique({
+      where: { id_anio: idAnio },
+      include: {
+        colegio: true,
+        bimestres: {
+          include: {
+            unidades: {
+              include: {
+                evaluaciones: {
+                  select: { id_evaluacion_det: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!anio) throw new NotFoundException('Año lectivo no encontrado.');
+
+    const idColegio = Number(params.body.id_colegio || params.colegioId || anio.id_colegio);
+
+    if (!idColegio || !contexto.permitidoIds.includes(idColegio)) {
+      throw new BadRequestException('No tienes acceso a la institución seleccionada.');
+    }
+
+    if (anio.id_colegio && anio.id_colegio !== idColegio) {
+      throw new BadRequestException('El año lectivo no pertenece a la institución seleccionada.');
+    }
+
+    const tienePeriodos = anio.bimestres.length > 0;
+    const tieneEvaluaciones = anio.bimestres.some((periodo) =>
+      periodo.unidades.some((unidad) => unidad.evaluaciones.length > 0),
+    );
+
+    if (tienePeriodos && !params.body.reemplazar) {
+      throw new BadRequestException('Este año ya tiene periodos creados. Marca reemplazar si deseas regenerarlos.');
+    }
+
+    if (tieneEvaluaciones) {
+      throw new BadRequestException('No se pueden regenerar periodos porque ya existen evaluaciones vinculadas.');
+    }
+
+    const periodosFechas = this.repartirRangosFechas(
+      anio.fecha_inicio,
+      anio.fecha_fin,
+      cantidadPeriodos,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      if (tienePeriodos && params.body.reemplazar) {
+        await tx.unidad.deleteMany({
+          where: {
+            bimestre: {
+              id_anio: idAnio,
+            },
+          },
+        });
+
+        await tx.bimestre.deleteMany({
+          where: {
+            id_anio: idAnio,
+          },
+        });
+      }
+
+      for (let i = 0; i < cantidadPeriodos; i++) {
+        const periodoCreado = await tx.bimestre.create({
+          data: {
+            id_anio: idAnio,
+            numero: i + 1,
+            fecha_inicio: periodosFechas[i].desde,
+            fecha_fin: periodosFechas[i].hasta,
+          },
+        });
+
+        const unidadesFechas = this.repartirRangosFechas(
+          periodosFechas[i].desde,
+          periodosFechas[i].hasta,
+          unidadesPorPeriodo,
+        );
+
+        for (let j = 0; j < unidadesPorPeriodo; j++) {
+          await tx.unidad.create({
+            data: {
+              id_bimestre: periodoCreado.id_bimestre,
+              numero: j + 1,
+              fecha_inicio: unidadesFechas[j].desde,
+              fecha_fin: unidadesFechas[j].hasta,
+              estado_abierto: i === 0 && j === 0,
+            },
+          });
+        }
+      }
+    });
+
+    return this.listarPeriodosUnidadesGestion({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: idColegio,
+      anioId: idAnio,
+    });
+  }
+
+  async actualizarEstadoUnidadGestion(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    idUnidad: number;
+    estadoAbierto: boolean;
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    if (!params.idUnidad) throw new BadRequestException('Unidad inválida.');
+
+    const unidad = await this.prisma.unidad.findUnique({
+      where: { id_unidad: params.idUnidad },
+      include: {
+        bimestre: {
+          include: {
+            anio: true,
+          },
+        },
+      },
+    });
+
+    if (!unidad) throw new NotFoundException('Unidad no encontrada.');
+
+    const idColegio = unidad.bimestre.anio.id_colegio;
+
+    if (idColegio && !contexto.permitidoIds.includes(idColegio)) {
+      throw new BadRequestException('No tienes acceso a esta unidad.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (params.estadoAbierto) {
+        await tx.unidad.updateMany({
+          where: {
+            bimestre: {
+              id_anio: unidad.bimestre.id_anio,
+            },
+            id_unidad: {
+              not: params.idUnidad,
+            },
+          },
+          data: {
+            estado_abierto: false,
+          },
+        });
+      }
+
+      await tx.unidad.update({
+        where: { id_unidad: params.idUnidad },
+        data: {
+          estado_abierto: params.estadoAbierto,
+        },
+      });
+    });
+
+    return this.listarPeriodosUnidadesGestion({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: idColegio || params.colegioId,
+      anioId: unidad.bimestre.id_anio,
+    });
+  }
+
+  async getPeriodosPorAsignacionNotas(params: {
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+    idAsignacion: number;
+  }) {
+    const contexto = await this.resolveContextoAcademicoUsuario({
+      userId: params.userId,
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const asignacion = await this.prisma.asignacionDocente.findUnique({
+      where: { id_asignacion: params.idAsignacion },
+      include: {
+        anio: {
+          include: {
+            colegio: true,
+            bimestres: {
+              include: {
+                unidades: true,
+              },
+              orderBy: {
+                numero: 'asc',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!asignacion) throw new NotFoundException('Asignación no encontrada.');
+
+    if (asignacion.id_colegio && !contexto.permitidoIds.includes(asignacion.id_colegio)) {
+      throw new BadRequestException('No tienes acceso a esta asignación.');
+    }
+
+    const periodos = asignacion.anio.bimestres.map((periodo) => this.mapPeriodoUnidad(periodo));
+
+    const unidades = periodos.flatMap((periodo) =>
+      periodo.unidades.map((unidad) => ({
+        ...unidad,
+        id_bimestre: periodo.id_bimestre,
+        periodo: periodo.numero,
+      })),
+    );
+
+    return {
+      id_asignacion: asignacion.id_asignacion,
+      id_anio: asignacion.id_anio,
+      anio: asignacion.anio.nombre_anio,
+      colegio: asignacion.anio.colegio?.nombre || asignacion.anio.colegio?.nombre_corto || null,
+      periodos,
+      unidad_abierta:
+        unidades.find((unidad) => unidad.estado_abierto) ||
+        unidades[0] ||
+        null,
+    };
+  }
+
   // ── ASIGNACIONES DOCENTES: GESTIÓN ADMIN / DIRECCIÓN ───────────
 
   private mapAsignacionDocenteGestion(asignacion: any) {

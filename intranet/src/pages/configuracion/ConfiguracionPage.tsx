@@ -20,6 +20,7 @@ import ConceptosPagoTab from './ConceptosPagoTab';
 import EscalaTab from './EscalaTab';
 import TiposEvalTab from './TiposEvalTab';
 import AniosLectivosTab from './AniosLectivosTab';
+import PeriodosUnidadesTab from './PeriodosUnidadesTab';
 import PlantillasEvaluacionTab from './PlantillasEvaluacionTab';
 import AsignacionesDocentesTab from './AsignacionesDocentesTab';
 
@@ -32,6 +33,7 @@ const CONFIG_GROUPS = [
 
 const TABS = [
   { key: 'anios', label: 'Años lectivos', icon: CalendarDays, group: 'tiempo' },
+  { key: 'periodos', label: 'Periodos y unidades', icon: CalendarDays, group: 'tiempo' },
   { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap, group: 'estructura' },
   { key: 'secciones', label: 'Secciones', icon: Building2, group: 'estructura' },
   { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck, group: 'estructura' },
@@ -131,6 +133,7 @@ export default function ConfiguracionPage() {
 
         <div key={`${contextKey}-${tabActivo}`} className="p-5">
           {tabActivo === 'anios' && <AniosLectivosTab />}
+          {tabActivo === 'periodos' && <PeriodosUnidadesTab />}
           {tabActivo === 'niveles' && <NivelesGradosTab />}
           {tabActivo === 'secciones' && <SeccionesTab />}
           {tabActivo === 'cursos' && <CursosTab />}

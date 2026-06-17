@@ -64,12 +64,27 @@ interface GrillaData {
   }[];
 }
 
-const periodos = [
-  { id: 1, label: '1 Bimestre', unidades: [1, 2] },
-  { id: 2, label: '2 Bimestre', unidades: [3, 4] },
-  { id: 3, label: '3 Bimestre', unidades: [5, 6] },
-  { id: 4, label: '4 Bimestre', unidades: [7, 8] },
-];
+interface UnidadNotas {
+  id_unidad: number;
+  numero: number;
+  label: string;
+  estado_abierto: boolean;
+}
+
+interface PeriodoNotas {
+  id_bimestre: number;
+  numero: number;
+  label: string;
+  unidades: UnidadNotas[];
+}
+
+// Array fijo reemplazado por periodos dinámicos, se mantiene comentado como referencia
+// const periodos = [
+//   { id: 1, label: '1 Bimestre', unidades: [1, 2] },
+//   { id: 2, label: '2 Bimestre', unidades: [3, 4] },
+//   { id: 3, label: '3 Bimestre', unidades: [5, 6] },
+//   { id: 4, label: '4 Bimestre', unidades: [7, 8] },
+// ];
 
 const tipoEvaluaciones = [
   { id: '1', label: 'Participación' },
@@ -155,8 +170,11 @@ export default function NotasPage() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
   const [asignacionId, setAsignacionId] = useState<number | null>(null);
-  const [periodoId, setPeriodoId] = useState(1);
-  const [unidadId, setUnidadId] = useState(1);
+  const [periodosNotas, setPeriodosNotas] = useState<PeriodoNotas[]>([]);
+  const [periodoId, setPeriodoId] = useState(0);
+  const [unidadId, setUnidadId] = useState(0);
+  const [loadingPeriodos, setLoadingPeriodos] = useState(false);
+  const [periodosError, setPeriodosError] = useState<string | null>(null);
   const [grilla, setGrilla] = useState<GrillaData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingAsignaciones, setLoadingAsignaciones] = useState(false);
@@ -262,11 +280,25 @@ export default function NotasPage() {
   }, [asignaciones, salonSeleccionado, getSalonKey]);
 
   const asignacionActual = useMemo(() => asignaciones.find((a) => a.id_asignacion === asignacionId), [asignaciones, asignacionId]);
-  const periodoActual = useMemo(() => periodos.find((p) => p.id === periodoId) || periodos[0], [periodoId]);
-  const unidadesDelPeriodo = periodoActual.unidades;
+
+  const periodoActual = useMemo(
+    () => periodosNotas.find((p) => p.id_bimestre === periodoId) || periodosNotas[0] || null,
+    [periodosNotas, periodoId],
+  );
+
+  const unidadesDelPeriodo = periodoActual?.unidades || [];
+
+  const unidadActual = useMemo(() => {
+    return unidadesDelPeriodo.find((unidad) => unidad.id_unidad === unidadId) || null;
+  }, [unidadesDelPeriodo, unidadId]);
+
+  const unidadAbierta = Boolean(unidadActual?.estado_abierto);
 
   const cargarGrilla = useCallback(async () => {
-    if (!token || !asignacionId) return;
+    if (!token || !asignacionId || !unidadId) {
+      setGrilla(null);
+      return;
+    }
     setLoading(true); setMensaje(null);
     try {
       const res = await axios.get(`/api/calificaciones/unidades/${unidadId}/grilla?asignacion_id=${asignacionId}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -275,6 +307,59 @@ export default function NotasPage() {
   }, [token, asignacionId, unidadId]);
 
   useEffect(() => { cargarGrilla(); }, [cargarGrilla]);
+
+  const cargarPeriodosNotas = useCallback(async () => {
+    if (!token || !asignacionId) {
+      setPeriodosNotas([]);
+      setPeriodoId(0);
+      setUnidadId(0);
+      return;
+    }
+
+    setLoadingPeriodos(true);
+    setPeriodosError(null);
+
+    try {
+      const res = await axios.get(`/api/academicos/asignaciones/${asignacionId}/periodos`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: queryParams,
+      });
+
+      const periodosData: PeriodoNotas[] = Array.isArray(res.data?.periodos)
+        ? res.data.periodos
+        : [];
+
+      setPeriodosNotas(periodosData);
+
+      const unidadPreferida =
+        res.data?.unidad_abierta ||
+        periodosData.flatMap((periodo) => periodo.unidades).find((unidad) => unidad.estado_abierto) ||
+        periodosData[0]?.unidades?.[0];
+
+      if (unidadPreferida) {
+        const periodo = periodosData.find((item) =>
+          item.unidades.some((unidad) => unidad.id_unidad === unidadPreferida.id_unidad),
+        );
+
+        setPeriodoId(periodo?.id_bimestre || periodosData[0]?.id_bimestre || 0);
+        setUnidadId(unidadPreferida.id_unidad);
+      } else {
+        setPeriodoId(0);
+        setUnidadId(0);
+      }
+    } catch (error: any) {
+      setPeriodosNotas([]);
+      setPeriodoId(0);
+      setUnidadId(0);
+      setPeriodosError(error.response?.data?.message || 'No se pudieron cargar los periodos del año.');
+    } finally {
+      setLoadingPeriodos(false);
+    }
+  }, [token, asignacionId, queryParams]);
+
+  useEffect(() => {
+    cargarPeriodosNotas();
+  }, [cargarPeriodosNotas]);
 
   const getCursoLabel = (asignacion: Asignacion) => {
     if (esProfesor || !asignacion.docente) return asignacion.curso;
@@ -330,9 +415,10 @@ export default function NotasPage() {
   };
 
   const handlePeriodoChange = (idPeriodo: number) => {
-    const nuevoPeriodo = periodos.find((p) => p.id === idPeriodo) || periodos[0];
-    setPeriodoId(nuevoPeriodo.id);
-    setUnidadId(nuevoPeriodo.unidades[0]);
+    const nuevoPeriodo = periodosNotas.find((p) => p.id_bimestre === idPeriodo) || periodosNotas[0];
+
+    setPeriodoId(nuevoPeriodo?.id_bimestre || 0);
+    setUnidadId(nuevoPeriodo?.unidades?.[0]?.id_unidad || 0);
   };
 
   const handleNotaChange = (idMatricula: number, idEval: number, valor: string) => {
@@ -449,7 +535,7 @@ export default function NotasPage() {
             <button
               type="button"
               onClick={guardarNotas}
-              disabled={saving || !grilla}
+              disabled={saving || !grilla || !unidadAbierta}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -481,14 +567,35 @@ export default function NotasPage() {
           </label>
           <label className="block">
             <span className={labelClass}><Calendar size={14} /> Periodo</span>
-            <select className={inputClass} value={periodoId} onChange={(e) => handlePeriodoChange(Number(e.target.value))}>
-              {periodos.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            <select
+              className={inputClass}
+              value={periodoId}
+              onChange={(e) => handlePeriodoChange(Number(e.target.value))}
+              disabled={loadingPeriodos || periodosNotas.length === 0}
+            >
+              {loadingPeriodos && <option value={0}>Cargando periodos...</option>}
+              {!loadingPeriodos && periodosNotas.length === 0 && <option value={0}>Sin periodos configurados</option>}
+              {periodosNotas.map((p) => (
+                <option key={p.id_bimestre} value={p.id_bimestre}>
+                  {p.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block">
             <span className={labelClass}><ClipboardList size={14} /> Unidad</span>
-            <select className={inputClass} value={unidadId} onChange={(e) => setUnidadId(Number(e.target.value))}>
-              {unidadesDelPeriodo.map((u) => <option key={u} value={u}>Unidad {u}</option>)}
+            <select
+              className={inputClass}
+              value={unidadId}
+              onChange={(e) => setUnidadId(Number(e.target.value))}
+              disabled={loadingPeriodos || unidadesDelPeriodo.length === 0}
+            >
+              {unidadesDelPeriodo.length === 0 && <option value={0}>Sin unidades</option>}
+              {unidadesDelPeriodo.map((unidad) => (
+                <option key={unidad.id_unidad} value={unidad.id_unidad}>
+                  {unidad.label} {unidad.estado_abierto ? '· Abierta' : '· Cerrada'}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block">
@@ -593,6 +700,46 @@ export default function NotasPage() {
         </section>
       )}
 
+      {/* Mensaje cuando no hay periodos configurados */}
+      {!loadingPeriodos && !periodosError && asignacionId && periodosNotas.length === 0 && (
+        <section className="rounded-3xl border border-dashed border-amber-200 bg-amber-50/80 px-6 py-5 text-sm text-amber-900 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-black">Este año aún no tiene periodos ni unidades configuradas.</p>
+                <p className="mt-1 max-w-3xl leading-6 text-amber-800">
+                  Dirección debe configurar los periodos del año antes de registrar notas.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.location.assign('/configuracion?tab=periodos')}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 px-4 text-xs font-black text-white shadow-[0_14px_28px_-18px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Ir a periodos
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Aviso de unidad cerrada */}
+      {grilla && unidadActual && !unidadAbierta && (
+        <section className="no-print rounded-3xl border border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-700 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={18} className="mt-0.5 text-slate-500" />
+            <div>
+              <p className="font-black text-slate-900">Unidad cerrada para edición</p>
+              <p className="mt-1 leading-6">
+                Puedes revisar o imprimir la grilla, pero no guardar cambios hasta que Dirección abra esta unidad.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Grilla */}
       {loading ? (
         <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] soft-fade-up">
@@ -607,7 +754,7 @@ export default function NotasPage() {
           <div className="no-print flex flex-col gap-4 border-b border-neutral-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">{grilla.asignacion?.curso || asignacionActual?.curso || 'Grilla de notas'}</h2>
-              <p className="mt-1 text-sm text-neutral-500">{grilla.asignacion?.seccion || asignacionActual?.seccion || 'Salón no especificado'} · {periodoActual.label} · Unidad {unidadId}</p>
+              <p className="mt-1 text-sm text-neutral-500">{grilla.asignacion?.seccion || asignacionActual?.seccion || 'Salón no especificado'} · {periodoActual?.label || 'Periodo'} · {unidadActual?.label || 'Unidad'}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600 ring-1 ring-emerald-200/60"><CheckCircle2 size={12} /> Aprobado: ≥11</span>
@@ -691,7 +838,8 @@ export default function NotasPage() {
                                       onChange={(e) =>
                                         handleNotaChange(fila.id_matricula, eva.id, e.target.value)
                                       }
-                                      className={`h-10 rounded-xl border text-center text-sm font-black tabular-nums outline-none transition-all focus:ring-2 ${getNotaColor(fila[eva.id])}`}
+                                      disabled={!unidadAbierta}
+                                      className={`h-10 rounded-xl border text-center text-sm font-black tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
                                       aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
                                     />
                                   </label>
@@ -757,7 +905,17 @@ export default function NotasPage() {
                             const style = grupoStyles[grupo.nombre] || grupoStyles['OTRAS EVALUACIONES'];
                             return grupo.evaluaciones.map((eva) => (
                               <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell}`}>
-                                <input type="text" inputMode="numeric" pattern="[0-9]*" value={formatearNotaEntera(fila[eva.id])} onFocus={(e) => e.currentTarget.select()} onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)} className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 ${getNotaColor(fila[eva.id])}`} aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`} />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={formatearNotaEntera(fila[eva.id])}
+                                  onFocus={(e) => e.currentTarget.select()}
+                                  onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
+                                  disabled={!unidadAbierta}
+                                  className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
+                                  aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
+                                />
                               </td>
                             ));
                           })}
@@ -791,7 +949,7 @@ export default function NotasPage() {
               <div>
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100"><Plus size={13} /> Nueva evaluación</div>
                 <h2 className="text-xl font-semibold text-neutral-900 tracking-tight">Agregar evaluación</h2>
-                <p className="mt-1 text-sm text-neutral-400">{periodoActual.label}, unidad {unidadId}.</p>
+                <p className="mt-1 text-sm text-neutral-400">{periodoActual?.label || 'Periodo'}, {unidadActual?.label || 'Unidad'}.</p>
               </div>
               <button type="button" onClick={closeModal} className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all duration-150 hover:bg-neutral-200 hover:text-neutral-600 flex-shrink-0"><X size={16} /></button>
             </div>

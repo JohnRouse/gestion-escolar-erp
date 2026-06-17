@@ -312,7 +312,7 @@ export class PlantillasController {
           estado_abierto: unidad.estado_abierto,
           id_bimestre: bimestre.id_bimestre,
           bimestre: bimestre.numero,
-          label: `Bimestre ${bimestre.numero} · Unidad ${unidad.numero}`,
+          label: `Periodo ${bimestre.numero} · Unidad ${unidad.numero}`,
         })),
       )
       .sort((a, b) => a.bimestre - b.bimestre || a.numero - b.numero);
