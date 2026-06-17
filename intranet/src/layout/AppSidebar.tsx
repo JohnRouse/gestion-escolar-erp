@@ -20,7 +20,7 @@ import {
   ChartColumn,
   Bell,
   GraduationCap,
-  Zap,
+  Sparkles,
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,25 +36,43 @@ const menuPrincipal: NavItem[] = [
 ];
 
 const menuAcademico: NavItem[] = [
-  { title: 'Matrícula', icon: UserPlus, path: '/matricula', roles: ['Admin', 'Secretaria', 'Director'], children: [
-    { title: 'Registrar matrícula', path: '/matricula' },
-    { title: 'Renovación / Re-matrícula', path: '/matricula/renovacion' },
-    { title: 'Historial de matrículas', path: '/matricula/historial' },
-  ]},
-  { title: 'Notas', icon: FileText, path: '/notas', roles: ['Profesor', 'Admin'], children: [
-    { title: 'Registro', path: '/notas' },
-    { title: 'Comentarios', path: '/notas/comentarios' },
-  ]},
-  { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin'] },
-  { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria'] },
+  {
+    title: 'Matrícula',
+    icon: UserPlus,
+    path: '/matricula',
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
+      { title: 'Registrar matrícula', path: '/matricula' },
+      { title: 'Renovación / Re-matrícula', path: '/matricula/renovacion' },
+      { title: 'Historial de matrículas', path: '/matricula/historial' },
+    ],
+  },
+  {
+    title: 'Notas',
+    icon: FileText,
+    path: '/notas',
+    roles: ['Profesor', 'Admin', 'Director'],
+    children: [
+      { title: 'Registro', path: '/notas' },
+      { title: 'Comentarios', path: '/notas/comentarios' },
+    ],
+  },
+  { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin', 'Director'] },
+  { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria', 'Director'] },
   { title: 'Horario', icon: GraduationCap, path: '/horario', roles: ['Profesor'] },
 ];
 
 const menuComunidad: NavItem[] = [
-  { title: 'Comunidad escolar', icon: Users, path: '/comunidad/alumnos', roles: ['Admin', 'Secretaria', 'Director'], children: [
-    { title: 'Alumnos', path: '/comunidad/alumnos' },
-    { title: 'Apoderados', path: '/comunidad/apoderados' },
-  ]},
+  {
+    title: 'Comunidad escolar',
+    icon: Users,
+    path: '/comunidad/alumnos',
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
+      { title: 'Alumnos', path: '/comunidad/alumnos' },
+      { title: 'Apoderados', path: '/comunidad/apoderados' },
+    ],
+  },
 ];
 
 const menuPersonal: NavItem[] = [
@@ -73,15 +91,21 @@ const menuComunicacion: NavItem[] = [
 ];
 
 const menuFinanzas: NavItem[] = [
-  { title: 'Tesorería', icon: Wallet, path: '/tesoreria', roles: ['Admin', 'Secretaria', 'Director'], children: [
+  {
+    title: 'Tesorería',
+    icon: Wallet,
+    path: '/tesoreria',
+    roles: ['Admin', 'Secretaria', 'Director'],
+    children: [
       { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
       { title: 'Agenda de cobranzas', path: '/tesoreria/agenda-cobranzas' },
-  { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
-  { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
-  { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
-  { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
-  { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
-  ]},
+      { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
+      { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
+      { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
+      { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
+      { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
+    ],
+  },
 ];
 
 const menuReportes: NavItem[] = [
@@ -92,7 +116,8 @@ const menuConfiguracion: NavItem[] = [
   { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin'] },
 ];
 
-const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
+const cx = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ');
 
 export default function AppSidebar() {
   const { user } = useAuth();
@@ -102,7 +127,9 @@ export default function AppSidebar() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const categorias = useMemo(() => {
-    const filterByRole = (items: NavItem[]) => items.filter((item) => !item.roles || item.roles.includes(user?.rol || ''));
+    const filterByRole = (items: NavItem[]) =>
+      items.filter((item) => !item.roles || item.roles.includes(user?.rol || ''));
+
     return [
       { titulo: 'Principal', items: filterByRole(menuPrincipal) },
       { titulo: 'Académico', items: filterByRole(menuAcademico) },
@@ -124,18 +151,24 @@ export default function AppSidebar() {
   const isChildActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
-    const activeParent = categorias.flatMap((c) => c.items).find((i) => i.children?.length && isRouteActive(i.path));
-    if (activeParent) setExpanded(activeParent.title);
-  }, [categorias, location.pathname]);
+    const activeParent = categorias
+      .flatMap((categoria) => categoria.items)
+      .find((item) => item.children?.length && isRouteActive(item.path));
+
+    if (activeParent && !isCollapsed) {
+      setExpanded(activeParent.title);
+    }
+  }, [categorias, location.pathname, isCollapsed]);
 
   const handleNavigate = (path?: string) => {
     if (!path) return;
+
     navigate(path);
     close();
   };
 
   const Tooltip = ({ title }: { title: string }) => (
-    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-xl bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 shadow-lg">
+    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-[80] -translate-y-1/2 whitespace-nowrap rounded-2xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-xl shadow-slate-950/15 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100">
       {title}
     </span>
   );
@@ -147,45 +180,74 @@ export default function AppSidebar() {
 
     if (hasChildren) {
       const isExpanded = expanded === item.title;
+
       return (
         <div key={item.title} className="relative">
           <button
             type="button"
-            onClick={() => setExpanded(isExpanded ? null : item.title)}
+            onClick={() => {
+              if (isCollapsed) {
+                handleNavigate(item.path);
+                return;
+              }
+
+              setExpanded(isExpanded ? null : item.title);
+            }}
+            title={isCollapsed ? item.title : undefined}
             className={cx(
-              'group relative flex h-10 w-full items-center rounded-xl text-sm font-medium transition-all duration-150',
+              'group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
               isCollapsed ? 'justify-center px-0' : 'justify-between px-3',
               isActive
-                ? 'bg-[#CCF32F] text-black shadow-sm'
-                : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+                ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
+                : 'text-slate-500 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950'
             )}
           >
             <span className={cx('flex min-w-0 items-center', isCollapsed ? 'justify-center' : 'gap-3')}>
-              <Icon size={18} strokeWidth={2} className={cx('shrink-0 transition-colors', isActive ? 'text-black' : 'text-neutral-400 group-hover:text-neutral-700')} />
+              <span
+                className={cx(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+                  isActive ? 'bg-white/12 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
+                )}
+              >
+                <Icon size={18} strokeWidth={2} />
+              </span>
               {!isCollapsed && <span className="truncate">{item.title}</span>}
             </span>
+
             {!isCollapsed && (
-              <ChevronDown size={16} className={cx('shrink-0 transition-transform duration-200', isExpanded && 'rotate-180', isActive ? 'text-black/60' : 'text-neutral-400')} />
+              <ChevronDown
+                size={16}
+                className={cx(
+                  'shrink-0 transition-transform duration-200',
+                  isExpanded && 'rotate-180',
+                  isActive ? 'text-white/70' : 'text-slate-400'
+                )}
+              />
             )}
+
             {isCollapsed && <Tooltip title={item.title} />}
           </button>
 
           {isExpanded && !isCollapsed && (
-            <div className="relative ml-3 mt-1.5 space-y-0.5 border-l border-neutral-200 pl-3">
+            <div className="relative ml-5 mt-2 space-y-1 border-l border-slate-200 pl-3">
               {item.children!.map((child) => {
                 const activeChild = isChildActive(child.path);
+
                 return (
                   <button
                     key={child.title}
                     type="button"
                     onClick={() => handleNavigate(child.path)}
                     className={cx(
-                      'relative flex min-h-8 w-full items-center rounded-lg px-2.5 py-1.5 text-left text-xs transition-all duration-150',
+                      'relative flex min-h-8 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
                       activeChild
-                        ? 'bg-[#CCF32F]/10 font-semibold text-black'
-                        : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'
+                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                     )}
                   >
+                    {activeChild && (
+                      <span className="absolute -left-[17px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-blue-600 ring-4 ring-white" />
+                    )}
                     <span className="truncate">{child.title}</span>
                   </button>
                 );
@@ -201,15 +263,23 @@ export default function AppSidebar() {
         key={item.title}
         type="button"
         onClick={() => handleNavigate(item.path)}
+        title={isCollapsed ? item.title : undefined}
         className={cx(
-          'group relative flex h-10 w-full items-center rounded-xl text-sm font-medium transition-all duration-150',
+          'group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
           isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
           isActive
-            ? 'bg-[#CCF32F] text-black shadow-sm'
-            : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+            ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
+            : 'text-slate-500 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950'
         )}
       >
-        <Icon size={18} strokeWidth={2} className={cx('shrink-0 transition-colors', isActive ? 'text-black' : 'text-neutral-400 group-hover:text-neutral-700')} />
+        <span
+          className={cx(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+            isActive ? 'bg-white/12 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
+          )}
+        >
+          <Icon size={18} strokeWidth={2} />
+        </span>
         {!isCollapsed && <span className="truncate">{item.title}</span>}
         {isCollapsed && <Tooltip title={item.title} />}
       </button>
@@ -219,70 +289,97 @@ export default function AppSidebar() {
   return (
     <>
       {isOpen && (
-        <button type="button" aria-label="Cerrar menú" onClick={close} className="fixed inset-0 z-40 bg-neutral-950/30 backdrop-blur-sm xl:hidden" />
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          onClick={close}
+          className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm transition-opacity xl:hidden"
+        />
       )}
 
-      <aside className={cx(
-        'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
-        isOpen ? 'translate-x-0' : '-translate-x-full',
-        isCollapsed ? 'w-24' : 'w-72'
-      )}>
-        <div className="flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          {/* Cabecera sin ícono */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-100 px-4">
+      <aside
+        className={cx(
+          'fixed inset-y-0 left-0 z-50 h-screen bg-transparent p-3 transition-all duration-300 ease-out xl:sticky xl:top-0 xl:z-0 xl:h-screen xl:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          isCollapsed ? 'w-[5.5rem]' : 'w-72'
+        )}
+      >
+        <div className="flex h-[calc(100vh-24px)] flex-col rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-3">
             <button
               type="button"
               onClick={() => handleNavigate('/dashboard')}
-              className={cx('group flex min-w-0 items-center rounded-xl transition-colors hover:bg-neutral-50', isCollapsed ? 'h-10 w-10 justify-center' : 'gap-3 px-2 py-2')}
+              className={cx(
+                'group flex min-w-0 items-center rounded-2xl transition-all duration-200 hover:bg-slate-50',
+                isCollapsed ? 'h-11 w-11 justify-center' : 'gap-3 px-2 py-2'
+              )}
             >
-              {!isCollapsed ? (
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-sm shadow-slate-950/15">
+                SM
+              </span>
+
+              {!isCollapsed && (
                 <span className="min-w-0 text-left">
-                  <span className="block truncate text-base font-semibold tracking-tight text-neutral-900">SMV</span>
-                  <span className="block truncate text-[11px] font-medium text-neutral-400">Gestión escolar</span>
+                  <span className="block truncate text-base font-black tracking-tight text-slate-950">SMV</span>
+                  <span className="block truncate text-[11px] font-semibold text-slate-400">Gestión escolar</span>
                 </span>
-              ) : (
-                <span className="text-base font-bold text-neutral-900">S</span>
               )}
             </button>
 
             {!isCollapsed && (
-              <button type="button" onClick={toggleCollapse} className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600" title="Contraer menú">
+              <button
+                type="button"
+                onClick={toggleCollapse}
+                className="flex h-9 w-9 items-center justify-center rounded-2xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700"
+                title="Contraer menú"
+              >
                 <PanelLeft size={18} />
               </button>
             )}
           </div>
 
           {isCollapsed && (
-            <div className="flex justify-center border-b border-neutral-100 py-2">
-              <button type="button" onClick={toggleCollapse} className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600" title="Expandir menú">
+            <div className="flex justify-center border-b border-slate-100 py-2">
+              <button
+                type="button"
+                onClick={toggleCollapse}
+                className="flex h-9 w-9 items-center justify-center rounded-2xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700"
+                title="Expandir menú"
+              >
                 <PanelLeft size={18} className="rotate-180" />
               </button>
             </div>
           )}
 
-          {/* Navegación */}
           <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 scrollbar-hide">
             {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
-                  <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">{categoria.titulo}</p>
+                  <p className="px-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {categoria.titulo}
+                  </p>
                 ) : (
-                  <div className="mx-auto my-2 h-px w-6 rounded-full bg-neutral-200" />
+                  <div className="mx-auto my-2 h-px w-7 rounded-full bg-slate-200" />
                 )}
-                <div className="space-y-0.5">{categoria.items.map(renderItem)}</div>
+
+                <div className="space-y-1">{categoria.items.map(renderItem)}</div>
               </section>
             ))}
           </nav>
 
-          {/* Pie */}
-          <div className="mt-auto shrink-0 border-t border-neutral-100 p-3">
+          <div className="mt-auto shrink-0 border-t border-slate-100 p-3">
             {!isCollapsed ? (
-              <div className="rounded-xl bg-neutral-50 px-3 py-3 ring-1 ring-neutral-200/60">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Rol activo</p>
-                <p className="mt-1.5 truncate text-sm font-medium text-neutral-800">{user?.rol || 'Usuario'}</p>
+              <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-200/70">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Rol activo</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 ring-1 ring-slate-200">
+                    <Sparkles size={15} />
+                  </span>
+                  <p className="truncate text-sm font-bold text-slate-800">{user?.rol || 'Usuario'}</p>
+                </div>
               </div>
             ) : (
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-xs font-semibold text-neutral-600">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-xs font-black text-slate-600 ring-1 ring-slate-200">
                 {(user?.rol || 'U').slice(0, 1)}
               </div>
             )}
