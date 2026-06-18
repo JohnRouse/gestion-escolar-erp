@@ -131,7 +131,7 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
-        <div key={`${contextKey}-${tabActivo}`} className="p-5">
+        <div key={`${contextKey}-${tabActivo}`} className="config-tab-content p-5">
           {tabActivo === 'anios' && <AniosLectivosTab />}
           {tabActivo === 'periodos' && <PeriodosUnidadesTab />}
           {tabActivo === 'niveles' && <NivelesGradosTab />}

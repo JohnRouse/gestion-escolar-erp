@@ -1,5 +1,3 @@
-//CURSOSTAB
-
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +28,9 @@ interface Curso {
   id_curso: number;
   nombre_curso: string;
   id_area?: number;
-  area?: { id_area?: number; nombre_area: string };
+  id_colegio?: number | null;
+  id_tenant?: number | null;
+  area?: { id_area?: number; nombre_area: string; id_colegio?: number | null };
 }
 
 type ModalState =
@@ -67,6 +67,7 @@ export default function CursosTab() {
     const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
 
     if (colegioGestionActualId) {
+      params.delete('scope');
       params.set('colegio_id', String(colegioGestionActualId));
     }
 
@@ -110,8 +111,8 @@ export default function CursosTab() {
         axios.get(`/api/academicos/areas${scopedQuery}`, authHeader),
         axios.get(`/api/academicos/cursos${scopedQuery}`, authHeader),
       ]);
-      setAreas(areasRes.data);
-      setCursos(cursosRes.data);
+      setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
+      setCursos(Array.isArray(cursosRes.data) ? cursosRes.data : []);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar áreas y cursos.' });
     } finally {
@@ -124,8 +125,24 @@ export default function CursosTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, scopedQuery]);
 
+  const areasInstitucion = useMemo(() => {
+    return areas.filter((area) => {
+      if (!colegioGestionActualId) return true;
+      return Number(area.id_colegio) === Number(colegioGestionActualId);
+    });
+  }, [areas, colegioGestionActualId]);
+
+  const cursosInstitucion = useMemo(() => {
+    return cursos.filter((curso) => {
+      if (!colegioGestionActualId) return true;
+
+      const cursoColegioId = curso.id_colegio ?? curso.area?.id_colegio;
+      return Number(cursoColegioId) === Number(colegioGestionActualId);
+    });
+  }, [cursos, colegioGestionActualId]);
+
   const cursosPorArea = (area: Area) =>
-    cursos.filter((curso) => curso.id_area === area.id_area || curso.area?.id_area === area.id_area || curso.area?.nombre_area === area.nombre_area);
+    cursosInstitucion.filter((curso) => Number(curso.id_area ?? curso.area?.id_area) === Number(area.id_area));
 
   const openModal = (state: ModalState) => {
     setModal(state);
@@ -195,7 +212,7 @@ export default function CursosTab() {
       showToast({
         type: 'success',
         title: 'Configuración guardada',
-        message: `Cursos actualizados para ${scopeLabel}.`,
+        message: `Cursos actualizados para ${nombreColegioGestion}.`,
       });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
@@ -283,7 +300,10 @@ export default function CursosTab() {
             <select
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
               value={colegioGestionId}
-              onChange={(event) => setColegioGestionId(event.target.value)}
+              onChange={(event) => {
+                setColegioGestionId(event.target.value);
+                setMensaje(null);
+              }}
             >
               {colegios.map((colegio) => (
                 <option key={colegio.id_colegio} value={colegio.id_colegio}>
@@ -318,7 +338,7 @@ export default function CursosTab() {
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Áreas</span>
             <FolderKanban size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{areas.length}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{areasInstitucion.length}</p>
           <p className="mt-1 text-sm text-gray-500">Agrupadores académicos</p>
         </div>
         <div className={`${panelClass} p-4`}>
@@ -326,19 +346,19 @@ export default function CursosTab() {
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Cursos</span>
             <BookOpenCheck size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{cursos.length}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{cursosInstitucion.length}</p>
           <p className="mt-1 text-sm text-gray-500">Cursos registrados</p>
         </div>
         <div className={`${panelClass} p-4`}>
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Promedio</span>
           <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
-            {areas.length ? Math.round(cursos.length / areas.length) : 0}
+            {areasInstitucion.length ? Math.round(cursosInstitucion.length / areasInstitucion.length) : 0}
           </p>
           <p className="mt-1 text-sm text-gray-500">Cursos por área</p>
         </div>
       </div>
 
-      {areas.length === 0 ? (
+      {areasInstitucion.length === 0 ? (
         <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}>
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
             <FolderKanban size={25} />
@@ -348,7 +368,7 @@ export default function CursosTab() {
         </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {areas.map((area, index) => {
+          {areasInstitucion.map((area, index) => {
             const cursosDelArea = cursosPorArea(area);
             return (
               <article key={area.id_area} className={`${panelClass} overflow-hidden`}>
