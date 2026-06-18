@@ -1735,7 +1735,11 @@ async eliminarNivelConfig(
       disponibles:
         sec.aula.capacidad -
         (Array.isArray(sec.matriculas) ? sec.matriculas.length : 0),
-      label: `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel}`,
+      abel:
+  scope.tipo === 'todos'
+    ? `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel} · ${sec.colegio?.nombre || 'Sin institución'}`
+    : `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel}`,
+colegio_nombre: sec.colegio?.nombre || null,
     }));
   }
 

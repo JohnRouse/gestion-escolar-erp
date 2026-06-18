@@ -16,6 +16,12 @@ import {
   X,
 } from 'lucide-react';
 
+interface ColegioBasico {
+  id_colegio: number;
+  nombre?: string | null;
+  nombre_corto?: string | null;
+}
+
 interface Grado {
   id_grado: number;
   nombre_grado: string;
@@ -24,6 +30,8 @@ interface Grado {
 
 interface Seccion {
   id_seccion: number;
+  id_colegio?: number | null;
+  colegio?: ColegioBasico | null;
   letra: string;
   id_grado: number;
   id_aula: number;
@@ -40,6 +48,7 @@ interface Nivel {
 interface AnioLectivo {
   id_anio: number;
   id_colegio?: number | null;
+  colegio?: ColegioBasico | null;
   nombre_anio: string;
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
@@ -57,13 +66,44 @@ const iconButtonClass =
 
 export default function SeccionesTab() {
   const { token } = useAuth();
-  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
+
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const [colegioGestionId, setColegioGestionId] = useState('');
+
+  const colegioGestionActualId = Number(
+    mostrarSelectorInstitucion
+      ? colegioGestionId
+      : colegioConfigId || colegios[0]?.id_colegio || 0,
+  );
+
+  const scopedQuery = useMemo(() => {
+    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+
+    if (colegioGestionActualId) {
+      params.set('colegio_id', String(colegioGestionActualId));
+    }
+
+    return `?${params.toString()}`;
+  }, [queryString, colegioGestionActualId]);
+
+  const nombreColegioGestion = useMemo(() => {
+    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
+    return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
+  }, [colegios, colegioGestionActualId, scopeLabel]);
+
+  const aniosFiltrados = useMemo(() => {
+    return anios.filter((anio) => {
+      if (!colegioGestionActualId) return true;
+      return !anio.id_colegio || anio.id_colegio === colegioGestionActualId;
+    });
+  }, [anios, colegioGestionActualId]);
 
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [grados, setGrados] = useState<Grado[]>([]);
@@ -91,21 +131,28 @@ export default function SeccionesTab() {
   const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
   const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
 
+  // Set initial colegioGestionId if in "todos" mode
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
+
   // Cargar niveles
   useEffect(() => {
     if (!token) return;
     axios
-      .get(`/api/academicos/niveles${queryString}`, authHeader)
+      .get(`/api/academicos/niveles${scopedQuery}`, authHeader)
       .then((res) => setNiveles(res.data))
       .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' }));
-  }, [token, authHeader, queryString]);
+  }, [token, authHeader, scopedQuery]);
 
   // Cargar años lectivos
   useEffect(() => {
     if (!token) return;
 
     axios
-      .get(`/api/academicos/anios${queryString}`, authHeader)
+      .get(`/api/academicos/anios${scopedQuery}`, authHeader)
       .then((res) => {
         const data: AnioLectivo[] = res.data || [];
         setAnios(data);
@@ -133,7 +180,7 @@ export default function SeccionesTab() {
       .catch(() =>
         setMensaje({ type: 'error', text: 'No se pudieron cargar los años lectivos.' }),
       );
-  }, [token, authHeader, queryString]);
+  }, [token, authHeader, scopedQuery]);
 
   // Resetear al cambiar de colegio/contexto
   useEffect(() => {
@@ -141,7 +188,7 @@ export default function SeccionesTab() {
     setGradoSeleccionado(null);
     setSecciones([]);
     setGrados([]);
-  }, [queryString]);
+  }, [scopedQuery]);
 
   // Cargar grados cuando cambia el nivel
   useEffect(() => {
@@ -152,11 +199,11 @@ export default function SeccionesTab() {
       return;
     }
 
-    const separator = queryString ? '&' : '?';
+    const separator = scopedQuery ? '&' : '?';
 
     axios
       .get(
-        `/api/academicos/grados${queryString}${separator}nivel_id=${nivelSeleccionado}`,
+        `/api/academicos/grados${scopedQuery}${separator}nivel_id=${nivelSeleccionado}`,
         authHeader,
       )
       .then((res) => {
@@ -165,14 +212,14 @@ export default function SeccionesTab() {
         setSecciones([]);
       })
       .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los grados.' }));
-  }, [nivelSeleccionado, token, authHeader, queryString]);
+  }, [nivelSeleccionado, token, authHeader, scopedQuery]);
 
   const cargarSecciones = async () => {
     if (!token || !gradoSeleccionado || !anioSeleccionado) return;
     setLoading(true);
     try {
       const res = await axios.get(
-        `/api/academicos/secciones${queryString ? `${queryString}&` : '?'}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
+        `/api/academicos/secciones${scopedQuery ? `${scopedQuery}&` : '?'}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
         authHeader
       );
       setSecciones(res.data);
@@ -187,7 +234,7 @@ export default function SeccionesTab() {
   useEffect(() => {
     cargarSecciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gradoSeleccionado, anioSeleccionado, token, queryString]);
+  }, [gradoSeleccionado, anioSeleccionado, token, scopedQuery]);
 
   const openCreate = () => {
     setModal({ mode: 'create' });
@@ -228,11 +275,11 @@ export default function SeccionesTab() {
         );
       } else {
         await axios.post(
-          `/api/academicos/secciones${queryString}`,
+          `/api/academicos/secciones${scopedQuery}`,
           {
             letra: cleanLetter,
             id_grado: gradoSeleccionado,
-            id_colegio: colegioConfigId || undefined,
+            id_colegio: colegioGestionActualId || undefined,
             id_tenant: tenant?.id_tenant || undefined,
             capacidad: Number(capacidad) || 30,
           },
@@ -277,12 +324,37 @@ export default function SeccionesTab() {
         <button
           type="button"
           onClick={openCreate}
-          disabled={!gradoSeleccionado || !anioSeleccionado || !colegioConfigId}
+          disabled={!gradoSeleccionado || !anioSeleccionado || !colegioGestionActualId}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
         >
           <Plus size={17} /> Nueva sección
         </button>
       </div>
+
+      {mostrarSelectorInstitucion && (
+        <section className={`${panelClass} p-4`}>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Institución para gestionar
+            </span>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              value={colegioGestionId}
+              onChange={(event) => setColegioGestionId(event.target.value)}
+            >
+              {colegios.map((colegio) => (
+                <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                  {colegio.nombre || colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="mt-2 text-xs font-semibold text-gray-500">
+            En vista consolidada, primero elige una institución para no mezclar años, grados ni secciones.
+          </p>
+        </section>
+      )}
 
       <div className={`${panelClass} p-4`}>
         <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
@@ -327,9 +399,10 @@ export default function SeccionesTab() {
               onChange={(event) => setAnioSeleccionado(event.target.value ? Number(event.target.value) : null)}
             >
               <option value="">Seleccionar año</option>
-              {anios.map((anio) => (
+              {aniosFiltrados.map((anio) => (
                 <option key={anio.id_anio} value={anio.id_anio}>
                   {anio.nombre_anio} · {anio.estado}
+                  {mostrarSelectorInstitucion && anio.colegio?.nombre ? ` · ${anio.colegio.nombre}` : ''}
                 </option>
               ))}
             </select>
@@ -338,7 +411,7 @@ export default function SeccionesTab() {
           <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm lg:min-w-64">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Vista actual</p>
             <p className="mt-1 truncate font-semibold text-gray-900">
-              {nivelActivo?.nombre_nivel || 'Sin nivel'} {gradoActivo ? `· ${gradoActivo.nombre_grado}` : ''}
+              {nombreColegioGestion} · {nivelActivo?.nombre_nivel || 'Sin nivel'} {gradoActivo ? `· ${gradoActivo.nombre_grado}` : ''}
             </p>
           </div>
         </div>
@@ -418,7 +491,10 @@ export default function SeccionesTab() {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900">{sec.grado?.nombre_grado || 'Grado'} “{sec.letra}”</p>
-                          <p className="text-xs text-gray-500">{sec.grado?.nivel?.nombre_nivel || nivelActivo?.nombre_nivel || 'Nivel'}</p>
+                          <p className="text-xs text-gray-500">
+                            {sec.grado?.nivel?.nombre_nivel || nivelActivo?.nombre_nivel || 'Nivel'}
+                            {sec.colegio?.nombre ? ` · ${sec.colegio.nombre}` : ''}
+                          </p>
                         </div>
                       </div>
                     </td>
