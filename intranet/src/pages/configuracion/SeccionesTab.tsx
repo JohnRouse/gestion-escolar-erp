@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   Building2,
@@ -85,6 +86,7 @@ export default function SeccionesTab() {
   const [letra, setLetra] = useState('');
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Seccion | null>(null);
 
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
@@ -300,14 +302,30 @@ export default function SeccionesTab() {
     }
   };
 
-  const eliminarSeccion = async (seccion: Seccion) => {
-    if (!confirm(`¿Eliminar la sección ${seccion.grado?.nombre_grado || ''} "${seccion.letra}"?`)) return;
+  const pedirEliminarSeccion = (seccion: Seccion) => {
+    setConfirmDelete(seccion);
+  };
+
+  const ejecutarEliminarSeccion = async () => {
+    if (!confirmDelete) return;
+
+    const seccion = confirmDelete;
+    setConfirmDelete(null);
+
     try {
       await axios.delete(`/api/academicos/secciones/${seccion.id_seccion}`, authHeader);
       setSecciones((prev) => prev.filter((item) => item.id_seccion !== seccion.id_seccion));
       setMensaje({ type: 'success', text: 'Sección eliminada correctamente.' });
+      showToast({
+        type: 'success',
+        title: 'Sección eliminada',
+        message: 'La sección fue retirada correctamente.',
+      });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar la sección.' });
+      setMensaje({
+        type: 'error',
+        text: err.response?.data?.message || 'No se pudo eliminar la sección.',
+      });
     }
   };
 
@@ -517,7 +535,7 @@ export default function SeccionesTab() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => eliminarSeccion(sec)}
+                          onClick={() => pedirEliminarSeccion(sec)}
                           className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}
                         >
                           <Trash2 size={15} />
@@ -600,6 +618,21 @@ export default function SeccionesTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={
+          confirmDelete
+            ? `Eliminar sección ${confirmDelete.grado?.nombre_grado || ''} "${confirmDelete.letra}"`
+            : 'Eliminar sección'
+        }
+        description="Esta acción retirará la sección si no tiene registros protegidos. No se recomienda eliminar secciones con historial."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminarSeccion}
+      />
     </div>
   );
 }

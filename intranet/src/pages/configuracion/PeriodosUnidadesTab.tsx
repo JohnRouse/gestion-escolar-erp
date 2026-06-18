@@ -119,7 +119,10 @@ export default function PeriodosUnidadesTab() {
   };
 
   const aniosFiltrados = useMemo(() => {
-    return anios.filter((anio) => !colegioSeleccionadoId || anio.id_colegio === colegioSeleccionadoId || !anio.id_colegio);
+    return anios.filter((anio) => {
+      if (!colegioSeleccionadoId) return true;
+      return Number(anio.id_colegio) === Number(colegioSeleccionadoId);
+    });
   }, [anios, colegioSeleccionadoId]);
 
   const unidades = useMemo(() => periodos.flatMap((periodo) => periodo.unidades), [periodos]);
@@ -143,21 +146,54 @@ export default function PeriodosUnidadesTab() {
 
   const scopedQuery = useMemo(() => queryConColegio(), [queryString, colegioSeleccionadoId]);
 
+  const estadoAnioPrioridad = (estado?: string) => {
+    const texto = String(estado || '').toLowerCase();
+
+    if (texto.includes('curso')) return 1;
+    if (texto.includes('abierto')) return 2;
+    if (texto.includes('matr')) return 3;
+    if (texto.includes('plan')) return 4;
+
+    return 9;
+  };
+
+  const elegirAnioRecomendado = (lista: Anio[]) => {
+    return [...lista].sort((a, b) => {
+      const prioridad = estadoAnioPrioridad(a.estado) - estadoAnioPrioridad(b.estado);
+      if (prioridad !== 0) return prioridad;
+      return Number(b.id_anio) - Number(a.id_anio);
+    })[0];
+  };
+
   const cargarAnios = async () => {
-    if (!token) return;
+    if (!token || !colegioSeleccionadoId) {
+      setAnios([]);
+      setIdAnio('');
+      setPeriodos([]);
+      return;
+    }
 
     setLoading(true);
     setMensaje(null);
+    setIdAnio('');
+    setPeriodos([]);
 
     try {
-      const res = await axios.get(`/api/academicos/anios${scopedQuery}`, authHeader);
+      const res = await axios.get(`/api/academicos/anios${queryConColegio()}`, authHeader);
       const data = Array.isArray(res.data) ? res.data : [];
-      setAnios(data);
-      setPeriodos([]);
 
-      const colegioInicial = activeScope.tipo === 'colegio' ? activeColegio?.id_colegio : colegios[0]?.id_colegio;
-      if (colegioInicial) setColegioGestionId(String(colegioInicial));
+      const filtrados = data.filter(
+        (anio) => Number(anio.id_colegio) === Number(colegioSeleccionadoId),
+      );
+
+      setAnios(filtrados);
+
+      const recomendado = elegirAnioRecomendado(filtrados);
+      setIdAnio(recomendado ? String(recomendado.id_anio) : '');
     } catch (error) {
+      setAnios([]);
+      setIdAnio('');
+      setPeriodos([]);
       setMensaje({ type: 'error', text: 'No se pudieron cargar los años lectivos.' });
     } finally {
       setLoading(false);
@@ -166,6 +202,17 @@ export default function PeriodosUnidadesTab() {
 
   const cargarPeriodos = async (anio = idAnio) => {
     if (!token || !anio) {
+      setPeriodos([]);
+      return;
+    }
+
+    const anioActual = anios.find((item) => String(item.id_anio) === String(anio));
+
+    if (
+      colegioSeleccionadoId &&
+      anioActual?.id_colegio &&
+      Number(anioActual.id_colegio) !== Number(colegioSeleccionadoId)
+    ) {
       setPeriodos([]);
       return;
     }
@@ -195,20 +242,15 @@ export default function PeriodosUnidadesTab() {
   useEffect(() => {
     cargarAnios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, scopedQuery]);
+  }, [token, colegioSeleccionadoId, queryString]);
 
-  useEffect(() => {
-    const recomendado =
-      aniosFiltrados.find((anio) => ['En curso', 'Abierto', 'Planificación'].includes(anio.estado || '')) ||
-      aniosFiltrados[0];
-
-    const siguienteAnio = recomendado ? String(recomendado.id_anio) : '';
-    setIdAnio(siguienteAnio);
-
-    if (!siguienteAnio) {
-      setPeriodos([]);
-    }
-  }, [aniosFiltrados, colegioSeleccionadoId]);
+  // The following effect is now handled inside cargarAnios, so we remove it.
+  // useEffect(() => {
+  //   const recomendado =
+  //     aniosFiltrados.find((anio) => ['En curso', 'Abierto', 'Planificación'].includes(anio.estado || '')) ||
+  //     aniosFiltrados[0];
+  //   setIdAnio(recomendado ? String(recomendado.id_anio) : '');
+  // }, [aniosFiltrados.length, colegioSeleccionadoId]);
 
   useEffect(() => {
     if (idAnio) cargarPeriodos(idAnio);
@@ -384,7 +426,16 @@ export default function PeriodosUnidadesTab() {
         <section className={`${panelClass} p-4`}>
           <label>
             <span className={labelClass}>Institución para gestionar</span>
-            <select className={inputClass} value={colegioGestionId} onChange={(event) => setColegioGestionId(event.target.value)}>
+            <select
+              className={inputClass}
+              value={colegioGestionId}
+              onChange={(event) => {
+                setColegioGestionId(event.target.value);
+                setIdAnio('');
+                setPeriodos([]);
+                setExpanded({});
+              }}
+            >
               {colegios.map((colegio) => (
                 <option key={colegio.id_colegio} value={colegio.id_colegio}>
                   {colegio.nombre || colegio.nombre_corto}

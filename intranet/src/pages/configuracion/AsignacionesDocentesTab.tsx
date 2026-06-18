@@ -4,6 +4,7 @@ import { AlertCircle, BookOpenCheck, CheckCircle2, GraduationCap, Loader2, Plus,
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface DocenteApi { id_persona: number; persona?: { nombres?: string; apellido_paterno?: string; apellido_materno?: string; dni?: string; }; }
 interface ColegioBasico {
@@ -85,6 +86,7 @@ export default function AsignacionesDocentesTab() {
   const [idCurso, setIdCurso] = useState('');
   const [idSeccion, setIdSeccion] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Asignacion | null>(null);
 
   const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
 
@@ -269,14 +271,30 @@ export default function AsignacionesDocentesTab() {
     }
   };
 
-  const eliminarAsignacion = async (asignacion: Asignacion) => {
-    if (!confirm(`¿Eliminar la asignación de ${asignacion.docente} en ${asignacion.curso} - ${asignacion.seccion}?`)) return;
+  const pedirEliminarAsignacion = (asignacion: Asignacion) => {
+    setConfirmDelete(asignacion);
+  };
+
+  const ejecutarEliminarAsignacion = async () => {
+    if (!confirmDelete) return;
+
+    const asignacion = confirmDelete;
+    setConfirmDelete(null);
+
     try {
-      await axios.delete(`/api/academicos/asignaciones-docentes/${asignacion.id_asignacion}${queryString}`, authHeader);
-      setAsignaciones((prev) => prev.filter((item) => item.id_asignacion !== asignacion.id_asignacion));
+      await axios.delete(
+        `/api/academicos/asignaciones-docentes/${asignacion.id_asignacion}${queryString}`,
+        authHeader,
+      );
+      setAsignaciones((prev) =>
+        prev.filter((item) => item.id_asignacion !== asignacion.id_asignacion),
+      );
       setMensaje({ type: 'success', text: 'Asignación eliminada correctamente.' });
     } catch (error: any) {
-      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo eliminar la asignación.' });
+      setMensaje({
+        type: 'error',
+        text: error.response?.data?.message || 'No se pudo eliminar la asignación.',
+      });
     }
   };
 
@@ -434,7 +452,7 @@ export default function AsignacionesDocentesTab() {
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => eliminarAsignacion(item)}
+                        onClick={() => pedirEliminarAsignacion(item)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition-all duration-150 hover:bg-red-50 hover:text-red-500"
                         title="Eliminar asignación"
                       >
@@ -448,6 +466,25 @@ export default function AsignacionesDocentesTab() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={
+          confirmDelete
+            ? `Eliminar asignación de ${confirmDelete.docente}`
+            : 'Eliminar asignación docente'
+        }
+        description={
+          confirmDelete
+            ? `${confirmDelete.curso} · ${confirmDelete.seccion}. Si ya tiene evaluaciones o notas, el sistema puede impedir la eliminación.`
+            : 'Esta acción retirará la relación docente-curso-sección.'
+        }
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminarAsignacion}
+      />
     </div>
   );
 }

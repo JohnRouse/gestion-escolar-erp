@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   CheckCircle2,
@@ -22,6 +23,7 @@ import {
 interface TipoEval {
   id_tipo_eval: number;
   nombre_tipo: string;
+  id_colegio?: number | null;
 }
 
 type ModalState =
@@ -35,13 +37,37 @@ const iconButtonClass =
 
 export default function TiposEvalTab() {
   const { token } = useAuth();
-  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
+
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const [colegioGestionId, setColegioGestionId] = useState('');
+
+  const colegioGestionActualId = Number(
+    mostrarSelectorInstitucion
+      ? colegioGestionId
+      : colegioConfigId || colegios[0]?.id_colegio || 0,
+  );
+
+  const scopedQuery = useMemo(() => {
+    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+
+    if (colegioGestionActualId) {
+      params.set('colegio_id', String(colegioGestionActualId));
+    }
+
+    return `?${params.toString()}`;
+  }, [queryString, colegioGestionActualId]);
+
+  const nombreColegioGestion = useMemo(() => {
+    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
+    return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
+  }, [colegios, colegioGestionActualId, scopeLabel]);
 
   const [tipos, setTipos] = useState<TipoEval[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,11 +76,18 @@ export default function TiposEvalTab() {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<TipoEval | null>(null);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
     [token]
   );
+
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
 
   const tiposFiltrados = tipos.filter((tipo) =>
     tipo.nombre_tipo.toLowerCase().includes(search.trim().toLowerCase())
@@ -64,7 +97,7 @@ export default function TiposEvalTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get(`/api/calificaciones/tipos-evaluacion${queryString}`, authHeader);
+      const res = await axios.get(`/api/calificaciones/tipos-evaluacion${scopedQuery}`, authHeader);
       setTipos(res.data);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los tipos de evaluación.' });
@@ -76,7 +109,7 @@ export default function TiposEvalTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString]);
+  }, [token, scopedQuery]);
 
   const openCreate = () => {
     setModal({ mode: 'create' });
@@ -114,17 +147,17 @@ export default function TiposEvalTab() {
           {
             nombre_tipo: cleanName,
             id_tenant: tenant?.id_tenant || undefined,
-            id_colegio: colegioConfigId || undefined,
+            id_colegio: colegioGestionActualId || undefined,
           },
           authHeader
         );
       } else {
         await axios.post(
-          `/api/calificaciones/tipos-evaluacion${queryString}`,
+          `/api/calificaciones/tipos-evaluacion${scopedQuery}`,
           {
             nombre_tipo: cleanName,
             id_tenant: tenant?.id_tenant || undefined,
-            id_colegio: colegioConfigId || undefined,
+            id_colegio: colegioGestionActualId || undefined,
           },
           authHeader,
         );
@@ -146,14 +179,25 @@ export default function TiposEvalTab() {
     }
   };
 
-  const handleDelete = async (tipo: TipoEval) => {
-    if (!confirm(`¿Eliminar el tipo de evaluación "${tipo.nombre_tipo}"?`)) return;
+  const pedirEliminarTipo = (tipo: TipoEval) => {
+    setConfirmDelete(tipo);
+  };
+
+  const ejecutarEliminarTipo = async () => {
+    if (!confirmDelete) return;
+
+    const tipo = confirmDelete;
+    setConfirmDelete(null);
+
     try {
       await axios.delete(`/api/calificaciones/tipos-evaluacion/${tipo.id_tipo_eval}`, authHeader);
       setTipos((prev) => prev.filter((item) => item.id_tipo_eval !== tipo.id_tipo_eval));
       setMensaje({ type: 'success', text: 'Tipo de evaluación eliminado correctamente.' });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar.' });
+      setMensaje({
+        type: 'error',
+        text: err.response?.data?.message || 'No se pudo eliminar.',
+      });
     }
   };
 
@@ -185,6 +229,31 @@ export default function TiposEvalTab() {
           <Plus size={17} /> Nuevo tipo
         </button>
       </div>
+
+      {mostrarSelectorInstitucion && (
+        <section className={`${panelClass} p-4`}>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Institución para gestionar
+            </span>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              value={colegioGestionId}
+              onChange={(event) => setColegioGestionId(event.target.value)}
+            >
+              {colegios.map((colegio) => (
+                <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                  {colegio.nombre || colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="mt-2 text-xs font-semibold text-gray-500">
+            En vista consolidada, primero elige una institución para evitar duplicados entre colegios.
+          </p>
+        </section>
+      )}
 
       {mensaje && !modal && (
         <div
@@ -273,7 +342,7 @@ export default function TiposEvalTab() {
                         <button type="button" onClick={() => openEdit(tipo)} className={iconButtonClass}>
                           <Pencil size={15} />
                         </button>
-                        <button type="button" onClick={() => handleDelete(tipo)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
+                        <button type="button" onClick={() => pedirEliminarTipo(tipo)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -334,6 +403,17 @@ export default function TiposEvalTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={`Eliminar tipo "${confirmDelete?.nombre_tipo || ''}"`}
+        description="Si este tipo ya fue usado en evaluaciones o plantillas, el sistema puede impedir la eliminación para proteger el historial."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminarTipo}
+      />
     </div>
   );
 }

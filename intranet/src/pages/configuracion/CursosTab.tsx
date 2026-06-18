@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   BookOpenCheck,
@@ -45,13 +46,37 @@ const iconButtonClass =
 
 export default function CursosTab() {
   const { token } = useAuth();
-  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
+
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const [colegioGestionId, setColegioGestionId] = useState('');
+
+  const colegioGestionActualId = Number(
+    mostrarSelectorInstitucion
+      ? colegioGestionId
+      : colegioConfigId || colegios[0]?.id_colegio || 0,
+  );
+
+  const scopedQuery = useMemo(() => {
+    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+
+    if (colegioGestionActualId) {
+      params.set('colegio_id', String(colegioGestionActualId));
+    }
+
+    return `?${params.toString()}`;
+  }, [queryString, colegioGestionActualId]);
+
+  const nombreColegioGestion = useMemo(() => {
+    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
+    return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
+  }, [colegios, colegioGestionActualId, scopeLabel]);
 
   const [areas, setAreas] = useState<Area[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
@@ -60,19 +85,30 @@ export default function CursosTab() {
   const [nombre, setNombre] = useState('');
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<
+    | { type: 'area'; area: Area }
+    | { type: 'curso'; curso: Curso }
+    | null
+  >(null);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
     [token]
   );
 
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
+
   const loadData = async () => {
     if (!token) return;
     setLoading(true);
     try {
       const [areasRes, cursosRes] = await Promise.all([
-        axios.get(`/api/academicos/areas${queryString}`, authHeader),
-        axios.get(`/api/academicos/cursos${queryString}`, authHeader),
+        axios.get(`/api/academicos/areas${scopedQuery}`, authHeader),
+        axios.get(`/api/academicos/cursos${scopedQuery}`, authHeader),
       ]);
       setAreas(areasRes.data);
       setCursos(cursosRes.data);
@@ -86,7 +122,7 @@ export default function CursosTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString]);
+  }, [token, scopedQuery]);
 
   const cursosPorArea = (area: Area) =>
     cursos.filter((curso) => curso.id_area === area.id_area || curso.area?.id_area === area.id_area || curso.area?.nombre_area === area.nombre_area);
@@ -124,11 +160,11 @@ export default function CursosTab() {
           await axios.put(`/api/academicos/areas/${modal.area.id_area}`, { nombre_area: cleanName }, authHeader);
         } else {
           await axios.post(
-            `/api/academicos/areas${queryString}`,
+            `/api/academicos/areas${scopedQuery}`,
             {
               nombre_area: cleanName,
               id_tenant: tenant?.id_tenant || undefined,
-              id_colegio: colegioConfigId || undefined,
+              id_colegio: colegioGestionActualId || undefined,
             },
             authHeader,
           );
@@ -141,12 +177,12 @@ export default function CursosTab() {
         );
       } else {
         await axios.post(
-          `/api/academicos/cursos${queryString}`,
+          `/api/academicos/cursos${scopedQuery}`,
           {
             nombre_curso: cleanName,
             id_area: modal.area.id_area,
             id_tenant: tenant?.id_tenant || undefined,
-            id_colegio: colegioConfigId || modal.area.id_colegio || undefined,
+            id_colegio: colegioGestionActualId || modal.area.id_colegio || undefined,
           },
           authHeader
         );
@@ -168,26 +204,42 @@ export default function CursosTab() {
     }
   };
 
-  const deleteArea = async (area: Area) => {
-    if (!confirm(`¿Eliminar el área "${area.nombre_area}"?`)) return;
-    try {
-      await axios.delete(`/api/academicos/areas/${area.id_area}`, authHeader);
-      setAreas((prev) => prev.filter((item) => item.id_area !== area.id_area));
-      setCursos((prev) => prev.filter((curso) => curso.id_area !== area.id_area && curso.area?.nombre_area !== area.nombre_area));
-      setMensaje({ type: 'success', text: 'Área eliminada correctamente.' });
-    } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el área.' });
-    }
+  const pedirEliminarArea = (area: Area) => {
+    setConfirmDelete({ type: 'area', area });
   };
 
-  const deleteCurso = async (curso: Curso) => {
-    if (!confirm(`¿Eliminar el curso "${curso.nombre_curso}"?`)) return;
+  const pedirEliminarCurso = (curso: Curso) => {
+    setConfirmDelete({ type: 'curso', curso });
+  };
+
+  const ejecutarEliminar = async () => {
+    if (!confirmDelete) return;
+
+    const item = confirmDelete;
+    setConfirmDelete(null);
+
     try {
-      await axios.delete(`/api/academicos/cursos/${curso.id_curso}`, authHeader);
-      setCursos((prev) => prev.filter((item) => item.id_curso !== curso.id_curso));
-      setMensaje({ type: 'success', text: 'Curso eliminado correctamente.' });
+      if (item.type === 'area') {
+        await axios.delete(`/api/academicos/areas/${item.area.id_area}`, authHeader);
+        setAreas((prev) => prev.filter((area) => area.id_area !== item.area.id_area));
+        setCursos((prev) =>
+          prev.filter(
+            (curso) =>
+              curso.id_area !== item.area.id_area &&
+              curso.area?.nombre_area !== item.area.nombre_area,
+          ),
+        );
+        setMensaje({ type: 'success', text: 'Área eliminada correctamente.' });
+      } else {
+        await axios.delete(`/api/academicos/cursos/${item.curso.id_curso}`, authHeader);
+        setCursos((prev) => prev.filter((curso) => curso.id_curso !== item.curso.id_curso));
+        setMensaje({ type: 'success', text: 'Curso eliminado correctamente.' });
+      }
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el curso.' });
+      setMensaje({
+        type: 'error',
+        text: err.response?.data?.message || 'No se pudo eliminar el registro.',
+      });
     }
   };
 
@@ -210,7 +262,7 @@ export default function CursosTab() {
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Áreas curriculares y cursos</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Agrupa los cursos por área para mantener el plan académico claro. Contexto: {scopeLabel}.
+            Agrupa los cursos por área para mantener el plan académico claro. Contexto: {nombreColegioGestion}.
           </p>
         </div>
         <button
@@ -221,6 +273,31 @@ export default function CursosTab() {
           <Plus size={17} /> Nueva área
         </button>
       </div>
+
+      {mostrarSelectorInstitucion && (
+        <section className={`${panelClass} p-4`}>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Institución para gestionar
+            </span>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              value={colegioGestionId}
+              onChange={(event) => setColegioGestionId(event.target.value)}
+            >
+              {colegios.map((colegio) => (
+                <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                  {colegio.nombre || colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="mt-2 text-xs font-semibold text-gray-500">
+            En vista consolidada, primero elige una institución para evitar mezclar cursos entre colegios.
+          </p>
+        </section>
+      )}
 
       {mensaje && !modal && (
         <div
@@ -292,7 +369,7 @@ export default function CursosTab() {
                     <button type="button" onClick={() => openModal({ type: 'area', mode: 'edit', area })} className={iconButtonClass}>
                       <Pencil size={15} />
                     </button>
-                    <button type="button" onClick={() => deleteArea(area)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
+                    <button type="button" onClick={() => pedirEliminarArea(area)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -314,7 +391,7 @@ export default function CursosTab() {
                           <button type="button" onClick={() => openModal({ type: 'curso', mode: 'edit', area, curso })} className={iconButtonClass}>
                             <Pencil size={14} />
                           </button>
-                          <button type="button" onClick={() => deleteCurso(curso)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
+                          <button type="button" onClick={() => pedirEliminarCurso(curso)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -378,6 +455,25 @@ export default function CursosTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={
+          confirmDelete?.type === 'area'
+            ? `Eliminar área "${confirmDelete.area.nombre_area}"`
+            : `Eliminar curso "${confirmDelete?.curso.nombre_curso || ''}"`
+        }
+        description={
+          confirmDelete?.type === 'area'
+            ? 'Si el área tiene cursos vinculados, el sistema puede impedir la eliminación para proteger la configuración.'
+            : 'Si el curso tiene asignaciones o notas, el sistema puede impedir la eliminación.'
+        }
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminar}
+      />
     </div>
   );
 }
