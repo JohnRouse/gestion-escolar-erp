@@ -573,7 +573,17 @@ export class FinanzasController {
 
   @Delete('conceptos/:id')
   @Roles('Admin', 'Director')
-  async deleteConcepto(@Param('id') id: string) {
-    return this.finanzasService.deleteConcepto(Number(id));
+  async deleteConcepto(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.finanzasService.deleteConcepto(Number(id), {
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
   }
 }

@@ -1,5 +1,3 @@
-//TIPOSEVALTAB
-
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
@@ -58,6 +56,7 @@ export default function TiposEvalTab() {
     const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
 
     if (colegioGestionActualId) {
+      params.delete('scope');
       params.set('colegio_id', String(colegioGestionActualId));
     }
 
@@ -89,7 +88,17 @@ export default function TiposEvalTab() {
     }
   }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
 
-  const tiposFiltrados = tipos.filter((tipo) =>
+  const tiposInstitucion = useMemo(() => {
+    return tipos.filter((tipo) => {
+      if (!colegioGestionActualId) return true;
+
+      // Refuerzo frontend: aunque el backend devuelva más datos, la pantalla
+      // solo muestra los tipos de la institución seleccionada.
+      return Number(tipo.id_colegio) === Number(colegioGestionActualId);
+    });
+  }, [tipos, colegioGestionActualId]);
+
+  const tiposFiltrados = tiposInstitucion.filter((tipo) =>
     tipo.nombre_tipo.toLowerCase().includes(search.trim().toLowerCase())
   );
 
@@ -98,7 +107,7 @@ export default function TiposEvalTab() {
     setLoading(true);
     try {
       const res = await axios.get(`/api/calificaciones/tipos-evaluacion${scopedQuery}`, authHeader);
-      setTipos(res.data);
+      setTipos(Array.isArray(res.data) ? res.data : []);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los tipos de evaluación.' });
     } finally {
@@ -170,7 +179,7 @@ export default function TiposEvalTab() {
       showToast({
         type: 'success',
         title: 'Tipo guardado',
-        message: `Tipo de evaluación guardado para ${scopeLabel}.`,
+        message: `Tipo de evaluación guardado para ${nombreColegioGestion}.`,
       });
     } catch (err: any) {
       setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
@@ -239,7 +248,11 @@ export default function TiposEvalTab() {
             <select
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
               value={colegioGestionId}
-              onChange={(event) => setColegioGestionId(event.target.value)}
+              onChange={(event) => {
+                setColegioGestionId(event.target.value);
+                setSearch('');
+                setMensaje(null);
+              }}
             >
               {colegios.map((colegio) => (
                 <option key={colegio.id_colegio} value={colegio.id_colegio}>
@@ -274,7 +287,7 @@ export default function TiposEvalTab() {
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Tipos</span>
             <ClipboardCheck size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{tipos.length}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{tiposInstitucion.length}</p>
           <p className="mt-1 text-sm text-gray-500">Categorías registradas</p>
         </div>
         <div className={`${panelClass} p-4 md:col-span-2`}>

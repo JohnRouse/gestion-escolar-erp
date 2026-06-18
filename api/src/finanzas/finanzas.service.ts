@@ -1349,8 +1349,57 @@ export class FinanzasService {
     });
   }
 
-  async deleteConcepto(id: number) {
-    return this.prisma.conceptoPago.delete({ where: { id_concepto: id } });
+  async deleteConcepto(id: number, params?: ScopeParams) {
+    const scope = params ? await this.resolveScope(params) : null;
+
+    const concepto = await this.prisma.conceptoPago.findFirst({
+      where: {
+        id_concepto: id,
+        ...(scope ? this.colegioWhere(scope) : {}),
+      },
+      include: {
+        colegio: true,
+        anio: true,
+        _count: {
+          select: {
+            cronogramas: true,
+            detalles_plan_pension: true,
+          },
+        },
+      },
+    });
+
+    if (!concepto) {
+      throw new NotFoundException('Concepto no encontrado o sin acceso.');
+    }
+
+    const cronogramas = concepto._count?.cronogramas || 0;
+    const detallesPlan = concepto._count?.detalles_plan_pension || 0;
+
+    if (cronogramas > 0 || detallesPlan > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar "${concepto.nombre_concepto}" porque ya está relacionado con ` +
+          `${cronogramas} cronograma(s) y ${detallesPlan} detalle(s) de plan de pensiones. ` +
+          'Para conservar el historial financiero, usa anulación o desactivación en lugar de eliminarlo.',
+      );
+    }
+
+    try {
+      return await this.prisma.conceptoPago.delete({
+        where: { id_concepto: id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'No se puede eliminar este concepto porque ya tiene información financiera relacionada.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   async procesarPagoExterno(data: any) {
