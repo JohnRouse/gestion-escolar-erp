@@ -165,11 +165,19 @@ export default function PeriodosUnidadesTab() {
     })[0];
   };
 
+  // Inicializar la institución en vista consolidada
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
+
   const cargarAnios = async () => {
     if (!token || !colegioSeleccionadoId) {
       setAnios([]);
       setIdAnio('');
       setPeriodos([]);
+      setLoading(false); // Evitar que la pantalla se quede en skeleton
       return;
     }
 
@@ -243,14 +251,6 @@ export default function PeriodosUnidadesTab() {
     cargarAnios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, colegioSeleccionadoId, queryString]);
-
-  // The following effect is now handled inside cargarAnios, so we remove it.
-  // useEffect(() => {
-  //   const recomendado =
-  //     aniosFiltrados.find((anio) => ['En curso', 'Abierto', 'Planificación'].includes(anio.estado || '')) ||
-  //     aniosFiltrados[0];
-  //   setIdAnio(recomendado ? String(recomendado.id_anio) : '');
-  // }, [aniosFiltrados.length, colegioSeleccionadoId]);
 
   useEffect(() => {
     if (idAnio) cargarPeriodos(idAnio);
@@ -405,7 +405,7 @@ export default function PeriodosUnidadesTab() {
         </div>
 
         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200/70">
-          Contexto: <span className="text-slate-950">{mostrarSelectorInstitucion ? 'Todas las instituciones' : scopeLabel}</span>
+          Contexto: <span className="text-slate-950">{nombreColegio(colegioSeleccionadoId) || scopeLabel}</span>
         </div>
       </div>
 
@@ -509,7 +509,6 @@ export default function PeriodosUnidadesTab() {
               {aniosFiltrados.map((anio) => (
                 <option key={anio.id_anio} value={anio.id_anio}>
                   {anio.nombre_anio} · {anio.estado}
-                  {mostrarSelectorInstitucion && anio.colegio?.nombre ? ` · ${anio.colegio.nombre}` : ''}
                 </option>
               ))}
             </select>

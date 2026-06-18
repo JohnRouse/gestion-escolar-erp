@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   CalendarDays,
@@ -89,7 +90,7 @@ export default function ConceptosPagoTab() {
   const colegioDefault =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
-      : colegios[0]?.id_colegio || '';
+      : '';
 
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,12 +105,16 @@ export default function ConceptosPagoTab() {
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [colegioId, setColegioId] = useState<number | ''>(colegioDefault);
+  const [filtroColegioId, setFiltroColegioId] = useState<number | ''>(colegioDefault);
+  const [confirmDelete, setConfirmDelete] = useState<Concepto | null>(null);
+
   const [anioId, setAnioId] = useState<number | ''>('');
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [loadingAnios, setLoadingAnios] = useState(false);
 
   // Sincronizar colegioId al cambiar el contexto global
   useEffect(() => {
+    setFiltroColegioId(colegioDefault);
     setColegioId(colegioDefault);
     setAnioId('');
     setMensaje(null);
@@ -119,6 +124,14 @@ export default function ConceptosPagoTab() {
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
     [token]
   );
+
+  const mostrarFiltroInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+
+  const nombreColegio = (id?: number | null) => {
+    if (!id) return 'Todos los colegios';
+    const colegio = colegios.find((item) => item.id_colegio === id);
+    return colegio?.nombre || colegio?.nombre_corto || `Colegio #${id}`;
+  };
 
   const loadAnios = async (targetColegioId: number | '') => {
     if (!token || !targetColegioId) {
@@ -178,10 +191,19 @@ export default function ConceptosPagoTab() {
   const loadData = async () => {
     if (!token) return;
     setLoading(true);
+
     try {
-      const query = colegioId ? `?colegio_id=${colegioId}` : queryString;
+      const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+
+      if (filtroColegioId) {
+        params.set('colegio_id', String(filtroColegioId));
+      } else if (activeScope.tipo === 'todos') {
+        params.set('scope', 'all');
+      }
+
+      const query = params.toString() ? `?${params.toString()}` : '';
       const res = await axios.get(`/api/tesoreria/conceptos${query}`, authHeader);
-      setConceptos(res.data);
+      setConceptos(Array.isArray(res.data) ? res.data : []);
     } catch {
       setMensaje({ type: 'error', text: 'No se pudieron cargar los conceptos de pago.' });
     } finally {
@@ -192,16 +214,26 @@ export default function ConceptosPagoTab() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, colegioId]);
+  }, [token, filtroColegioId, queryString]);
 
   const openCreate = () => {
+    const colegioParaFormulario =
+      activeScope.tipo === 'colegio'
+        ? colegioDefault
+        : filtroColegioId || '';
+
     setModal({ mode: 'create' });
     setNombre('');
     setMonto('');
     setTipoConcepto('MATRICULA');
     setEsPension(false);
-    setColegioId(colegioDefault);
-    setTimeout(() => loadAnios(colegioDefault), 0);
+    setColegioId(colegioParaFormulario);
+    setAnioId('');
+    if (colegioParaFormulario) {
+      setTimeout(() => loadAnios(colegioParaFormulario), 0);
+    } else {
+      setAnios([]);
+    }
     setMensaje(null);
   };
 
@@ -296,22 +328,22 @@ export default function ConceptosPagoTab() {
     }
   };
 
-  const handleDelete = async (concepto: Concepto) => {
-    if (!confirm(`¿Eliminar el concepto "${concepto.nombre_concepto}"?`)) return;
+  const pedirEliminarConcepto = (concepto: Concepto) => {
+    setConfirmDelete(concepto);
+  };
+
+  const ejecutarEliminarConcepto = async () => {
+    if (!confirmDelete) return;
+
+    const concepto = confirmDelete;
+    setConfirmDelete(null);
+
     try {
       await axios.delete(`/api/tesoreria/conceptos/${concepto.id_concepto}`, authHeader);
       setConceptos((prev) => prev.filter((item) => item.id_concepto !== concepto.id_concepto));
-      showToast({
-        type: 'success',
-        title: 'Concepto eliminado',
-        message: `"${concepto.nombre_concepto}" fue eliminado correctamente.`,
-      });
+      showToast({ type: 'success', title: 'Concepto eliminado', message: `"${concepto.nombre_concepto}" fue eliminado correctamente.` });
     } catch (err: any) {
-      showToast({
-        type: 'error',
-        title: 'Error al eliminar',
-        message: err.response?.data?.message || 'No se pudo eliminar el concepto.',
-      });
+      showToast({ type: 'error', title: 'Error al eliminar', message: err.response?.data?.message || 'No se pudo eliminar el concepto.' });
     }
   };
 
@@ -334,7 +366,7 @@ export default function ConceptosPagoTab() {
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Conceptos de pago</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Define pensiones, matrícula y otros cobros base por colegio y año lectivo. Contexto: {scopeLabel}.
+            Define pensiones, matrícula y otros cobros base por colegio y año lectivo. Contexto: {nombreColegio(filtroColegioId || undefined)}.
           </p>
         </div>
         <button
@@ -345,6 +377,31 @@ export default function ConceptosPagoTab() {
           <Plus size={17} /> Nuevo concepto
         </button>
       </div>
+
+      {mostrarFiltroInstitucion && (
+        <section className={`${panelClass} p-4`}>
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Institución para visualizar
+            </span>
+            <select
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
+              value={filtroColegioId}
+              onChange={(event) => setFiltroColegioId(event.target.value ? Number(event.target.value) : '')}
+            >
+              <option value="">Todos los colegios</option>
+              {colegios.map((colegio) => (
+                <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                  {colegio.nombre || colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-2 text-xs font-semibold text-gray-500">
+            Usa todos para revisar conceptos consolidados o selecciona una institución para gestionarla.
+          </p>
+        </section>
+      )}
 
       {mensaje && !modal && (
         <div
@@ -456,7 +513,7 @@ export default function ConceptosPagoTab() {
                     <td className="px-4 py-4">
                       <p className="font-semibold text-gray-700">{concepto.anio?.nombre_anio || 'Año no identificado'}</p>
                       <p className="text-xs font-medium text-gray-400">
-                        {concepto.colegio?.nombre_corto || concepto.colegio?.nombre || 'Colegio no identificado'}
+                        {concepto.colegio?.nombre || concepto.colegio?.nombre_corto || 'Colegio no identificado'}
                       </p>
                     </td>
                     <td className="px-4 py-4 text-right font-semibold text-gray-700">{formatCurrency(concepto.monto_base)}</td>
@@ -486,7 +543,7 @@ export default function ConceptosPagoTab() {
                         <button type="button" onClick={() => openEdit(concepto)} className={iconButtonClass}>
                           <Pencil size={15} />
                         </button>
-                        <button type="button" onClick={() => handleDelete(concepto)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
+                        <button type="button" onClick={() => pedirEliminarConcepto(concepto)} className={`${iconButtonClass} hover:border-red-100 hover:bg-red-50 hover:text-red-500`}>
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -533,7 +590,7 @@ export default function ConceptosPagoTab() {
                     <option value="">Seleccionar colegio</option>
                     {colegios.map((colegio) => (
                       <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                        {colegio.nombre_corto || colegio.nombre}
+                        {colegio.nombre || colegio.nombre_corto}
                       </option>
                     ))}
                   </select>
@@ -635,6 +692,17 @@ export default function ConceptosPagoTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={`Eliminar concepto "${confirmDelete?.nombre_concepto || ''}"`}
+        description="Si el concepto ya generó deudas o cronogramas, el sistema puede impedir su eliminación para proteger el historial financiero."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminarConcepto}
+      />
     </div>
   );
 }

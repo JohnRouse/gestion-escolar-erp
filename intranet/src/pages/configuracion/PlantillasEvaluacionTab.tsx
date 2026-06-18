@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   ArrowDown,
@@ -71,6 +72,7 @@ export default function PlantillasEvaluacionTab() {
   const [applying, setApplying] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Plantilla | null>(null);
   const [search, setSearch] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -137,30 +139,46 @@ export default function PlantillasEvaluacionTab() {
     return `?${params.toString()}`;
   };
 
+  const scopedQuery = useMemo(() => queryConColegio(), [queryString, colegioSeleccionadoId]);
+
+  useEffect(() => {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+      setColegioGestionId(String(colegios[0].id_colegio));
+    }
+  }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
+
   const loadData = async () => {
     if (!token) return;
+
+    if (mostrarSelectorInstitucion && !colegioSeleccionadoId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setMensaje(null);
+
     try {
       const [plantillasRes, tiposRes, nivelesRes, cursosRes, seccionesRes, aniosRes] = await Promise.all([
-        axios.get(`/api/plantillas${queryString}`, authHeader),
-        axios.get(`/api/calificaciones/tipos-evaluacion${queryString}`, authHeader),
-        axios.get(`/api/academicos/niveles${queryString}`, authHeader),
-        axios.get(`/api/academicos/cursos${queryString}`, authHeader),
-        axios.get(`/api/academicos/secciones${queryString}`, authHeader),
-        axios.get(`/api/academicos/anios${queryString}`, authHeader),
+        axios.get(`/api/plantillas${scopedQuery}`, authHeader),
+        axios.get(`/api/calificaciones/tipos-evaluacion${scopedQuery}`, authHeader),
+        axios.get(`/api/academicos/niveles${scopedQuery}`, authHeader),
+        axios.get(`/api/academicos/cursos${scopedQuery}`, authHeader),
+        axios.get(`/api/academicos/secciones${scopedQuery}`, authHeader),
+        axios.get(`/api/academicos/anios${scopedQuery}`, authHeader),
       ]);
+
       setPlantillas(Array.isArray(plantillasRes.data) ? plantillasRes.data : []);
       setTipos(Array.isArray(tiposRes.data) ? tiposRes.data : []);
       setNiveles(Array.isArray(nivelesRes.data) ? nivelesRes.data : []);
       setCursos(Array.isArray(cursosRes.data) ? cursosRes.data : []);
       setSecciones(Array.isArray(seccionesRes.data) ? seccionesRes.data : []);
       setAnios(Array.isArray(aniosRes.data) ? aniosRes.data : []);
-      const colegioInicial = activeScope.tipo === 'colegio' ? activeColegio?.id_colegio : colegios[0]?.id_colegio;
-      if (colegioInicial) setColegioGestionId(String(colegioInicial));
     } catch (error) {
       setMensaje({ type: 'error', text: 'No se pudieron cargar las plantillas de evaluación.' });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadUnidades = async (anio = idAnio) => {
@@ -181,7 +199,7 @@ export default function PlantillasEvaluacionTab() {
     setAsignaciones(Array.isArray(res.data) ? res.data : []);
   };
 
-  useEffect(() => { loadData(); }, [token, queryString]);
+  useEffect(() => { loadData(); }, [token, scopedQuery]);
   useEffect(() => {
     const recomendado = aniosFiltrados.find((anio) => ['En curso', 'Abierto', 'Planificación'].includes(anio.estado || '')) || aniosFiltrados[0];
     setIdAnio(recomendado ? String(recomendado.id_anio) : '');
@@ -266,10 +284,24 @@ export default function PlantillasEvaluacionTab() {
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (plantilla: Plantilla) => {
-    if (!confirm(`¿Eliminar la plantilla "${plantilla.nombre}"?`)) return;
-    try { await axios.delete(`/api/plantillas/${plantilla.id_plantilla}`, authHeader); setPlantillas((c) => c.filter((p) => p.id_plantilla !== plantilla.id_plantilla)); }
-    catch (error: any) { setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo eliminar la plantilla.' }); }
+  const pedirEliminarPlantilla = (plantilla: Plantilla) => {
+    setConfirmDelete(plantilla);
+  };
+
+  const ejecutarEliminarPlantilla = async () => {
+    if (!confirmDelete) return;
+
+    const plantilla = confirmDelete;
+    setConfirmDelete(null);
+
+    try {
+      await axios.delete(`/api/plantillas/${plantilla.id_plantilla}`, authHeader);
+      setPlantillas((current) => current.filter((item) => item.id_plantilla !== plantilla.id_plantilla));
+      setMensaje({ type: 'success', text: 'Plantilla eliminada correctamente.' });
+      showToast({ type: 'success', title: 'Plantilla eliminada', message: `"${plantilla.nombre}" fue eliminada correctamente.` });
+    } catch (error: any) {
+      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo eliminar la plantilla.' });
+    }
   };
 
   const revisarCobertura = async () => {
@@ -338,7 +370,13 @@ export default function PlantillasEvaluacionTab() {
       <section className={`${panelClass} overflow-hidden soft-fade-up`}>
         <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4"><h4 className="text-sm font-black text-slate-950">Aplicar plantilla</h4><p className="mt-1 text-sm text-slate-500">Elige el alcance. El sistema revisará qué asignaciones ya tienen evaluaciones y cuáles faltan.</p></div>
         <div className="grid gap-4 p-5 lg:grid-cols-4">
-          {mostrarSelectorInstitucion && <label><span className={labelClass}>Institución</span><select className={inputClass} value={colegioGestionId} onChange={(e)=>{setColegioGestionId(e.target.value);setPreview(null);}}>{colegios.map(c=><option key={c.id_colegio} value={c.id_colegio}>{c.nombre||c.nombre_corto}</option>)}</select></label>}
+          {mostrarSelectorInstitucion && <label><span className={labelClass}>Institución</span><select className={inputClass} value={colegioGestionId} onChange={(e)=>{
+            setColegioGestionId(e.target.value);
+            setIdAnio('');
+            setIdUnidad('');
+            setIdPlantillaAplicar('');
+            setPreview(null);
+          }}>{colegios.map(c=><option key={c.id_colegio} value={c.id_colegio}>{c.nombre||c.nombre_corto}</option>)}</select></label>}
           <label><span className={labelClass}>Plantilla</span><select className={inputClass} value={idPlantillaAplicar} onChange={(e)=>{setIdPlantillaAplicar(e.target.value);setPreview(null);}}><option value="">Selecciona plantilla</option>{plantillas.map(p=><option key={p.id_plantilla} value={p.id_plantilla}>{p.nombre}</option>)}</select></label>
           <label><span className={labelClass}>Año lectivo</span><select className={inputClass} value={idAnio} onChange={(e)=>{setIdAnio(e.target.value);setIdUnidad('');setPreview(null);}}><option value="">Selecciona año</option>{aniosFiltrados.map(a=><option key={a.id_anio} value={a.id_anio}>{a.nombre_anio}</option>)}</select></label>
           <label><span className={labelClass}>Unidad</span><select className={inputClass} value={idUnidad} onChange={(e)=>{setIdUnidad(e.target.value);setPreview(null);}}><option value="">Selecciona unidad</option>{unidades.map(u=><option key={u.id_unidad} value={u.id_unidad}>{u.label}</option>)}</select></label>
@@ -355,7 +393,7 @@ export default function PlantillasEvaluacionTab() {
       {preview && <section className={`${panelClass} overflow-hidden soft-fade-up`}><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:flex-row md:items-center md:justify-between"><div><h4 className="text-sm font-black text-slate-950">Cobertura de plantilla</h4><p className="mt-1 text-sm text-slate-500">{preview.plantilla.nombre} · {preview.plantilla.evaluaciones} evaluaciones</p></div><div className={`rounded-2xl px-4 py-2 text-sm font-black ring-1 ${preview.cobertura.estado==='completo'?'bg-emerald-50 text-emerald-700 ring-emerald-100':preview.cobertura.estado==='pendiente'?'bg-amber-50 text-amber-700 ring-amber-100':'bg-blue-50 text-blue-700 ring-blue-100'}`}>{preview.cobertura.estado==='completo'?'Todo listo':preview.cobertura.estado==='sin_asignaciones'?'Sin asignaciones':preview.cobertura.estado==='pendiente'?'Pendiente':'Parcial'} · {preview.cobertura.cubiertas}/{preview.cobertura.total}</div></div><div className="grid gap-3 p-5 md:grid-cols-3"><div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Total</p><p className="mt-2 text-3xl font-black text-slate-950">{preview.cobertura.total}</p></div><div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100"><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-500">Cubiertas</p><p className="mt-2 text-3xl font-black text-emerald-700">{preview.cobertura.cubiertas}</p></div><div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-500">Faltantes</p><p className="mt-2 text-3xl font-black text-amber-700">{preview.cobertura.faltantes}</p></div></div>{preview.cobertura.faltantes_agrupadas?.length>0 && <div className="space-y-3 border-t border-slate-100 p-5"><h5 className="text-sm font-black text-slate-950">Asignaciones pendientes</h5>{preview.cobertura.faltantes_agrupadas.map((grupo:any)=><div key={grupo.key} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><p className="text-sm font-black text-slate-800">{grupo.nivel || 'Nivel'} · {grupo.grado || 'Grado'}</p><div className="mt-2 space-y-2">{grupo.items.map((item:any)=><p key={item.id_asignacion} className="text-sm text-slate-600">{item.seccion} · {item.curso} · {item.docente}</p>)}</div></div>)}</div>}</section>}
 
       <div className={`${panelClass} p-4 soft-fade-up`}><div className="relative max-w-md"><Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10" placeholder="Buscar plantilla, curso, nivel o evaluación..." value={search} onChange={(e)=>setSearch(e.target.value)}/></div></div>
-      {plantillasFiltradas.length===0 ? <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center soft-fade-up`}><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400"><ClipboardList size={25}/></div><h4 className="text-base font-black text-slate-900">No hay plantillas para mostrar</h4><p className="mt-1 max-w-md text-sm text-slate-500">Crea una plantilla inicial para que pueda aplicarse a cursos, niveles o a toda una institución.</p></div> : <div className="grid gap-4 xl:grid-cols-2 soft-fade-up">{plantillasFiltradas.map((plantilla)=><article key={plantilla.id_plantilla} className={`${panelClass} overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)]`}><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4"><div className="min-w-0"><h4 className="truncate text-base font-black text-slate-950">{plantilla.nombre}</h4><p className="mt-1 text-sm text-slate-500">{plantilla.curso?.nombre_curso || plantilla.nivel?.nombre_nivel || 'Alcance general'}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={()=>openEdit(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><Pencil size={16}/></button><button type="button" onClick={()=>handleDelete(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={16}/></button></div></div><div className="space-y-2 px-5 py-4">{(plantilla.detalles||[]).slice().sort((a,b)=>a.orden-b.orden).map((detalle,index)=><div key={`${plantilla.id_plantilla}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100"><div><p className="text-sm font-bold text-slate-900">{String(index+1).padStart(2,'0')}. {detalle.descripcion}</p><p className="mt-0.5 text-xs font-semibold text-slate-400">{detalle.grupo_evaluacion || 'Trabajo en clase'} · {detalle.tipo?.nombre_tipo || 'Tipo no especificado'}</p></div></div>)}</div></article>)}</div>}
+      {plantillasFiltradas.length===0 ? <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center soft-fade-up`}><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400"><ClipboardList size={25}/></div><h4 className="text-base font-black text-slate-900">No hay plantillas para mostrar</h4><p className="mt-1 max-w-md text-sm text-slate-500">Crea una plantilla inicial para que pueda aplicarse a cursos, niveles o a toda una institución.</p></div> : <div className="grid gap-4 xl:grid-cols-2 soft-fade-up">{plantillasFiltradas.map((plantilla)=><article key={plantilla.id_plantilla} className={`${panelClass} overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)]`}><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4"><div className="min-w-0"><h4 className="truncate text-base font-black text-slate-950">{plantilla.nombre}</h4><p className="mt-1 text-sm text-slate-500">{plantilla.curso?.nombre_curso || plantilla.nivel?.nombre_nivel || 'Alcance general'}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={()=>openEdit(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><Pencil size={16}/></button><button type="button" onClick={()=>pedirEliminarPlantilla(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={16}/></button></div></div><div className="space-y-2 px-5 py-4">{(plantilla.detalles||[]).slice().sort((a,b)=>a.orden-b.orden).map((detalle,index)=><div key={`${plantilla.id_plantilla}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100"><div><p className="text-sm font-bold text-slate-900">{String(index+1).padStart(2,'0')}. {detalle.descripcion}</p><p className="mt-0.5 text-xs font-semibold text-slate-400">{detalle.grupo_evaluacion || 'Trabajo en clase'} · {detalle.tipo?.nombre_tipo || 'Tipo no especificado'}</p></div></div>)}</div></article>)}</div>}
 
       {modal && <div className="fixed inset-0 z-[80] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={closeModal}/><div className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up"><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5"><div><div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100"><ClipboardList size={13}/> {modal.mode==='edit'?'Editar plantilla':'Nueva plantilla'}</div><h2 className="mt-3 text-xl font-black text-slate-950">Plantilla de evaluación</h2><p className="mt-1 text-sm text-slate-500">Configura las columnas iniciales que usará Dirección al aplicar plantillas.</p></div><button type="button" onClick={closeModal} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X size={17}/></button></div><div className="space-y-5 overflow-y-auto px-6 py-5">{mensaje && modal && <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${mensaje.type==='error'?'bg-red-50 text-red-700 ring-1 ring-red-100':'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>{mensaje.text}</div>}<div className="grid gap-4 md:grid-cols-3"><label className="block md:col-span-3"><span className={labelClass}>Nombre de la plantilla</span><input className={inputClass} value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Ej. Plantilla general de Comunicación"/></label><label className="block"><span className={labelClass}>Nivel sugerido</span><select className={inputClass} value={idNivel} onChange={(e)=>setIdNivel(e.target.value)}><option value="">Todos los niveles</option>{niveles.map(n=><option key={n.id_nivel} value={n.id_nivel}>{n.nombre_nivel}</option>)}</select></label><label className="block md:col-span-2"><span className={labelClass}>Curso sugerido</span><select className={inputClass} value={idCurso} onChange={(e)=>setIdCurso(e.target.value)}><option value="">Todos los cursos</option>{cursos.map(c=><option key={c.id_curso} value={c.id_curso}>{c.nombre_curso}</option>)}</select></label></div><div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Evaluaciones iniciales</p><p className="mt-1 text-xs font-semibold text-slate-500">Estas columnas aparecerán en Registro de Notas cuando Dirección aplique la plantilla.</p></div><button type="button" onClick={addDetalle} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"><Plus size={15}/> Agregar</button></div><div className="space-y-3">
                   {detalles.map((detalle,index)=>(
@@ -453,6 +491,16 @@ export default function PlantillasEvaluacionTab() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={`Eliminar plantilla "${confirmDelete?.nombre || ''}"`}
+        description="Si esta plantilla ya fue aplicada o tiene evaluaciones relacionadas, el sistema puede impedir su eliminación para proteger el historial."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={ejecutarEliminarPlantilla}
+      />
     </div>
   );
 }
