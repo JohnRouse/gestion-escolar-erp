@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   CalendarDays,
   CheckCircle2,
   Edit3,
+  ListChecks,
   Loader2,
   Plus,
   Save,
@@ -97,6 +99,7 @@ export default function AniosLectivosTab() {
   const { token } = useAuth();
   const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } =
     useSchool();
+  const [, setSearchParams] = useSearchParams();
 
   const colegioDefault =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
@@ -161,6 +164,13 @@ export default function AniosLectivosTab() {
     });
     setMensaje(null);
     setOpenForm(true);
+  };
+
+  const abrirPreparacion = (anio: AnioLectivo) => {
+    setSearchParams({
+      tab: 'preparacion',
+      anio_id: String(anio.id_anio),
+    });
   };
 
   const validarForm = () => {
@@ -445,7 +455,7 @@ export default function AniosLectivosTab() {
                   <div>
                     <p className="text-sm font-black text-slate-900">{anio.nombre_anio}</p>
                     <p className="mt-1 text-xs font-bold text-slate-400">
-                      {colegio?.nombre_corto || colegio?.nombre || 'Colegio no identificado'}
+                      {colegio?.nombre || colegio?.nombre_corto || 'Colegio no identificado'}
                     </p>
                   </div>
 
@@ -468,14 +478,25 @@ export default function AniosLectivosTab() {
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => abrirEditar(anio)}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50"
-                  >
-                    <Edit3 size={16} />
-                    Editar
-                  </button>
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => abrirPreparacion(anio)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 text-sm font-black text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <ListChecks size={16} />
+                      Preparación
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => abrirEditar(anio)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                    >
+                      <Edit3 size={16} />
+                      Editar
+                    </button>
+                  </div>
                 </div>
               );
             })}

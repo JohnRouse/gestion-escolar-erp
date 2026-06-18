@@ -8,6 +8,7 @@ import {
   Layers3,
   ListChecks,
   Settings,
+  ClipboardCheck,
   ClipboardList,
   UserRoundCheck,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import AniosLectivosTab from './AniosLectivosTab';
 import PeriodosUnidadesTab from './PeriodosUnidadesTab';
 import PlantillasEvaluacionTab from './PlantillasEvaluacionTab';
 import AsignacionesDocentesTab from './AsignacionesDocentesTab';
+import PreparacionAnioTab from './PreparacionAnioTab';
 
 const CONFIG_GROUPS = [
   { key: 'tiempo', label: 'Tiempo académico' },
@@ -34,6 +36,7 @@ const CONFIG_GROUPS = [
 const TABS = [
   { key: 'anios', label: 'Años lectivos', icon: CalendarDays, group: 'tiempo' },
   { key: 'periodos', label: 'Periodos y unidades', icon: CalendarDays, group: 'tiempo' },
+  { key: 'preparacion', label: 'Preparación del año', icon: ClipboardCheck, group: 'tiempo' },
   { key: 'niveles', label: 'Niveles y Grados', icon: GraduationCap, group: 'estructura' },
   { key: 'secciones', label: 'Secciones', icon: Building2, group: 'estructura' },
   { key: 'cursos', label: 'Cursos y Áreas', icon: BookOpenCheck, group: 'estructura' },
@@ -134,6 +137,7 @@ export default function ConfiguracionPage() {
         <div key={`${contextKey}-${tabActivo}`} className="config-tab-content p-5">
           {tabActivo === 'anios' && <AniosLectivosTab />}
           {tabActivo === 'periodos' && <PeriodosUnidadesTab />}
+          {tabActivo === 'preparacion' && <PreparacionAnioTab />}
           {tabActivo === 'niveles' && <NivelesGradosTab />}
           {tabActivo === 'secciones' && <SeccionesTab />}
           {tabActivo === 'cursos' && <CursosTab />}

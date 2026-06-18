@@ -296,6 +296,30 @@ async deleteGrado(
     });
   }
 
+  @Get('anios/:id/preparacion')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director', 'Secretaria')
+  async getPreparacionAnioLectivo(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const anioId = Number(id);
+
+    if (!Number.isInteger(anioId) || anioId <= 0) {
+      throw new BadRequestException('El ID del año lectivo no es válido.');
+    }
+
+    return this.academicosService.obtenerPreparacionAnioLectivo({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      anioId,
+    });
+  }
+
   @Post('anios')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')

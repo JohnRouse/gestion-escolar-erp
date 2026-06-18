@@ -1743,6 +1743,473 @@ colegio_nombre: sec.colegio?.nombre || null,
     }));
   }
 
+  async obtenerPreparacionAnioLectivo(params: ScopeParams & { anioId: number }) {
+    const scope = await this.resolveScope(params);
+
+    const anio = await this.prisma.anioLectivo.findFirst({
+      where: {
+        id_anio: params.anioId,
+        id_colegio: { in: scope.colegioIds },
+      },
+      include: {
+        colegio: true,
+      },
+    });
+
+    if (!anio) {
+      throw new NotFoundException('Año lectivo no encontrado o sin acceso.');
+    }
+
+    if (!anio.id_colegio) {
+      throw new BadRequestException('El año lectivo no tiene una institución asociada.');
+    }
+
+    const colegioId = anio.id_colegio;
+    const idAnio = anio.id_anio;
+
+    const [
+      periodos,
+      unidades,
+      unidadesAbiertas,
+      niveles,
+      grados,
+      secciones,
+      areas,
+      cursos,
+      asignaciones,
+      evaluaciones,
+      asignacionesConEvaluacion,
+      matriculas,
+      conceptos,
+      conceptosMatricula,
+      conceptosPension,
+      tiposEvaluacion,
+      escalas,
+      plantillas,
+    ] = await Promise.all([
+      this.prisma.bimestre.count({
+        where: { id_anio: idAnio },
+      }),
+      this.prisma.unidad.count({
+        where: { bimestre: { id_anio: idAnio } },
+      }),
+      this.prisma.unidad.count({
+        where: {
+          estado_abierto: true,
+          bimestre: { id_anio: idAnio },
+        },
+      }),
+      this.prisma.colegioNivel.count({
+        where: { id_colegio: colegioId },
+      }),
+      this.prisma.colegioGrado.count({
+        where: {
+          id_colegio: colegioId,
+          estado: 'Activo',
+        },
+      }),
+      this.prisma.seccion.count({
+        where: { id_colegio: colegioId },
+      }),
+      this.prisma.areaCurricular.count({
+        where: { id_colegio: colegioId },
+      }),
+      this.prisma.curso.count({
+        where: { id_colegio: colegioId },
+      }),
+      this.prisma.asignacionDocente.count({
+        where: {
+          id_anio: idAnio,
+          id_colegio: colegioId,
+        },
+      }),
+      this.prisma.evaluacionDetalle.count({
+        where: {
+          asignacion: {
+            id_anio: idAnio,
+            id_colegio: colegioId,
+          },
+          unidad: {
+            bimestre: {
+              id_anio: idAnio,
+            },
+          },
+        },
+      }),
+      this.prisma.evaluacionDetalle.groupBy({
+        by: ['id_asignacion'],
+        where: {
+          asignacion: {
+            id_anio: idAnio,
+            id_colegio: colegioId,
+          },
+          unidad: {
+            bimestre: {
+              id_anio: idAnio,
+            },
+          },
+        },
+      }),
+      this.prisma.matricula.count({
+        where: {
+          id_anio: idAnio,
+          id_colegio: colegioId,
+          estado_matricula: {
+            notIn: this.estadosMatriculaFinales,
+          },
+        },
+      }),
+      this.prisma.conceptoPago.count({
+        where: {
+          id_anio: idAnio,
+          id_colegio: colegioId,
+        },
+      }),
+      this.prisma.conceptoPago.count({
+        where: {
+          id_anio: idAnio,
+          id_colegio: colegioId,
+          OR: [
+            { tipo_concepto: 'MATRICULA' },
+            { nombre_concepto: { contains: 'Matrícula' } },
+            { nombre_concepto: { contains: 'Matricula' } },
+          ],
+        },
+      }),
+      this.prisma.conceptoPago.count({
+        where: {
+          id_anio: idAnio,
+          id_colegio: colegioId,
+          OR: [
+            { tipo_concepto: 'PENSION' },
+            { es_pension: true },
+          ],
+        },
+      }),
+      this.prisma.tipoEvaluacion.count({
+        where: { id_colegio: colegioId },
+      }),
+      this.prisma.escalaCalificacion.count({
+        where: {
+          OR: [
+            { id_colegio: colegioId },
+            {
+              id_colegio: null,
+              id_tenant: anio.id_tenant,
+            },
+          ],
+        },
+      }),
+      this.prisma.plantillaEvaluacion.count({
+        where: { id_colegio: colegioId },
+      }),
+    ]);
+
+    const normalizar = (value?: string | null) =>
+      String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    const estadoAnio = normalizar(anio.estado);
+    const estaEnCurso = estadoAnio.includes('curso') || estadoAnio === 'activo';
+    const estaEnMatricula = estadoAnio.includes('matricula');
+
+    const asignacionesCubiertas = asignacionesConEvaluacion.length;
+
+    const item = (
+      grupo: string,
+      clave: string,
+      titulo: string,
+      estado: 'listo' | 'parcial' | 'pendiente' | 'bloqueo' | 'no_aplica',
+      mensaje: string,
+      tab?: string,
+      actual?: number,
+      total?: number,
+    ) => ({
+      grupo,
+      clave,
+      titulo,
+      estado,
+      mensaje,
+      tab,
+      actual,
+      total,
+    });
+
+    const items = [
+      item(
+        'tiempo',
+        'anio',
+        'Año lectivo creado',
+        anio.fecha_inicio && anio.fecha_fin ? 'listo' : 'bloqueo',
+        anio.fecha_inicio && anio.fecha_fin
+          ? `${anio.nombre_anio} tiene fechas de inicio y fin.`
+          : 'Completa fecha de inicio y fecha de fin del año lectivo.',
+        'anios',
+      ),
+      item(
+        'tiempo',
+        'periodos',
+        'Periodos y unidades',
+        periodos > 0 && unidades > 0 ? 'listo' : periodos > 0 ? 'parcial' : 'bloqueo',
+        periodos > 0 && unidades > 0
+          ? `${periodos} periodo(s) y ${unidades} unidad(es) configuradas.`
+          : periodos > 0
+            ? `${periodos} periodo(s) creados, pero faltan unidades.`
+            : 'Genera la estructura académica del año: bimestres, trimestres o periodos.',
+        'periodos',
+        unidades,
+        Math.max(periodos, 1),
+      ),
+      item(
+        'tiempo',
+        'unidad_activa',
+        'Unidad disponible para notas',
+        unidadesAbiertas > 0 ? 'listo' : estaEnCurso ? 'bloqueo' : 'pendiente',
+        unidadesAbiertas > 0
+          ? `${unidadesAbiertas} unidad(es) abierta(s) para registro de notas.`
+          : estaEnCurso
+            ? 'El año está en curso, pero no hay unidad abierta para docentes.'
+            : 'Abre una unidad cuando Dirección habilite el registro de notas.',
+        'periodos',
+        unidadesAbiertas,
+        1,
+      ),
+      item(
+        'estructura',
+        'niveles',
+        'Niveles educativos',
+        niveles > 0 ? 'listo' : 'bloqueo',
+        niveles > 0
+          ? `${niveles} nivel(es) vinculados a la institución.`
+          : 'Agrega Inicial, Primaria, Secundaria u otra estructura según corresponda.',
+        'niveles',
+        niveles,
+      ),
+      item(
+        'estructura',
+        'grados',
+        'Grados configurados',
+        grados > 0 ? 'listo' : niveles > 0 ? 'pendiente' : 'bloqueo',
+        grados > 0
+          ? `${grados} grado(s) activos para esta institución.`
+          : 'Agrega los grados dentro de cada nivel educativo.',
+        'niveles',
+        grados,
+      ),
+      item(
+        'estructura',
+        'secciones',
+        'Secciones / aulas',
+        secciones > 0 ? 'listo' : grados > 0 ? 'pendiente' : 'bloqueo',
+        secciones > 0
+          ? `${secciones} sección(es) disponibles para matrícula y asignaciones.`
+          : 'Crea secciones por grado para poder matricular alumnos y asignar docentes.',
+        'secciones',
+        secciones,
+      ),
+      item(
+        'estructura',
+        'cursos',
+        'Cursos y áreas',
+        areas > 0 && cursos > 0 ? 'listo' : areas > 0 ? 'parcial' : 'pendiente',
+        areas > 0 && cursos > 0
+          ? `${areas} área(s) y ${cursos} curso(s) configurados.`
+          : areas > 0
+            ? 'Hay áreas creadas, pero faltan cursos.'
+            : 'Agrega áreas curriculares y cursos de la institución.',
+        'cursos',
+        cursos,
+      ),
+      item(
+        'estructura',
+        'asignaciones',
+        'Asignaciones docentes',
+        asignaciones > 0 ? 'listo' : cursos > 0 && secciones > 0 ? 'pendiente' : 'bloqueo',
+        asignaciones > 0
+          ? `${asignaciones} asignación(es) docente-curso-sección registradas.`
+          : 'Relaciona docente, curso, sección y año lectivo para habilitar notas y asistencia.',
+        'asignaciones',
+        asignaciones,
+      ),
+      item(
+        'evaluacion',
+        'escala',
+        'Escala de calificación',
+        escalas > 0 ? 'listo' : 'pendiente',
+        escalas > 0
+          ? `${escalas} escala(s) disponible(s).`
+          : 'Configura nota mínima, nota aprobatoria y nota máxima.',
+        'escala',
+        escalas,
+      ),
+      item(
+        'evaluacion',
+        'tipos',
+        'Tipos de evaluación',
+        tiposEvaluacion > 0 ? 'listo' : 'pendiente',
+        tiposEvaluacion > 0
+          ? `${tiposEvaluacion} tipo(s) de evaluación disponibles.`
+          : 'Agrega tipos como Cuaderno, Participación, Práctica o Examen.',
+        'tipos',
+        tiposEvaluacion,
+      ),
+      item(
+        'evaluacion',
+        'plantillas',
+        'Plantillas de evaluación',
+        plantillas > 0 ? 'listo' : 'pendiente',
+        plantillas > 0
+          ? `${plantillas} plantilla(s) de evaluación creadas.`
+          : 'Crea una plantilla inicial antes de que los docentes registren notas.',
+        'plantillas',
+        plantillas,
+      ),
+      item(
+        'evaluacion',
+        'plantillas_aplicadas',
+        'Plantillas aplicadas a cursos',
+        asignaciones === 0
+          ? 'no_aplica'
+          : asignacionesCubiertas === asignaciones
+            ? 'listo'
+            : asignacionesCubiertas > 0
+              ? 'parcial'
+              : 'pendiente',
+        asignaciones === 0
+          ? 'Primero crea asignaciones docentes para medir cobertura.'
+          : asignacionesCubiertas === asignaciones
+            ? `Todas las asignaciones tienen evaluaciones cargadas (${asignacionesCubiertas}/${asignaciones}).`
+            : `${asignacionesCubiertas}/${asignaciones} asignación(es) tienen evaluaciones. Faltan ${asignaciones - asignacionesCubiertas}.`,
+        'plantillas',
+        asignacionesCubiertas,
+        asignaciones,
+      ),
+      item(
+        'matricula',
+        'matriculas',
+        'Matrículas del año',
+        matriculas > 0 ? 'listo' : estaEnMatricula || estaEnCurso ? 'pendiente' : 'no_aplica',
+        matriculas > 0
+          ? `${matriculas} matrícula(s) activas o en proceso para este año.`
+          : estaEnMatricula || estaEnCurso
+            ? 'Aún no hay alumnos matriculados para este año.'
+            : 'Se revisará cuando el año entre a matrícula o curso.',
+        'anios',
+        matriculas,
+      ),
+      item(
+        'finanzas',
+        'concepto_matricula',
+        'Concepto de matrícula',
+        conceptosMatricula > 0 ? 'listo' : 'pendiente',
+        conceptosMatricula > 0
+          ? `${conceptosMatricula} concepto(s) de matrícula configurados.`
+          : 'Agrega el concepto de matrícula del año lectivo.',
+        'pagos',
+        conceptosMatricula,
+      ),
+      item(
+        'finanzas',
+        'pensiones',
+        'Conceptos de pensión',
+        conceptosPension > 0 ? 'listo' : conceptos > 0 ? 'parcial' : 'pendiente',
+        conceptosPension > 0
+          ? `${conceptosPension} concepto(s) de pensión configurados.`
+          : conceptos > 0
+            ? 'Hay conceptos de pago, pero no hay pensiones identificadas.'
+            : 'Agrega pensiones u otros conceptos de pago si la institución usa tesorería.',
+        'pagos',
+        conceptosPension,
+      ),
+    ];
+
+    const gruposConfig = [
+      { key: 'tiempo', titulo: 'Tiempo académico' },
+      { key: 'estructura', titulo: 'Estructura académica' },
+      { key: 'evaluacion', titulo: 'Evaluación y notas' },
+      { key: 'matricula', titulo: 'Matrícula' },
+      { key: 'finanzas', titulo: 'Finanzas' },
+    ];
+
+    const grupos = gruposConfig.map((grupo) => ({
+      ...grupo,
+      items: items.filter((entry) => entry.grupo === grupo.key),
+    }));
+
+    const evaluables = items.filter((entry) => entry.estado !== 'no_aplica');
+    const puntos = evaluables.reduce((total, entry) => {
+      if (entry.estado === 'listo') return total + 1;
+      if (entry.estado === 'parcial') return total + 0.5;
+      return total;
+    }, 0);
+
+    const porcentaje = evaluables.length
+      ? Math.round((puntos / evaluables.length) * 100)
+      : 0;
+
+    const bloqueos = items.filter((entry) => entry.estado === 'bloqueo').length;
+    const pendientes = items.filter((entry) => entry.estado === 'pendiente').length;
+    const parciales = items.filter((entry) => entry.estado === 'parcial').length;
+    const listos = items.filter((entry) => entry.estado === 'listo').length;
+
+    return {
+      anio: {
+        id_anio: anio.id_anio,
+        nombre_anio: anio.nombre_anio,
+        estado: anio.estado,
+        fecha_inicio: anio.fecha_inicio,
+        fecha_fin: anio.fecha_fin,
+      },
+      colegio: anio.colegio
+        ? {
+            id_colegio: anio.colegio.id_colegio,
+            nombre: anio.colegio.nombre,
+            nombre_corto: anio.colegio.nombre_corto,
+          }
+        : null,
+      resumen: {
+        porcentaje,
+        estado_general:
+          bloqueos > 0
+            ? 'bloqueado'
+            : porcentaje >= 90
+              ? 'listo'
+              : porcentaje >= 50
+                ? 'parcial'
+                : 'incompleto',
+        total: evaluables.length,
+        listos,
+        parciales,
+        pendientes,
+        bloqueos,
+      },
+      metricas: {
+        periodos,
+        unidades,
+        unidades_abiertas: unidadesAbiertas,
+        niveles,
+        grados,
+        secciones,
+        areas,
+        cursos,
+        asignaciones,
+        evaluaciones,
+        asignaciones_cubiertas: asignacionesCubiertas,
+        matriculas,
+        conceptos,
+        conceptos_matricula: conceptosMatricula,
+        conceptos_pension: conceptosPension,
+        tipos_evaluacion: tiposEvaluacion,
+        escalas,
+        plantillas,
+      },
+      grupos,
+    };
+  }
+
   async crearSeccionConfig(
     params: ScopeParams & {
       letra: string;
@@ -3657,6 +4124,8 @@ colegio_nombre: sec.colegio?.nombre || null,
 
     return asignaciones.map((a) => a.seccion);
   }
+
+
 
   async getAsistencia(seccionId: number, fecha: string) {
     const matriculas = await this.prisma.matricula.findMany({
