@@ -1743,7 +1743,9 @@ colegio_nombre: sec.colegio?.nombre || null,
     }));
   }
 
-  async obtenerPreparacionAnioLectivo(params: ScopeParams & { anioId: number }) {
+  async obtenerPreparacionAnioLectivo(
+  params: ScopeParams & { anioId: number; perfilOperativo?: string },
+) {
     const scope = await this.resolveScope(params);
 
     const anio = await this.prisma.anioLectivo.findFirst({
@@ -1936,9 +1938,147 @@ colegio_nombre: sec.colegio?.nombre || null,
       tab,
       actual,
       total,
+      obligatorio: true,
+      aplica: true,
     });
 
-    const items = [
+    type ItemPreparacion = ReturnType<typeof item>;
+
+    const perfilesOperativos = {
+      colegio_completo: {
+        key: 'colegio_completo',
+        nombre: 'Colegio completo',
+        descripcion: 'Valida matrícula, estructura académica, notas y finanzas.',
+        obligatorios: [
+          'anio',
+          'periodos',
+          'unidad_activa',
+          'niveles',
+          'grados',
+          'secciones',
+          'cursos',
+          'asignaciones',
+          'escala',
+          'tipos',
+          'plantillas',
+          'plantillas_aplicadas',
+          'matriculas',
+          'concepto_matricula',
+          'pensiones',
+        ],
+        excluidos: [],
+      },
+      academia: {
+        key: 'academia',
+        nombre: 'Academia / instituto',
+        descripcion: 'Prioriza estructura, cursos, docentes y evaluación. Finanzas no bloquea la apertura académica.',
+        obligatorios: [
+          'anio',
+          'periodos',
+          'unidad_activa',
+          'niveles',
+          'grados',
+          'secciones',
+          'cursos',
+          'asignaciones',
+          'escala',
+          'tipos',
+          'plantillas',
+          'plantillas_aplicadas',
+        ],
+        excluidos: ['concepto_matricula', 'pensiones'],
+      },
+      solo_matricula: {
+        key: 'solo_matricula',
+        nombre: 'Solo matrícula',
+        descripcion: 'Valida lo mínimo para registrar alumnos y cobrar matrícula.',
+        obligatorios: [
+          'anio',
+          'niveles',
+          'grados',
+          'secciones',
+          'concepto_matricula',
+        ],
+        excluidos: [
+          'periodos',
+          'unidad_activa',
+          'cursos',
+          'asignaciones',
+          'escala',
+          'tipos',
+          'plantillas',
+          'plantillas_aplicadas',
+          'pensiones',
+        ],
+      },
+      solo_tesoreria: {
+        key: 'solo_tesoreria',
+        nombre: 'Solo tesorería',
+        descripcion: 'Valida año lectivo y conceptos de cobro. Lo académico no bloquea.',
+        obligatorios: ['anio', 'concepto_matricula', 'pensiones'],
+        excluidos: [
+          'periodos',
+          'unidad_activa',
+          'niveles',
+          'grados',
+          'secciones',
+          'cursos',
+          'asignaciones',
+          'escala',
+          'tipos',
+          'plantillas',
+          'plantillas_aplicadas',
+          'matriculas',
+        ],
+      },
+      sin_notas: {
+        key: 'sin_notas',
+        nombre: 'Sin notas',
+        descripcion: 'Valida estructura, cursos y asignaciones. Evaluación y plantillas no bloquean.',
+        obligatorios: [
+          'anio',
+          'periodos',
+          'niveles',
+          'grados',
+          'secciones',
+          'cursos',
+          'asignaciones',
+          'matriculas',
+          'concepto_matricula',
+          'pensiones',
+        ],
+        excluidos: ['unidad_activa', 'escala', 'tipos', 'plantillas', 'plantillas_aplicadas'],
+      },
+      sin_pensiones: {
+        key: 'sin_pensiones',
+        nombre: 'Sin pensiones',
+        descripcion: 'Valida todo lo académico y matrícula, pero las pensiones no bloquean.',
+        obligatorios: [
+          'anio',
+          'periodos',
+          'unidad_activa',
+          'niveles',
+          'grados',
+          'secciones',
+          'cursos',
+          'asignaciones',
+          'escala',
+          'tipos',
+          'plantillas',
+          'plantillas_aplicadas',
+          'matriculas',
+          'concepto_matricula',
+        ],
+        excluidos: ['pensiones'],
+      },
+    } as const;
+
+    const perfilKey = String(params.perfilOperativo || 'colegio_completo').trim();
+    const perfilOperativo =
+      perfilesOperativos[perfilKey as keyof typeof perfilesOperativos] ||
+      perfilesOperativos.colegio_completo;
+
+    const baseItems = [
       item(
         'tiempo',
         'anio',
@@ -2126,6 +2266,43 @@ colegio_nombre: sec.colegio?.nombre || null,
       ),
     ];
 
+    const items = baseItems.map((entry: ItemPreparacion) => {
+      const esObligatorio = perfilOperativo.obligatorios.includes(entry.clave as never);
+      const estaExcluido = perfilOperativo.excluidos.includes(entry.clave as never);
+
+      if (estaExcluido) {
+        return {
+          ...entry,
+          estado: 'no_aplica' as const,
+          obligatorio: false,
+          aplica: false,
+          mensaje: 'No requerido para el perfil operativo seleccionado.',
+        };
+      }
+
+      if (!esObligatorio) {
+        return {
+          ...entry,
+          obligatorio: false,
+          aplica: true,
+          estado:
+            entry.estado === 'listo' || entry.estado === 'parcial'
+              ? entry.estado
+              : ('no_aplica' as const),
+          mensaje:
+            entry.estado === 'listo' || entry.estado === 'parcial'
+              ? `${entry.mensaje} Este punto es opcional para el perfil seleccionado.`
+              : 'Opcional para el perfil operativo seleccionado.',
+        };
+      }
+
+      return {
+        ...entry,
+        obligatorio: true,
+        aplica: true,
+      };
+    });
+
     const gruposConfig = [
       { key: 'tiempo', titulo: 'Tiempo académico' },
       { key: 'estructura', titulo: 'Estructura académica' },
@@ -2139,7 +2316,9 @@ colegio_nombre: sec.colegio?.nombre || null,
       items: items.filter((entry) => entry.grupo === grupo.key),
     }));
 
-    const evaluables = items.filter((entry) => entry.estado !== 'no_aplica');
+    const evaluables = items.filter(
+      (entry) => entry.aplica !== false && entry.obligatorio !== false && entry.estado !== 'no_aplica',
+    );
     const puntos = evaluables.reduce((total, entry) => {
       if (entry.estado === 'listo') return total + 1;
       if (entry.estado === 'parcial') return total + 0.5;
@@ -2156,6 +2335,7 @@ colegio_nombre: sec.colegio?.nombre || null,
     const listos = items.filter((entry) => entry.estado === 'listo').length;
 
     return {
+      perfil_operativo: perfilOperativo,
       anio: {
         id_anio: anio.id_anio,
         nombre_anio: anio.nombre_anio,

@@ -40,6 +40,8 @@ type PreparacionItem = {
   tab?: string;
   actual?: number;
   total?: number;
+  obligatorio?: boolean;
+  aplica?: boolean;
 };
 
 type PreparacionGrupo = {
@@ -49,6 +51,11 @@ type PreparacionGrupo = {
 };
 
 type PreparacionData = {
+  perfil_operativo?: {
+    key: string;
+    nombre: string;
+    descripcion: string;
+  };
   anio: {
     id_anio: number;
     nombre_anio: string;
@@ -140,6 +147,39 @@ const prioridadAnio = (estado?: string) => {
   return 5;
 };
 
+const PERFILES_OPERATIVOS = [
+  {
+    key: 'colegio_completo',
+    label: 'Colegio completo',
+    description: 'Matrícula, estructura académica, notas y finanzas.',
+  },
+  {
+    key: 'academia',
+    label: 'Academia / instituto',
+    description: 'Estructura, cursos, docentes y evaluación; finanzas no bloquea.',
+  },
+  {
+    key: 'solo_matricula',
+    label: 'Solo matrícula',
+    description: 'Valida lo necesario para registrar alumnos y cobrar matrícula.',
+  },
+  {
+    key: 'solo_tesoreria',
+    label: 'Solo tesorería',
+    description: 'Valida año lectivo y conceptos de pago.',
+  },
+  {
+    key: 'sin_notas',
+    label: 'Sin notas',
+    description: 'Evaluación y plantillas no bloquean la apertura.',
+  },
+  {
+    key: 'sin_pensiones',
+    label: 'Sin pensiones',
+    description: 'Las pensiones no bloquean la apertura académica.',
+  },
+] as const;
+
 export default function PreparacionAnioTab() {
   const { token } = useAuth();
   const { colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
@@ -157,6 +197,9 @@ export default function PreparacionAnioTab() {
   const [colegioGestionId, setColegioGestionId] = useState(colegioInicial);
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [idAnio, setIdAnio] = useState(searchParams.get('anio_id') || '');
+  const [perfilOperativo, setPerfilOperativo] = useState(
+    searchParams.get('perfil') || 'colegio_completo',
+  );
   const [loadingAnios, setLoadingAnios] = useState(false);
   const [loadingPreparacion, setLoadingPreparacion] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -191,6 +234,10 @@ export default function PreparacionAnioTab() {
     });
   }, [anios]);
 
+  const perfilActivo =
+    PERFILES_OPERATIVOS.find((perfil) => perfil.key === perfilOperativo) ||
+    PERFILES_OPERATIVOS[0];
+
   useEffect(() => {
     if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
       setColegioGestionId(String(colegios[0].id_colegio));
@@ -210,7 +257,7 @@ export default function PreparacionAnioTab() {
 
     cargarPreparacion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, idAnio, queryConColegio]);
+  }, [token, idAnio, queryConColegio, perfilOperativo]);
 
   const cargarAnios = async () => {
     if (!token || !colegioSeleccionadoId) {
@@ -250,7 +297,7 @@ export default function PreparacionAnioTab() {
       setIdAnio(nextId);
 
       if (nextId) {
-        setSearchParams({ tab: 'preparacion', anio_id: nextId });
+        setSearchParams({ tab: 'preparacion', anio_id: nextId, perfil: perfilOperativo });
       }
     } catch (error: any) {
       setAnios([]);
@@ -268,7 +315,13 @@ export default function PreparacionAnioTab() {
     setMensaje(null);
 
     try {
-      const res = await axios.get(`/api/academicos/anios/${idAnio}/preparacion${queryConColegio}`, {
+      const params = new URLSearchParams(
+        queryConColegio.startsWith('?') ? queryConColegio.slice(1) : queryConColegio,
+      );
+      params.set('perfil', perfilOperativo);
+      const suffix = params.toString() ? `?${params.toString()}` : '';
+
+      const res = await axios.get(`/api/academicos/anios/${idAnio}/preparacion${suffix}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -285,7 +338,7 @@ export default function PreparacionAnioTab() {
     setIdAnio(value);
 
     if (value) {
-      setSearchParams({ tab: 'preparacion', anio_id: value });
+      setSearchParams({ tab: 'preparacion', anio_id: value, perfil: perfilOperativo });
     } else {
       setSearchParams({ tab: 'preparacion' });
     }
@@ -319,7 +372,7 @@ export default function PreparacionAnioTab() {
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 xl:grid-cols-2">
+        <div className="mt-5 grid gap-3 xl:grid-cols-3">
           {mostrarSelectorInstitucion && (
             <label>
               <Label>Institución para revisar</Label>
@@ -358,11 +411,44 @@ export default function PreparacionAnioTab() {
               ))}
             </select>
           </label>
+
+          <label>
+            <Label>Perfil operativo</Label>
+            <select
+              value={perfilOperativo}
+              onChange={(event) => {
+                const nextPerfil = event.target.value;
+                setPerfilOperativo(nextPerfil);
+                setSearchParams(
+                  idAnio
+                    ? { tab: 'preparacion', anio_id: idAnio, perfil: nextPerfil }
+                    : { tab: 'preparacion', perfil: nextPerfil },
+                );
+              }}
+              className={selectClass}
+            >
+              {PERFILES_OPERATIVOS.map((perfil) => (
+                <option key={perfil.key} value={perfil.key}>
+                  {perfil.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
-          <Building2 size={13} />
-          Contexto de revisión: {nombreColegio(colegioSeleccionadoId)}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-100">
+            <Building2 size={13} />
+            Contexto de revisión: {nombreColegio(colegioSeleccionadoId)}
+          </p>
+          <p className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+            <ShieldCheck size={13} />
+            Perfil: {data?.perfil_operativo?.nombre || perfilActivo.label}
+          </p>
+        </div>
+
+        <p className="mt-2 text-xs font-bold text-slate-400">
+          {data?.perfil_operativo?.descripcion || perfilActivo.description}
         </p>
       </section>
 
@@ -446,7 +532,12 @@ export default function PreparacionAnioTab() {
                               <Icon size={17} />
                             </span>
                             <div>
-                              <p className="text-sm font-black text-slate-900">{item.titulo}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-black text-slate-900">{item.titulo}</p>
+                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 ring-1 ring-slate-100">
+                                  {item.obligatorio === false ? 'Opcional' : 'Obligatorio'}
+                                </span>
+                              </div>
                               <p className="mt-1 text-sm font-bold leading-5 text-slate-500">
                                 {item.mensaje}
                               </p>

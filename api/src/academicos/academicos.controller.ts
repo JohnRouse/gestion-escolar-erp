@@ -304,6 +304,7 @@ async deleteGrado(
     @Request() req,
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
+    @Query('perfil') perfil?: string,
   ) {
     const anioId = Number(id);
 
@@ -317,6 +318,7 @@ async deleteGrado(
       scope,
       colegioId: colegioId ? Number(colegioId) : undefined,
       anioId,
+      perfilOperativo: perfil,
     });
   }
 
