@@ -98,6 +98,7 @@ const menuFinanzas: NavItem[] = [
     roles: ['Admin', 'Secretaria', 'Director'],
     children: [
       { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
+      { title: 'Configurar pensiones', path: '/tesoreria/configuracion' },
       { title: 'Agenda de cobranzas', path: '/tesoreria/agenda-cobranzas' },
       { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
       { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },

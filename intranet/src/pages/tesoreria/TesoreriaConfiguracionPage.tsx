@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import {
   BadgePercent,
@@ -6,7 +6,9 @@ import {
   CheckCircle2,
   Coins,
   Loader2,
+  Megaphone,
   Send,
+  ShieldCheck,
   WalletCards,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -51,10 +53,13 @@ type CampanaDescuento = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-300 hover:bg-white focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100';
 
 const labelClass =
-  'mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400';
+  'mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
+
+const cx = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ');
 
 const currency = (value: number | string | null | undefined) =>
   new Intl.NumberFormat('es-PE', {
@@ -95,57 +100,61 @@ function estadoClass(estado?: string) {
   if (value.includes('programado') || value.includes('plan')) {
     return 'bg-amber-50 text-amber-700 ring-amber-100';
   }
-  return 'bg-slate-50 text-slate-600 ring-slate-100';
+  if (value.includes('cerrado') || value.includes('inactivo')) {
+    return 'bg-slate-100 text-slate-500 ring-slate-200';
+  }
+  return 'bg-blue-50 text-blue-700 ring-blue-100';
 }
 
-function GuideCard({
-  step,
-  title,
-  description,
-}: {
-  step: number;
-  title: string;
-  description: string;
-}) {
+function StepCard({ step, title, description }: { step: number; title: string; description: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-accent-600">
-        Paso {step}
-      </p>
-      <h3 className="mt-1 text-sm font-black text-slate-900">{title}</h3>
-      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
-        {description}
-      </p>
+    <div className="group rounded-[26px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/80">
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">Paso {step}</p>
+      <h3 className="mt-1 text-sm font-black text-slate-950">{title}</h3>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">{description}</p>
     </div>
   );
 }
 
-function Card({
-  title,
-  description,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  description: string;
-  icon: any;
-  children: React.ReactNode;
-}) {
+function StatCard({ label, value, helper, icon: Icon }: { label: string; value: string | number; helper: string; icon: any }) {
   return (
-    <section className="rounded-[30px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-      <div className="mb-5 flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+    <div className="rounded-[26px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/80">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+          <p className="mt-1 text-sm font-medium text-slate-500">{helper}</p>
+        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+          <Icon size={18} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Card({ title, description, icon: Icon, children }: { title: string; description: string; icon: any; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-[30px] border border-white bg-white/95 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/70">
+      <div className="flex items-start gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
           <Icon size={19} />
         </div>
         <div>
           <h2 className="text-base font-black text-slate-950">{title}</h2>
-          <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
-            {description}
-          </p>
+          <p className="mt-1 text-sm font-medium leading-6 text-slate-500">{description}</p>
         </div>
       </div>
-      {children}
+      <div className="p-5">{children}</div>
     </section>
+  );
+}
+
+function EmptyBox({ text }: { text: string }) {
+  return (
+    <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
+      {text}
+    </p>
   );
 }
 
@@ -155,7 +164,7 @@ export default function TesoreriaConfiguracionPage() {
   const { showToast } = useToast();
 
   const colegioDefault =
-    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+    activeScope?.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : colegios[0]?.id_colegio || '';
 
@@ -194,9 +203,22 @@ export default function TesoreriaConfiguracionPage() {
     mes: new Date().getMonth() + 1,
   });
 
+  const aniosPorColegio = (idColegio: number | string | '') =>
+    anios.filter((anio) => !idColegio || anio.id_colegio === Number(idColegio));
+
+  const planesActivos = useMemo(
+    () => planes.filter((plan) => String(plan.estado || '').toLowerCase().includes('activo')).length,
+    [planes],
+  );
+
   const selectedColegioQuery = (idColegio: number | string | '') => {
     if (!idColegio) return queryString;
     return `?colegio_id=${idColegio}`;
+  };
+
+  const nombreColegio = (idColegio: number | string | '') => {
+    const colegio = colegios.find((item: any) => item.id_colegio === Number(idColegio));
+    return colegio?.nombre || colegio?.nombre_corto || 'Selecciona colegio';
   };
 
   const fetchAll = async () => {
@@ -235,11 +257,33 @@ export default function TesoreriaConfiguracionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, queryString]);
 
+  useEffect(() => {
+    if (!colegioDefault) return;
+
+    setPlanForm((current) => ({
+      ...current,
+      id_colegio: current.id_colegio || colegioDefault,
+    }));
+    setCampanaForm((current) => ({
+      ...current,
+      id_colegio: current.id_colegio || colegioDefault,
+    }));
+    setPublicarForm((current) => ({
+      ...current,
+      id_colegio: current.id_colegio || colegioDefault,
+    }));
+  }, [colegioDefault]);
+
   const crearPlan = async () => {
     if (!token) return;
 
     if (!planForm.id_colegio || !planForm.id_anio) {
       showToast({ type: 'warning', title: 'Faltan datos', message: 'Selecciona colegio y año lectivo.' });
+      return;
+    }
+
+    if (Number(planForm.mes_inicio) > Number(planForm.mes_fin)) {
+      showToast({ type: 'warning', title: 'Revisa los meses', message: 'El mes de inicio no puede ser mayor al mes final.' });
       return;
     }
 
@@ -355,8 +399,8 @@ export default function TesoreriaConfiguracionPage() {
     <div className="w-full space-y-6">
       <PageHeader
         eyebrow="Tesorería"
-        title="Configuración de pensiones"
-        description={`Define las pensiones del año, crea descuentos y activa los cobros del mes para ${scopeLabel.toLowerCase()}.`}
+        title="Pensiones y descuentos"
+        description={`Configura pensiones anuales, descuentos y publicación mensual para ${scopeLabel.toLowerCase()}.`}
         icon={WalletCards}
         meta={[
           { label: 'Contexto activo', value: scopeLabel },
@@ -364,30 +408,49 @@ export default function TesoreriaConfiguracionPage() {
         ]}
       />
 
-      {/* Guía visual de tres pasos */}
       <section className="grid gap-3 md:grid-cols-3">
-        <GuideCard
+        <StepCard
           step={1}
-          title="Crear pensiones del año"
-          description="Define los meses, montos y fechas de vencimiento para el año escolar."
+          title="Crea el cronograma"
+          description="Define meses, monto mensual, fecha de publicación y fecha de vencimiento."
         />
-        <GuideCard
+        <StepCard
           step={2}
-          title="Crear descuentos o campañas"
-          description="Úsalo para matrícula anticipada, promociones o descuentos especiales."
+          title="Registra descuentos"
+          description="Úsalo para matrícula anticipada, pronto pago o campañas por temporada."
         />
-        <GuideCard
+        <StepCard
           step={3}
-          title="Activar cobros del mes"
-          description="Cuando llegue el mes, publica la pensión para que aparezca como deuda."
+          title="Publica el mes"
+          description="Cuando corresponda, activa la pensión para que aparezca como deuda."
         />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Cronogramas" value={planes.length} helper={`${planesActivos} activos`} icon={CalendarDays} />
+        <StatCard label="Campañas" value={campanas.length} helper="Descuentos configurados" icon={BadgePercent} />
+        <StatCard label="Instituciones" value={colegios.length} helper="Disponibles para gestionar" icon={ShieldCheck} />
+      </section>
+
+      <div className="rounded-[30px] border border-blue-100 bg-blue-50/60 p-4 text-sm font-semibold leading-6 text-blue-900">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 ring-1 ring-blue-100">
+            <Megaphone size={17} />
+          </div>
+          <div>
+            <p className="font-black text-blue-950">Uso recomendado</p>
+            <p className="mt-1 text-blue-800/80">
+              Esta pantalla debe usarse por colegio. En vista consolidada, selecciona primero la institución para evitar mezclar planes de pensiones entre colegios.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Card
           icon={Coins}
           title="Cronograma base de pensiones"
-          description="Crea automáticamente las pensiones de marzo a diciembre, con publicación y vencimiento mensual."
+          description="Crea automáticamente las pensiones del año con publicación y vencimiento mensual."
         >
           <div className="grid gap-4 md:grid-cols-2">
             <label>
@@ -397,10 +460,10 @@ export default function TesoreriaConfiguracionPage() {
                 value={planForm.id_colegio}
                 onChange={(e) => setPlanForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
               >
-                <option value="">Seleccionar</option>
-                {colegios.map((colegio) => (
+                <option value="">Seleccionar colegio</option>
+                {colegios.map((colegio: any) => (
                   <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                    {colegio.nombre_corto || colegio.nombre}
+                    {colegio.nombre}
                   </option>
                 ))}
               </select>
@@ -413,22 +476,20 @@ export default function TesoreriaConfiguracionPage() {
                 value={planForm.id_anio}
                 onChange={(e) => setPlanForm((c) => ({ ...c, id_anio: e.target.value }))}
               >
-                <option value="">Seleccionar</option>
-                {anios
-                  .filter((anio) => !planForm.id_colegio || anio.id_colegio === Number(planForm.id_colegio))
-                  .map((anio) => (
-                    <option key={anio.id_anio} value={anio.id_anio}>
-                      {anio.nombre_anio} · {anio.estado}
-                    </option>
-                  ))}
+                <option value="">Seleccionar año</option>
+                {aniosPorColegio(planForm.id_colegio).map((anio) => (
+                  <option key={anio.id_anio} value={anio.id_anio}>
+                    {anio.nombre_anio} · {anio.estado}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label>
-              <span className={labelClass}>Nombre</span>
+              <span className={labelClass}>Nombre del plan</span>
               <input
                 className={inputClass}
-                placeholder="Pensiones 2027"
+                placeholder="Ej. Plan regular 2027"
                 value={planForm.nombre}
                 onChange={(e) => setPlanForm((c) => ({ ...c, nombre: e.target.value }))}
               />
@@ -498,28 +559,27 @@ export default function TesoreriaConfiguracionPage() {
           <button
             type="button"
             onClick={crearPlan}
-            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+            disabled={loading}
+            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <CheckCircle2 size={16} />
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Crear cronograma base
           </button>
 
           <div className="mt-5 space-y-3">
             {planes.length === 0 ? (
-              <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
-                No hay cronogramas base registrados.
-              </p>
+              <EmptyBox text="No hay cronogramas base registrados." />
             ) : (
               planes.map((plan) => (
-                <div key={plan.id_plan_pension} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <div key={plan.id_plan_pension} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:bg-white">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-black text-slate-900">{plan.nombre}</p>
                       <p className="mt-1 text-xs font-bold text-slate-500">
-                        {plan.colegio?.nombre_corto || plan.colegio?.nombre} · {plan.anio?.nombre_anio}
+                        {plan.colegio?.nombre || plan.colegio?.nombre_corto} · {plan.anio?.nombre_anio}
                       </p>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoClass(plan.estado)}`}>
+                    <span className={cx('rounded-full px-3 py-1 text-xs font-black ring-1', estadoClass(plan.estado))}>
                       {plan.estado}
                     </span>
                   </div>
@@ -536,7 +596,7 @@ export default function TesoreriaConfiguracionPage() {
           <Card
             icon={Send}
             title="Publicar pensión del mes"
-            description="Publica un mes para que sea visible en la app de padres."
+            description="Activa un mes para que sea visible como deuda en la vista de padres y cobranza."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <label>
@@ -546,10 +606,10 @@ export default function TesoreriaConfiguracionPage() {
                   value={publicarForm.id_colegio}
                   onChange={(e) => setPublicarForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
                 >
-                  <option value="">Seleccionar</option>
-                  {colegios.map((colegio) => (
+                  <option value="">Seleccionar colegio</option>
+                  {colegios.map((colegio: any) => (
                     <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                      {colegio.nombre_corto || colegio.nombre}
+                      {colegio.nombre}
                     </option>
                   ))}
                 </select>
@@ -562,14 +622,10 @@ export default function TesoreriaConfiguracionPage() {
                   value={publicarForm.id_anio}
                   onChange={(e) => setPublicarForm((c) => ({ ...c, id_anio: e.target.value }))}
                 >
-                  <option value="">Seleccionar</option>
-                  {anios
-                    .filter((anio) => !publicarForm.id_colegio || anio.id_colegio === Number(publicarForm.id_colegio))
-                    .map((anio) => (
-                      <option key={anio.id_anio} value={anio.id_anio}>
-                        {anio.nombre_anio}
-                      </option>
-                    ))}
+                  <option value="">Seleccionar año</option>
+                  {aniosPorColegio(publicarForm.id_colegio).map((anio) => (
+                    <option key={anio.id_anio} value={anio.id_anio}>{anio.nombre_anio}</option>
+                  ))}
                 </select>
               </label>
 
@@ -590,19 +646,24 @@ export default function TesoreriaConfiguracionPage() {
                 <button
                   type="button"
                   onClick={publicarMes}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-accent-600"
+                  disabled={loading}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Send size={16} />
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   Publicar
                 </button>
               </div>
             </div>
+
+            <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-5 text-slate-500 ring-1 ring-slate-100">
+              Se publicará la pensión para {nombreColegio(publicarForm.id_colegio)}. Si el cronograma base no existe, el backend debe devolver un mensaje claro.
+            </p>
           </Card>
 
           <Card
             icon={BadgePercent}
             title="Campañas y descuentos"
-            description="Aplica descuentos a matrícula, pensión, extraordinarios u otros conceptos."
+            description="Registra descuentos para matrícula anticipada, pensión, extraordinarios u otros conceptos."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <label>
@@ -613,9 +674,9 @@ export default function TesoreriaConfiguracionPage() {
                   onChange={(e) => setCampanaForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
                 >
                   <option value="">Todos</option>
-                  {colegios.map((colegio) => (
+                  {colegios.map((colegio: any) => (
                     <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                      {colegio.nombre_corto || colegio.nombre}
+                      {colegio.nombre}
                     </option>
                   ))}
                 </select>
@@ -629,13 +690,9 @@ export default function TesoreriaConfiguracionPage() {
                   onChange={(e) => setCampanaForm((c) => ({ ...c, id_anio: e.target.value }))}
                 >
                   <option value="">Todos</option>
-                  {anios
-                    .filter((anio) => !campanaForm.id_colegio || anio.id_colegio === Number(campanaForm.id_colegio))
-                    .map((anio) => (
-                      <option key={anio.id_anio} value={anio.id_anio}>
-                        {anio.nombre_anio}
-                      </option>
-                    ))}
+                  {aniosPorColegio(campanaForm.id_colegio).map((anio) => (
+                    <option key={anio.id_anio} value={anio.id_anio}>{anio.nombre_anio}</option>
+                  ))}
                 </select>
               </label>
 
@@ -645,7 +702,7 @@ export default function TesoreriaConfiguracionPage() {
                   className={inputClass}
                   value={campanaForm.nombre}
                   onChange={(e) => setCampanaForm((c) => ({ ...c, nombre: e.target.value }))}
-                  placeholder="Matrícula anticipada / Descuento pronto pago"
+                  placeholder="Ej. Matrícula anticipada 2027"
                 />
               </label>
 
@@ -730,20 +787,19 @@ export default function TesoreriaConfiguracionPage() {
             <button
               type="button"
               onClick={crearCampana}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+              disabled={loading}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <BadgePercent size={16} />
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <BadgePercent size={16} />}
               Crear campaña/descuento
             </button>
 
             <div className="mt-5 space-y-3">
               {campanas.length === 0 ? (
-                <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
-                  No hay campañas registradas.
-                </p>
+                <EmptyBox text="No hay campañas registradas." />
               ) : (
                 campanas.map((campana) => (
-                  <div key={campana.id_campana_descuento} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                  <div key={campana.id_campana_descuento} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:bg-white">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-black text-slate-900">{campana.nombre}</p>
@@ -751,10 +807,10 @@ export default function TesoreriaConfiguracionPage() {
                           {formatDate(campana.fecha_inicio)} - {formatDate(campana.fecha_fin)}
                         </p>
                         <p className="mt-1 text-xs font-bold text-slate-400">
-                          {campana.colegio?.nombre_corto || campana.colegio?.nombre || 'Todos'} · {campana.tipo_concepto_aplica || 'Todos'}
+                          {campana.colegio?.nombre || campana.colegio?.nombre_corto || 'Todos'} · {campana.tipo_concepto_aplica || 'Todos'}
                         </p>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoClass(campana.estado)}`}>
+                      <span className={cx('rounded-full px-3 py-1 text-xs font-black ring-1', estadoClass(campana.estado))}>
                         {campana.estado}
                       </span>
                     </div>
