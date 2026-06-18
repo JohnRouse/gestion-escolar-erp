@@ -74,8 +74,25 @@ export default function SeccionesTab() {
       ? activeColegio.id_colegio
       : null;
 
-  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  // ════ Estados (importante: declarar todos los useState antes de cualquier useMemo que los consuma) ════
+  const [niveles, setNiveles] = useState<Nivel[]>([]);
+  const [grados, setGrados] = useState<Grado[]>([]);
+  const [nivelSeleccionado, setNivelSeleccionado] = useState<number | null>(null);
+  const [gradoSeleccionado, setGradoSeleccionado] = useState<number | null>(null);
+  const [secciones, setSecciones] = useState<Seccion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState<ModalState | null>(null);
+  const [letra, setLetra] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [anios, setAnios] = useState<AnioLectivo[]>([]);
+  const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
+  const [capacidad, setCapacidad] = useState('30');
   const [colegioGestionId, setColegioGestionId] = useState('');
+
+  // ════ Variables derivadas (después de los estados) ════
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
 
   const colegioGestionActualId = Number(
     mostrarSelectorInstitucion
@@ -105,33 +122,12 @@ export default function SeccionesTab() {
     });
   }, [anios, colegioGestionActualId]);
 
-  const [niveles, setNiveles] = useState<Nivel[]>([]);
-  const [grados, setGrados] = useState<Grado[]>([]);
-  const [nivelSeleccionado, setNivelSeleccionado] = useState<number | null>(null);
-  const [gradoSeleccionado, setGradoSeleccionado] = useState<number | null>(null);
-  const [secciones, setSecciones] = useState<Seccion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [modal, setModal] = useState<ModalState | null>(null);
-  const [letra, setLetra] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const [anios, setAnios] = useState<AnioLectivo[]>([]);
-  const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
-  const [capacidad, setCapacidad] = useState('30');
-
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
-    [token]
+    [token],
   );
 
-  const nivelActivo = niveles.find((nivel) => nivel.id_nivel === nivelSeleccionado);
-  const gradoActivo = grados.find((grado) => grado.id_grado === gradoSeleccionado);
-  const capacidadTotal = secciones.reduce((total, sec) => total + Number(sec.aula?.capacidad || 0), 0);
-  const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
-  const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
-
-  // Set initial colegioGestionId if in "todos" mode
+  // ════ Efectos iniciales ════
   useEffect(() => {
     if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
       setColegioGestionId(String(colegios[0].id_colegio));
@@ -220,7 +216,7 @@ export default function SeccionesTab() {
     try {
       const res = await axios.get(
         `/api/academicos/secciones${scopedQuery ? `${scopedQuery}&` : '?'}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
-        authHeader
+        authHeader,
       );
       setSecciones(res.data);
     } catch {
@@ -236,6 +232,7 @@ export default function SeccionesTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradoSeleccionado, anioSeleccionado, token, scopedQuery]);
 
+  // ════ Acciones ════
   const openCreate = () => {
     setModal({ mode: 'create' });
     setLetra('');
@@ -271,7 +268,7 @@ export default function SeccionesTab() {
         await axios.put(
           `/api/academicos/secciones/${modal.seccion.id_seccion}`,
           { letra: cleanLetter },
-          authHeader
+          authHeader,
         );
       } else {
         await axios.post(
@@ -314,6 +311,14 @@ export default function SeccionesTab() {
     }
   };
 
+  // ════ Lecturas derivadas ════
+  const nivelActivo = niveles.find((nivel) => nivel.id_nivel === nivelSeleccionado);
+  const gradoActivo = grados.find((grado) => grado.id_grado === gradoSeleccionado);
+  const capacidadTotal = secciones.reduce((total, sec) => total + Number(sec.aula?.capacidad || 0), 0);
+  const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
+  const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
+
+  // ════ Interfaz ════
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

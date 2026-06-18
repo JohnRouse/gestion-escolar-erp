@@ -141,6 +141,8 @@ export default function PeriodosUnidadesTab() {
     return `?${params.toString()}`;
   };
 
+  const scopedQuery = useMemo(() => queryConColegio(), [queryString, colegioSeleccionadoId]);
+
   const cargarAnios = async () => {
     if (!token) return;
 
@@ -148,9 +150,10 @@ export default function PeriodosUnidadesTab() {
     setMensaje(null);
 
     try {
-      const res = await axios.get(`/api/academicos/anios${queryString}`, authHeader);
+      const res = await axios.get(`/api/academicos/anios${scopedQuery}`, authHeader);
       const data = Array.isArray(res.data) ? res.data : [];
       setAnios(data);
+      setPeriodos([]);
 
       const colegioInicial = activeScope.tipo === 'colegio' ? activeColegio?.id_colegio : colegios[0]?.id_colegio;
       if (colegioInicial) setColegioGestionId(String(colegioInicial));
@@ -168,7 +171,7 @@ export default function PeriodosUnidadesTab() {
     }
 
     try {
-      const params = new URLSearchParams(queryConColegio().slice(1));
+      const params = new URLSearchParams(scopedQuery.slice(1));
       params.set('anio_id', anio);
 
       const res = await axios.get<PeriodosResponse>(`/api/academicos/periodos-unidades?${params.toString()}`, authHeader);
@@ -192,15 +195,20 @@ export default function PeriodosUnidadesTab() {
   useEffect(() => {
     cargarAnios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString]);
+  }, [token, scopedQuery]);
 
   useEffect(() => {
     const recomendado =
       aniosFiltrados.find((anio) => ['En curso', 'Abierto', 'Planificación'].includes(anio.estado || '')) ||
       aniosFiltrados[0];
 
-    setIdAnio(recomendado ? String(recomendado.id_anio) : '');
-  }, [aniosFiltrados.length, colegioSeleccionadoId]);
+    const siguienteAnio = recomendado ? String(recomendado.id_anio) : '';
+    setIdAnio(siguienteAnio);
+
+    if (!siguienteAnio) {
+      setPeriodos([]);
+    }
+  }, [aniosFiltrados, colegioSeleccionadoId]);
 
   useEffect(() => {
     if (idAnio) cargarPeriodos(idAnio);
@@ -238,10 +246,8 @@ export default function PeriodosUnidadesTab() {
     setMensaje(null);
 
     try {
-      const params = queryConColegio();
-
       const res = await axios.post<PeriodosResponse>(
-        `/api/academicos/periodos-unidades/generar${params}`,
+        `/api/academicos/periodos-unidades/generar${scopedQuery}`,
         {
           id_anio: Number(idAnio),
           id_colegio: colegioSeleccionadoId,
@@ -286,11 +292,10 @@ export default function PeriodosUnidadesTab() {
   const guardarEdicion = async () => {
     if (!token || !editando) return;
     try {
-      const params = queryConColegio();
       const url =
         editando.tipo === 'periodo'
-          ? `/api/academicos/periodos/${editando.id}${params}`
-          : `/api/academicos/unidades/${editando.id}/detalle${params}`;
+          ? `/api/academicos/periodos/${editando.id}${scopedQuery}`
+          : `/api/academicos/unidades/${editando.id}/detalle${scopedQuery}`;
 
       const res = await axios.patch<PeriodosResponse>(
         url,
@@ -315,10 +320,8 @@ export default function PeriodosUnidadesTab() {
     if (!token) return;
 
     try {
-      const params = queryConColegio();
-
       const res = await axios.patch<PeriodosResponse>(
-        `/api/academicos/unidades/${unidad.id_unidad}/estado${params}`,
+        `/api/academicos/unidades/${unidad.id_unidad}/estado${scopedQuery}`,
         { estado_abierto: estado },
         authHeader,
       );
@@ -454,7 +457,8 @@ export default function PeriodosUnidadesTab() {
               <option value="">Selecciona año</option>
               {aniosFiltrados.map((anio) => (
                 <option key={anio.id_anio} value={anio.id_anio}>
-                  {anio.nombre_anio}
+                  {anio.nombre_anio} · {anio.estado}
+                  {mostrarSelectorInstitucion && anio.colegio?.nombre ? ` · ${anio.colegio.nombre}` : ''}
                 </option>
               ))}
             </select>
