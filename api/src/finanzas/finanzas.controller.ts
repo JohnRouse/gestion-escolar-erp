@@ -156,6 +156,23 @@ export class FinanzasController {
     });
   }
 
+  @Patch('planes-pensiones/:id')
+@Roles('Admin', 'Director')
+async actualizarPlanPensiones(
+  @Param('id') id: string,
+  @Body() body: any,
+  @Request() req,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.finanzasService.actualizarPlanPensiones(Number(id), body, {
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope: scope || body.scope,
+    colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+  });
+}
+
   @Post('matriculas/:id/generar-pensiones')
   @Roles('Admin', 'Director', 'Secretaria')
   async generarPensionesMatricula(
@@ -259,6 +276,23 @@ export class FinanzasController {
       colegioId: colegioId ? Number(colegioId) : body.id_colegio,
     });
   }
+
+  @Patch('campanas-descuento/:id')
+@Roles('Admin', 'Director')
+async actualizarCampanaDescuento(
+  @Param('id') id: string,
+  @Body() body: any,
+  @Request() req,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.finanzasService.actualizarCampanaDescuento(Number(id), body, {
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope: scope || body.scope,
+    colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+  });
+}
 
   // ── NUEVAS RUTAS: REFERENCIAS DE PAGO Y PAGOS RECIBIDOS ──
   @Post('referencias/generar-faltantes')

@@ -1160,6 +1160,166 @@ export class FinanzasService {
     });
   }
 
+  async actualizarPlanPensiones(idPlan: number, dto: any, params: ScopeParams) {
+  const scope = await this.resolveScope(params);
+
+  const plan = await this.prisma.planPensiones.findFirst({
+    where: {
+      id_plan_pension: idPlan,
+      ...this.colegioWhere(scope),
+    },
+    include: {
+      anio: true,
+      colegio: true,
+      detalles: {
+        include: {
+          concepto: true,
+          _count: {
+            select: {
+              cronogramas: true,
+            },
+          },
+        },
+        orderBy: { mes: 'asc' },
+      },
+    },
+  });
+
+  if (!plan) {
+    throw new NotFoundException('Cronograma de pensiones no encontrado o sin acceso.');
+  }
+
+  const nombre = dto.nombre !== undefined ? String(dto.nombre || '').trim() : plan.nombre;
+  const montoMensual = dto.monto_mensual !== undefined ? Number(dto.monto_mensual) : Number(plan.monto_mensual);
+  const mesInicio = dto.mes_inicio !== undefined ? Number(dto.mes_inicio) : Number(plan.mes_inicio || 3);
+  const mesFin = dto.mes_fin !== undefined ? Number(dto.mes_fin) : Number(plan.mes_fin || 12);
+  const diaPublicacion = dto.dia_publicacion !== undefined ? Number(dto.dia_publicacion) : Number(plan.dia_publicacion || 1);
+  const diaVencimiento = dto.dia_vencimiento !== undefined ? Number(dto.dia_vencimiento) : Number(plan.dia_vencimiento || 5);
+  const estado = dto.estado !== undefined ? String(dto.estado || 'Activo') : plan.estado;
+  const idAnio = dto.id_anio !== undefined ? Number(dto.id_anio) : plan.id_anio;
+
+  if (!nombre) {
+    throw new BadRequestException('Ingresa el nombre del cronograma.');
+  }
+
+  if (!Number.isFinite(montoMensual) || montoMensual <= 0) {
+    throw new BadRequestException('Ingresa un monto mensual válido mayor a cero.');
+  }
+
+  if (mesInicio < 1 || mesFin > 12 || mesInicio > mesFin) {
+    throw new BadRequestException('Rango de meses inválido.');
+  }
+
+  if (diaPublicacion < 1 || diaPublicacion > 31 || diaVencimiento < 1 || diaVencimiento > 31) {
+    throw new BadRequestException('Los días de publicación y vencimiento deben estar entre 1 y 31.');
+  }
+
+  const anio = await this.prisma.anioLectivo.findFirst({
+    where: {
+      id_anio: idAnio,
+      id_colegio: plan.id_colegio,
+    },
+  });
+
+  if (!anio) {
+    throw new BadRequestException('El año lectivo seleccionado no pertenece al colegio del cronograma.');
+  }
+
+  const cambiaEstructura =
+    Number(plan.monto_mensual) !== montoMensual ||
+    Number(plan.mes_inicio || 3) !== mesInicio ||
+    Number(plan.mes_fin || 12) !== mesFin ||
+    Number(plan.dia_publicacion || 1) !== diaPublicacion ||
+    Number(plan.dia_vencimiento || 5) !== diaVencimiento ||
+    Number(plan.id_anio) !== idAnio;
+
+  const cronogramasRelacionados = plan.detalles.reduce(
+    (total, detalle: any) => total + Number(detalle._count?.cronogramas || 0),
+    0,
+  );
+
+  if (cambiaEstructura && cronogramasRelacionados > 0) {
+    throw new BadRequestException(
+      'No se puede cambiar monto, meses o fechas porque este cronograma ya generó deudas para alumnos. ' +
+        'Para proteger el historial financiero, crea un nuevo cronograma o usa uno para el siguiente año.',
+    );
+  }
+
+  const anioNumero = this.getAnioCorte(anio);
+
+  return this.prisma.$transaction(async (tx) => {
+    const actualizado = await tx.planPensiones.update({
+      where: { id_plan_pension: idPlan },
+      data: {
+        id_anio: idAnio,
+        nombre,
+        monto_mensual: montoMensual,
+        mes_inicio: mesInicio,
+        mes_fin: mesFin,
+        dia_publicacion: diaPublicacion,
+        dia_vencimiento: diaVencimiento,
+        estado,
+      },
+    });
+
+    if (cambiaEstructura) {
+      const conceptosAnteriores = plan.detalles.map((detalle) => detalle.id_concepto);
+
+      await tx.planPensionesDetalle.deleteMany({
+        where: { id_plan_pension: idPlan },
+      });
+
+      if (conceptosAnteriores.length) {
+        await tx.conceptoPago.deleteMany({
+          where: {
+            id_concepto: { in: conceptosAnteriores },
+          },
+        });
+      }
+
+      for (let mes = mesInicio; mes <= mesFin; mes++) {
+        const mesInfo = this.mesesEscolares.find((item) => item.mes === mes);
+        const nombreMes = mesInfo?.nombre || `Mes ${mes}`;
+        const nombreConcepto = `Pensión ${nombreMes} ${anioNumero}`;
+        const fechaPublicacion = this.crearFechaLocal(anioNumero, mes, diaPublicacion);
+        const fechaVencimiento = this.crearFechaLocal(anioNumero, mes, diaVencimiento);
+
+        const concepto = await tx.conceptoPago.create({
+          data: {
+            id_tenant: plan.id_tenant,
+            id_colegio: plan.id_colegio,
+            id_anio: idAnio,
+            nombre_concepto: nombreConcepto,
+            monto_base: montoMensual,
+            tipo_concepto: 'PENSION',
+            es_pension: true,
+            es_extraordinario: false,
+          },
+        });
+
+        await tx.planPensionesDetalle.create({
+          data: {
+            id_plan_pension: idPlan,
+            id_concepto: concepto.id_concepto,
+            mes,
+            nombre_mes: nombreMes,
+            fecha_publicacion: fechaPublicacion,
+            fecha_vencimiento: fechaVencimiento,
+            monto_base: montoMensual,
+            estado: 'Programado',
+          },
+        });
+      }
+    }
+
+    return {
+      message: 'Cronograma de pensiones actualizado correctamente.',
+      plan: actualizado,
+    };
+  });
+}
+
+
   // ── CONCEPTOS ──────────────────────────────────────
   async getConceptos(params: ScopeParams) {
     const scope = await this.resolveScope(params);
@@ -1854,6 +2014,119 @@ export class FinanzasService {
       },
     });
   }
+
+  async actualizarCampanaDescuento(idCampana: number, dto: any, params: ScopeParams) {
+  const scope = await this.resolveScope(params);
+
+  const campana = await this.prisma.campanaDescuento.findFirst({
+    where: {
+      id_campana_descuento: idCampana,
+      OR: [
+        { id_colegio: { in: scope.colegioIds } },
+        { id_colegio: null, id_tenant: scope.tenantId },
+      ],
+    },
+  });
+
+  if (!campana) {
+    throw new NotFoundException('Campaña/descuento no encontrado o sin acceso.');
+  }
+
+  const idColegio =
+    dto.id_colegio !== undefined && dto.id_colegio !== null && dto.id_colegio !== ''
+      ? Number(dto.id_colegio)
+      : null;
+
+  if (idColegio && !scope.colegioIds.includes(idColegio)) {
+    throw new UnauthorizedException('No tienes acceso al colegio seleccionado.');
+  }
+
+  const fechaInicio = dto.fecha_inicio !== undefined
+    ? new Date(`${dto.fecha_inicio}T00:00:00`)
+    : campana.fecha_inicio;
+
+  const fechaFin = dto.fecha_fin !== undefined
+    ? new Date(`${dto.fecha_fin}T00:00:00`)
+    : campana.fecha_fin;
+
+  if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+    throw new BadRequestException('Las fechas no son válidas.');
+  }
+
+  if (fechaFin < fechaInicio) {
+    throw new BadRequestException('La fecha fin no puede ser anterior a la fecha inicio.');
+  }
+
+  const nombre = dto.nombre !== undefined ? String(dto.nombre || '').trim() : campana.nombre;
+
+  if (!nombre) {
+    throw new BadRequestException('Ingresa el nombre de la campaña.');
+  }
+
+  const montoPromocional =
+    dto.monto_promocional === null || dto.monto_promocional === ''
+      ? null
+      : dto.monto_promocional !== undefined
+        ? Number(dto.monto_promocional)
+        : campana.monto_promocional;
+
+  const descuentoMonto =
+    dto.descuento_monto === null || dto.descuento_monto === ''
+      ? null
+      : dto.descuento_monto !== undefined
+        ? Number(dto.descuento_monto)
+        : campana.descuento_monto;
+
+  const descuentoPorcentaje =
+    dto.descuento_porcentaje === null || dto.descuento_porcentaje === ''
+      ? null
+      : dto.descuento_porcentaje !== undefined
+        ? Number(dto.descuento_porcentaje)
+        : campana.descuento_porcentaje;
+
+  if (
+    montoPromocional === null &&
+    descuentoMonto === null &&
+    descuentoPorcentaje === null
+  ) {
+    throw new BadRequestException('Ingresa monto promocional, descuento fijo o porcentaje.');
+  }
+
+  return this.prisma.campanaDescuento.update({
+    where: { id_campana_descuento: idCampana },
+    data: {
+      id_colegio: idColegio,
+      id_anio:
+        dto.id_anio !== undefined && dto.id_anio !== null && dto.id_anio !== ''
+          ? Number(dto.id_anio)
+          : null,
+      nombre,
+      descripcion: dto.descripcion !== undefined ? this.normalizeEmpty(dto.descripcion) : campana.descripcion,
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
+      tipo_concepto_aplica:
+        dto.tipo_concepto_aplica !== undefined && dto.tipo_concepto_aplica !== ''
+          ? this.normalizarTipoConcepto(dto.tipo_concepto_aplica)
+          : null,
+      tipo_ingreso_aplica:
+        dto.tipo_ingreso_aplica !== undefined
+          ? this.normalizeEmpty(dto.tipo_ingreso_aplica)
+          : campana.tipo_ingreso_aplica,
+      monto_promocional: montoPromocional,
+      descuento_monto: descuentoMonto,
+      descuento_porcentaje: descuentoPorcentaje,
+      solo_alumnos_vigentes:
+        dto.solo_alumnos_vigentes !== undefined
+          ? Boolean(dto.solo_alumnos_vigentes)
+          : campana.solo_alumnos_vigentes,
+      estado: dto.estado !== undefined ? String(dto.estado || 'Activo') : campana.estado,
+    },
+    include: {
+      colegio: true,
+      anio: true,
+    },
+  });
+}
 
   async listarCampanasDescuento(params: ScopeParams & { idAnio?: number }) {
     const scope = await this.resolveScope(params);

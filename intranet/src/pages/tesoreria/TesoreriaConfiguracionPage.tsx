@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   BadgePercent,
-  CalendarDays,
   CheckCircle2,
   Coins,
   Loader2,
   Megaphone,
+  Pencil,
+  Save,
   Send,
-  ShieldCheck,
   WalletCards,
+  X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,24 +24,41 @@ type AnioLectivo = {
   estado: string;
 };
 
+type PlanDetalle = {
+  id_plan_detalle: number;
+  id_concepto: number;
+  mes: number;
+  nombre_mes: string;
+  fecha_publicacion: string;
+  fecha_vencimiento: string;
+  monto_base: number | string;
+  estado: string;
+  concepto?: {
+    id_concepto: number;
+    nombre_concepto: string;
+  };
+};
+
 type PlanPensiones = {
   id_plan_pension: number;
+  id_colegio?: number | null;
+  id_anio?: number | null;
   nombre: string;
   monto_mensual: number | string;
+  mes_inicio?: number | null;
+  mes_fin?: number | null;
+  dia_publicacion?: number | null;
+  dia_vencimiento?: number | null;
   estado: string;
-  colegio?: { nombre: string; nombre_corto?: string | null };
-  anio?: { nombre_anio: string };
-  detalles?: {
-    id_plan_detalle: number;
-    nombre_mes: string;
-    fecha_publicacion: string;
-    fecha_vencimiento: string;
-    estado: string;
-  }[];
+  colegio?: { id_colegio?: number; nombre: string; nombre_corto?: string | null };
+  anio?: { id_anio?: number; nombre_anio: string };
+  detalles?: PlanDetalle[];
 };
 
 type CampanaDescuento = {
   id_campana_descuento: number;
+  id_colegio?: number | null;
+  id_anio?: number | null;
   nombre: string;
   fecha_inicio: string;
   fecha_fin: string;
@@ -48,18 +66,17 @@ type CampanaDescuento = {
   monto_promocional?: number | string | null;
   descuento_monto?: number | string | null;
   descuento_porcentaje?: number | string | null;
+  solo_alumnos_vigentes?: boolean;
   estado: string;
-  colegio?: { nombre: string; nombre_corto?: string | null };
+  colegio?: { id_colegio?: number; nombre: string; nombre_corto?: string | null };
+  anio?: { id_anio?: number; nombre_anio: string };
 };
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-300 hover:bg-white focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
 
 const labelClass =
   'mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
-
-const cx = (...classes: Array<string | false | null | undefined>) =>
-  classes.filter(Boolean).join(' ');
 
 const currency = (value: number | string | null | undefined) =>
   new Intl.NumberFormat('es-PE', {
@@ -75,6 +92,13 @@ const formatDate = (value?: string | null) => {
     month: 'short',
     year: 'numeric',
   });
+};
+
+const toDateInput = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
 };
 
 const meses = [
@@ -94,55 +118,77 @@ const meses = [
 
 function estadoClass(estado?: string) {
   const value = String(estado || '').toLowerCase();
+
   if (value.includes('activo') || value.includes('publicado')) {
     return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
   }
+
   if (value.includes('programado') || value.includes('plan')) {
     return 'bg-amber-50 text-amber-700 ring-amber-100';
   }
-  if (value.includes('cerrado') || value.includes('inactivo')) {
-    return 'bg-slate-100 text-slate-500 ring-slate-200';
+
+  if (value.includes('inactivo') || value.includes('anulado')) {
+    return 'bg-rose-50 text-rose-700 ring-rose-100';
   }
-  return 'bg-blue-50 text-blue-700 ring-blue-100';
+
+  return 'bg-slate-50 text-slate-600 ring-slate-100';
 }
 
-function StepCard({ step, title, description }: { step: number; title: string; description: string }) {
+function tipoLabel(value?: string | null) {
+  const raw = String(value || '').toUpperCase();
+  if (raw === 'MATRICULA') return 'Matrícula';
+  if (raw === 'PENSION') return 'Pensión';
+  if (raw === 'EXTRAORDINARIO') return 'Extraordinario';
+  if (raw === 'OTRO') return 'Otro';
+  return 'Todos';
+}
+
+function GuideCard({
+  step,
+  title,
+  description,
+}: {
+  step: number;
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="group rounded-[26px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/80">
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">Paso {step}</p>
+    <div className="rounded-[28px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
+        Paso {step}
+      </p>
       <h3 className="mt-1 text-sm font-black text-slate-950">{title}</h3>
-      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">{description}</p>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+        {description}
+      </p>
     </div>
   );
 }
 
-function StatCard({ label, value, helper, icon: Icon }: { label: string; value: string | number; helper: string; icon: any }) {
+function Card({
+  title,
+  description,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-[26px] border border-white bg-white/90 p-5 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/80">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
-          <p className="mt-1 text-sm font-medium text-slate-500">{helper}</p>
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
-          <Icon size={18} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Card({ title, description, icon: Icon, children }: { title: string; description: string; icon: any; children: ReactNode }) {
-  return (
-    <section className="overflow-hidden rounded-[30px] border border-white bg-white/95 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/70">
-      <div className="flex items-start gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
-          <Icon size={19} />
-        </div>
-        <div>
-          <h2 className="text-base font-black text-slate-950">{title}</h2>
-          <p className="mt-1 text-sm font-medium leading-6 text-slate-500">{description}</p>
+    <section className="overflow-hidden rounded-[30px] border border-white bg-white/95 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md">
+      <div className="border-b border-slate-100 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+            <Icon size={19} />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-slate-950">{title}</h2>
+            <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
+              {description}
+            </p>
+          </div>
         </div>
       </div>
       <div className="p-5">{children}</div>
@@ -150,11 +196,48 @@ function Card({ title, description, icon: Icon, children }: { title: string; des
   );
 }
 
-function EmptyBox({ text }: { text: string }) {
+function ModalShell({
+  open,
+  title,
+  eyebrow,
+  description,
+  children,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  eyebrow: string;
+  description: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
   return (
-    <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
-      {text}
-    </p>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[34px] bg-white shadow-2xl shadow-slate-950/20 ring-1 ring-white/70 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
+              {eyebrow}
+            </p>
+            <h3 className="mt-1 text-xl font-black text-slate-950">{title}</h3>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="max-h-[calc(90vh-120px)] overflow-y-auto px-6 py-5">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -164,7 +247,7 @@ export default function TesoreriaConfiguracionPage() {
   const { showToast } = useToast();
 
   const colegioDefault =
-    activeScope?.tipo === 'colegio' && activeColegio?.id_colegio
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : colegios[0]?.id_colegio || '';
 
@@ -172,6 +255,8 @@ export default function TesoreriaConfiguracionPage() {
   const [planes, setPlanes] = useState<PlanPensiones[]>([]);
   const [campanas, setCampanas] = useState<CampanaDescuento[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [savingCampana, setSavingCampana] = useState(false);
 
   const [planForm, setPlanForm] = useState({
     id_colegio: colegioDefault,
@@ -190,7 +275,7 @@ export default function TesoreriaConfiguracionPage() {
     nombre: '',
     fecha_inicio: '',
     fecha_fin: '',
-    tipo_concepto_aplica: 'PENSION',
+    tipo_concepto_aplica: 'MATRICULA',
     monto_promocional: '',
     descuento_monto: '',
     descuento_porcentaje: '',
@@ -200,26 +285,19 @@ export default function TesoreriaConfiguracionPage() {
   const [publicarForm, setPublicarForm] = useState({
     id_colegio: colegioDefault,
     id_anio: '',
-    mes: new Date().getMonth() + 1,
+    mes: '',
   });
 
-  const aniosPorColegio = (idColegio: number | string | '') =>
-    anios.filter((anio) => !idColegio || anio.id_colegio === Number(idColegio));
-
-  const planesActivos = useMemo(
-    () => planes.filter((plan) => String(plan.estado || '').toLowerCase().includes('activo')).length,
-    [planes],
-  );
+  const [editPlan, setEditPlan] = useState<any>(null);
+  const [editCampana, setEditCampana] = useState<any>(null);
 
   const selectedColegioQuery = (idColegio: number | string | '') => {
     if (!idColegio) return queryString;
     return `?colegio_id=${idColegio}`;
   };
 
-  const nombreColegio = (idColegio: number | string | '') => {
-    const colegio = colegios.find((item: any) => item.id_colegio === Number(idColegio));
-    return colegio?.nombre || colegio?.nombre_corto || 'Selecciona colegio';
-  };
+  const aniosPorColegio = (idColegio: number | string | '') =>
+    anios.filter((anio) => !idColegio || Number(anio.id_colegio) === Number(idColegio));
 
   const fetchAll = async () => {
     if (!token) return;
@@ -260,19 +338,62 @@ export default function TesoreriaConfiguracionPage() {
   useEffect(() => {
     if (!colegioDefault) return;
 
-    setPlanForm((current) => ({
-      ...current,
-      id_colegio: current.id_colegio || colegioDefault,
-    }));
-    setCampanaForm((current) => ({
-      ...current,
-      id_colegio: current.id_colegio || colegioDefault,
-    }));
-    setPublicarForm((current) => ({
-      ...current,
-      id_colegio: current.id_colegio || colegioDefault,
-    }));
+    setPlanForm((current) => ({ ...current, id_colegio: colegioDefault, id_anio: '' }));
+    setPublicarForm((current) => ({ ...current, id_colegio: colegioDefault, id_anio: '', mes: '' }));
+    setCampanaForm((current) => ({ ...current, id_colegio: colegioDefault, id_anio: '' }));
   }, [colegioDefault]);
+
+  const planActivoPublicacion = useMemo(() => {
+    if (!publicarForm.id_colegio || !publicarForm.id_anio) return null;
+
+    return (
+      planes.find(
+        (plan) =>
+          Number(plan.id_colegio ?? plan.colegio?.id_colegio) === Number(publicarForm.id_colegio) &&
+          Number(plan.id_anio ?? plan.anio?.id_anio) === Number(publicarForm.id_anio) &&
+          String(plan.estado || '').toLowerCase() === 'activo',
+      ) || null
+    );
+  }, [planes, publicarForm.id_anio, publicarForm.id_colegio]);
+
+  const mesesPublicables = useMemo(() => {
+    if (!planActivoPublicacion?.detalles?.length) return [];
+
+    return [...planActivoPublicacion.detalles]
+      .sort((a, b) => Number(a.mes) - Number(b.mes))
+      .map((detalle) => ({
+        value: String(detalle.mes),
+        label: `${detalle.nombre_mes} · vence ${formatDate(detalle.fecha_vencimiento)}`,
+      }));
+  }, [planActivoPublicacion]);
+
+  useEffect(() => {
+    if (!mesesPublicables.length) {
+      if (publicarForm.mes) {
+        setPublicarForm((current) => ({ ...current, mes: '' }));
+      }
+
+      return;
+    }
+
+    if (!mesesPublicables.some((item) => item.value === String(publicarForm.mes))) {
+      setPublicarForm((current) => ({ ...current, mes: mesesPublicables[0].value }));
+    }
+  }, [mesesPublicables, publicarForm.mes]);
+
+  const planesVisibles = useMemo(() => {
+    return planes.filter((plan) => {
+      if (!planForm.id_colegio) return true;
+      return Number(plan.id_colegio ?? plan.colegio?.id_colegio) === Number(planForm.id_colegio);
+    });
+  }, [planes, planForm.id_colegio]);
+
+  const campanasVisibles = useMemo(() => {
+    return campanas.filter((campana) => {
+      if (!campanaForm.id_colegio) return true;
+      return Number(campana.id_colegio ?? campana.colegio?.id_colegio) === Number(campanaForm.id_colegio);
+    });
+  }, [campanas, campanaForm.id_colegio]);
 
   const crearPlan = async () => {
     if (!token) return;
@@ -282,12 +403,8 @@ export default function TesoreriaConfiguracionPage() {
       return;
     }
 
-    if (Number(planForm.mes_inicio) > Number(planForm.mes_fin)) {
-      showToast({ type: 'warning', title: 'Revisa los meses', message: 'El mes de inicio no puede ser mayor al mes final.' });
-      return;
-    }
-
     try {
+      setSavingPlan(true);
       const res = await axios.post(
         `/api/tesoreria/planes-pensiones${selectedColegioQuery(planForm.id_colegio)}`,
         {
@@ -314,6 +431,8 @@ export default function TesoreriaConfiguracionPage() {
         title: 'No se pudo crear',
         message: error.response?.data?.message || 'Revisa los datos.',
       });
+    } finally {
+      setSavingPlan(false);
     }
   };
 
@@ -340,6 +459,7 @@ export default function TesoreriaConfiguracionPage() {
     if (campanaForm.descuento_porcentaje) payload.descuento_porcentaje = Number(campanaForm.descuento_porcentaje);
 
     try {
+      setSavingCampana(true);
       await axios.post(
         `/api/tesoreria/campanas-descuento${selectedColegioQuery(campanaForm.id_colegio)}`,
         payload,
@@ -358,14 +478,16 @@ export default function TesoreriaConfiguracionPage() {
         title: 'No se pudo crear',
         message: error.response?.data?.message || 'Revisa los datos.',
       });
+    } finally {
+      setSavingCampana(false);
     }
   };
 
   const publicarMes = async () => {
     if (!token) return;
 
-    if (!publicarForm.id_colegio || !publicarForm.id_anio) {
-      showToast({ type: 'warning', title: 'Faltan datos', message: 'Selecciona colegio y año.' });
+    if (!publicarForm.id_colegio || !publicarForm.id_anio || !publicarForm.mes) {
+      showToast({ type: 'warning', title: 'Faltan datos', message: 'Selecciona colegio, año y mes programado.' });
       return;
     }
 
@@ -395,6 +517,129 @@ export default function TesoreriaConfiguracionPage() {
     }
   };
 
+  const abrirEditarPlan = (plan: PlanPensiones) => {
+    setEditPlan({
+      id_plan_pension: plan.id_plan_pension,
+      id_colegio: plan.id_colegio ?? plan.colegio?.id_colegio ?? '',
+      id_anio: plan.id_anio ?? plan.anio?.id_anio ?? '',
+      nombre: plan.nombre || '',
+      monto_mensual: String(plan.monto_mensual ?? ''),
+      mes_inicio: Number(plan.mes_inicio || plan.detalles?.[0]?.mes || 3),
+      mes_fin: Number(plan.mes_fin || plan.detalles?.[plan.detalles.length - 1]?.mes || 12),
+      dia_publicacion: Number(plan.dia_publicacion || 1),
+      dia_vencimiento: Number(plan.dia_vencimiento || 5),
+      estado: plan.estado || 'Activo',
+    });
+  };
+
+  const guardarEdicionPlan = async () => {
+    if (!token || !editPlan) return;
+
+    if (!editPlan.nombre || !editPlan.id_colegio || !editPlan.id_anio) {
+      showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa colegio, año y nombre del plan.' });
+      return;
+    }
+
+    try {
+      setSavingPlan(true);
+      await axios.patch(
+        `/api/tesoreria/planes-pensiones/${editPlan.id_plan_pension}${selectedColegioQuery(editPlan.id_colegio)}`,
+        {
+          id_anio: Number(editPlan.id_anio),
+          nombre: editPlan.nombre,
+          monto_mensual: Number(editPlan.monto_mensual),
+          mes_inicio: Number(editPlan.mes_inicio),
+          mes_fin: Number(editPlan.mes_fin),
+          dia_publicacion: Number(editPlan.dia_publicacion),
+          dia_vencimiento: Number(editPlan.dia_vencimiento),
+          estado: editPlan.estado,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      showToast({
+        type: 'success',
+        title: 'Cronograma actualizado',
+        message: 'Los cambios fueron guardados correctamente.',
+      });
+      setEditPlan(null);
+      await fetchAll();
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar',
+        message: error.response?.data?.message || 'Revisa los datos del cronograma.',
+      });
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
+  const abrirEditarCampana = (campana: CampanaDescuento) => {
+    setEditCampana({
+      id_campana_descuento: campana.id_campana_descuento,
+      id_colegio: campana.id_colegio ?? campana.colegio?.id_colegio ?? '',
+      id_anio: campana.id_anio ?? campana.anio?.id_anio ?? '',
+      nombre: campana.nombre || '',
+      fecha_inicio: toDateInput(campana.fecha_inicio),
+      fecha_fin: toDateInput(campana.fecha_fin),
+      tipo_concepto_aplica: campana.tipo_concepto_aplica || 'MATRICULA',
+      monto_promocional: campana.monto_promocional ? String(campana.monto_promocional) : '',
+      descuento_monto: campana.descuento_monto ? String(campana.descuento_monto) : '',
+      descuento_porcentaje: campana.descuento_porcentaje ? String(campana.descuento_porcentaje) : '',
+      solo_alumnos_vigentes: Boolean(campana.solo_alumnos_vigentes),
+      estado: campana.estado || 'Activo',
+    });
+  };
+
+  const guardarEdicionCampana = async () => {
+    if (!token || !editCampana) return;
+
+    if (!editCampana.nombre || !editCampana.fecha_inicio || !editCampana.fecha_fin) {
+      showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa nombre y fechas de la campaña.' });
+      return;
+    }
+
+    const payload: any = {
+      id_colegio: editCampana.id_colegio ? Number(editCampana.id_colegio) : undefined,
+      id_anio: editCampana.id_anio ? Number(editCampana.id_anio) : undefined,
+      nombre: editCampana.nombre,
+      fecha_inicio: editCampana.fecha_inicio,
+      fecha_fin: editCampana.fecha_fin,
+      tipo_concepto_aplica: editCampana.tipo_concepto_aplica || undefined,
+      solo_alumnos_vigentes: editCampana.solo_alumnos_vigentes,
+      estado: editCampana.estado,
+      monto_promocional: editCampana.monto_promocional ? Number(editCampana.monto_promocional) : null,
+      descuento_monto: editCampana.descuento_monto ? Number(editCampana.descuento_monto) : null,
+      descuento_porcentaje: editCampana.descuento_porcentaje ? Number(editCampana.descuento_porcentaje) : null,
+    };
+
+    try {
+      setSavingCampana(true);
+      await axios.patch(
+        `/api/tesoreria/campanas-descuento/${editCampana.id_campana_descuento}${selectedColegioQuery(editCampana.id_colegio)}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      showToast({
+        type: 'success',
+        title: 'Campaña actualizada',
+        message: 'Los cambios fueron guardados correctamente.',
+      });
+      setEditCampana(null);
+      await fetchAll();
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar',
+        message: error.response?.data?.message || 'Revisa los datos de la campaña.',
+      });
+    } finally {
+      setSavingCampana(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -409,17 +654,17 @@ export default function TesoreriaConfiguracionPage() {
       />
 
       <section className="grid gap-3 md:grid-cols-3">
-        <StepCard
+        <GuideCard
           step={1}
           title="Crea el cronograma"
           description="Define meses, monto mensual, fecha de publicación y fecha de vencimiento."
         />
-        <StepCard
+        <GuideCard
           step={2}
           title="Registra descuentos"
           description="Úsalo para matrícula anticipada, pronto pago o campañas por temporada."
         />
-        <StepCard
+        <GuideCard
           step={3}
           title="Publica el mes"
           description="Cuando corresponda, activa la pensión para que aparezca como deuda."
@@ -427,26 +672,33 @@ export default function TesoreriaConfiguracionPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Cronogramas" value={planes.length} helper={`${planesActivos} activos`} icon={CalendarDays} />
-        <StatCard label="Campañas" value={campanas.length} helper="Descuentos configurados" icon={BadgePercent} />
-        <StatCard label="Instituciones" value={colegios.length} helper="Disponibles para gestionar" icon={ShieldCheck} />
+        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <p className={labelClass}>Cronogramas</p>
+          <p className="text-3xl font-black text-slate-950">{planes.length}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">registrados</p>
+        </div>
+        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <p className={labelClass}>Campañas</p>
+          <p className="text-3xl font-black text-slate-950">{campanas.length}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">descuentos configurados</p>
+        </div>
+        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <p className={labelClass}>Instituciones</p>
+          <p className="text-3xl font-black text-slate-950">{colegios.length}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">disponibles para gestionar</p>
+        </div>
       </section>
 
-      <div className="rounded-[30px] border border-blue-100 bg-blue-50/60 p-4 text-sm font-semibold leading-6 text-blue-900">
+      <div className="rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 text-sm font-bold text-blue-700">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 ring-1 ring-blue-100">
-            <Megaphone size={17} />
-          </div>
-          <div>
-            <p className="font-black text-blue-950">Uso recomendado</p>
-            <p className="mt-1 text-blue-800/80">
-              Esta pantalla debe usarse por colegio. En vista consolidada, selecciona primero la institución para evitar mezclar planes de pensiones entre colegios.
-            </p>
-          </div>
+          <Megaphone size={18} className="mt-0.5 shrink-0" />
+          <p>
+            Esta pantalla se recomienda usar por colegio. En vista consolidada, selecciona primero la institución para evitar mezclar planes, años o campañas entre colegios.
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
         <Card
           icon={Coins}
           title="Cronograma base de pensiones"
@@ -460,8 +712,8 @@ export default function TesoreriaConfiguracionPage() {
                 value={planForm.id_colegio}
                 onChange={(e) => setPlanForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
               >
-                <option value="">Seleccionar colegio</option>
-                {colegios.map((colegio: any) => (
+                <option value="">Seleccionar</option>
+                {colegios.map((colegio) => (
                   <option key={colegio.id_colegio} value={colegio.id_colegio}>
                     {colegio.nombre}
                   </option>
@@ -559,33 +811,59 @@ export default function TesoreriaConfiguracionPage() {
           <button
             type="button"
             onClick={crearPlan}
-            disabled={loading}
-            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={savingPlan}
+            className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            {savingPlan ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             Crear cronograma base
           </button>
 
           <div className="mt-5 space-y-3">
-            {planes.length === 0 ? (
-              <EmptyBox text="No hay cronogramas base registrados." />
+            {planesVisibles.length === 0 ? (
+              <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
+                No hay cronogramas base registrados para la institución seleccionada.
+              </p>
             ) : (
-              planes.map((plan) => (
-                <div key={plan.id_plan_pension} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:bg-white">
+              planesVisibles.map((plan) => (
+                <div key={plan.id_plan_pension} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition duration-300 hover:bg-slate-100/70">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-black text-slate-900">{plan.nombre}</p>
                       <p className="mt-1 text-xs font-bold text-slate-500">
-                        {plan.colegio?.nombre || plan.colegio?.nombre_corto} · {plan.anio?.nombre_anio}
+                        {plan.colegio?.nombre} · {plan.anio?.nombre_anio}
                       </p>
                     </div>
-                    <span className={cx('rounded-full px-3 py-1 text-xs font-black ring-1', estadoClass(plan.estado))}>
-                      {plan.estado}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoClass(plan.estado)}`}>
+                        {plan.estado}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => abrirEditarPlan(plan)}
+                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-slate-200 transition hover:text-blue-600 hover:ring-blue-200"
+                        title="Editar cronograma"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-2 text-sm font-black text-slate-700">
                     {currency(plan.monto_mensual)} mensual · {plan.detalles?.length || 0} meses
                   </p>
+                  {plan.detalles?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {plan.detalles.slice(0, 5).map((detalle) => (
+                        <span key={detalle.id_plan_detalle} className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-slate-500 ring-1 ring-slate-100">
+                          {detalle.nombre_mes}
+                        </span>
+                      ))}
+                      {plan.detalles.length > 5 && (
+                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-slate-400 ring-1 ring-slate-100">
+                          +{plan.detalles.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               ))
             )}
@@ -604,10 +882,10 @@ export default function TesoreriaConfiguracionPage() {
                 <select
                   className={inputClass}
                   value={publicarForm.id_colegio}
-                  onChange={(e) => setPublicarForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
+                  onChange={(e) => setPublicarForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '', mes: '' }))}
                 >
-                  <option value="">Seleccionar colegio</option>
-                  {colegios.map((colegio: any) => (
+                  <option value="">Seleccionar</option>
+                  {colegios.map((colegio) => (
                     <option key={colegio.id_colegio} value={colegio.id_colegio}>
                       {colegio.nombre}
                     </option>
@@ -620,25 +898,32 @@ export default function TesoreriaConfiguracionPage() {
                 <select
                   className={inputClass}
                   value={publicarForm.id_anio}
-                  onChange={(e) => setPublicarForm((c) => ({ ...c, id_anio: e.target.value }))}
+                  onChange={(e) => setPublicarForm((c) => ({ ...c, id_anio: e.target.value, mes: '' }))}
                 >
                   <option value="">Seleccionar año</option>
                   {aniosPorColegio(publicarForm.id_colegio).map((anio) => (
-                    <option key={anio.id_anio} value={anio.id_anio}>{anio.nombre_anio}</option>
+                    <option key={anio.id_anio} value={anio.id_anio}>
+                      {anio.nombre_anio}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <label>
-                <span className={labelClass}>Mes</span>
+                <span className={labelClass}>Mes programado</span>
                 <select
                   className={inputClass}
                   value={publicarForm.mes}
-                  onChange={(e) => setPublicarForm((c) => ({ ...c, mes: Number(e.target.value) }))}
+                  disabled={!mesesPublicables.length}
+                  onChange={(e) => setPublicarForm((c) => ({ ...c, mes: e.target.value }))}
                 >
-                  {meses.map((mes) => (
-                    <option key={mes.value} value={mes.value}>{mes.label}</option>
-                  ))}
+                  {mesesPublicables.length === 0 ? (
+                    <option value="">Sin cronograma base</option>
+                  ) : (
+                    mesesPublicables.map((mes) => (
+                      <option key={mes.value} value={mes.value}>{mes.label}</option>
+                    ))
+                  )}
                 </select>
               </label>
 
@@ -646,18 +931,24 @@ export default function TesoreriaConfiguracionPage() {
                 <button
                   type="button"
                   onClick={publicarMes}
-                  disabled={loading}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!mesesPublicables.length}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  <Send size={16} />
                   Publicar
                 </button>
               </div>
             </div>
 
-            <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-5 text-slate-500 ring-1 ring-slate-100">
-              Se publicará la pensión para {nombreColegio(publicarForm.id_colegio)}. Si el cronograma base no existe, el backend debe devolver un mensaje claro.
-            </p>
+            <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-5 text-slate-500 ring-1 ring-slate-100">
+              {planActivoPublicacion ? (
+                <>
+                  Se usará el plan <b>{planActivoPublicacion.nombre}</b>. Solo aparecen los meses incluidos en ese cronograma, por eso no se mostrará enero si tu plan inicia en marzo.
+                </>
+              ) : (
+                'Selecciona un colegio y año con cronograma base activo para ver los meses publicables.'
+              )}
+            </div>
           </Card>
 
           <Card
@@ -674,7 +965,7 @@ export default function TesoreriaConfiguracionPage() {
                   onChange={(e) => setCampanaForm((c) => ({ ...c, id_colegio: Number(e.target.value), id_anio: '' }))}
                 >
                   <option value="">Todos</option>
-                  {colegios.map((colegio: any) => (
+                  {colegios.map((colegio) => (
                     <option key={colegio.id_colegio} value={colegio.id_colegio}>
                       {colegio.nombre}
                     </option>
@@ -691,7 +982,9 @@ export default function TesoreriaConfiguracionPage() {
                 >
                   <option value="">Todos</option>
                   {aniosPorColegio(campanaForm.id_colegio).map((anio) => (
-                    <option key={anio.id_anio} value={anio.id_anio}>{anio.nombre_anio}</option>
+                    <option key={anio.id_anio} value={anio.id_anio}>
+                      {anio.nombre_anio}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -787,19 +1080,21 @@ export default function TesoreriaConfiguracionPage() {
             <button
               type="button"
               onClick={crearCampana}
-              disabled={loading}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={savingCampana}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <BadgePercent size={16} />}
+              {savingCampana ? <Loader2 size={16} className="animate-spin" /> : <BadgePercent size={16} />}
               Crear campaña/descuento
             </button>
 
             <div className="mt-5 space-y-3">
-              {campanas.length === 0 ? (
-                <EmptyBox text="No hay campañas registradas." />
+              {campanasVisibles.length === 0 ? (
+                <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-400 ring-1 ring-slate-100">
+                  No hay campañas registradas para la institución seleccionada.
+                </p>
               ) : (
-                campanas.map((campana) => (
-                  <div key={campana.id_campana_descuento} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:bg-white">
+                campanasVisibles.map((campana) => (
+                  <div key={campana.id_campana_descuento} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition duration-300 hover:bg-slate-100/70">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-black text-slate-900">{campana.nombre}</p>
@@ -807,12 +1102,22 @@ export default function TesoreriaConfiguracionPage() {
                           {formatDate(campana.fecha_inicio)} - {formatDate(campana.fecha_fin)}
                         </p>
                         <p className="mt-1 text-xs font-bold text-slate-400">
-                          {campana.colegio?.nombre || campana.colegio?.nombre_corto || 'Todos'} · {campana.tipo_concepto_aplica || 'Todos'}
+                          {campana.colegio?.nombre || 'Todos los colegios'} · {tipoLabel(campana.tipo_concepto_aplica)}
                         </p>
                       </div>
-                      <span className={cx('rounded-full px-3 py-1 text-xs font-black ring-1', estadoClass(campana.estado))}>
-                        {campana.estado}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoClass(campana.estado)}`}>
+                          {campana.estado}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => abrirEditarCampana(campana)}
+                          className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-slate-200 transition hover:text-blue-600 hover:ring-blue-200"
+                          title="Editar campaña"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {campana.monto_promocional && (
@@ -838,6 +1143,291 @@ export default function TesoreriaConfiguracionPage() {
           </Card>
         </div>
       </div>
+
+      <ModalShell
+        open={Boolean(editPlan)}
+        eyebrow="Cronograma de pensiones"
+        title="Editar cronograma"
+        description="Puedes corregir nombre, rango de meses, monto o días mientras el plan no tenga cronogramas generados para alumnos."
+        onClose={() => setEditPlan(null)}
+      >
+        {editPlan && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label>
+              <span className={labelClass}>Nombre del plan</span>
+              <input
+                className={inputClass}
+                value={editPlan.nombre}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, nombre: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Estado</span>
+              <select
+                className={inputClass}
+                value={editPlan.estado}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, estado: e.target.value }))}
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Monto mensual</span>
+              <input
+                type="number"
+                className={inputClass}
+                value={editPlan.monto_mensual}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, monto_mensual: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Año lectivo</span>
+              <select
+                className={inputClass}
+                value={editPlan.id_anio}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, id_anio: e.target.value }))}
+              >
+                {aniosPorColegio(editPlan.id_colegio).map((anio) => (
+                  <option key={anio.id_anio} value={anio.id_anio}>
+                    {anio.nombre_anio} · {anio.estado}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Mes inicio</span>
+              <select
+                className={inputClass}
+                value={editPlan.mes_inicio}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, mes_inicio: Number(e.target.value) }))}
+              >
+                {meses.map((mes) => (
+                  <option key={mes.value} value={mes.value}>{mes.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Mes fin</span>
+              <select
+                className={inputClass}
+                value={editPlan.mes_fin}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, mes_fin: Number(e.target.value) }))}
+              >
+                {meses.map((mes) => (
+                  <option key={mes.value} value={mes.value}>{mes.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Día publicación</span>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className={inputClass}
+                value={editPlan.dia_publicacion}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, dia_publicacion: Number(e.target.value) }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Día vencimiento</span>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className={inputClass}
+                value={editPlan.dia_vencimiento}
+                onChange={(e) => setEditPlan((c: any) => ({ ...c, dia_vencimiento: Number(e.target.value) }))}
+              />
+            </label>
+
+            <div className="md:col-span-2 mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setEditPlan(null)}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={guardarEdicionPlan}
+                disabled={savingPlan}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:bg-slate-400"
+              >
+                {savingPlan ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Guardar cronograma
+              </button>
+            </div>
+          </div>
+        )}
+      </ModalShell>
+
+      <ModalShell
+        open={Boolean(editCampana)}
+        eyebrow="Campaña o descuento"
+        title="Editar campaña"
+        description="Aquí puedes corregir si el descuento corresponde a matrícula, pensión u otro concepto."
+        onClose={() => setEditCampana(null)}
+      >
+        {editCampana && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="md:col-span-2">
+              <span className={labelClass}>Nombre</span>
+              <input
+                className={inputClass}
+                value={editCampana.nombre}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, nombre: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Colegio</span>
+              <select
+                className={inputClass}
+                value={editCampana.id_colegio}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, id_colegio: e.target.value, id_anio: '' }))}
+              >
+                <option value="">Todos</option>
+                {colegios.map((colegio) => (
+                  <option key={colegio.id_colegio} value={colegio.id_colegio}>
+                    {colegio.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Año lectivo</span>
+              <select
+                className={inputClass}
+                value={editCampana.id_anio}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, id_anio: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                {aniosPorColegio(editCampana.id_colegio).map((anio) => (
+                  <option key={anio.id_anio} value={anio.id_anio}>
+                    {anio.nombre_anio}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Fecha inicio</span>
+              <input
+                type="date"
+                className={inputClass}
+                value={editCampana.fecha_inicio}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, fecha_inicio: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Fecha fin</span>
+              <input
+                type="date"
+                className={inputClass}
+                value={editCampana.fecha_fin}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, fecha_fin: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Aplica a</span>
+              <select
+                className={inputClass}
+                value={editCampana.tipo_concepto_aplica}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, tipo_concepto_aplica: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                <option value="MATRICULA">Matrícula</option>
+                <option value="PENSION">Pensión</option>
+                <option value="EXTRAORDINARIO">Extraordinario</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Estado</span>
+              <select
+                className={inputClass}
+                value={editCampana.estado}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, estado: e.target.value }))}
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Monto promocional</span>
+              <input
+                type="number"
+                className={inputClass}
+                value={editCampana.monto_promocional}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, monto_promocional: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Descuento fijo</span>
+              <input
+                type="number"
+                className={inputClass}
+                value={editCampana.descuento_monto}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, descuento_monto: e.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Descuento %</span>
+              <input
+                type="number"
+                className={inputClass}
+                value={editCampana.descuento_porcentaje}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, descuento_porcentaje: e.target.value }))}
+              />
+            </label>
+
+            <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+              <input
+                type="checkbox"
+                checked={editCampana.solo_alumnos_vigentes}
+                onChange={(e) => setEditCampana((c: any) => ({ ...c, solo_alumnos_vigentes: e.target.checked }))}
+              />
+              <span className="text-sm font-bold text-slate-600">Solo alumnos vigentes</span>
+            </label>
+
+            <div className="md:col-span-2 mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setEditCampana(null)}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={guardarEdicionCampana}
+                disabled={savingCampana}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:bg-slate-400"
+              >
+                {savingCampana ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Guardar campaña
+              </button>
+            </div>
+          </div>
+        )}
+      </ModalShell>
     </div>
   );
 }
