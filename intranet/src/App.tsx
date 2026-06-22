@@ -7,6 +7,7 @@ import MatriculaPage from './pages/MatriculaPage';
 import TesoreriaPage from './pages/TesoreriaPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotasPage from './pages/NotasPage';
+import TutoriaPage from './pages/TutoriaPage';
 import CircularesPage from './pages/CircularesPage';
 import ConfiguracionPage from './pages/configuracion/ConfiguracionPage';
 import DocentesPage from './pages/DocentesPage';
@@ -18,7 +19,7 @@ import ReportesPage from './pages/ReportesPage';
 import { SchoolProvider } from './contexts/SchoolContext';
 import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
-import RenovacionMatriculaPage from './pages/matricula/RenovacionMatriculaPage';
+import RenovacionMatriculaPage from './pages/matricula/RenovacionMatriculaPaage';
 import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';
@@ -98,23 +99,7 @@ function AppRoutes() {
         />
         <Route path="/notas" element={<NotasPage />} />
         <Route path="/notas/comentarios" element={<Navigate to="/tutoria" replace />} />
-        <Route
-          path="/tutoria"
-          element={
-            <ModuloPendientePage
-              modulo="Tutoría y libreta"
-              descripcion="Permite al tutor revisar el desempeño integral del alumno y registrar conducta, participación familiar y comentarios para la libreta."
-              icon={moduloIcons.comentarios}
-              estado="Módulo de tutoría"
-              acciones={[
-                'Mostrar solo salones donde el docente es tutor',
-                'Visualizar notas consolidadas y detalle por evaluación sin modificarlas',
-                'Registrar conducta, participación de padres y comentario final del periodo',
-                'Reservar exportación de libreta solo para Dirección y Administración',
-              ]}
-            />
-          }
-        />
+        <Route path="/tutoria" element={<TutoriaPage />} />
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />

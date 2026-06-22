@@ -19,6 +19,7 @@ import { ActividadInterceptor } from './auth/actividad.interceptor';
 import { PlantillasModule } from './plantillas/plantillas.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ColegiosModule } from './colegios/colegios.module';
+import { TutoriaModule } from './tutoria/tutoria.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ColegiosModule } from './colegios/colegios.module';
     AcademicosModule,
     FinanzasModule,
     CalificacionesModule,
+    TutoriaModule,
     CircularesModule,
     AnaliticasModule,
     NotificacionesModule,
