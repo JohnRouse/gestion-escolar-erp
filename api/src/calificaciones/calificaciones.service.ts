@@ -12,14 +12,74 @@ export class CalificacionesService {
     private notificacionesService: NotificacionesService,
   ) {}
 
+  // ── Helpers ─────────────────────────────────────
+  private normalizarGrupoEvaluacion(grupo?: string | null) {
+    const texto = String(grupo || '').toUpperCase();
+
+    if (texto.includes('PRÁCTICA') || texto.includes('PRACTICA')) return 'PRÁCTICAS';
+    if (texto.includes('EXAMEN')) return 'EXAMEN';
+    return 'TRABAJO EN CLASE';
+  }
+
+  private async validarRegistroEditable(idAsignacion: number, idUnidad: number) {
+    const unidad = await this.prisma.unidad.findUnique({
+      where: { id_unidad: idUnidad },
+    });
+
+    if (!unidad?.estado_abierto) {
+      throw new BadRequestException('Unidad cerrada o no encontrada');
+    }
+
+    const registro = await this.prisma.registroNotasUnidad.findUnique({
+      where: {
+        id_asignacion_id_unidad: {
+          id_asignacion: idAsignacion,
+          id_unidad: idUnidad,
+        },
+      },
+    });
+
+    if (registro?.cerrado) {
+      throw new BadRequestException('El registro de notas está cerrado. Solicita reapertura a Dirección.');
+    }
+
+    return unidad;
+  }
+
+  private inferirGrupoEvaluacion(nombre?: string | null) {
+    const texto = String(nombre || '').toLowerCase();
+    if (texto.includes('práctica') || texto.includes('practica')) return 'Prácticas';
+    if (texto.includes('examen')) return 'Examen';
+    return 'Trabajo en clase';
+  }
+
   // ── Evaluaciones ────────────────────────────────
   async createEvaluacion(dto: CreateEvaluacionDto) {
+    await this.validarRegistroEditable(dto.id_asignacion, dto.id_unidad);
+
+    const maxOrden = await this.prisma.evaluacionDetalle.aggregate({
+      where: {
+        id_asignacion: dto.id_asignacion,
+        id_unidad: dto.id_unidad,
+      },
+      _max: { orden: true },
+    });
+
+    const orden = dto.orden && dto.orden > 0
+      ? dto.orden
+      : Number(maxOrden._max.orden || 0) + 1;
+
     return this.prisma.evaluacionDetalle.create({
       data: {
         id_asignacion: dto.id_asignacion,
         id_unidad: dto.id_unidad,
         id_tipo_eval: dto.id_tipo_eval,
         descripcion_actividad: dto.descripcion_actividad,
+        grupo_evaluacion:
+          dto.grupo_evaluacion
+            ? this.normalizarGrupoEvaluacion(dto.grupo_evaluacion)
+            : this.inferirGrupoEvaluacion(dto.descripcion_actividad),
+        orden,
         fecha_evaluacion: dto.fecha_evaluacion ? new Date(dto.fecha_evaluacion) : undefined,
       },
     });
@@ -29,8 +89,50 @@ export class CalificacionesService {
     return this.prisma.evaluacionDetalle.findMany({
       where: { id_asignacion: asignacionId, id_unidad: unidadId },
       include: { tipo: true },
-      orderBy: { fecha_evaluacion: 'asc' },
+      orderBy: [
+        { orden: 'asc' },
+        { fecha_evaluacion: 'asc' },
+        { id_evaluacion_det: 'asc' },
+      ],
     });
+  }
+
+  async reordenarEvaluaciones(body: {
+    id_asignacion: number;
+    id_unidad: number;
+    orden: { id_evaluacion_det: number; orden: number }[];
+  }) {
+    if (!body.id_asignacion || !body.id_unidad) {
+      throw new BadRequestException('Asignación y unidad son obligatorias.');
+    }
+
+    await this.validarRegistroEditable(body.id_asignacion, body.id_unidad);
+
+    const ids = body.orden.map((item) => Number(item.id_evaluacion_det)).filter(Boolean);
+
+    const evaluaciones = await this.prisma.evaluacionDetalle.findMany({
+      where: {
+        id_evaluacion_det: { in: ids },
+        id_asignacion: body.id_asignacion,
+        id_unidad: body.id_unidad,
+      },
+      select: { id_evaluacion_det: true },
+    });
+
+    if (evaluaciones.length !== ids.length) {
+      throw new BadRequestException('Una o más evaluaciones no pertenecen a esta grilla.');
+    }
+
+    await this.prisma.$transaction(
+      body.orden.map((item, index) =>
+        this.prisma.evaluacionDetalle.update({
+          where: { id_evaluacion_det: Number(item.id_evaluacion_det) },
+          data: { orden: item.orden || index + 1 },
+        }),
+      ),
+    );
+
+    return { message: 'Orden de evaluaciones actualizado correctamente.' };
   }
 
   async getEvaluacionNotas(evaluacionId: number) {
@@ -51,8 +153,7 @@ export class CalificacionesService {
     const evaluacion = await this.prisma.evaluacionDetalle.findUnique({ where: { id_evaluacion_det: evaluacionId } });
     if (!evaluacion) throw new NotFoundException('Evaluación no encontrada');
 
-    const unidad = await this.prisma.unidad.findUnique({ where: { id_unidad: evaluacion.id_unidad } });
-    if (!unidad?.estado_abierto) throw new BadRequestException('La unidad no está abierta');
+    await this.validarRegistroEditable(evaluacion.id_asignacion, evaluacion.id_unidad);
 
     const asignacion = await this.prisma.asignacionDocente.findUnique({ where: { id_asignacion: evaluacion.id_asignacion } });
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
@@ -105,14 +206,6 @@ export class CalificacionesService {
     return { message: 'Notas guardadas correctamente', total: dto.notas.length };
   }
 
-  // ── Helper para inferir grupo de evaluación ─────
-  private inferirGrupoEvaluacion(nombre?: string | null) {
-    const texto = String(nombre || '').toLowerCase();
-    if (texto.includes('práctica') || texto.includes('practica')) return 'Prácticas';
-    if (texto.includes('examen')) return 'Examen';
-    return 'Trabajo en clase';
-  }
-
   // ── Modo Grilla (Unidad completa) ─────────────────
   async getGrillaUnidad(unidadId: number, asignacionId: number) {
     const asignacion = await this.prisma.asignacionDocente.findUnique({
@@ -132,10 +225,20 @@ export class CalificacionesService {
     });
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
 
+    const registro = await this.prisma.registroNotasUnidad.findUnique({
+      where: {
+        id_asignacion_id_unidad: {
+          id_asignacion: asignacionId,
+          id_unidad: unidadId,
+        },
+      },
+    });
+
     const evaluaciones = await this.prisma.evaluacionDetalle.findMany({
       where: { id_asignacion: asignacionId, id_unidad: unidadId },
       include: { tipo: true },
       orderBy: [
+        { orden: 'asc' },
         { fecha_evaluacion: 'asc' },
         { id_evaluacion_det: 'asc' },
       ],
@@ -231,9 +334,18 @@ export class CalificacionesService {
         seccion: seccionNombre,
         curso: asignacion.curso.nombre_curso,
       },
+      registro: {
+        cerrado: Boolean(registro?.cerrado),
+        fecha_cierre: registro?.fecha_cierre || null,
+        cerrado_por: registro?.cerrado_por || null,
+        fecha_reapertura: registro?.fecha_reapertura || null,
+        reabierto_por: registro?.reabierto_por || null,
+        motivo_reapertura: registro?.motivo_reapertura || null,
+      },
       evaluaciones: evaluaciones.map((ev) => ({
         id: ev.id_evaluacion_det,
         descripcion: ev.descripcion_actividad,
+        orden: ev.orden,
         grupo_evaluacion:
           (ev as any).grupo_evaluacion ||
           this.inferirGrupoEvaluacion(ev.descripcion_actividad || ev.tipo?.nombre_tipo),
@@ -253,6 +365,20 @@ export class CalificacionesService {
   async saveNotasMasivo(dto: SaveNotasMasivoDto, docenteId: number) {
     const unidad = await this.prisma.unidad.findUnique({ where: { id_unidad: dto.id_unidad } });
     if (!unidad?.estado_abierto) throw new BadRequestException('Unidad cerrada o no encontrada');
+
+    if (!dto.notas.length) {
+      return { message: 'No hay notas para guardar', total: 0 };
+    }
+
+    const primeraEvaluacion = await this.prisma.evaluacionDetalle.findUnique({
+      where: { id_evaluacion_det: dto.notas[0].id_evaluacion_det },
+    });
+
+    if (!primeraEvaluacion) {
+      throw new BadRequestException('Evaluación no encontrada');
+    }
+
+    await this.validarRegistroEditable(primeraEvaluacion.id_asignacion, dto.id_unidad);
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of dto.notas) {
@@ -288,6 +414,80 @@ export class CalificacionesService {
       }
     });
     return { message: 'Notas masivas guardadas correctamente', total: dto.notas.length };
+  }
+
+  // ── Cierre de registro de notas (por asignación y unidad) ──
+  async cerrarRegistroUnidad(params: {
+    idUnidad: number;
+    idAsignacion: number;
+    userId: number;
+  }) {
+    const unidad = await this.prisma.unidad.findUnique({
+      where: { id_unidad: params.idUnidad },
+    });
+
+    if (!unidad?.estado_abierto) {
+      throw new BadRequestException('No se puede cerrar un registro de una unidad cerrada.');
+    }
+
+    const asignacion = await this.prisma.asignacionDocente.findUnique({
+      where: { id_asignacion: params.idAsignacion },
+    });
+
+    if (!asignacion) {
+      throw new NotFoundException('Asignación no encontrada');
+    }
+
+    return this.prisma.registroNotasUnidad.upsert({
+      where: {
+        id_asignacion_id_unidad: {
+          id_asignacion: params.idAsignacion,
+          id_unidad: params.idUnidad,
+        },
+      },
+      create: {
+        id_asignacion: params.idAsignacion,
+        id_unidad: params.idUnidad,
+        cerrado: true,
+        cerrado_por: params.userId,
+        fecha_cierre: new Date(),
+      },
+      update: {
+        cerrado: true,
+        cerrado_por: params.userId,
+        fecha_cierre: new Date(),
+      },
+    });
+  }
+
+  async reabrirRegistroUnidad(params: {
+    idUnidad: number;
+    idAsignacion: number;
+    userId: number;
+    motivo?: string;
+  }) {
+    const registro = await this.prisma.registroNotasUnidad.findUnique({
+      where: {
+        id_asignacion_id_unidad: {
+          id_asignacion: params.idAsignacion,
+          id_unidad: params.idUnidad,
+        },
+      },
+    });
+
+    if (!registro || !registro.cerrado) {
+      throw new BadRequestException('El registro no está cerrado.');
+    }
+
+    return this.prisma.registroNotasUnidad.update({
+      where: { id_registro_notas: registro.id_registro_notas },
+      data: {
+        cerrado: false,
+        reabierto_por: params.userId,
+        fecha_reapertura: new Date(),
+        motivo_reapertura: params.motivo || null,
+      },
+    });
   }
 
   // ── Cierre de unidad ──────────────────────────────
@@ -827,6 +1027,7 @@ async deleteEvaluacion(id: number) {
   if (evaluacion.notas.length > 0) {
     throw new BadRequestException('No se puede eliminar una evaluación con notas registradas');
   }
+  await this.validarRegistroEditable(evaluacion.id_asignacion, evaluacion.id_unidad);
   return this.prisma.evaluacionDetalle.delete({ where: { id_evaluacion_det: id } });
 }
 

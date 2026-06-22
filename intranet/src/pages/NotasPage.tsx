@@ -22,6 +22,12 @@ import {
   BookOpen,
   Zap,
   Printer,
+  LockKeyhole,
+  UnlockKeyhole,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
+  ListOrdered,
 } from 'lucide-react';
 
 interface Asignacion {
@@ -52,11 +58,20 @@ interface Evaluacion {
     nombre?: string;
     descripcion?: string;
   };
+  orden?: number;
 }
 
 interface GrillaData {
   asignacion: { seccion: string; curso: string };
   evaluaciones: Evaluacion[];
+  registro?: {
+    cerrado: boolean;
+    fecha_cierre?: string | null;
+    cerrado_por?: number | null;
+    fecha_reapertura?: string | null;
+    reabierto_por?: number | null;
+    motivo_reapertura?: string | null;
+  };
   grilla: {
     id_matricula: number;
     alumno: string;
@@ -78,14 +93,6 @@ interface PeriodoNotas {
   label: string;
   unidades: UnidadNotas[];
 }
-
-// Array fijo reemplazado por periodos dinámicos, se mantiene comentado como referencia
-// const periodos = [
-//   { id: 1, label: '1 Bimestre', unidades: [1, 2] },
-//   { id: 2, label: '2 Bimestre', unidades: [3, 4] },
-//   { id: 3, label: '3 Bimestre', unidades: [5, 6] },
-//   { id: 4, label: '4 Bimestre', unidades: [7, 8] },
-// ];
 
 const tipoEvaluaciones = [
   { id: '1', label: 'Participación' },
@@ -129,7 +136,14 @@ function normalizeText(text: string) {
 }
 
 const getGrupoEvaluacion = (evaluacion: Evaluacion) => {
-  const texto = `${evaluacion.grupo_evaluacion || ''} ${evaluacion.descripcion || ''} ${evaluacion.tipo || ''}`.toLowerCase();
+  const grupoManual = String(evaluacion.grupo_evaluacion || '').toUpperCase();
+
+  if (grupoManual.includes('TRABAJO')) return 'TRABAJO EN CLASE';
+  if (grupoManual.includes('PRÁCTICA') || grupoManual.includes('PRACTICA')) return 'PRÁCTICAS';
+  if (grupoManual.includes('EXAMEN')) return 'EXAMEN';
+
+  const texto = `${evaluacion.descripcion || ''} ${evaluacion.tipo || ''}`.toLowerCase();
+
   if (texto.includes('práctica') || texto.includes('practica')) return 'PRÁCTICAS';
   if (texto.includes('examen')) return 'EXAMEN';
   return 'TRABAJO EN CLASE';
@@ -187,11 +201,20 @@ export default function NotasPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
   const [nuevaEvalTipo, setNuevaEvalTipo] = useState('3');
+  const [nuevaEvalGrupo, setNuevaEvalGrupo] = useState('TRABAJO EN CLASE');
+  const [ordenTemporal, setOrdenTemporal] = useState<number[]>([]);
+  const [procesandoRegistro, setProcesandoRegistro] = useState(false);
+  const [motivoReapertura, setMotivoReapertura] = useState('');
+  const [confirmAction, setConfirmAction] = useState<null | {
+    tipo: 'cerrar' | 'reabrir';
+    titulo: string;
+    descripcion: string;
+    textoBoton: string;
+  }>(null);
 
   const esProfesor = user?.rol === 'Profesor';
   const puedeGestionarEvaluaciones = ['Admin', 'Director'].includes(user?.rol || '');
 
-  // Ayudantes para diferenciar salones en vista consolidada
   const esVistaConsolidada = activeScope.tipo === 'todos';
 
   const getSalonKey = useCallback((asignacion: Asignacion) => {
@@ -254,7 +277,6 @@ export default function NotasPage() {
     };
   }, [token, queryParams, getSalonKey]);
 
-  // Lista de salones con clave única (colegio + sección)
   const salones = useMemo(() => {
     const unicos = new Map<string, { key: string; label: string }>();
 
@@ -294,6 +316,9 @@ export default function NotasPage() {
   }, [unidadesDelPeriodo, unidadId]);
 
   const unidadAbierta = Boolean(unidadActual?.estado_abierto);
+  const registroCerrado = Boolean(grilla?.registro?.cerrado);
+  const notasEditables = Boolean(unidadAbierta && !registroCerrado);
+  const puedeReabrirRegistro = ['Admin', 'Director'].includes(user?.rol || '') && registroCerrado;
 
   const cargarGrilla = useCallback(async () => {
     if (!token || !asignacionId || !unidadId) {
@@ -433,13 +458,14 @@ export default function NotasPage() {
   };
 
   const handleNotaChange = (idMatricula: number, idEval: number, valor: string) => {
+    if (registroCerrado) return;
     if (!grilla) return;
     const notaNormalizada = normalizarNotaDesdeInput(valor);
     setGrilla({ ...grilla, grilla: grilla.grilla.map((fila) => fila.id_matricula === idMatricula ? { ...fila, [idEval]: notaNormalizada } : fila) });
   };
 
   const guardarNotas = async () => {
-    if (!grilla || !token || !asignacionId) return;
+    if (!grilla || !token || !asignacionId || !notasEditables) return;
     setSaving(true); setMensaje(null);
     const notas = grilla.grilla.flatMap((fila) => grilla.evaluaciones.filter((eva) => { const v = fila[eva.id]; return v !== null && v !== undefined && v !== ''; }).map((eva) => ({ id_matricula: fila.id_matricula, id_evaluacion_det: eva.id, valor_nota: normalizarNotaEntera(fila[eva.id]) })));
     try {
@@ -448,19 +474,171 @@ export default function NotasPage() {
     } catch (err: any) { setMensaje({ tipo: 'error', texto: err.response?.data?.message || 'Error al guardar las notas.' }); } finally { setSaving(false); }
   };
 
-  const openModal = () => { setIsClosing(false); setModalOpen(true); };
+  const openModal = () => {
+    setIsClosing(false);
+    setOrdenTemporal((grilla?.evaluaciones || []).map((eva) => eva.id));
+    setNuevaEvalGrupo('TRABAJO EN CLASE');
+    setModalOpen(true);
+  };
 
   const closeModal = () => {
     setIsClosing(true);
     setTimeout(() => { setModalOpen(false); setIsClosing(false); }, 200);
   };
 
-  const crearEvaluacion = async () => {
-    if (!token || !asignacionId || !nuevaEvalDesc.trim()) return;
+  const evaluacionesOrdenadasModal = useMemo(() => {
+    const mapa = new Map((grilla?.evaluaciones || []).map((eva) => [eva.id, eva]));
+
+    const ordenadas = ordenTemporal
+      .map((id) => mapa.get(id))
+      .filter((eva): eva is Evaluacion => Boolean(eva));
+
+    const faltantes = (grilla?.evaluaciones || []).filter((eva) => !ordenTemporal.includes(eva.id));
+
+    return [...ordenadas, ...faltantes];
+  }, [grilla, ordenTemporal]);
+
+  const moverEvaluacionModal = (id: number, direccion: -1 | 1) => {
+    setOrdenTemporal((actual) => {
+      const base = actual.length ? [...actual] : (grilla?.evaluaciones || []).map((eva) => eva.id);
+      const index = base.indexOf(id);
+      const nuevoIndex = index + direccion;
+
+      if (index < 0 || nuevoIndex < 0 || nuevoIndex >= base.length) return base;
+
+      const copia = [...base];
+      const [item] = copia.splice(index, 1);
+      copia.splice(nuevoIndex, 0, item);
+
+      return copia;
+    });
+  };
+
+  const guardarOrdenEvaluaciones = async (mostrarMensaje = true) => {
+    if (!token || !asignacionId || !unidadId || !notasEditables) return;
+
+    const ordenBase = ordenTemporal.length
+      ? ordenTemporal
+      : (grilla?.evaluaciones || []).map((eva) => eva.id);
+
     try {
-      await axios.post('/api/calificaciones/evaluaciones', { id_asignacion: asignacionId, id_unidad: unidadId, id_tipo_eval: Number(nuevaEvalTipo), descripcion_actividad: nuevaEvalDesc.trim() }, { headers: { Authorization: `Bearer ${token}` } });
-      closeModal(); setNuevaEvalDesc(''); setNuevaEvalTipo('3'); cargarGrilla();
-    } catch (err: any) { alert(err.response?.data?.message || 'Error al crear evaluación'); }
+      await axios.put(
+        '/api/calificaciones/evaluaciones/orden',
+        {
+          id_asignacion: asignacionId,
+          id_unidad: unidadId,
+          orden: ordenBase.map((id, index) => ({
+            id_evaluacion_det: id,
+            orden: index + 1,
+          })),
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (mostrarMensaje) {
+        setMensaje({ tipo: 'exito', texto: 'Orden de evaluaciones actualizado correctamente.' });
+      }
+
+      await cargarGrilla();
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.response?.data?.message || 'No se pudo actualizar el orden de evaluaciones.',
+      });
+      throw err;
+    }
+  };
+
+  const cerrarRegistroNotas = async () => {
+    if (!token || !asignacionId || !unidadId) return;
+
+    setProcesandoRegistro(true);
+    setMensaje(null);
+
+    try {
+      await axios.put(
+        `/api/calificaciones/unidades/${unidadId}/registro/cerrar`,
+        { id_asignacion: asignacionId },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setMensaje({ tipo: 'exito', texto: 'Registro de notas cerrado correctamente.' });
+      await cargarGrilla();
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.response?.data?.message || 'No se pudo cerrar el registro de notas.',
+      });
+    } finally {
+      setProcesandoRegistro(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const reabrirRegistroNotas = async () => {
+    if (!token || !asignacionId || !unidadId) return;
+
+    setProcesandoRegistro(true);
+    setMensaje(null);
+
+    try {
+      await axios.put(
+        `/api/calificaciones/unidades/${unidadId}/registro/reabrir`,
+        { id_asignacion: asignacionId, motivo: motivoReapertura.trim() || undefined },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setMensaje({ tipo: 'exito', texto: 'Registro de notas reabierto correctamente.' });
+      setMotivoReapertura('');
+      await cargarGrilla();
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.response?.data?.message || 'No se pudo reabrir el registro de notas.',
+      });
+    } finally {
+      setProcesandoRegistro(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const ejecutarConfirmAction = () => {
+    if (confirmAction?.tipo === 'cerrar') cerrarRegistroNotas();
+    if (confirmAction?.tipo === 'reabrir') reabrirRegistroNotas();
+  };
+
+  const crearEvaluacion = async () => {
+    if (!token || !asignacionId || !unidadId || !nuevaEvalDesc.trim() || !notasEditables) return;
+
+    try {
+      if (ordenTemporal.length) {
+        await guardarOrdenEvaluaciones(false);
+      }
+
+      await axios.post(
+        '/api/calificaciones/evaluaciones',
+        {
+          id_asignacion: asignacionId,
+          id_unidad: unidadId,
+          id_tipo_eval: Number(nuevaEvalTipo),
+          descripcion_actividad: nuevaEvalDesc.trim(),
+          grupo_evaluacion: nuevaEvalGrupo,
+          orden: (grilla?.evaluaciones?.length || 0) + 1,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      closeModal();
+      setNuevaEvalDesc('');
+      setNuevaEvalTipo('3');
+      setNuevaEvalGrupo('TRABAJO EN CLASE');
+      cargarGrilla();
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.response?.data?.message || 'Error al crear evaluación',
+      });
+    }
   };
 
   const eliminarEvaluacion = async (idEval: number) => {
@@ -528,10 +706,46 @@ export default function NotasPage() {
               <button
                 type="button"
                 onClick={openModal}
-                disabled={!asignacionId}
+                disabled={!asignacionId || !notasEditables}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 <Plus size={16} /> Agregar evaluación
+              </button>
+            )}
+            {grilla && notasEditables && (
+              <button
+                type="button"
+                onClick={() =>
+                  setConfirmAction({
+                    tipo: 'cerrar',
+                    titulo: 'Cerrar registro de notas',
+                    descripcion: 'Al cerrar este registro, las notas de este curso y unidad ya no podrán modificarse hasta que Dirección o Administración lo reabra.',
+                    textoBoton: 'Cerrar registro',
+                  })
+                }
+                disabled={procesandoRegistro}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                <LockKeyhole size={16} />
+                Cerrar registro
+              </button>
+            )}
+            {grilla && puedeReabrirRegistro && (
+              <button
+                type="button"
+                onClick={() =>
+                  setConfirmAction({
+                    tipo: 'reabrir',
+                    titulo: 'Reabrir registro de notas',
+                    descripcion: 'Esta acción volverá a permitir la edición de notas y evaluaciones para esta unidad. Registra el motivo de reapertura.',
+                    textoBoton: 'Reabrir registro',
+                  })
+                }
+                disabled={procesandoRegistro}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                <UnlockKeyhole size={16} />
+                Reabrir registro
               </button>
             )}
             <button
@@ -546,7 +760,7 @@ export default function NotasPage() {
             <button
               type="button"
               onClick={guardarNotas}
-              disabled={saving || !grilla || !unidadAbierta}
+              disabled={saving || !grilla || !notasEditables}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -670,6 +884,20 @@ export default function NotasPage() {
           {mensaje.tipo === 'exito' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           {mensaje.texto}
         </div>
+      )}
+
+      {grilla && registroCerrado && (
+        <section className="no-print rounded-3xl border border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-700 shadow-sm soft-fade-up">
+          <div className="flex items-start gap-3">
+            <LockKeyhole size={18} className="mt-0.5 text-slate-500" />
+            <div>
+              <p className="font-black text-slate-900">Registro de notas cerrado</p>
+              <p className="mt-1 leading-6">
+                Esta grilla ya no puede modificarse. Solo Dirección o Administración puede reabrirla si existe una corrección justificada.
+              </p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Error y mensajes de asignaciones vacías */}
@@ -849,7 +1077,7 @@ export default function NotasPage() {
                                       onChange={(e) =>
                                         handleNotaChange(fila.id_matricula, eva.id, e.target.value)
                                       }
-                                      disabled={!unidadAbierta}
+                                      disabled={!notasEditables}
                                       className={`h-10 rounded-xl border text-center text-sm font-black tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
                                       aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
                                     />
@@ -928,7 +1156,7 @@ export default function NotasPage() {
                                     value={formatearNotaEntera(fila[eva.id])}
                                     onFocus={(e) => e.currentTarget.select()}
                                     onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
-                                    disabled={!unidadAbierta}
+                                    disabled={!notasEditables}
                                     className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
                                     aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
                                   />
@@ -972,31 +1200,142 @@ export default function NotasPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="space-y-5 px-6 py-5">
-              <div>
-                <label className={labelClass}>Descripción</label>
-                <input type="text" value={nuevaEvalDesc} onChange={(e) => setNuevaEvalDesc(e.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300" placeholder="Ej. Cuaderno/P, Práctica 1, Examen mensual..." autoFocus />
+            <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Descripción</label>
+                  <input
+                    type="text"
+                    value={nuevaEvalDesc}
+                    onChange={(e) => setNuevaEvalDesc(e.target.value)}
+                    className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
+                    placeholder="Ej. Cuaderno, Exposición, Práctica 1, Examen..."
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Grupo en la grilla</label>
+                  <select
+                    value={nuevaEvalGrupo}
+                    onChange={(e) => setNuevaEvalGrupo(e.target.value)}
+                    className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
+                  >
+                    <option value="TRABAJO EN CLASE">Trabajo en clase</option>
+                    <option value="PRÁCTICAS">Prácticas</option>
+                    <option value="EXAMEN">Examen</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Tipo de evaluación</label>
+                  <select
+                    value={nuevaEvalTipo}
+                    onChange={(e) => setNuevaEvalTipo(e.target.value)}
+                    className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
+                  >
+                    {tipoEvaluaciones.map((tipo) => (
+                      <option key={tipo.id} value={tipo.id}>{tipo.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className={labelClass}>Tipo de evaluación</label>
-                <select value={nuevaEvalTipo} onChange={(e) => setNuevaEvalTipo(e.target.value)} className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300">
-                  {tipoEvaluaciones.map((tipo) => (<option key={tipo.id} value={tipo.id}>{tipo.label}</option>))}
-                </select>
-              </div>
-
-              <div className="rounded-2xl bg-blue-50/70 ring-1 ring-blue-100 p-4">
+              <div className="rounded-2xl bg-blue-50/70 p-4 ring-1 ring-blue-100">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Prácticas existentes</p>
-                    <p className="mt-1.5 text-sm font-semibold text-neutral-800">Siguiente: Práctica {siguientePractica}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Atajo rápido</p>
+                    <p className="mt-1.5 text-sm font-semibold text-neutral-800">Siguiente práctica: Práctica {siguientePractica}</p>
                   </div>
-                  <button type="button" onClick={() => { setNuevaEvalTipo('3'); setNuevaEvalDesc(`Práctica ${siguientePractica}`); }} className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition-all duration-150 hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]">Usar</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNuevaEvalGrupo('PRÁCTICAS');
+                      setNuevaEvalTipo('3');
+                      setNuevaEvalDesc(`Práctica ${siguientePractica}`);
+                    }}
+                    className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition-all duration-150 hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]"
+                  >
+                    Usar
+                  </button>
                 </div>
-                <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
-                  {practicasExistentes.length === 0 ? (
-                    <span className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-400 shadow-sm">No hay prácticas creadas</span>
-                  ) : (practicasExistentes.map((p) => (<span key={p.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm">{p.descripcion}</span>)))}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      <ListOrdered size={14} />
+                      Orden actual de la grilla
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Puedes mover las evaluaciones para cambiar el orden visual antes de guardar.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => guardarOrdenEvaluaciones()}
+                    disabled={!evaluacionesOrdenadasModal.length || !notasEditables}
+                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition-all duration-150 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Guardar orden
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {evaluacionesOrdenadasModal.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-xs font-semibold text-slate-400">
+                      Aún no hay evaluaciones creadas en esta unidad.
+                    </div>
+                  ) : (
+                    evaluacionesOrdenadasModal.map((eva, index) => {
+                      const grupo = getGrupoEvaluacion(eva);
+                      const style = getGrupoStyle(grupo);
+
+                      return (
+                        <div
+                          key={eva.id}
+                          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                            {String(index + 1).padStart(2, '0')}
+                          </div>
+
+                          <GripVertical size={16} className="shrink-0 text-slate-300" />
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-black text-slate-900">{eva.descripcion}</p>
+                            <p className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${style.header}`}>
+                              {grupo}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => moverEvaluacionModal(eva.id, -1)}
+                              disabled={index === 0}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                              title="Subir"
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => moverEvaluacionModal(eva.id, 1)}
+                              disabled={index === evaluacionesOrdenadasModal.length - 1}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                              title="Bajar"
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -1005,6 +1344,65 @@ export default function NotasPage() {
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 bg-neutral-50/50 px-6 py-4 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={closeModal} className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">Cancelar</button>
               <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"><Plus size={16} /> Crear evaluación</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para cerrar/reabrir */}
+      {confirmAction && (
+        <div
+          className="no-print fixed inset-0 z-[90] flex items-center justify-center p-4 modal-overlay-enter"
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction(null); }}
+        >
+          <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
+
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-neutral-200/60 modal-panel-enter">
+            <button
+              type="button"
+              onClick={() => setConfirmAction(null)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all hover:bg-neutral-200 hover:text-neutral-600"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-100">
+              {confirmAction.tipo === 'cerrar' ? <LockKeyhole size={22} /> : <UnlockKeyhole size={22} />}
+            </div>
+
+            <h3 className="mt-4 text-lg font-black text-slate-950">{confirmAction.titulo}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{confirmAction.descripcion}</p>
+
+            {confirmAction.tipo === 'reabrir' && (
+              <div className="mt-4">
+                <label className={labelClass}>Motivo de reapertura</label>
+                <textarea
+                  value={motivoReapertura}
+                  onChange={(e) => setMotivoReapertura(e.target.value)}
+                  className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  placeholder="Ej. Corrección solicitada por Dirección."
+                />
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={ejecutarConfirmAction}
+                disabled={procesandoRegistro}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {procesandoRegistro ? <Loader2 size={16} className="animate-spin" /> : null}
+                {confirmAction.textoBoton}
+              </button>
             </div>
           </div>
         </div>

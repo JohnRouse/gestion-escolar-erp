@@ -363,7 +363,8 @@ model Unidad {
 
   bimestre Bimestre @relation(fields: [id_bimestre], references: [id_bimestre])
 
-  evaluaciones EvaluacionDetalle[]
+  evaluaciones   EvaluacionDetalle[]
+  registros_notas RegistroNotasUnidad[]
 
   @@index([id_bimestre])
 }
@@ -515,7 +516,8 @@ model AsignacionDocente {
   seccion Seccion     @relation(fields: [id_seccion], references: [id_seccion])
   anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 
-  evaluaciones EvaluacionDetalle[]
+  evaluaciones   EvaluacionDetalle[]
+  registros_notas RegistroNotasUnidad[]
 
   @@index([id_docente, id_anio])
   @@index([id_curso])
@@ -548,6 +550,7 @@ model EvaluacionDetalle {
   descripcion_actividad String?   @db.VarChar(100)
   grupo_evaluacion      String?   @db.VarChar(50)
   fecha_evaluacion      DateTime? @db.Date
+  orden                 Int       @default(0)
 
   asignacion AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion])
   unidad     Unidad            @relation(fields: [id_unidad], references: [id_unidad])
@@ -589,6 +592,27 @@ model NotaAlumno {
 
   @@index([id_matricula])
   @@index([id_evaluacion_det])
+}
+
+model RegistroNotasUnidad {
+  id_registro_notas Int      @id @default(autoincrement())
+  id_asignacion     Int
+  id_unidad         Int
+  cerrado           Boolean  @default(false)
+  cerrado_por       Int?
+  fecha_cierre      DateTime?
+  reabierto_por     Int?
+  fecha_reapertura  DateTime?
+  motivo_reapertura String?  @db.VarChar(500)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  asignacion AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion], onDelete: Cascade)
+  unidad     Unidad            @relation(fields: [id_unidad], references: [id_unidad], onDelete: Cascade)
+
+  @@unique([id_asignacion, id_unidad])
+  @@index([id_asignacion])
+  @@index([id_unidad])
 }
 
 // ======================================================

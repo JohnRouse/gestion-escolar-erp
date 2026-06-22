@@ -1,5 +1,3 @@
-//CALIFICACIONES CONTROLLER
-
 import {
   Controller, Get, Post, Put, Param, Query, Body, Delete,
   UseGuards, Request, NotFoundException, BadRequestException,
@@ -63,7 +61,7 @@ export class CalificacionesController {
 
   // ── Evaluaciones ────────────────────────────────
   @Post('evaluaciones')
-  @Roles('Admin', 'Profesor')
+  @Roles('Admin', 'Director', 'Profesor')
   async createEvaluacion(@Body() dto: CreateEvaluacionDto) {
     return this.calificacionesService.createEvaluacion(dto);
   }
@@ -76,13 +74,26 @@ export class CalificacionesController {
     return this.calificacionesService.getEvaluaciones(Number(asignacionId), Number(unidadId));
   }
 
+  @Put('evaluaciones/orden')
+  @Roles('Admin', 'Director')
+  async reordenarEvaluaciones(
+    @Body()
+    body: {
+      id_asignacion: number;
+      id_unidad: number;
+      orden: { id_evaluacion_det: number; orden: number }[];
+    },
+  ) {
+    return this.calificacionesService.reordenarEvaluaciones(body);
+  }
+
   @Get('evaluaciones/:id/notas')
   async getEvaluacionNotas(@Param('id') id: string) {
     return this.calificacionesService.getEvaluacionNotas(Number(id));
   }
 
   @Post('evaluaciones/:id/notas')
-  @Roles('Admin', 'Profesor')
+  @Roles('Admin', 'Director', 'Profesor')
   async saveNotasIndividual(
     @Param('id') id: string,
     @Body() dto: SaveNotasDto,
@@ -100,7 +111,7 @@ export class CalificacionesController {
   }
 
   @Put('unidades/:id/notas')
-  @Roles('Admin', 'Profesor')
+  @Roles('Admin', 'Director', 'Profesor')
   async saveNotasMasivo(
     @Param('id') unidadId: string,
     @Body() dto: SaveNotasMasivoDto,
@@ -110,6 +121,35 @@ export class CalificacionesController {
       throw new BadRequestException('El id_unidad no coincide');
     }
     return this.calificacionesService.saveNotasMasivo(dto, 0); // El docente se obtendrá del token, pero por ahora pasamos 0 (no se usa)
+  }
+
+  @Put('unidades/:id/registro/cerrar')
+  @Roles('Admin', 'Director', 'Profesor')
+  async cerrarRegistroUnidad(
+    @Param('id') unidadId: string,
+    @Request() req,
+    @Body() body: { id_asignacion: number },
+  ) {
+    return this.calificacionesService.cerrarRegistroUnidad({
+      idUnidad: Number(unidadId),
+      idAsignacion: Number(body.id_asignacion),
+      userId: req.user.userId,
+    });
+  }
+
+  @Put('unidades/:id/registro/reabrir')
+  @Roles('Admin', 'Director')
+  async reabrirRegistroUnidad(
+    @Param('id') unidadId: string,
+    @Request() req,
+    @Body() body: { id_asignacion: number; motivo?: string },
+  ) {
+    return this.calificacionesService.reabrirRegistroUnidad({
+      idUnidad: Number(unidadId),
+      idAsignacion: Number(body.id_asignacion),
+      userId: req.user.userId,
+      motivo: body.motivo,
+    });
   }
 
   // ── Cierre de unidad ─────────────────────────────
@@ -175,7 +215,7 @@ export class CalificacionesController {
   }
 
   @Delete('evaluaciones/:id')
-  @Roles('Admin', 'Profesor')
+  @Roles('Admin', 'Director', 'Profesor')
   async deleteEvaluacion(@Param('id') id: string) {
     return this.calificacionesService.deleteEvaluacion(Number(id));
   }

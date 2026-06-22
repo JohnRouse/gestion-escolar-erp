@@ -15,6 +15,14 @@ export class CreateEvaluacionDto {
   descripcion_actividad?: string;
 
   @IsOptional()
+  @IsString()
+  grupo_evaluacion?: string;
+
+  @IsOptional()
+  @IsInt()
+  orden?: number;
+
+  @IsOptional()
   @IsDateString()
   fecha_evaluacion?: string;
 }
