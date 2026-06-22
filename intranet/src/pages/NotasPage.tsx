@@ -115,6 +115,15 @@ const grupoStyles: Record<string, { header: string; subHeader: string; cell: str
   },
 };
 
+const defaultGrupoStyle: { header: string; subHeader: string; cell: string; accent: string } = {
+  header: 'bg-neutral-50 text-neutral-600',
+  subHeader: 'bg-neutral-50/60 text-neutral-600',
+  cell: 'bg-white',
+  accent: 'bg-neutral-300',
+};
+
+const getGrupoStyle = (grupo: string) => grupoStyles[grupo] || defaultGrupoStyle;
+
 function normalizeText(text: string) {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
@@ -317,9 +326,16 @@ export default function NotasPage() {
         params: queryParams,
       });
 
-      const periodosData: PeriodoNotas[] = Array.isArray(res.data?.periodos)
+      const periodosDataRaw: PeriodoNotas[] = Array.isArray(res.data?.periodos)
         ? res.data.periodos
         : [];
+
+      const periodosData = periodosDataRaw
+        .map((periodo) => ({
+          ...periodo,
+          unidades: (periodo.unidades || []).filter((unidad) => unidad.estado_abierto),
+        }))
+        .filter((periodo) => periodo.unidades.length > 0);
 
       setPeriodosNotas(periodosData);
 
@@ -569,7 +585,7 @@ export default function NotasPage() {
               disabled={loadingPeriodos || periodosNotas.length === 0}
             >
               {loadingPeriodos && <option value={0}>Cargando periodos...</option>}
-              {!loadingPeriodos && periodosNotas.length === 0 && <option value={0}>Sin periodos configurados</option>}
+              {!loadingPeriodos && periodosNotas.length === 0 && <option value={0}>Sin unidades abiertas</option>}
               {periodosNotas.map((p) => (
                 <option key={p.id_bimestre} value={p.id_bimestre}>
                   {p.label}
@@ -585,10 +601,10 @@ export default function NotasPage() {
               onChange={(e) => setUnidadId(Number(e.target.value))}
               disabled={loadingPeriodos || unidadesDelPeriodo.length === 0}
             >
-              {unidadesDelPeriodo.length === 0 && <option value={0}>Sin unidades</option>}
+              {unidadesDelPeriodo.length === 0 && <option value={0}>Sin unidades abiertas</option>}
               {unidadesDelPeriodo.map((unidad) => (
                 <option key={unidad.id_unidad} value={unidad.id_unidad}>
-                  {unidad.label} {unidad.estado_abierto ? '· Abierta' : '· Cerrada'}
+                  {unidad.label} · Abierta
                 </option>
               ))}
             </select>
@@ -695,14 +711,14 @@ export default function NotasPage() {
         </section>
       )}
 
-      {/* Mensaje cuando no hay periodos configurados */}
+       {/* Mensaje cuando no hay unidades abiertas para registrar notas */}
       {!loadingPeriodos && !periodosError && asignacionId && periodosNotas.length === 0 && (
         <section className="rounded-3xl border border-dashed border-amber-200 bg-amber-50/80 px-6 py-5 text-sm text-amber-900 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
               <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" />
               <div>
-                <p className="font-black">Este año aún no tiene periodos ni unidades configuradas.</p>
+                <p className="font-black">No hay unidades abiertas para registrar notas.</p>
                 <p className="mt-1 max-w-3xl leading-6 text-amber-800">
                   Dirección debe configurar los periodos del año antes de registrar notas.
                 </p>
@@ -809,7 +825,7 @@ export default function NotasPage() {
 
                       <div className="mt-4 space-y-4">
                         {evaluacionesAgrupadas.map(([grupoNombre, items]) => {
-                          const style = grupoStyles[grupoNombre] || {};
+                          const style = getGrupoStyle(grupoNombre);
 
                           return (
                             <div key={grupoNombre} className="rounded-2xl bg-neutral-50 p-3 ring-1 ring-neutral-100">
@@ -857,7 +873,7 @@ export default function NotasPage() {
                       <th rowSpan={2} className="sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
                       <th rowSpan={2} className="sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
                       {evaluacionesAgrupadas.map(([grupoNombre, items]) => {
-                        const style = grupoStyles[grupoNombre] || {};
+                        const style = getGrupoStyle(grupoNombre);
                         return (
                           <th key={grupoNombre} colSpan={items.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header || ''}`}>
                             {grupoNombre}
@@ -868,7 +884,7 @@ export default function NotasPage() {
                     </tr>
                     <tr>
                       {evaluacionesAgrupadas.flatMap(([grupoNombre, items]) => {
-                        const style = grupoStyles[grupoNombre] || {};
+                        const style = getGrupoStyle(grupoNombre);
                         return items.map((eva) => (
                           <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader || ''}`}>
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
@@ -902,7 +918,7 @@ export default function NotasPage() {
                           </td>
                           {evaluacionesAgrupadas.flatMap(([_, items]) =>
                             items.map((eva) => {
-                              const style = grupoStyles[getGrupoEvaluacion(eva)] || {};
+                              const style = getGrupoStyle(getGrupoEvaluacion(eva));
                               return (
                                 <td key={eva.id} className={`border-b border-r border-neutral-100 px-2 py-2 text-center align-middle group-hover:bg-neutral-50/70 transition-colors ${style.cell || ''}`}>
                                   <input

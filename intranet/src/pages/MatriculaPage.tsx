@@ -8,6 +8,7 @@ import { useToast } from '../contexts/ToastContext';
 import {
   AlertCircle, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Circle, Clock,
   GraduationCap, Loader2, MapPin, Phone, Search, ShieldCheck, UserPlus, Users, X,
+  PencilLine,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -176,6 +177,8 @@ export default function MatriculaPage() {
   const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
   const [modalEditarAlumno, setModalEditarAlumno] = useState(false);
+  const [modalEditarApoderado, setModalEditarApoderado] = useState(false);
+  const [apoderadoEditando, setApoderadoEditando] = useState<Apoderado | null>(null);
   const [excepcionTraslado, setExcepcionTraslado] = useState(false);
   const [tipoIngreso, setTipoIngreso] = useState('Nuevo');
   const [colegioProcedencia, setColegioProcedencia] = useState('');
@@ -245,6 +248,30 @@ export default function MatriculaPage() {
 
   const apoderadosDesdeAlumno = (alumnoData: Alumno): Apoderado[] => { const estudianteData = alumnoData.estudiantes?.[0]; if (!estudianteData?.apoderados?.length) return []; return estudianteData.apoderados.map((relacion) => ({ id_persona: relacion.apoderado.id_persona, dni: relacion.apoderado.persona.dni, nombres: relacion.apoderado.persona.nombres, apellido_paterno: relacion.apoderado.persona.apellido_paterno, apellido_materno: relacion.apoderado.persona.apellido_materno, telefono: relacion.apoderado.persona.telefono, correo: relacion.apoderado.persona.correo, direccion: relacion.apoderado.persona.direccion, pais: relacion.apoderado.persona.pais, departamento: relacion.apoderado.persona.departamento, provincia: relacion.apoderado.persona.provincia, distrito: relacion.apoderado.persona.distrito, apoderado: { id_persona: relacion.apoderado.id_persona, ocupacion: relacion.apoderado.ocupacion }, parentesco: relacion.parentesco, })); };
 
+  const apoderadoToForm = (apoderado: Apoderado): PersonaForm => ({
+    dni: apoderado.dni || '',
+    nombres: apoderado.nombres || '',
+    apellido_paterno: apoderado.apellido_paterno || '',
+    apellido_materno: apoderado.apellido_materno || '',
+    telefono: apoderado.telefono || '',
+    correo: apoderado.correo || '',
+    direccion: apoderado.direccion || '',
+    pais: apoderado.pais || 'Perú',
+    departamento: apoderado.departamento || '',
+    provincia: apoderado.provincia || '',
+    distrito: apoderado.distrito || '',
+    ocupacion: apoderado.apoderado?.ocupacion || '',
+  });
+
+  const abrirEditarApoderado = (apoderado: Apoderado) => {
+    setApoderadoEditando(apoderado);
+    setParentesco(apoderado.parentesco || parentesco || 'Apoderado');
+    setFormApoderado(apoderadoToForm(apoderado));
+    setErrorPersona(null);
+    setClosingModal(null);
+    setModalEditarApoderado(true);
+  };
+
   const buscarAlumnoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoAlumno(true); setMensaje(null); setApoderados([]); try { const query = puedeVerConsolidado ? '&scope=all' : colegioDestinoQuery ? `&${colegioDestinoQuery.replace('?','')}` : ''; const res = await axios.get(`/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setMensaje(null); } catch (err: any) { setAlumno(null); setMensaje(err.response?.data?.message || 'No se encontró el alumno.'); } finally { setBuscandoAlumno(false); } };
   const buscarAlumno = () => buscarAlumnoPorDni(dni);
   const buscarApoderadoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoApoderado(true); setMensaje(null); try { const res = await axios.get(`/api/academicos/apoderados/buscar?dni=${dniBusqueda.trim()}`, { headers: { Authorization: `Bearer ${token}` } }); setApoderadoEncontrado(res.data); return res.data; } catch (err: any) { setApoderadoEncontrado(null); setMensaje(err.response?.data?.message || 'No se encontró el apoderado.'); return null; } finally { setBuscandoApoderado(false); } };
@@ -255,6 +282,68 @@ export default function MatriculaPage() {
   const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? '/api/academicos/alumnos' : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); closeModal(setModalAlumno, 'alumno'); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Alumno registrado', message: 'La ficha del alumno se guardó correctamente.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); closeModal(setModalApoderado, 'apoderado'); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
 
   const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); closeModal(setModalEditarAlumno, 'editarAlumno'); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el alumno.'); } finally { setSavingPersona(false); } };
+
+  const editarApoderado = async () => {
+    if (!token || !apoderadoEditando) return;
+
+    if (!formApoderado.dni || !formApoderado.nombres || !formApoderado.apellido_paterno || !formApoderado.apellido_materno) {
+      setErrorPersona('Completa DNI, nombres y apellidos.');
+      return;
+    }
+
+    setSavingPersona(true);
+    setErrorPersona(null);
+
+    try {
+      const res = await axios.put(
+        `/api/academicos/apoderados/${apoderadoEditando.id_persona}`,
+        { ...formApoderado, pais: formApoderado.pais || 'Perú' },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const actualizado: Apoderado = {
+        ...apoderadoEditando,
+        id_persona: res.data?.id_persona || apoderadoEditando.id_persona,
+        dni: res.data?.dni || formApoderado.dni,
+        nombres: res.data?.nombres || formApoderado.nombres,
+        apellido_paterno: res.data?.apellido_paterno || formApoderado.apellido_paterno,
+        apellido_materno: res.data?.apellido_materno || formApoderado.apellido_materno,
+        telefono: res.data?.telefono || formApoderado.telefono,
+        correo: res.data?.correo || formApoderado.correo,
+        direccion: res.data?.direccion || formApoderado.direccion,
+        pais: res.data?.pais || formApoderado.pais,
+        departamento: res.data?.departamento || formApoderado.departamento,
+        provincia: res.data?.provincia || formApoderado.provincia,
+        distrito: res.data?.distrito || formApoderado.distrito,
+        parentesco,
+        apoderado: {
+          id_persona: res.data?.apoderado?.id_persona || apoderadoEditando.id_persona,
+          ocupacion: res.data?.apoderado?.ocupacion || formApoderado.ocupacion,
+        },
+      };
+
+      setApoderados((actuales) =>
+        actuales.map((item) => item.id_persona === actualizado.id_persona ? actualizado : item),
+      );
+
+      setApoderadoEncontrado((actual) =>
+        actual?.id_persona === actualizado.id_persona ? actualizado : actual,
+      );
+
+      closeModal(setModalEditarApoderado, 'editarApoderado');
+      setApoderadoEditando(null);
+      setMensaje(null);
+      showToast({
+        type: 'success',
+        title: 'Apoderado actualizado',
+        message: 'Los datos del apoderado se actualizaron correctamente.',
+      });
+    } catch (err: any) {
+      setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el apoderado.');
+    } finally {
+      setSavingPersona(false);
+    }
+  };
 
   const limpiarFlujoMatricula = () => { setDni(''); setAlumno(null); setApoderados([]); setApoderadoDni(''); setApoderadoEncontrado(null); setParentesco('Madre'); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setExcepcionTraslado(false); setMensaje(null); setTipoIngreso('Nuevo'); setColegioProcedencia(''); setCodigoModularProcedencia(''); setGradoProcedencia(''); setObservacionProcedencia(''); };
 
@@ -420,7 +509,34 @@ export default function MatriculaPage() {
                     {apoderados.map((a) => { const color = getAvatarColor(a.nombres); const initials = getInitials(a.nombres); return (
                       <div key={a.id_persona} className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200/60">
                         <div className="flex min-w-0 items-center gap-2.5"><div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold ${color}`}>{initials}</div><div className="min-w-0"><p className="truncate text-sm font-medium text-neutral-800">{a.nombres} {a.apellido_paterno}</p><p className="mt-0.5 truncate text-xs text-neutral-400">{a.parentesco} · DNI {a.dni} · {a.telefono || 'Sin teléfono'}</p></div></div>
-                        <button type="button" onClick={async () => { if (!token || !estudiante?.id_persona) return; try { await axios.delete(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados/${a.id_persona}`, { headers: { Authorization: `Bearer ${token}` } }); setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona)); setMensaje(null); showToast({ type: 'success', title: 'Apoderado desvinculado', message: 'El apoderado fue retirado de la ficha del alumno.' }); } catch (err: any) { setMensaje(err.response?.data?.message || 'No se pudo desvincular el apoderado.'); } }} className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-red-500 transition-all duration-150 hover:bg-red-50 hover:text-red-700">Quitar</button>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => abrirEditarApoderado(a)}
+                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition-all duration-150 hover:bg-neutral-100 hover:text-neutral-800"
+                          >
+                            <PencilLine size={12} /> Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!token || !estudiante?.id_persona) return;
+                              try {
+                                await axios.delete(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados/${a.id_persona}`, {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                });
+                                setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona));
+                                setMensaje(null);
+                                showToast({ type: 'success', title: 'Apoderado desvinculado', message: 'El apoderado fue retirado de la ficha del alumno.' });
+                              } catch (err: any) {
+                                setMensaje(err.response?.data?.message || 'No se pudo desvincular el apoderado.');
+                              }
+                            }}
+                            className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-500 transition-all duration-150 hover:bg-red-50 hover:text-red-700"
+                          >
+                            Quitar
+                          </button>
+                        </div>
                       </div> ); })}
                   </div>
                 )}
@@ -516,6 +632,21 @@ export default function MatriculaPage() {
       {modalAlumno && <PersonaModal title="Nuevo alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalAlumno, 'alumno')} onSave={() => crearPersona('alumno')} aviso={avisoEdadFichaAlumno} alumno isClosing={closingModal === 'alumno'} />}
       {modalEditarAlumno && <PersonaModal title="Editar alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalEditarAlumno, 'editarAlumno')} onSave={editarAlumno} alumno isClosing={closingModal === 'editarAlumno'} />}
       {modalApoderado && <PersonaModal title="Nuevo apoderado" form={formApoderado} setForm={setFormApoderado} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalApoderado, 'apoderado')} onSave={() => crearPersona('apoderado')} apoderado parentesco={parentesco} onParentescoChange={setParentesco} isClosing={closingModal === 'apoderado'} />}
+      {modalEditarApoderado && (
+        <PersonaModal
+          title="Editar apoderado"
+          form={formApoderado}
+          setForm={setFormApoderado}
+          error={errorPersona}
+          loading={savingPersona}
+          onClose={() => closeModal(setModalEditarApoderado, 'editarApoderado')}
+          onSave={editarApoderado}
+          apoderado
+          parentesco={parentesco}
+          onParentescoChange={setParentesco}
+          isClosing={closingModal === 'editarApoderado'}
+        />
+      )}
 
       {/* ── Modal detalle matrícula ── */}
       {detalleOpen && (

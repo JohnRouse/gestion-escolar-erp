@@ -3799,7 +3799,13 @@ colegio_nombre: sec.colegio?.nombre || null,
       throw new BadRequestException('No tienes acceso a esta asignación.');
     }
 
-    const periodos = asignacion.anio.bimestres.map((periodo) => this.mapPeriodoUnidad(periodo));
+    const periodos = asignacion.anio.bimestres
+      .map((periodo) => this.mapPeriodoUnidad(periodo))
+      .map((periodo) => ({
+        ...periodo,
+        unidades: periodo.unidades.filter((unidad) => unidad.estado_abierto),
+      }))
+      .filter((periodo) => periodo.unidades.length > 0);
 
     const unidades = periodos.flatMap((periodo) =>
       periodo.unidades.map((unidad) => ({
@@ -3815,10 +3821,7 @@ colegio_nombre: sec.colegio?.nombre || null,
       anio: asignacion.anio.nombre_anio,
       colegio: asignacion.anio.colegio?.nombre || asignacion.anio.colegio?.nombre_corto || null,
       periodos,
-      unidad_abierta:
-        unidades.find((unidad) => unidad.estado_abierto) ||
-        unidades[0] ||
-        null,
+      unidad_abierta: unidades[0] || null,
     };
   }
 
@@ -4088,6 +4091,10 @@ colegio_nombre: sec.colegio?.nombre || null,
     };
   }
 
+  private estadosAnioAcademicoOperativos() {
+    return ['En curso', 'Abierto', 'Planificación', 'Matrícula abierta', 'Activo'];
+  }
+
   private async resolverAnioAcademicoActivo(params: {
     anioId?: number;
     colegioId?: number;
@@ -4102,7 +4109,7 @@ colegio_nombre: sec.colegio?.nombre || null,
     const enCurso = await this.prisma.anioLectivo.findFirst({
       where: {
         ...whereColegio,
-        estado: { in: ['En curso', 'Abierto', 'Planificación'] },
+        estado: { in: this.estadosAnioAcademicoOperativos() },
       },
       orderBy: { fecha_inicio: 'desc' },
     });
@@ -4150,7 +4157,7 @@ colegio_nombre: sec.colegio?.nombre || null,
       const aniosActivos = await this.prisma.anioLectivo.findMany({
         where: {
           id_colegio: { in: contexto.permitidoIds },
-          estado: { in: ['En curso', 'Abierto', 'Planificación'] },
+          estado: { in: this.estadosAnioAcademicoOperativos() },
         },
         select: {
           id_anio: true,
@@ -4290,7 +4297,7 @@ colegio_nombre: sec.colegio?.nombre || null,
     const anioActivo =
       anioId ||
       (await this.prisma.anioLectivo.findFirst({
-        where: { estado: { in: ['En curso', 'Abierto', 'Planificación'] } },
+        where: { estado: { in: this.estadosAnioAcademicoOperativos() } },
         orderBy: { fecha_inicio: 'desc' },
       }))?.id_anio;
 
@@ -5089,59 +5096,54 @@ colegio_nombre: sec.colegio?.nombre || null,
       throw new NotFoundException('No se encontró el apoderado seleccionado.');
     }
 
-    const personaData: Prisma.PersonaUpdateInput = {};
+    const data: Prisma.PersonaUpdateInput = {};
 
-    if (dto.dni !== undefined) personaData.dni = dto.dni.trim();
-    if (dto.nombres !== undefined) personaData.nombres = dto.nombres.trim();
-    if (dto.apellido_paterno !== undefined) personaData.apellido_paterno = dto.apellido_paterno.trim();
-    if (dto.apellido_materno !== undefined) personaData.apellido_materno = dto.apellido_materno.trim();
-    if (dto.telefono !== undefined) personaData.telefono = this.normalizeEmpty(dto.telefono);
-    if (dto.correo !== undefined) personaData.correo = this.normalizeEmpty(dto.correo);
-    if (dto.direccion !== undefined) personaData.direccion = this.normalizeEmpty(dto.direccion);
-    if (dto.pais !== undefined) personaData.pais = this.normalizeEmpty(dto.pais) || 'Perú';
-    if (dto.departamento !== undefined) personaData.departamento = this.normalizeEmpty(dto.departamento);
-    if (dto.provincia !== undefined) personaData.provincia = this.normalizeEmpty(dto.provincia);
-    if (dto.distrito !== undefined) personaData.distrito = this.normalizeEmpty(dto.distrito);
+    if (dto.dni !== undefined) data.dni = dto.dni.trim();
+    if (dto.nombres !== undefined) data.nombres = dto.nombres.trim();
+    if (dto.apellido_paterno !== undefined) data.apellido_paterno = dto.apellido_paterno.trim();
+    if (dto.apellido_materno !== undefined) data.apellido_materno = dto.apellido_materno.trim();
+    if (dto.telefono !== undefined) data.telefono = this.normalizeEmpty(dto.telefono);
+    if (dto.correo !== undefined) data.correo = this.normalizeEmpty(dto.correo);
+    if (dto.direccion !== undefined) data.direccion = this.normalizeEmpty(dto.direccion);
+    if (dto.pais !== undefined) data.pais = this.normalizeEmpty(dto.pais) || 'Perú';
+    if (dto.departamento !== undefined) data.departamento = this.normalizeEmpty(dto.departamento);
+    if (dto.provincia !== undefined) data.provincia = this.normalizeEmpty(dto.provincia);
+    if (dto.distrito !== undefined) data.distrito = this.normalizeEmpty(dto.distrito);
 
     try {
-      await this.prisma.persona.update({
+      const persona = await this.prisma.persona.update({
         where: { id_persona: idApoderado },
-        data: personaData,
+        data,
       });
 
+      let apoderadoActualizado = apoderado;
+
       if (dto.ocupacion !== undefined) {
-        await this.prisma.apoderado.update({
+        apoderadoActualizado = await this.prisma.apoderado.update({
           where: { id_persona: idApoderado },
           data: { ocupacion: this.normalizeEmpty(dto.ocupacion) },
+          include: { persona: true },
         });
       }
 
-      return this.prisma.apoderado.findUnique({
-        where: { id_persona: idApoderado },
-        include: {
-          persona: true,
-          estudiantes: {
-            include: {
-              estudiante: {
-                include: {
-                  persona: true,
-                  codigos_colegio: true,
-                  matriculas: {
-                    include: {
-                      colegio: true,
-                      anio: true,
-                      seccion: {
-                        include: { grado: { include: { nivel: true } } },
-                      },
-                    },
-                    orderBy: { fecha_matricula: 'desc' },
-                  },
-                },
-              },
-            },
-          },
+      return {
+        id_persona: persona.id_persona,
+        dni: persona.dni,
+        nombres: persona.nombres,
+        apellido_paterno: persona.apellido_paterno,
+        apellido_materno: persona.apellido_materno,
+        telefono: persona.telefono,
+        correo: persona.correo,
+        direccion: persona.direccion,
+        pais: persona.pais,
+        departamento: persona.departamento,
+        provincia: persona.provincia,
+        distrito: persona.distrito,
+        apoderado: {
+          id_persona: apoderadoActualizado.id_persona,
+          ocupacion: apoderadoActualizado.ocupacion,
         },
-      });
+      };
     } catch (error) {
       this.handlePersonaPrismaError(error);
     }
