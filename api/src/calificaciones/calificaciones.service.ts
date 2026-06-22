@@ -329,11 +329,13 @@ export class CalificacionesService {
         .filter(Boolean)
         .join(', ');
 
-      const fila: any = {
+       const fila: any = {
         id_matricula: mat.id_matricula,
         codigo_matricula: mat.codigo_matricula,
         codigo_estudiante: mat.estudiante.codigo_estudiante,
-        codigo_alumno: mat.estudiante.codigo_estudiante,
+        // Código visible para la grilla de notas.
+        // Debe coincidir con el código que ve el usuario en el detalle de matrícula.
+        codigo_alumno: mat.codigo_matricula || mat.estudiante.codigo_estudiante || `MAT-${mat.id_matricula}`,
         alumno: alumnoNombre,
       };
 

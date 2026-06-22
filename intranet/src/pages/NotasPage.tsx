@@ -206,9 +206,9 @@ function formatearNotaEntera(value: unknown) {
 
 function getCodigoAlumnoFila(fila: GrillaData['grilla'][number]) {
   return (
+    fila.codigo_matricula ||
     fila.codigo_alumno ||
     fila.codigo_estudiante ||
-    fila.codigo_matricula ||
     `MAT-${fila.id_matricula}`
   );
 }
@@ -245,6 +245,7 @@ export default function NotasPage() {
   const [loadingPeriodos, setLoadingPeriodos] = useState(false);
   const [periodosError, setPeriodosError] = useState<string | null>(null);
   const [grilla, setGrilla] = useState<GrillaData | null>(null);
+  const [grillaKey, setGrillaKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingAsignaciones, setLoadingAsignaciones] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -285,6 +286,12 @@ export default function NotasPage() {
     return asignacion.seccion;
   }, [esVistaConsolidada]);
 
+  const resetGrillaVisual = useCallback(() => {
+    setGrilla(null);
+    setGrillaKey('');
+    setMensaje(null);
+  }, []);
+
   useEffect(() => {
     if (!token) return;
 
@@ -292,6 +299,7 @@ export default function NotasPage() {
 
     setLoadingAsignaciones(true);
     setAsignacionesError(null);
+    resetGrillaVisual();
 
     axios
       .get('/api/academicos/docente/asignaciones', {
@@ -311,6 +319,7 @@ export default function NotasPage() {
           setSalonSeleccionado('');
           setAsignacionId(null);
           setGrilla(null);
+          setGrillaKey('');
         }
       })
       .catch((err) => {
@@ -321,6 +330,7 @@ export default function NotasPage() {
         setSalonSeleccionado('');
         setAsignacionId(null);
         setGrilla(null);
+        setGrillaKey('');
         setAsignacionesError(
           err.response?.data?.message || 'No se pudieron cargar las asignaciones docentes.',
         );
@@ -332,7 +342,7 @@ export default function NotasPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, queryParams, getSalonKey]);
+  }, [token, queryParams, getSalonKey, resetGrillaVisual]);
 
   const salones = useMemo(() => {
     const unicos = new Map<string, { key: string; label: string }>();
@@ -435,13 +445,27 @@ export default function NotasPage() {
   const cargarGrilla = useCallback(async () => {
     if (!token || !asignacionId || !unidadId) {
       setGrilla(null);
+      setGrillaKey('');
+      setLoading(false);
       return;
     }
-    setLoading(true); setMensaje(null);
+
+    const currentKey = `${asignacionId}-${unidadId}`;
+    setLoading(true);
+    setMensaje(null);
+
     try {
-      const res = await axios.get(`/api/calificaciones/unidades/${unidadId}/grilla?asignacion_id=${asignacionId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`/api/calificaciones/unidades/${unidadId}/grilla?asignacion_id=${asignacionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setGrilla(res.data);
-    } catch { setGrilla(null); } finally { setLoading(false); }
+      setGrillaKey(currentKey);
+    } catch {
+      setGrilla(null);
+      setGrillaKey('');
+    } finally {
+      setLoading(false);
+    }
   }, [token, asignacionId, unidadId]);
 
   useEffect(() => { cargarGrilla(); }, [cargarGrilla]);
@@ -451,6 +475,8 @@ export default function NotasPage() {
       setPeriodosNotas([]);
       setPeriodoId(0);
       setUnidadId(0);
+      setGrillaKey('');
+      setLoadingPeriodos(false);
       return;
     }
 
@@ -543,19 +569,39 @@ export default function NotasPage() {
     return 'bg-blue-50 text-blue-700 ring-blue-200/60';
   };
 
+  const grillaSelectionKey = asignacionId && unidadId ? `${asignacionId}-${unidadId}` : '';
+  const grillaEnSincronia = Boolean(grilla && grillaSelectionKey && grillaKey === grillaSelectionKey);
+  const mostrandoCargaGrilla = Boolean(
+    loading ||
+    loadingAsignaciones ||
+    loadingPeriodos ||
+    (asignacionId && unidadId && !grillaEnSincronia)
+  );
+
   const handleSalonChange = (salonKey: string) => {
+    resetGrillaVisual();
+    setPeriodosNotas([]);
+    setPeriodoId(0);
+    setUnidadId(0);
+    setLoadingPeriodos(true);
     setSalonSeleccionado(salonKey);
     const primera = asignaciones.find((asignacion) => getSalonKey(asignacion) === salonKey);
     setAsignacionId(primera?.id_asignacion ?? null);
   };
 
   const handleCursoChange = (idAsignacion: number) => {
+    resetGrillaVisual();
+    setPeriodosNotas([]);
+    setPeriodoId(0);
+    setUnidadId(0);
+    setLoadingPeriodos(true);
     setAsignacionId(idAsignacion);
     const asig = asignaciones.find((a) => a.id_asignacion === idAsignacion);
     if (asig) setSalonSeleccionado(getSalonKey(asig));
   };
 
   const handlePeriodoChange = (idPeriodo: number) => {
+    resetGrillaVisual();
     const nuevoPeriodo = periodosNotas.find((p) => p.id_bimestre === idPeriodo) || periodosNotas[0];
 
     setPeriodoId(nuevoPeriodo?.id_bimestre || 0);
@@ -967,7 +1013,10 @@ export default function NotasPage() {
             <select
               className={inputClass}
               value={unidadId}
-              onChange={(e) => setUnidadId(Number(e.target.value))}
+              onChange={(e) => {
+                resetGrillaVisual();
+                setUnidadId(Number(e.target.value));
+              }}
               disabled={loadingPeriodos || unidadesDelPeriodo.length === 0}
             >
               {unidadesDelPeriodo.length === 0 && <option value={0}>Sin unidades abiertas</option>}
@@ -1135,7 +1184,7 @@ export default function NotasPage() {
       )}
 
       {/* Grilla */}
-      {loading ? (
+      {mostrandoCargaGrilla ? (
         <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] soft-fade-up">
           <div className="mb-6 flex items-center justify-between">
             <div className="space-y-2"><div className="h-5 w-40 rounded-lg bg-neutral-100 animate-pulse" /><div className="h-4 w-56 rounded-lg bg-neutral-100 animate-pulse" /></div>
