@@ -55,9 +55,28 @@ export class CalificacionesService {
 
   // ── Evaluaciones ────────────────────────────────
   async createEvaluacion(dto: CreateEvaluacionDto) {
-    await this.validarRegistroEditable(dto.id_asignacion, dto.id_unidad);
+    const unidad = await this.prisma.unidad.findUnique({
+      where: { id_unidad: dto.id_unidad },
+    });
 
-    const maxOrden = await this.prisma.evaluacionDetalle.aggregate({
+    if (!unidad?.estado_abierto) {
+      throw new BadRequestException('La unidad no está abierta');
+    }
+
+    const registro = await this.prisma.registroNotasUnidad.findUnique({
+      where: {
+        id_asignacion_id_unidad: {
+          id_asignacion: dto.id_asignacion,
+          id_unidad: dto.id_unidad,
+        },
+      },
+    });
+
+    if (registro?.cerrado) {
+      throw new BadRequestException('El registro de notas está cerrado');
+    }
+
+    const ultima = await this.prisma.evaluacionDetalle.aggregate({
       where: {
         id_asignacion: dto.id_asignacion,
         id_unidad: dto.id_unidad,
@@ -65,21 +84,14 @@ export class CalificacionesService {
       _max: { orden: true },
     });
 
-    const orden = dto.orden && dto.orden > 0
-      ? dto.orden
-      : Number(maxOrden._max.orden || 0) + 1;
-
     return this.prisma.evaluacionDetalle.create({
       data: {
         id_asignacion: dto.id_asignacion,
         id_unidad: dto.id_unidad,
         id_tipo_eval: dto.id_tipo_eval,
         descripcion_actividad: dto.descripcion_actividad,
-        grupo_evaluacion:
-          dto.grupo_evaluacion
-            ? this.normalizarGrupoEvaluacion(dto.grupo_evaluacion)
-            : this.inferirGrupoEvaluacion(dto.descripcion_actividad),
-        orden,
+        grupo_evaluacion: dto.grupo_evaluacion || this.inferirGrupoEvaluacion(dto.descripcion_actividad),
+        orden: dto.orden || Number(ultima._max.orden || 0) + 1,
         fecha_evaluacion: dto.fecha_evaluacion ? new Date(dto.fecha_evaluacion) : undefined,
       },
     });
@@ -238,10 +250,9 @@ export class CalificacionesService {
       where: { id_asignacion: asignacionId, id_unidad: unidadId },
       include: { tipo: true },
       orderBy: [
-        { orden: 'asc' },
-        { fecha_evaluacion: 'asc' },
-        { id_evaluacion_det: 'asc' },
-      ],
+    { orden: 'asc' },
+    { id_evaluacion_det: 'asc' },
+  ],
     });
 
     const estadosPermitidosNotas = ['Activo', 'Matriculado'];

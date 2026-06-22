@@ -101,6 +101,43 @@ const tipoEvaluaciones = [
   { id: '4', label: 'Examen' },
 ];
 
+// ── Tipos y helpers para modal por lote ──
+type TipoGrilla = 'TRABAJO EN CLASE' | 'PRÁCTICAS' | 'EXAMEN';
+
+type EvaluacionModalItem = {
+  id?: number;
+  tempId: string;
+  descripcion: string;
+  grupo_evaluacion: TipoGrilla;
+  esNueva?: boolean;
+};
+
+const tipoGrillaOptions: { id: TipoGrilla; label: string }[] = [
+  { id: 'TRABAJO EN CLASE', label: 'Trabajo en clase' },
+  { id: 'PRÁCTICAS', label: 'Práctica' },
+  { id: 'EXAMEN', label: 'Examen' },
+];
+
+const normalizarGrupoTipo = (value?: string | null): TipoGrilla => {
+  const texto = String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+
+  if (texto.includes('PRACTICA')) return 'PRÁCTICAS';
+  if (texto.includes('EXAMEN')) return 'EXAMEN';
+  return 'TRABAJO EN CLASE';
+};
+
+const getGrupoOrden = (grupo: string) => {
+  const normalizado = normalizarGrupoTipo(grupo);
+  if (normalizado === 'TRABAJO EN CLASE') return 1;
+  if (normalizado === 'PRÁCTICAS') return 2;
+  return 3;
+};
+
+const crearTempId = () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 const grupoStyles: Record<string, { header: string; subHeader: string; cell: string; accent: string }> = {
   'TRABAJO EN CLASE': {
     header: 'bg-amber-50 text-amber-700',
@@ -136,11 +173,9 @@ function normalizeText(text: string) {
 }
 
 const getGrupoEvaluacion = (evaluacion: Evaluacion) => {
-  const grupoManual = String(evaluacion.grupo_evaluacion || '').toUpperCase();
+  const grupoManual = normalizarGrupoTipo(evaluacion.grupo_evaluacion);
 
-  if (grupoManual.includes('TRABAJO')) return 'TRABAJO EN CLASE';
-  if (grupoManual.includes('PRÁCTICA') || grupoManual.includes('PRACTICA')) return 'PRÁCTICAS';
-  if (grupoManual.includes('EXAMEN')) return 'EXAMEN';
+  if (evaluacion.grupo_evaluacion) return grupoManual;
 
   const texto = `${evaluacion.descripcion || ''} ${evaluacion.tipo || ''}`.toLowerCase();
 
@@ -174,9 +209,12 @@ function calcularPromedioFila(fila: GrillaData['grilla'][number], evaluaciones: 
 
 function getNotaColor(value: unknown) {
   const nota = normalizarNotaEntera(value);
-  if (nota < 11) return 'border-red-200 bg-red-50/60 text-red-600 focus:border-red-300 focus:ring-red-100';
-  if (nota >= 14) return 'border-emerald-200 bg-emerald-50/60 text-emerald-600 focus:border-emerald-300 focus:ring-emerald-100';
-  return 'border-sky-200 bg-sky-50/60 text-sky-600 focus:border-sky-300 focus:ring-sky-100';
+
+  if (nota <= 10) {
+    return 'border-red-200 bg-red-50/60 text-red-600 focus:border-red-300 focus:ring-red-100';
+  }
+
+  return 'border-blue-200 bg-blue-50/60 text-blue-700 focus:border-blue-300 focus:ring-blue-100';
 }
 
 export default function NotasPage() {
@@ -197,12 +235,15 @@ export default function NotasPage() {
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [asignacionesError, setAsignacionesError] = useState<string | null>(null);
 
+  // ── Estados del modal de evaluación ──
   const [modalOpen, setModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
-  const [nuevaEvalTipo, setNuevaEvalTipo] = useState('3');
-  const [nuevaEvalGrupo, setNuevaEvalGrupo] = useState('TRABAJO EN CLASE');
-  const [ordenTemporal, setOrdenTemporal] = useState<number[]>([]);
+  const [nuevaEvalTipoGrilla, setNuevaEvalTipoGrilla] = useState<TipoGrilla>('TRABAJO EN CLASE');
+  const [evaluacionesModal, setEvaluacionesModal] = useState<EvaluacionModalItem[]>([]);
+  const [guardandoModal, setGuardandoModal] = useState(false);
+
+  // Estados de cierre/reapertura de registro (ya existentes)
   const [procesandoRegistro, setProcesandoRegistro] = useState(false);
   const [motivoReapertura, setMotivoReapertura] = useState('');
   const [confirmAction, setConfirmAction] = useState<null | {
@@ -320,6 +361,61 @@ export default function NotasPage() {
   const notasEditables = Boolean(unidadAbierta && !registroCerrado);
   const puedeReabrirRegistro = ['Admin', 'Director'].includes(user?.rol || '') && registroCerrado;
 
+  // ── Helpers para modal por lote ──
+  const getTipoEvalIdParaGrupo = useCallback((grupo: TipoGrilla) => {
+    const buscador = (palabras: string[]) => {
+      const encontrado = tipoEvaluaciones.find((tipo) => {
+        const texto = normalizeText(tipo.label);
+        return palabras.some((palabra) => texto.includes(palabra));
+      });
+
+      return encontrado ? Number(encontrado.id) : null;
+    };
+
+    if (grupo === 'PRÁCTICAS') return buscador(['practica']) || 3;
+    if (grupo === 'EXAMEN') return buscador(['examen']) || 4;
+
+    return buscador(['participacion', 'cuaderno', 'tarea']) || 1;
+  }, []);
+
+  const ordenGrillaActualKey = useMemo(() => {
+    return (grilla?.evaluaciones || []).map((eva) => `eva-${eva.id}`).join('|');
+  }, [grilla]);
+
+  const ordenModalKey = useMemo(() => {
+    return evaluacionesModal.map((eva) => eva.tempId).join('|');
+  }, [evaluacionesModal]);
+
+  const hayCambiosModal = useMemo(() => {
+    return evaluacionesModal.some((eva) => eva.esNueva) || ordenModalKey !== ordenGrillaActualKey;
+  }, [evaluacionesModal, ordenModalKey, ordenGrillaActualKey]);
+
+  // Reemplazo de practicasExistentes y siguientePractica
+  const practicasModal = useMemo(() => {
+    const base = evaluacionesModal.length
+      ? evaluacionesModal
+      : (grilla?.evaluaciones || []).map((eva) => ({
+          id: eva.id,
+          tempId: `eva-${eva.id}`,
+          descripcion: eva.descripcion,
+          grupo_evaluacion: getGrupoEvaluacion(eva),
+          esNueva: false,
+        }));
+
+    return base.filter((eva) => normalizarGrupoTipo(eva.grupo_evaluacion) === 'PRÁCTICAS');
+  }, [evaluacionesModal, grilla]);
+
+  const siguientePractica = useMemo(() => {
+    const numeros = practicasModal
+      .map((p) => {
+        const match = normalizeText(p.descripcion).match(/practica\s*(\d+)/);
+        return match ? Number(match[1]) : null;
+      })
+      .filter((numero): numero is number => Number.isFinite(numero));
+
+    return numeros.length ? Math.max(...numeros) + 1 : practicasModal.length + 1;
+  }, [practicasModal]);
+
   const cargarGrilla = useCallback(async () => {
     if (!token || !asignacionId || !unidadId) {
       setGrilla(null);
@@ -423,15 +519,6 @@ export default function NotasPage() {
     return Array.from(grupos.entries()).sort(([a], [b]) => orden.indexOf(a) - orden.indexOf(b));
   }, [grilla]);
 
-  const practicasExistentes = useMemo(() => {
-    return (grilla?.evaluaciones || []).filter((e) => getGrupoEvaluacion(e) === 'PRÁCTICAS');
-  }, [grilla]);
-
-  const siguientePractica = useMemo(() => {
-    const numeros = practicasExistentes.map((p) => { const m = normalizeText(p.descripcion).match(/practica\s*(\d+)/); return m ? Number(m[1]) : null; }).filter((n): n is number => Number.isFinite(n));
-    return numeros.length ? Math.max(...numeros) + 1 : practicasExistentes.length + 1;
-  }, [practicasExistentes]);
-
   const getPromedioClass = (promedio: number) => {
     if (promedio >= 14) return 'bg-emerald-50 text-emerald-700 ring-emerald-200/60';
     if (promedio >= 11) return 'bg-sky-50 text-sky-700 ring-sky-200/60';
@@ -474,10 +561,22 @@ export default function NotasPage() {
     } catch (err: any) { setMensaje({ tipo: 'error', texto: err.response?.data?.message || 'Error al guardar las notas.' }); } finally { setSaving(false); }
   };
 
+  // ── Modal: abrir con orden lógico ──
   const openModal = () => {
     setIsClosing(false);
-    setOrdenTemporal((grilla?.evaluaciones || []).map((eva) => eva.id));
-    setNuevaEvalGrupo('TRABAJO EN CLASE');
+    setNuevaEvalDesc('');
+    setNuevaEvalTipoGrilla('TRABAJO EN CLASE');
+    setEvaluacionesModal(
+      (grilla?.evaluaciones || [])
+        .map((eva) => ({
+          id: eva.id,
+          tempId: `eva-${eva.id}`,
+          descripcion: eva.descripcion,
+          grupo_evaluacion: getGrupoEvaluacion(eva),
+          esNueva: false,
+        }))
+        .sort((a, b) => getGrupoOrden(a.grupo_evaluacion) - getGrupoOrden(b.grupo_evaluacion)),
+    );
     setModalOpen(true);
   };
 
@@ -486,27 +585,64 @@ export default function NotasPage() {
     setTimeout(() => { setModalOpen(false); setIsClosing(false); }, 200);
   };
 
-  const evaluacionesOrdenadasModal = useMemo(() => {
-    const mapa = new Map((grilla?.evaluaciones || []).map((eva) => [eva.id, eva]));
+  // ── Funciones para modal por lote ──
+  const insertarEvaluacionEnOrden = useCallback((lista: EvaluacionModalItem[], nueva: EvaluacionModalItem) => {
+    const grupoNuevo = normalizarGrupoTipo(nueva.grupo_evaluacion);
+    const copia = [...lista];
 
-    const ordenadas = ordenTemporal
-      .map((id) => mapa.get(id))
-      .filter((eva): eva is Evaluacion => Boolean(eva));
+    if (grupoNuevo === 'TRABAJO EN CLASE') {
+      const primerNoTrabajo = copia.findIndex((item) => normalizarGrupoTipo(item.grupo_evaluacion) !== 'TRABAJO EN CLASE');
+      if (primerNoTrabajo === -1) return [...copia, nueva];
+      return [...copia.slice(0, primerNoTrabajo), nueva, ...copia.slice(primerNoTrabajo)];
+    }
 
-    const faltantes = (grilla?.evaluaciones || []).filter((eva) => !ordenTemporal.includes(eva.id));
+    if (grupoNuevo === 'PRÁCTICAS') {
+      const ultimaPractica = copia.reduce((ultimo, item, index) => {
+        return normalizarGrupoTipo(item.grupo_evaluacion) === 'PRÁCTICAS' ? index : ultimo;
+      }, -1);
 
-    return [...ordenadas, ...faltantes];
-  }, [grilla, ordenTemporal]);
+      if (ultimaPractica >= 0) {
+        return [...copia.slice(0, ultimaPractica + 1), nueva, ...copia.slice(ultimaPractica + 1)];
+      }
 
-  const moverEvaluacionModal = (id: number, direccion: -1 | 1) => {
-    setOrdenTemporal((actual) => {
-      const base = actual.length ? [...actual] : (grilla?.evaluaciones || []).map((eva) => eva.id);
-      const index = base.indexOf(id);
+      const primerExamen = copia.findIndex((item) => normalizarGrupoTipo(item.grupo_evaluacion) === 'EXAMEN');
+      if (primerExamen >= 0) return [...copia.slice(0, primerExamen), nueva, ...copia.slice(primerExamen)];
+
+      return [...copia, nueva];
+    }
+
+    return [...copia, nueva];
+  }, []);
+
+  const agregarEvaluacionAlModal = useCallback((descripcionManual?: string, grupoManual?: TipoGrilla) => {
+    const descripcion = (descripcionManual || nuevaEvalDesc).trim();
+    const grupo = normalizarGrupoTipo(grupoManual || nuevaEvalTipoGrilla);
+
+    if (!descripcion || !notasEditables) return;
+
+    const nueva: EvaluacionModalItem = {
+      tempId: crearTempId(),
+      descripcion,
+      grupo_evaluacion: grupo,
+      esNueva: true,
+    };
+
+    setEvaluacionesModal((actual) => insertarEvaluacionEnOrden(actual, nueva));
+
+    if (!descripcionManual) {
+      setNuevaEvalDesc('');
+      setNuevaEvalTipoGrilla('TRABAJO EN CLASE');
+    }
+  }, [insertarEvaluacionEnOrden, notasEditables, nuevaEvalDesc, nuevaEvalTipoGrilla]);
+
+  const moverEvaluacionModal = (tempId: string, direccion: -1 | 1) => {
+    setEvaluacionesModal((actual) => {
+      const index = actual.findIndex((item) => item.tempId === tempId);
       const nuevoIndex = index + direccion;
 
-      if (index < 0 || nuevoIndex < 0 || nuevoIndex >= base.length) return base;
+      if (index < 0 || nuevoIndex < 0 || nuevoIndex >= actual.length) return actual;
 
-      const copia = [...base];
+      const copia = [...actual];
       const [item] = copia.splice(index, 1);
       copia.splice(nuevoIndex, 0, item);
 
@@ -514,20 +650,55 @@ export default function NotasPage() {
     });
   };
 
-  const guardarOrdenEvaluaciones = async (mostrarMensaje = true) => {
-    if (!token || !asignacionId || !unidadId || !notasEditables) return;
+  const quitarEvaluacionNuevaModal = (tempId: string) => {
+    setEvaluacionesModal((actual) => actual.filter((item) => item.tempId !== tempId));
+  };
 
-    const ordenBase = ordenTemporal.length
-      ? ordenTemporal
-      : (grilla?.evaluaciones || []).map((eva) => eva.id);
+  const guardarCambiosEvaluacionesModal = async () => {
+    if (!token || !asignacionId || !unidadId || !notasEditables || !hayCambiosModal) return;
+
+    setGuardandoModal(true);
+    setMensaje(null);
 
     try {
+      const idsFinales: number[] = [];
+
+      for (const item of evaluacionesModal) {
+        if (item.id) {
+          idsFinales.push(item.id);
+          continue;
+        }
+
+        const grupo = normalizarGrupoTipo(item.grupo_evaluacion);
+
+        const res = await axios.post(
+          '/api/calificaciones/evaluaciones',
+          {
+            id_asignacion: asignacionId,
+            id_unidad: unidadId,
+            id_tipo_eval: getTipoEvalIdParaGrupo(grupo),
+            descripcion_actividad: item.descripcion,
+            grupo_evaluacion: grupo,
+            orden: idsFinales.length + 1,
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+
+        const nuevoId = Number(res.data?.id_evaluacion_det || res.data?.id || res.data?.id_evaluacion);
+
+        if (!nuevoId) {
+          throw new Error('No se pudo obtener el ID de la evaluación creada.');
+        }
+
+        idsFinales.push(nuevoId);
+      }
+
       await axios.put(
         '/api/calificaciones/evaluaciones/orden',
         {
           id_asignacion: asignacionId,
           id_unidad: unidadId,
-          orden: ordenBase.map((id, index) => ({
+          orden: idsFinales.map((id, index) => ({
             id_evaluacion_det: id,
             orden: index + 1,
           })),
@@ -535,20 +706,20 @@ export default function NotasPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      if (mostrarMensaje) {
-        setMensaje({ tipo: 'exito', texto: 'Orden de evaluaciones actualizado correctamente.' });
-      }
-
+      setMensaje({ tipo: 'exito', texto: 'Evaluaciones actualizadas correctamente.' });
+      closeModal();
       await cargarGrilla();
     } catch (err: any) {
       setMensaje({
         tipo: 'error',
-        texto: err.response?.data?.message || 'No se pudo actualizar el orden de evaluaciones.',
+        texto: err.response?.data?.message || err.message || 'No se pudieron guardar las evaluaciones.',
       });
-      throw err;
+    } finally {
+      setGuardandoModal(false);
     }
   };
 
+  // Cierre y reapertura de registro (sin cambios respecto al ZIP anterior)
   const cerrarRegistroNotas = async () => {
     if (!token || !asignacionId || !unidadId) return;
 
@@ -605,40 +776,6 @@ export default function NotasPage() {
   const ejecutarConfirmAction = () => {
     if (confirmAction?.tipo === 'cerrar') cerrarRegistroNotas();
     if (confirmAction?.tipo === 'reabrir') reabrirRegistroNotas();
-  };
-
-  const crearEvaluacion = async () => {
-    if (!token || !asignacionId || !unidadId || !nuevaEvalDesc.trim() || !notasEditables) return;
-
-    try {
-      if (ordenTemporal.length) {
-        await guardarOrdenEvaluaciones(false);
-      }
-
-      await axios.post(
-        '/api/calificaciones/evaluaciones',
-        {
-          id_asignacion: asignacionId,
-          id_unidad: unidadId,
-          id_tipo_eval: Number(nuevaEvalTipo),
-          descripcion_actividad: nuevaEvalDesc.trim(),
-          grupo_evaluacion: nuevaEvalGrupo,
-          orden: (grilla?.evaluaciones?.length || 0) + 1,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      closeModal();
-      setNuevaEvalDesc('');
-      setNuevaEvalTipo('3');
-      setNuevaEvalGrupo('TRABAJO EN CLASE');
-      cargarGrilla();
-    } catch (err: any) {
-      setMensaje({
-        tipo: 'error',
-        texto: err.response?.data?.message || 'Error al crear evaluación',
-      });
-    }
   };
 
   const eliminarEvaluacion = async (idEval: number) => {
@@ -1184,7 +1321,7 @@ export default function NotasPage() {
         </section>
       )}
 
-      {/* ═══ Modal de Nueva Evaluación ═══ */}
+      {/* ═══ Modal de Nueva Evaluación (por lote) ═══ */}
       {modalOpen && (
         <div className={`no-print fixed inset-0 z-[80] flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
@@ -1201,8 +1338,8 @@ export default function NotasPage() {
 
             {/* Modal Body */}
             <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-[1fr_190px]">
+                <div>
                   <label className={labelClass}>Descripción</label>
                   <input
                     type="text"
@@ -1215,29 +1352,28 @@ export default function NotasPage() {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Grupo en la grilla</label>
+                  <label className={labelClass}>Tipo</label>
                   <select
-                    value={nuevaEvalGrupo}
-                    onChange={(e) => setNuevaEvalGrupo(e.target.value)}
+                    value={nuevaEvalTipoGrilla}
+                    onChange={(e) => setNuevaEvalTipoGrilla(e.target.value as TipoGrilla)}
                     className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
                   >
-                    <option value="TRABAJO EN CLASE">Trabajo en clase</option>
-                    <option value="PRÁCTICAS">Prácticas</option>
-                    <option value="EXAMEN">Examen</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Tipo de evaluación</label>
-                  <select
-                    value={nuevaEvalTipo}
-                    onChange={(e) => setNuevaEvalTipo(e.target.value)}
-                    className="h-11 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
-                  >
-                    {tipoEvaluaciones.map((tipo) => (
+                    {tipoGrillaOptions.map((tipo) => (
                       <option key={tipo.id} value={tipo.id}>{tipo.label}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="sm:col-span-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => agregarEvaluacionAlModal()}
+                    disabled={!nuevaEvalDesc.trim() || !notasEditables}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-xs font-black text-white shadow-[0_14px_28px_-18px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  >
+                    <Plus size={15} />
+                    Agregar al orden
+                  </button>
                 </div>
               </div>
 
@@ -1249,12 +1385,9 @@ export default function NotasPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setNuevaEvalGrupo('PRÁCTICAS');
-                      setNuevaEvalTipo('3');
-                      setNuevaEvalDesc(`Práctica ${siguientePractica}`);
-                    }}
-                    className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition-all duration-150 hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]"
+                    onClick={() => agregarEvaluacionAlModal(`Práctica ${siguientePractica}`, 'PRÁCTICAS')}
+                    disabled={!notasEditables}
+                    className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition-all duration-150 hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Usar
                   </button>
@@ -1262,41 +1395,34 @@ export default function NotasPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                      <ListOrdered size={14} />
-                      Orden actual de la grilla
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Puedes mover las evaluaciones para cambiar el orden visual antes de guardar.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => guardarOrdenEvaluaciones()}
-                    disabled={!evaluacionesOrdenadasModal.length || !notasEditables}
-                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition-all duration-150 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Guardar orden
-                  </button>
+                <div className="mb-3">
+                  <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    <ListOrdered size={14} />
+                    Orden actual de la grilla
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Puedes mover las evaluaciones antes de guardar. Las nuevas evaluaciones se guardarán recién al final.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  {evaluacionesOrdenadasModal.length === 0 ? (
+                  {evaluacionesModal.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-xs font-semibold text-slate-400">
-                      Aún no hay evaluaciones creadas en esta unidad.
+                      Aún no hay evaluaciones en esta unidad.
                     </div>
                   ) : (
-                    evaluacionesOrdenadasModal.map((eva, index) => {
-                      const grupo = getGrupoEvaluacion(eva);
+                    evaluacionesModal.map((eva, index) => {
+                      const grupo = normalizarGrupoTipo(eva.grupo_evaluacion);
                       const style = getGrupoStyle(grupo);
 
                       return (
                         <div
-                          key={eva.id}
-                          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+                          key={eva.tempId}
+                          className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-sm transition-all duration-200 ${
+                            eva.esNueva
+                              ? 'border-blue-200 bg-blue-50/45'
+                              : 'border-slate-200 bg-white'
+                          }`}
                         >
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
                             {String(index + 1).padStart(2, '0')}
@@ -1305,16 +1431,34 @@ export default function NotasPage() {
                           <GripVertical size={16} className="shrink-0 text-slate-300" />
 
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-black text-slate-900">{eva.descripcion}</p>
-                            <p className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${style.header}`}>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm font-black text-slate-900">{eva.descripcion}</p>
+                              {eva.esNueva && (
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                                  Nuevo
+                                </span>
+                              )}
+                            </div>
+                            <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${style.header}`}>
                               {grupo}
                             </p>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-1">
+                            {eva.esNueva && (
+                              <button
+                                type="button"
+                                onClick={() => quitarEvaluacionNuevaModal(eva.tempId)}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition-all hover:bg-red-100"
+                                title="Quitar"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+
                             <button
                               type="button"
-                              onClick={() => moverEvaluacionModal(eva.id, -1)}
+                              onClick={() => moverEvaluacionModal(eva.tempId, -1)}
                               disabled={index === 0}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
                               title="Subir"
@@ -1324,8 +1468,8 @@ export default function NotasPage() {
 
                             <button
                               type="button"
-                              onClick={() => moverEvaluacionModal(eva.id, 1)}
-                              disabled={index === evaluacionesOrdenadasModal.length - 1}
+                              onClick={() => moverEvaluacionModal(eva.tempId, 1)}
+                              disabled={index === evaluacionesModal.length - 1}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
                               title="Bajar"
                             >
@@ -1342,8 +1486,23 @@ export default function NotasPage() {
 
             {/* Modal Footer */}
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 bg-neutral-50/50 px-6 py-4 sm:flex-row sm:justify-end flex-shrink-0">
-              <button type="button" onClick={closeModal} className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">Cancelar</button>
-              <button type="button" onClick={crearEvaluacion} disabled={!nuevaEvalDesc.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"><Plus size={16} /> Crear evaluación</button>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={guardarCambiosEvaluacionesModal}
+                disabled={!hayCambiosModal || guardandoModal || !notasEditables}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {guardandoModal ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {guardandoModal ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
