@@ -21,6 +21,7 @@ import {
   Bell,
   GraduationCap,
   Sparkles,
+  BookOpenCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -54,12 +55,20 @@ const menuAcademico: NavItem[] = [
     roles: ['Profesor', 'Admin', 'Director'],
     children: [
       { title: 'Registro', path: '/notas' },
-      { title: 'Comentarios', path: '/notas/comentarios' },
     ],
   },
   { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin', 'Director'] },
   { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria', 'Director'] },
   { title: 'Horario', icon: GraduationCap, path: '/horario', roles: ['Profesor'] },
+];
+
+const menuTutoria: NavItem[] = [
+  {
+    title: 'Tutoría',
+    icon: BookOpenCheck,
+    path: '/tutoria',
+    roles: ['Profesor', 'Admin', 'Director'],
+  },
 ];
 
 const menuComunidad: NavItem[] = [
@@ -134,6 +143,7 @@ export default function AppSidebar() {
     return [
       { titulo: 'Principal', items: filterByRole(menuPrincipal) },
       { titulo: 'Académico', items: filterByRole(menuAcademico) },
+      { titulo: 'Tutoría', items: filterByRole(menuTutoria) },
       { titulo: 'Comunidad escolar', items: filterByRole(menuComunidad) },
       { titulo: 'Personal', items: filterByRole(menuPersonal) },
       { titulo: 'Bienestar', items: filterByRole(menuBienestar) },
