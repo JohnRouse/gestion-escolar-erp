@@ -75,8 +75,8 @@ export class CalificacionesController {
   }
 
   @Put('evaluaciones/orden')
-  @Roles('Admin', 'Director')
-  async reordenarEvaluaciones(
+  @Roles('Admin', 'Director', 'Profesor')
+  async actualizarOrdenEvaluaciones(
     @Body()
     body: {
       id_asignacion: number;
@@ -84,7 +84,7 @@ export class CalificacionesController {
       orden: { id_evaluacion_det: number; orden: number }[];
     },
   ) {
-    return this.calificacionesService.reordenarEvaluaciones(body);
+    return this.calificacionesService.actualizarOrdenEvaluaciones(body);
   }
 
   @Get('evaluaciones/:id/notas')

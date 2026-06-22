@@ -109,7 +109,7 @@ export class CalificacionesService {
     });
   }
 
-  async reordenarEvaluaciones(body: {
+  async actualizarOrdenEvaluaciones(body: {
     id_asignacion: number;
     id_unidad: number;
     orden: { id_evaluacion_det: number; orden: number }[];
@@ -118,20 +118,32 @@ export class CalificacionesService {
       throw new BadRequestException('Asignación y unidad son obligatorias.');
     }
 
+    if (!Array.isArray(body.orden) || body.orden.length === 0) {
+      throw new BadRequestException('Envía el orden de evaluaciones.');
+    }
+
     await this.validarRegistroEditable(body.id_asignacion, body.id_unidad);
 
-    const ids = body.orden.map((item) => Number(item.id_evaluacion_det)).filter(Boolean);
+    const ids = body.orden
+      .map((item) => Number(item.id_evaluacion_det))
+      .filter(Boolean);
+
+    const idsUnicos = Array.from(new Set(ids));
+
+    if (idsUnicos.length !== ids.length) {
+      throw new BadRequestException('Hay evaluaciones repetidas en el orden enviado.');
+    }
 
     const evaluaciones = await this.prisma.evaluacionDetalle.findMany({
       where: {
-        id_evaluacion_det: { in: ids },
+        id_evaluacion_det: { in: idsUnicos },
         id_asignacion: body.id_asignacion,
         id_unidad: body.id_unidad,
       },
       select: { id_evaluacion_det: true },
     });
 
-    if (evaluaciones.length !== ids.length) {
+    if (evaluaciones.length !== idsUnicos.length) {
       throw new BadRequestException('Una o más evaluaciones no pertenecen a esta grilla.');
     }
 
@@ -139,12 +151,21 @@ export class CalificacionesService {
       body.orden.map((item, index) =>
         this.prisma.evaluacionDetalle.update({
           where: { id_evaluacion_det: Number(item.id_evaluacion_det) },
-          data: { orden: item.orden || index + 1 },
+          data: { orden: Number(item.orden || index + 1) },
         }),
       ),
     );
 
     return { message: 'Orden de evaluaciones actualizado correctamente.' };
+  }
+
+  // Compatibilidad con implementaciones anteriores.
+  async reordenarEvaluaciones(body: {
+    id_asignacion: number;
+    id_unidad: number;
+    orden: { id_evaluacion_det: number; orden: number }[];
+  }) {
+    return this.actualizarOrdenEvaluaciones(body);
   }
 
   async getEvaluacionNotas(evaluacionId: number) {
@@ -250,9 +271,9 @@ export class CalificacionesService {
       where: { id_asignacion: asignacionId, id_unidad: unidadId },
       include: { tipo: true },
       orderBy: [
-    { orden: 'asc' },
-    { id_evaluacion_det: 'asc' },
-  ],
+        { orden: 'asc' },
+        { id_evaluacion_det: 'asc' },
+      ],
     });
 
     const estadosPermitidosNotas = ['Activo', 'Matriculado'];
@@ -310,6 +331,9 @@ export class CalificacionesService {
 
       const fila: any = {
         id_matricula: mat.id_matricula,
+        codigo_matricula: mat.codigo_matricula,
+        codigo_estudiante: mat.estudiante.codigo_estudiante,
+        codigo_alumno: mat.estudiante.codigo_estudiante,
         alumno: alumnoNombre,
       };
 

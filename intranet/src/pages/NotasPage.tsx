@@ -74,6 +74,9 @@ interface GrillaData {
   };
   grilla: {
     id_matricula: number;
+    codigo_matricula?: string | null;
+    codigo_estudiante?: string | null;
+    codigo_alumno?: string | null;
     alumno: string;
     promedio?: number | string;
     [key: string]: any;
@@ -201,6 +204,19 @@ function formatearNotaEntera(value: unknown) {
   return String(normalizarNotaEntera(value)).padStart(2, '0');
 }
 
+function getCodigoAlumnoFila(fila: GrillaData['grilla'][number]) {
+  return (
+    fila.codigo_alumno ||
+    fila.codigo_estudiante ||
+    fila.codigo_matricula ||
+    `MAT-${fila.id_matricula}`
+  );
+}
+
+function textoMayusculas(value?: string | null) {
+  return String(value || '').toLocaleUpperCase('es-PE');
+}
+
 function calcularPromedioFila(fila: GrillaData['grilla'][number], evaluaciones: Evaluacion[]) {
   if (!evaluaciones.length) return 0;
   const total = evaluaciones.reduce((suma, evaluacion) => suma + normalizarNotaEntera(fila[evaluacion.id]), 0);
@@ -254,7 +270,7 @@ export default function NotasPage() {
   }>(null);
 
   const esProfesor = user?.rol === 'Profesor';
-  const puedeGestionarEvaluaciones = ['Admin', 'Director'].includes(user?.rol || '');
+  const puedeGestionarEvaluaciones = ['Admin', 'Director', 'Profesor'].includes(user?.rol || '');
 
   const esVistaConsolidada = activeScope.tipo === 'todos';
 
@@ -520,9 +536,11 @@ export default function NotasPage() {
   }, [grilla]);
 
   const getPromedioClass = (promedio: number) => {
-    if (promedio >= 14) return 'bg-emerald-50 text-emerald-700 ring-emerald-200/60';
-    if (promedio >= 11) return 'bg-sky-50 text-sky-700 ring-sky-200/60';
-    return 'bg-red-50 text-red-600 ring-red-200/60';
+    if (normalizarNotaEntera(promedio) <= 10) {
+      return 'bg-red-50 text-red-600 ring-red-200/60';
+    }
+
+    return 'bg-blue-50 text-blue-700 ring-blue-200/60';
   };
 
   const handleSalonChange = (salonKey: string) => {
@@ -835,7 +853,7 @@ export default function NotasPage() {
       <PageHeader
         eyebrow="Registro de notas por unidad"
         title="Registro de Notas"
-        description={`Grilla dinámica por salón, bimestre, unidad y curso. Contexto activo: ${scopeLabel}.`}
+        description="Grilla dinámica por salón, bimestre, unidad y curso."
         icon={BookOpenCheck}
         actions={
           <div className="flex flex-wrap items-center gap-3">
@@ -955,7 +973,7 @@ export default function NotasPage() {
               {unidadesDelPeriodo.length === 0 && <option value={0}>Sin unidades abiertas</option>}
               {unidadesDelPeriodo.map((unidad) => (
                 <option key={unidad.id_unidad} value={unidad.id_unidad}>
-                  {unidad.label} · Abierta
+                  {unidad.label}
                 </option>
               ))}
             </select>
@@ -1179,7 +1197,7 @@ export default function NotasPage() {
                             {fila.alumno}
                           </h3>
                           <p className="mt-0.5 text-xs text-neutral-400">
-                            Matrícula #{fila.id_matricula}
+                            Código: {getCodigoAlumnoFila(fila)}
                           </p>
                         </div>
 
@@ -1202,7 +1220,7 @@ export default function NotasPage() {
                                 {items.map((eva) => (
                                   <label key={eva.id} className="grid grid-cols-[1fr_76px] items-center gap-3">
                                     <span className="text-xs font-bold leading-4 text-neutral-600">
-                                      {eva.descripcion}
+                                      {textoMayusculas(eva.descripcion)}
                                     </span>
 
                                     <input
@@ -1216,7 +1234,7 @@ export default function NotasPage() {
                                       }
                                       disabled={!notasEditables}
                                       className={`h-10 rounded-xl border text-center text-sm font-black tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
-                                      aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
+                                      aria-label={`Nota de ${fila.alumno} en ${textoMayusculas(eva.descripcion)}`}
                                     />
                                   </label>
                                 ))}
@@ -1253,7 +1271,7 @@ export default function NotasPage() {
                         return items.map((eva) => (
                           <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader || ''}`}>
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
-                              <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{eva.descripcion}</span>
+                              <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{textoMayusculas(eva.descripcion)}</span>
                               {puedeGestionarEvaluaciones && (
                                 <button
                                   type="button"
@@ -1279,7 +1297,7 @@ export default function NotasPage() {
                           <td className="sticky left-0 z-20 border-b border-r border-neutral-100 bg-white px-3 py-2.5 text-center text-xs font-medium text-neutral-400 group-hover:bg-neutral-50/50 transition-colors">{index + 1}</td>
                           <td className="sticky left-[56px] z-20 border-b border-r border-neutral-100 bg-white px-4 py-2.5 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] group-hover:bg-neutral-50/50 transition-colors">
                             <p className="text-sm font-medium text-neutral-800 truncate max-w-[230px]">{fila.alumno}</p>
-                            <p className="text-[11px] text-neutral-400">Matrícula #{fila.id_matricula}</p>
+                            <p className="text-[11px] text-neutral-400">Código: {getCodigoAlumnoFila(fila)}</p>
                           </td>
                           {evaluacionesAgrupadas.flatMap(([_, items]) =>
                             items.map((eva) => {
@@ -1295,7 +1313,7 @@ export default function NotasPage() {
                                     onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
                                     disabled={!notasEditables}
                                     className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
-                                    aria-label={`Nota de ${fila.alumno} en ${eva.descripcion}`}
+                                    aria-label={`Nota de ${fila.alumno} en ${textoMayusculas(eva.descripcion)}`}
                                   />
                                 </td>
                               );
