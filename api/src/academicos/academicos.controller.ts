@@ -253,6 +253,29 @@ async deleteGrado(
     });
   }
 
+  @Patch('secciones/:id/tutor')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async asignarTutorSeccion(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { id_docente?: number | null },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.asignarTutorSeccion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idSeccion: Number(id),
+      idDocente:
+        body.id_docente === null || body.id_docente === undefined
+          ? null
+          : Number(body.id_docente),
+    });
+  }
+
   @Delete('secciones/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
@@ -878,9 +901,16 @@ async deleteGrado(
   @Get('docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
-  async getDocentes() {
-    return this.prisma.docente.findMany({
-      include: { persona: true },
+  async getDocentes(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.listarDocentesGestion({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
     });
   }
 

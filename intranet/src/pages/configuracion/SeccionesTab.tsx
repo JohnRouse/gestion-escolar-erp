@@ -13,6 +13,7 @@ import {
   Plus,
   Save,
   Trash2,
+  UserRoundCheck,
   Users,
   X,
 } from 'lucide-react';
@@ -29,6 +30,12 @@ interface Grado {
   nivel: { id_nivel: number; nombre_nivel: string };
 }
 
+interface TutorBasico {
+  id_docente: number;
+  dni?: string | null;
+  nombre: string;
+}
+
 interface Seccion {
   id_seccion: number;
   id_colegio?: number | null;
@@ -39,6 +46,18 @@ interface Seccion {
   grado: { nombre_grado: string; nivel: { nombre_nivel: string } };
   aula: { nombre_aula: string; capacidad: number };
   _count?: { matriculas: number };
+  tutor?: TutorBasico | null;
+}
+
+interface DocenteTutor {
+  id_persona: number;
+  nombre?: string;
+  persona: {
+    nombres: string;
+    apellido_paterno: string;
+    apellido_materno: string;
+    dni: string;
+  };
 }
 
 interface Nivel {
@@ -87,6 +106,13 @@ export default function SeccionesTab() {
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Seccion | null>(null);
+  const [docentes, setDocentes] = useState<DocenteTutor[]>([]);
+  const [guardandoTutorId, setGuardandoTutorId] = useState<number | null>(null);
+  const [tutorPendiente, setTutorPendiente] = useState<{
+    seccion: Seccion;
+    idDocente: number | null;
+    nombreTutor: string;
+  } | null>(null);
 
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
@@ -128,6 +154,18 @@ export default function SeccionesTab() {
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
     [token],
   );
+
+  // Cargar docentes para asignación de tutor
+  useEffect(() => {
+    if (!token) return;
+
+    axios
+      .get(`/api/academicos/docentes${scopedQuery}`, authHeader)
+      .then((res) => setDocentes(Array.isArray(res.data) ? res.data : []))
+      .catch(() =>
+        setMensaje({ type: 'error', text: 'No se pudieron cargar los docentes para tutoría.' }),
+      );
+  }, [token, authHeader, scopedQuery]);
 
   // ════ Efectos iniciales ════
   useEffect(() => {
@@ -329,12 +367,85 @@ export default function SeccionesTab() {
     }
   };
 
+  const getNombreDocenteTutor = (docente?: DocenteTutor | null) => {
+    if (!docente) return '';
+
+    return (
+      docente.nombre ||
+      `${docente.persona?.nombres || ''} ${docente.persona?.apellido_paterno || ''} ${docente.persona?.apellido_materno || ''}`
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
+  };
+
+  const solicitarCambioTutor = (seccion: Seccion, idDocenteRaw: string) => {
+    const idDocente = idDocenteRaw ? Number(idDocenteRaw) : null;
+    const docente = idDocente ? docentes.find((item) => item.id_persona === idDocente) : null;
+
+    setTutorPendiente({
+      seccion,
+      idDocente,
+      nombreTutor: idDocente ? getNombreDocenteTutor(docente) || 'docente seleccionado' : 'Sin tutor asignado',
+    });
+  };
+
+  const asignarTutorSeccion = async (seccion: Seccion, idDocente: number | null) => {
+    if (!token) return;
+
+    setGuardandoTutorId(seccion.id_seccion);
+    setMensaje(null);
+
+    try {
+      await axios.patch(
+        `/api/academicos/secciones/${seccion.id_seccion}/tutor${scopedQuery}`,
+        { id_docente: idDocente },
+        authHeader,
+      );
+
+      await cargarSecciones();
+
+      setMensaje({
+        type: 'success',
+        text: idDocente ? 'Tutor asignado correctamente.' : 'Tutor retirado correctamente.',
+      });
+
+      showToast({
+        type: 'success',
+        title: idDocente ? 'Tutor asignado' : 'Tutor retirado',
+        message: `${seccion.grado?.nombre_grado || 'Sección'} "${seccion.letra}" actualizada.`,
+      });
+    } catch (err: any) {
+      setMensaje({
+        type: 'error',
+        text: err.response?.data?.message || 'No se pudo actualizar el tutor de la sección.',
+      });
+    } finally {
+      setGuardandoTutorId(null);
+    }
+  };
+
+  const confirmarCambioTutor = async () => {
+    if (!tutorPendiente) return;
+
+    const pendiente = tutorPendiente;
+    setTutorPendiente(null);
+    await asignarTutorSeccion(pendiente.seccion, pendiente.idDocente);
+  };
+
   // ════ Lecturas derivadas ════
   const nivelActivo = niveles.find((nivel) => nivel.id_nivel === nivelSeleccionado);
   const gradoActivo = grados.find((grado) => grado.id_grado === gradoSeleccionado);
   const capacidadTotal = secciones.reduce((total, sec) => total + Number(sec.aula?.capacidad || 0), 0);
   const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
   const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
+  const docentesOrdenados = useMemo(() => {
+    return [...docentes].sort((a, b) => {
+      const nombreA = a.nombre || `${a.persona?.nombres || ''} ${a.persona?.apellido_paterno || ''}`;
+      const nombreB = b.nombre || `${b.persona?.nombres || ''} ${b.persona?.apellido_paterno || ''}`;
+      return nombreA.localeCompare(nombreB, 'es-PE');
+    });
+  }, [docentes]);
+
 
   // ════ Interfaz ════
   return (
@@ -494,19 +605,20 @@ export default function SeccionesTab() {
       ) : (
         <div className={`${panelClass} overflow-hidden`}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[1120px] text-sm">
               <thead className="bg-gray-50/80">
                 <tr className="border-b border-gray-100">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Sección</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Aula</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Capacidad</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Matriculados</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Tutor asignado</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {secciones.map((sec) => (
-                  <tr key={sec.id_seccion} className="transition hover:bg-gray-50/70">
+                  <tr key={sec.id_seccion} className="align-middle transition hover:bg-gray-50/70">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-sm font-bold text-accent-600">
@@ -528,7 +640,67 @@ export default function SeccionesTab() {
                         <Users size={14} /> {sec._count?.matriculas ?? 0}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex min-w-[310px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm shadow-slate-200/70">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                          <UserRoundCheck size={17} />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                              Tutoría
+                            </span>
+                            {guardandoTutorId === sec.id_seccion && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600">
+                                <Loader2 size={11} className="animate-spin" />
+                                Guardando
+                              </span>
+                            )}
+                          </div>
+
+                          <select
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-wait disabled:opacity-60"
+                            value={sec.tutor?.id_docente || ''}
+                            disabled={guardandoTutorId === sec.id_seccion}
+                            onChange={(event) => solicitarCambioTutor(sec, event.target.value)}
+                          >
+                            <option value="">Sin tutor asignado</option>
+                            {docentesOrdenados.map((docente) => {
+                              const nombre =
+                                docente.nombre ||
+                                `${docente.persona?.nombres || ''} ${docente.persona?.apellido_paterno || ''} ${docente.persona?.apellido_materno || ''}`
+                                  .replace(/\s+/g, ' ')
+                                  .trim();
+
+                              return (
+                                <option key={docente.id_persona} value={docente.id_persona}>
+                                  {nombre}
+                                </option>
+                              );
+                            })}
+                          </select>
+
+                          <div
+                            className={`mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ${
+                              sec.tutor?.nombre
+                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100'
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                sec.tutor?.nombre ? 'bg-emerald-500' : 'bg-slate-300'
+                              }`}
+                            />
+                            <span className="truncate">
+                              {sec.tutor?.nombre ? `Tutor actual: ${sec.tutor.nombre}` : 'Sin tutor activo'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => openEdit(sec)} className={iconButtonClass}>
                           <Pencil size={15} />
@@ -618,6 +790,31 @@ export default function SeccionesTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(tutorPendiente)}
+        eyebrow="Tutoría"
+        title={
+          tutorPendiente?.idDocente
+            ? 'Confirmar asignación de tutor'
+            : 'Confirmar retiro de tutor'
+        }
+        description={
+          tutorPendiente
+            ? tutorPendiente.idDocente
+              ? `Se asignará a ${tutorPendiente.nombreTutor} como tutor de ${tutorPendiente.seccion.grado?.nombre_grado || 'la sección'} "${tutorPendiente.seccion.letra}".`
+              : `La sección ${tutorPendiente.seccion.grado?.nombre_grado || ''} "${tutorPendiente.seccion.letra}" quedará sin tutor asignado.`
+            : ''
+        }
+        tone="neutral"
+        confirmLabel="Sí, confirmar"
+        cancelLabel="Cancelar"
+        loading={guardandoTutorId !== null}
+        onCancel={() => setTutorPendiente(null)}
+        onConfirm={() => {
+          void confirmarCambioTutor();
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}

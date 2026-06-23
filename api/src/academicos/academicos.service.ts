@@ -1701,6 +1701,20 @@ async eliminarNivelConfig(
         colegio: true,
         aula: true,
         grado: { include: { nivel: true } },
+        staff: {
+          where: { es_tutor: true },
+          include: {
+            persona: {
+              select: {
+                id_persona: true,
+                dni: true,
+                nombres: true,
+                apellido_paterno: true,
+                apellido_materno: true,
+              },
+            },
+          },
+        },
         matriculas: params.anioId
           ? {
               where: {
@@ -1740,10 +1754,163 @@ async eliminarNivelConfig(
     ? `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel} · ${sec.colegio?.nombre || 'Sin institución'}`
     : `${sec.grado.nombre_grado} "${sec.letra}" · ${sec.grado.nivel.nombre_nivel}`,
 colegio_nombre: sec.colegio?.nombre || null,
+      tutor: sec.staff?.[0]?.persona
+        ? {
+            id_docente: sec.staff[0].persona.id_persona,
+            dni: sec.staff[0].persona.dni,
+            nombre: `${sec.staff[0].persona.nombres || ''} ${sec.staff[0].persona.apellido_paterno || ''} ${sec.staff[0].persona.apellido_materno || ''}`
+              .replace(/\s+/g, ' ')
+              .trim(),
+          }
+        : null,
     }));
   }
 
-  async obtenerPreparacionAnioLectivo(
+  
+  async listarDocentesGestion(params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    const docentes = await this.prisma.docente.findMany({
+      include: {
+        persona: true,
+        especialidades: {
+          include: {
+            area: true,
+          },
+        },
+        _count: {
+          select: {
+            asignaciones: true,
+          },
+        },
+      },
+      orderBy: {
+        id_persona: 'asc',
+      },
+    });
+
+    return docentes.map((docente) => ({
+      id_persona: docente.id_persona,
+      persona: docente.persona,
+      fecha_ingreso: docente.fecha_ingreso,
+      especialidades: docente.especialidades || [],
+      _count: docente._count,
+      nombre: `${docente.persona.nombres || ''} ${docente.persona.apellido_paterno || ''} ${docente.persona.apellido_materno || ''}`
+        .replace(/\s+/g, ' ')
+        .trim(),
+      colegios_asignados: [],
+      scope_colegios: scope.colegioIds,
+    }));
+  }
+
+  async asignarTutorSeccion(
+    params: ScopeParams & {
+      idSeccion: number;
+      idDocente?: number | null;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const seccion = await this.prisma.seccion.findFirst({
+      where: {
+        id_seccion: params.idSeccion,
+        id_colegio: { in: scope.colegioIds },
+      },
+      include: {
+        colegio: true,
+        grado: {
+          include: {
+            nivel: true,
+          },
+        },
+      },
+    });
+
+    if (!seccion) {
+      throw new NotFoundException('Sección no encontrada o sin acceso.');
+    }
+
+    if (!params.idDocente) {
+      await this.prisma.staff.updateMany({
+        where: {
+          id_seccion: seccion.id_seccion,
+          es_tutor: true,
+        },
+        data: {
+          es_tutor: false,
+          id_seccion: null,
+        },
+      });
+
+      return {
+        message: 'Tutor retirado correctamente.',
+        tutor: null,
+      };
+    }
+
+    const docente = await this.prisma.docente.findUnique({
+      where: { id_persona: params.idDocente },
+      include: {
+        persona: true,
+      },
+    });
+
+    if (!docente) {
+      throw new NotFoundException('Docente no encontrado.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.staff.updateMany({
+        where: {
+          id_seccion: seccion.id_seccion,
+          es_tutor: true,
+          id_persona: { not: docente.id_persona },
+        },
+        data: {
+          es_tutor: false,
+          id_seccion: null,
+        },
+      });
+
+      await tx.staff.upsert({
+        where: {
+          id_persona: docente.id_persona,
+        },
+        update: {
+          id_tenant: seccion.id_tenant || scope.tenantId,
+          id_colegio: seccion.id_colegio,
+          id_seccion: seccion.id_seccion,
+          es_tutor: true,
+          permite_citas: true,
+        },
+        create: {
+          id_persona: docente.id_persona,
+          id_tenant: seccion.id_tenant || scope.tenantId,
+          id_colegio: seccion.id_colegio,
+          id_seccion: seccion.id_seccion,
+          cargo: 'Tutor',
+          area: 'Tutoría',
+          es_tutor: true,
+          permite_citas: true,
+        },
+      });
+    });
+
+    const nombreTutor = `${docente.persona.nombres || ''} ${docente.persona.apellido_paterno || ''} ${docente.persona.apellido_materno || ''}`
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return {
+      message: `Tutor asignado correctamente a ${seccion.grado?.nombre_grado || 'grado'} "${seccion.letra}".`,
+      tutor: {
+        id_docente: docente.id_persona,
+        dni: docente.persona.dni,
+        nombre: nombreTutor,
+      },
+    };
+  }
+
+async obtenerPreparacionAnioLectivo(
   params: ScopeParams & { anioId: number; perfilOperativo?: string },
 ) {
     const scope = await this.resolveScope(params);

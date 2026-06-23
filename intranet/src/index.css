@@ -138,3 +138,30 @@ body {
     transform: translateY(0);
   }
 }
+
+
+/* Contraste visual para pantallas de Configuración */
+@layer components {
+  .config-tab-content label > span,
+  .config-tab-content table thead th {
+    color: #64748b !important;
+    font-weight: 800 !important;
+  }
+
+  .config-tab-content table thead th {
+    background: rgba(248, 250, 252, 0.95);
+  }
+
+  .config-tab-content p[class*="text-gray-400"],
+  .config-tab-content p[class*="text-slate-400"],
+  .config-tab-content span[class*="text-gray-400"],
+  .config-tab-content span[class*="text-slate-400"] {
+    color: #7c8da5 !important;
+  }
+
+  .config-tab-content h3,
+  .config-tab-content h4 {
+    color: #0f172a;
+  }
+}
+

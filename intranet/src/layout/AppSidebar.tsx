@@ -123,7 +123,7 @@ const menuReportes: NavItem[] = [
 ];
 
 const menuConfiguracion: NavItem[] = [
-  { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin'] },
+  { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin', 'Director'] },
 ];
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
