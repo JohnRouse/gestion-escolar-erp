@@ -110,6 +110,9 @@ export default function TutoriaPage() {
   const [saving, setSaving] = useState(false);
   const [confirmGuardar, setConfirmGuardar] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmExportarAlumno, setConfirmExportarAlumno] = useState(false);
+  const [exportingSalon, setExportingSalon] = useState(false);
+  const [confirmExportarSalon, setConfirmExportarSalon] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
   const puedeExportar = panel.permisos.puede_exportar || ['Admin', 'Director'].includes(user?.rol || '');
@@ -270,6 +273,60 @@ export default function TutoriaPage() {
     await ejecutarGuardar();
   };
 
+  const exportarSalon = async () => {
+    if (!token || !periodoId || !puedeExportar || alumnos.length === 0) return;
+
+    setExportingSalon(true);
+    setMensaje(null);
+
+    try {
+      for (const alumno of alumnos) {
+        const res = await axios.get(
+          `/api/tutoria/alumnos/${alumno.id_matricula}/libreta-pdf`,
+          {
+            headers: headers(token),
+            params: { id_bimestre: periodoId },
+            responseType: 'blob',
+          },
+        );
+
+        const blob = new Blob([res.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        const cleanName = `${alumno.codigo || alumno.id_matricula}-${alumno.alumno || 'alumno'}-${periodo?.label || 'periodo'}`
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9_-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .toLowerCase();
+
+        link.href = url;
+        link.download = `libreta-${cleanName || alumno.id_matricula}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      setMensaje({
+        tipo: 'exito',
+        texto: `Se exportaron ${alumnos.length} libretas del salón.`,
+      });
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.response?.data?.message || 'No se pudieron exportar todas las libretas del salón.',
+      });
+    } finally {
+      setExportingSalon(false);
+      setConfirmExportarSalon(false);
+    }
+  };
+
   const cards = [
     { label: 'Alumnos', value: resumen.total, helper: 'Del salón', icon: UsersRound },
     { label: 'Promedio', value: nota(resumen.promedio), helper: 'General del salón', icon: BarChart3 },
@@ -279,7 +336,7 @@ export default function TutoriaPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 erp-page-enter">
       <PageHeader
         eyebrow="Tutoría"
         title="Tutoría y libreta"
@@ -289,7 +346,7 @@ export default function TutoriaPage() {
         actions={puedeExportar && detalle ? (
           <button
             type="button"
-            onClick={exportarLibreta}
+            onClick={() => setConfirmExportarAlumno(true)}
             disabled={exporting}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
           >
@@ -305,7 +362,7 @@ export default function TutoriaPage() {
         </div>
       )}
 
-      <section className="rounded-[28px] border border-slate-100 bg-white/90 p-5 shadow-sm shadow-slate-200/70">
+      <section className="rounded-[28px] border border-slate-100 bg-white/90 p-5 shadow-sm shadow-slate-200/70 erp-section-enter">
         <div className="grid gap-4 lg:grid-cols-3">
           <label className="space-y-2">
             <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Año lectivo</span>
@@ -330,9 +387,23 @@ export default function TutoriaPage() {
           </label>
         </div>
         {loadingPanel && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando tutoría...</p>}
+
+        {puedeExportar && alumnos.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setConfirmExportarSalon(true)}
+              disabled={exportingSalon}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+            >
+              {exportingSalon ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+              {exportingSalon ? 'Exportando salón...' : 'Exportar salón'}
+            </button>
+          </div>
+        )}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 erp-stagger">
         {cards.map((card) => {
           const Icon = card.icon;
           return <div key={card.label} className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-200/70 transition-all duration-200 hover:-translate-y-0.5">
@@ -341,12 +412,12 @@ export default function TutoriaPage() {
         })}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-        <aside className="rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70">
+      <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)] erp-section-enter">
+        <aside className="rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
           <div className="border-b border-slate-100 p-5"><h2 className="text-base font-black text-slate-950">Alumnos del salón</h2><p className="mt-1 text-sm text-slate-500">Selecciona un alumno para revisar su libreta interna.</p></div>
           <div className="max-h-[720px] space-y-3 overflow-auto p-4">
             {loadingAlumnos ? <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando alumnos...</div> : alumnos.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">Sin alumnos para mostrar.</div> : alumnos.map((alumno) => (
-              <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`w-full rounded-3xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
+              <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`w-full rounded-3xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 erp-list-item-enter ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
                 <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{alumno.alumno}</p><p className="mt-1 text-xs font-bold text-slate-400">Código: {alumno.codigo}</p></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(alumno.promedio)}`}>{nota(alumno.promedio)}</span></div>
                 <div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">Desaprobados: {alumno.cursos_desaprobados}</span>{alumno.comentario_pendiente && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-100">Comentario pendiente</span>}</div>
               </button>
@@ -354,9 +425,9 @@ export default function TutoriaPage() {
           </div>
         </aside>
 
-        <main className="min-h-[720px] rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70">
+        <main className="min-h-[720px] rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
           {loadingDetalle ? <div className="flex min-h-[520px] items-center justify-center"><div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando resumen...</div></div> : !detalle ? <div className="flex min-h-[520px] items-center justify-center p-8 text-center"><div><BookOpenCheck className="mx-auto text-slate-300" size={42} /><h2 className="mt-4 text-lg font-black text-slate-800">Selecciona un alumno</h2><p className="mt-2 max-w-md text-sm text-slate-500">Aquí aparecerán sus notas consolidadas, detalle por evaluación, conducta, participación familiar y comentario final.</p></div></div> : (
-            <div className="space-y-5 p-5">
+            <div key={`${detalle.alumno.id_matricula}-${periodoId}`} className="space-y-5 p-5 erp-detail-enter">
               <div className="rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Alumno seleccionado</p><h2 className="mt-1 text-2xl font-black text-slate-950">{detalle.alumno.nombre}</h2><p className="mt-1 text-sm font-semibold text-slate-500">{detalle.alumno.codigo} · {detalle.alumno.salon}</p></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Promedio', nota(detalle.estadistica.promedio_general)], ['Desaprobados', detalle.estadistica.cursos_desaprobados], ['Mérito', detalle.estadistica.orden_merito || '—'], ['Tercio', detalle.estadistica.tercio || '—']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-slate-900">{value}</p></div>)}</div></div></div>
 
               <section className="rounded-[24px] border border-slate-100"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-base font-black text-slate-950">Notas consolidadas</h3><p className="text-sm text-slate-500">Solo lectura. El tutor no puede modificar notas desde esta pantalla.</p></div><Eye size={18} className="text-slate-400" /></div><div className="space-y-3 p-4">{detalle.cursos.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm font-semibold text-slate-400">Sin evaluaciones para este periodo.</div> : detalle.cursos.map((curso) => <div key={curso.id_asignacion} className="overflow-hidden rounded-2xl border border-slate-100"><button type="button" onClick={() => setCursoAbierto((actual) => actual === curso.id_asignacion ? null : curso.id_asignacion)} className="flex w-full items-center justify-between gap-3 bg-white px-4 py-3 text-left transition-colors duration-200 hover:bg-slate-50"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{curso.curso}</p><p className="text-xs font-semibold text-slate-400">{curso.area} · {curso.docente || 'Docente no asignado'}</p></div><div className="flex items-center gap-3"><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(curso.promedio)}`}>{nota(curso.promedio)}</span><ChevronDown size={18} className={`text-slate-400 transition-transform duration-200 ${cursoAbierto === curso.id_asignacion ? 'rotate-180' : ''}`} /></div></button>{cursoAbierto === curso.id_asignacion && <div className="grid gap-2 border-t border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-2 xl:grid-cols-3">{curso.evaluaciones.length === 0 ? <div className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-400 ring-1 ring-slate-100">Sin evaluaciones cargadas.</div> : curso.evaluaciones.map((ev) => <div key={ev.id_evaluacion_det} className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black uppercase text-slate-800">{ev.descripcion}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ring-1 ${grupoClass(ev.grupo)}`}>{ev.grupo}</span></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(ev.nota)}`}>{nota(ev.nota)}</span></div></div>)}</div>}</div>)}</div></section>
@@ -384,6 +455,41 @@ export default function TutoriaPage() {
         onCancel={() => setConfirmGuardar(false)}
         onConfirm={() => {
           void confirmarGuardarCierre();
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmExportarSalon}
+        eyebrow="Libretas"
+        title="Confirmar exportación del salón"
+        description={`Se descargarán ${alumnos.length} libretas PDF del salón seleccionado. Verifica que los cierres de tutoría estén guardados antes de exportar.`}
+        tone="neutral"
+        confirmLabel="Sí, exportar"
+        cancelLabel="Cancelar"
+        loading={exportingSalon}
+        onCancel={() => setConfirmExportarSalon(false)}
+        onConfirm={() => {
+          void exportarSalon();
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmExportarAlumno}
+        eyebrow="Libreta individual"
+        title="Confirmar exportación de libreta"
+        description={
+          detalle
+            ? `Se descargará la libreta PDF de ${detalle.alumno.nombre} para ${periodo?.label || 'el periodo seleccionado'}. Verifica que el cierre de tutoría esté guardado antes de exportar.`
+            : 'Se descargará la libreta PDF del alumno seleccionado.'
+        }
+        tone="neutral"
+        confirmLabel="Sí, exportar"
+        cancelLabel="Cancelar"
+        loading={exporting}
+        onCancel={() => setConfirmExportarAlumno(false)}
+        onConfirm={() => {
+          setConfirmExportarAlumno(false);
+          void exportarLibreta();
         }}
       />
 

@@ -165,3 +165,80 @@ body {
   }
 }
 
+
+/* Animaciones suaves reutilizables para módulos ERP */
+@layer components {
+  .erp-page-enter {
+    animation: erpPageEnter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .erp-section-enter {
+    animation: erpSectionEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .erp-detail-enter {
+    animation: erpDetailEnter 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .erp-list-item-enter {
+    animation: erpListItemEnter 0.22s ease-out both;
+  }
+
+  .erp-stagger > * {
+    animation: erpSectionEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .erp-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .erp-stagger > *:nth-child(2) { animation-delay: 45ms; }
+  .erp-stagger > *:nth-child(3) { animation-delay: 90ms; }
+  .erp-stagger > *:nth-child(4) { animation-delay: 135ms; }
+  .erp-stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .erp-stagger > *:nth-child(6) { animation-delay: 225ms; }
+}
+
+@keyframes erpPageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes erpSectionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes erpDetailEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.992);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes erpListItemEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+

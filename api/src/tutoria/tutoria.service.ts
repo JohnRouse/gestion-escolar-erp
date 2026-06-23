@@ -198,13 +198,34 @@ export class TutoriaService {
 
     const periodos = selected ? await this.prisma.bimestre.findMany({
       where: { id_anio: selected.id_anio },
+      include: {
+        unidades: {
+          include: {
+            registros_notas: {
+              select: {
+                cerrado: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { numero: 'asc' },
     }) : [];
+
+    const periodosDisponibles = periodos.filter((periodo) => {
+      const unidades = periodo.unidades || [];
+      const tieneUnidadAbierta = unidades.some((unidad) => unidad.estado_abierto);
+      const tieneRegistroCerrado = unidades.some((unidad) =>
+        unidad.registros_notas?.some((registro) => registro.cerrado),
+      );
+
+      return tieneUnidadAbierta || tieneRegistroCerrado;
+    });
 
     return {
       anios: anios.map((a) => ({ id_anio: a.id_anio, nombre_anio: a.nombre_anio, estado: a.estado, colegio: a.colegio?.nombre || 'Colegio', id_colegio: a.id_colegio })),
       selected_anio_id: selected?.id_anio || null,
-      periodos: periodos.map((p) => ({ id_bimestre: p.id_bimestre, numero: p.numero, label: p.nombre || `Periodo ${p.numero}` })),
+      periodos: periodosDisponibles.map((p) => ({ id_bimestre: p.id_bimestre, numero: p.numero, label: p.nombre || `Periodo ${p.numero}` })),
       salones: selected ? await this.getSalones(user, usuario, selected) : [],
       permisos: {
         puede_exportar: ['Admin', 'Director'].includes(user.rol),
