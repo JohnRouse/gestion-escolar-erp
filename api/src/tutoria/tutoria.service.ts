@@ -182,6 +182,210 @@ export class TutoriaService {
     }));
   }
 
+
+  private normalizarTipoCriterio(tipo?: string | null): TipoCriterio {
+    const value = String(tipo || '').trim().toUpperCase();
+
+    if (value === 'CONDUCTA' || value === 'PARTICIPACION_FAMILIAR') {
+      return value as TipoCriterio;
+    }
+
+    throw new BadRequestException('Tipo de criterio inválido.');
+  }
+
+  private async getColegioConfigTutoria(user: JwtUser, query: { scope?: string; colegioId?: string }) {
+    const { colegioIds, usuario } = await this.resolveScope(user, query);
+    const idColegio = query.colegioId ? Number(query.colegioId) : colegioIds[0];
+
+    if (!idColegio || !colegioIds.includes(idColegio)) {
+      throw new ForbiddenException('No tienes acceso al colegio seleccionado.');
+    }
+
+    const colegio = await this.prisma.colegio.findUnique({
+      where: { id_colegio: idColegio },
+    });
+
+    if (!colegio) throw new NotFoundException('Colegio no encontrado.');
+
+    return {
+      colegio,
+      usuario,
+      idColegio,
+      idTenant: colegio.id_tenant,
+    };
+  }
+
+  async listarCriteriosConfig(user: JwtUser, query: { scope?: string; colegioId?: string }) {
+    const { colegio, idColegio, idTenant } = await this.getColegioConfigTutoria(user, query);
+
+    await this.asegurarCriterios(idColegio, idTenant);
+
+    const criterios = await this.prisma.criterioTutoria.findMany({
+      where: {
+        id_colegio: idColegio,
+      },
+      orderBy: [
+        { tipo: 'asc' },
+        { orden: 'asc' },
+        { id_criterio: 'asc' },
+      ],
+      include: {
+        _count: {
+          select: {
+            calificaciones: true,
+          },
+        },
+      },
+    });
+
+    return {
+      colegio: {
+        id_colegio: colegio.id_colegio,
+        nombre: colegio.nombre,
+        nombre_corto: colegio.nombre_corto,
+      },
+      criterios: criterios.map((criterio) => ({
+        id_criterio: criterio.id_criterio,
+        id_colegio: criterio.id_colegio,
+        tipo: criterio.tipo,
+        descripcion: criterio.descripcion,
+        orden: criterio.orden,
+        activo: criterio.activo,
+        usos: criterio._count.calificaciones,
+      })),
+    };
+  }
+
+  async crearCriterioConfig(
+    user: JwtUser,
+    params: {
+      scope?: string;
+      colegioId?: string;
+      body: {
+        tipo: 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
+        descripcion: string;
+        orden?: number;
+        id_colegio?: number;
+      };
+    },
+  ) {
+    const colegioIdQuery = params.body.id_colegio
+      ? String(params.body.id_colegio)
+      : params.colegioId;
+
+    const { idColegio, idTenant } = await this.getColegioConfigTutoria(user, {
+      scope: params.scope,
+      colegioId: colegioIdQuery,
+    });
+
+    const tipo = this.normalizarTipoCriterio(params.body.tipo);
+    const descripcion = String(params.body.descripcion || '').replace(/\s+/g, ' ').trim();
+
+    if (!descripcion) {
+      throw new BadRequestException('Escribe la descripción del criterio.');
+    }
+
+    const existente = await this.prisma.criterioTutoria.findFirst({
+      where: {
+        id_colegio: idColegio,
+        tipo,
+        descripcion,
+      },
+    });
+
+    if (existente) {
+      if (!existente.activo) {
+        return this.prisma.criterioTutoria.update({
+          where: { id_criterio: existente.id_criterio },
+          data: {
+            activo: true,
+            orden: params.body.orden || existente.orden,
+          },
+        });
+      }
+
+      throw new BadRequestException('Ya existe un criterio con esa descripción.');
+    }
+
+    const ultimo = await this.prisma.criterioTutoria.findFirst({
+      where: {
+        id_colegio: idColegio,
+        tipo,
+      },
+      orderBy: {
+        orden: 'desc',
+      },
+    });
+
+    return this.prisma.criterioTutoria.create({
+      data: {
+        id_tenant: idTenant,
+        id_colegio: idColegio,
+        tipo,
+        descripcion,
+        orden: Number(params.body.orden || (ultimo?.orden || 0) + 1),
+        activo: true,
+      },
+    });
+  }
+
+  async actualizarCriterioConfig(
+    user: JwtUser,
+    params: {
+      scope?: string;
+      colegioId?: string;
+      idCriterio: number;
+      body: {
+        descripcion?: string;
+        orden?: number;
+        activo?: boolean;
+      };
+    },
+  ) {
+    const { idColegio } = await this.getColegioConfigTutoria(user, {
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const criterio = await this.prisma.criterioTutoria.findFirst({
+      where: {
+        id_criterio: params.idCriterio,
+        id_colegio: idColegio,
+      },
+    });
+
+    if (!criterio) {
+      throw new NotFoundException('Criterio no encontrado o sin acceso.');
+    }
+
+    const data: any = {};
+
+    if (params.body.descripcion !== undefined) {
+      const descripcion = String(params.body.descripcion || '').replace(/\s+/g, ' ').trim();
+
+      if (!descripcion) {
+        throw new BadRequestException('Escribe la descripción del criterio.');
+      }
+
+      data.descripcion = descripcion;
+    }
+
+    if (params.body.orden !== undefined) {
+      data.orden = Number(params.body.orden || 1);
+    }
+
+    if (params.body.activo !== undefined) {
+      data.activo = Boolean(params.body.activo);
+    }
+
+    return this.prisma.criterioTutoria.update({
+      where: {
+        id_criterio: criterio.id_criterio,
+      },
+      data,
+    });
+  }
+
   async getPanel(user: JwtUser, query: { scope?: string; colegioId?: string; anioId?: string }) {
     const { usuario, colegioIds } = await this.resolveScope(user, query);
     const anios = await this.prisma.anioLectivo.findMany({

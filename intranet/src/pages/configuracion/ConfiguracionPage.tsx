@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   UserRoundCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -24,6 +25,7 @@ import AniosLectivosTab from './AniosLectivosTab';
 import PeriodosUnidadesTab from './PeriodosUnidadesTab';
 import PlantillasEvaluacionTab from './PlantillasEvaluacionTab';
 import AsignacionesDocentesTab from './AsignacionesDocentesTab';
+import CriteriosTutoriaTab from './CriteriosTutoriaTab';
 import PreparacionAnioTab from './PreparacionAnioTab';
 
 const CONFIG_GROUPS = [
@@ -44,6 +46,7 @@ const TABS = [
   { key: 'escala', label: 'Escala de Calificación', icon: Layers3, group: 'evaluacion' },
   { key: 'tipos', label: 'Tipos de Evaluación', icon: ListChecks, group: 'evaluacion' },
   { key: 'plantillas', label: 'Plantillas de Evaluación', icon: ClipboardList, group: 'evaluacion' },
+  { key: 'criterios-tutoria', label: 'Criterios de Tutoría', icon: ShieldCheck, group: 'evaluacion' },
   { key: 'pagos', label: 'Conceptos de Pago', icon: CreditCard, group: 'finanzas' },
 ];
 
@@ -146,6 +149,7 @@ export default function ConfiguracionPage() {
           {tabActivo === 'escala' && <EscalaTab />}
           {tabActivo === 'tipos' && <TiposEvalTab />}
           {tabActivo === 'plantillas' && <PlantillasEvaluacionTab />}
+          {tabActivo === 'criterios-tutoria' && <CriteriosTutoriaTab />}
         </div>
       </section>
     </div>

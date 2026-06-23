@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Query, Request, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -8,6 +8,62 @@ import { TutoriaService } from './tutoria.service';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class TutoriaController {
   constructor(private readonly tutoriaService: TutoriaService) {}
+
+  @Get('criterios')
+  @Roles('Admin', 'Director')
+  async listarCriterios(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.listarCriteriosConfig(req.user, {
+      scope,
+      colegioId,
+    });
+  }
+
+  @Post('criterios')
+  @Roles('Admin', 'Director')
+  async crearCriterio(
+    @Request() req,
+    @Body()
+    body: {
+      tipo: 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
+      descripcion: string;
+      orden?: number;
+      id_colegio?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.crearCriterioConfig(req.user, {
+      scope,
+      colegioId,
+      body,
+    });
+  }
+
+  @Patch('criterios/:id')
+  @Roles('Admin', 'Director')
+  async actualizarCriterio(
+    @Request() req,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      descripcion?: string;
+      orden?: number;
+      activo?: boolean;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.actualizarCriterioConfig(req.user, {
+      scope,
+      colegioId,
+      idCriterio: Number(id),
+      body,
+    });
+  }
 
   @Get('panel')
   @Roles('Admin', 'Director', 'Profesor')
