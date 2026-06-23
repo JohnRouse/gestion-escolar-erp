@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, Request, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -40,6 +40,40 @@ export class TutoriaController {
       scope,
       colegioId,
       body,
+    });
+  }
+
+  @Post('criterios/reordenar')
+  @Roles('Admin', 'Director')
+  async reordenarCriterios(
+    @Request() req,
+    @Body()
+    body: {
+      tipo: 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
+      orden: { id_criterio: number; orden: number }[];
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.reordenarCriteriosConfig(req.user, {
+      scope,
+      colegioId,
+      body,
+    });
+  }
+
+  @Delete('criterios/:id')
+  @Roles('Admin', 'Director')
+  async eliminarCriterio(
+    @Request() req,
+    @Param('id') id: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.eliminarCriterioConfig(req.user, {
+      scope,
+      colegioId,
+      idCriterio: Number(id),
     });
   }
 

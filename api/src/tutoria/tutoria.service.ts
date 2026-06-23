@@ -99,16 +99,23 @@ export class TutoriaService {
     if (!idColegio) return [];
 
     const existentes = await this.prisma.criterioTutoria.findMany({
-      where: { id_colegio: idColegio, activo: true },
+      where: { id_colegio: idColegio },
       orderBy: [{ tipo: 'asc' }, { orden: 'asc' }, { id_criterio: 'asc' }],
     });
 
     const faltantes: { tipo: TipoCriterio; descripcion: string; orden: number }[] = [];
+
+    // Solo sembramos criterios base cuando el colegio todavía no tiene
+    // ningún criterio de ese tipo. Así, si el usuario edita el texto,
+    // el sistema no vuelve a crear el criterio original como duplicado.
     (Object.keys(CRITERIOS_BASE) as TipoCriterio[]).forEach((tipo) => {
-      CRITERIOS_BASE[tipo].forEach((descripcion, index) => {
-        const exists = existentes.some((item) => item.tipo === tipo && item.descripcion.toLowerCase() === descripcion.toLowerCase());
-        if (!exists) faltantes.push({ tipo, descripcion, orden: index + 1 });
-      });
+      const existeTipo = existentes.some((item) => item.tipo === tipo);
+
+      if (!existeTipo) {
+        CRITERIOS_BASE[tipo].forEach((descripcion, index) => {
+          faltantes.push({ tipo, descripcion, orden: index + 1 });
+        });
+      }
     });
 
     if (faltantes.length) {
@@ -327,6 +334,126 @@ export class TutoriaService {
         activo: true,
       },
     });
+  }
+
+  async reordenarCriteriosConfig(
+    user: JwtUser,
+    params: {
+      scope?: string;
+      colegioId?: string;
+      body: {
+        tipo: 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
+        orden: { id_criterio: number; orden: number }[];
+      };
+    },
+  ) {
+    const { idColegio } = await this.getColegioConfigTutoria(user, {
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const tipo = this.normalizarTipoCriterio(params.body.tipo);
+    const orden = Array.isArray(params.body.orden) ? params.body.orden : [];
+
+    if (!orden.length) {
+      throw new BadRequestException('Envía el orden de los criterios.');
+    }
+
+    const ids = orden.map((item) => Number(item.id_criterio)).filter(Boolean);
+
+    const criterios = await this.prisma.criterioTutoria.findMany({
+      where: {
+        id_colegio: idColegio,
+        tipo,
+        id_criterio: { in: ids },
+      },
+      select: {
+        id_criterio: true,
+      },
+    });
+
+    if (criterios.length !== ids.length) {
+      throw new ForbiddenException('Uno o más criterios no pertenecen al colegio seleccionado.');
+    }
+
+    await this.prisma.$transaction(
+      orden.map((item, index) =>
+        this.prisma.criterioTutoria.update({
+          where: { id_criterio: Number(item.id_criterio) },
+          data: { orden: Number(item.orden || index + 1) },
+        }),
+      ),
+    );
+
+    return { message: 'Orden de criterios actualizado correctamente.' };
+  }
+
+  async eliminarCriterioConfig(
+    user: JwtUser,
+    params: {
+      scope?: string;
+      colegioId?: string;
+      idCriterio: number;
+    },
+  ) {
+    const { idColegio } = await this.getColegioConfigTutoria(user, {
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const criterio = await this.prisma.criterioTutoria.findFirst({
+      where: {
+        id_criterio: params.idCriterio,
+        id_colegio: idColegio,
+      },
+      include: {
+        _count: {
+          select: {
+            calificaciones: true,
+          },
+        },
+      },
+    });
+
+    if (!criterio) {
+      throw new NotFoundException('Criterio no encontrado o sin acceso.');
+    }
+
+    if (criterio._count.calificaciones > 0) {
+      throw new BadRequestException(
+        'No se puede eliminar un criterio que ya tiene registros. Puedes desactivarlo para que no aparezca en nuevos cierres.',
+      );
+    }
+
+    await this.prisma.criterioTutoria.delete({
+      where: {
+        id_criterio: criterio.id_criterio,
+      },
+    });
+
+    const restantes = await this.prisma.criterioTutoria.findMany({
+      where: {
+        id_colegio: idColegio,
+        tipo: criterio.tipo,
+      },
+      orderBy: [
+        { orden: 'asc' },
+        { id_criterio: 'asc' },
+      ],
+    });
+
+    await this.prisma.$transaction(
+      restantes.map((item, index) =>
+        this.prisma.criterioTutoria.update({
+          where: { id_criterio: item.id_criterio },
+          data: { orden: index + 1 },
+        }),
+      ),
+    );
+
+    return {
+      message: 'Criterio eliminado correctamente.',
+    };
   }
 
   async actualizarCriterioConfig(

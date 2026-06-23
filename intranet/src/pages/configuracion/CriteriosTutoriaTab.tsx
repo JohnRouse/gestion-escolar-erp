@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   ClipboardList,
   Eye,
@@ -11,6 +13,7 @@ import {
   Plus,
   Save,
   Search,
+  Trash2,
   ShieldCheck,
   UserRoundCheck,
   X,
@@ -100,7 +103,9 @@ export default function CriteriosTutoriaTab() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reordenandoId, setReordenandoId] = useState<number | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<CriterioTutoria | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<CriterioTutoria | null>(null);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -133,16 +138,20 @@ export default function CriteriosTutoriaTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, scopedQuery, colegioGestionActualId]);
 
-  const criteriosPorTipo = useMemo(() => {
-    return criterios.filter((criterio) => {
-      const coincideTipo = criterio.tipo === tipoActivo;
-      const coincideBusqueda = criterio.descripcion
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
+  const criteriosOrdenadosTipo = useMemo(() => {
+    return criterios
+      .filter((criterio) => criterio.tipo === tipoActivo)
+      .slice()
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.id_criterio - b.id_criterio);
+  }, [criterios, tipoActivo]);
 
-      return coincideTipo && coincideBusqueda;
-    });
-  }, [criterios, tipoActivo, search]);
+  const criteriosPorTipo = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return criteriosOrdenadosTipo.filter((criterio) =>
+      criterio.descripcion.toLowerCase().includes(term),
+    );
+  }, [criteriosOrdenadosTipo, search]);
 
   const resumen = useMemo(() => {
     const conducta = criterios.filter((item) => item.tipo === 'CONDUCTA');
@@ -232,6 +241,85 @@ export default function CriteriosTutoriaTab() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const moverCriterio = async (criterio: CriterioTutoria, direccion: -1 | 1) => {
+    if (!token || reordenandoId) return;
+
+    const lista = criterios
+      .filter((item) => item.tipo === criterio.tipo)
+      .slice()
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.id_criterio - b.id_criterio);
+
+    const index = lista.findIndex((item) => item.id_criterio === criterio.id_criterio);
+    const destino = index + direccion;
+
+    if (index < 0 || destino < 0 || destino >= lista.length) return;
+
+    const nuevaLista = [...lista];
+    const [movido] = nuevaLista.splice(index, 1);
+    nuevaLista.splice(destino, 0, movido);
+
+    setReordenandoId(criterio.id_criterio);
+
+    try {
+      await axios.post(
+        `/api/tutoria/criterios/reordenar${scopedQuery}`,
+        {
+          tipo: criterio.tipo,
+          orden: nuevaLista.map((item, itemIndex) => ({
+            id_criterio: item.id_criterio,
+            orden: itemIndex + 1,
+          })),
+        },
+        authHeader,
+      );
+
+      await loadData();
+
+      showToast({
+        type: 'success',
+        title: 'Orden actualizado',
+        message: 'Los criterios se reordenaron correctamente.',
+      });
+    } catch (err: any) {
+      setMensaje({
+        type: 'error',
+        text: err.response?.data?.message || 'No se pudo reordenar el criterio.',
+      });
+    } finally {
+      setReordenandoId(null);
+    }
+  };
+
+  const ejecutarEliminarCriterio = async () => {
+    if (!confirmDelete) return;
+
+    const criterio = confirmDelete;
+    setConfirmDelete(null);
+
+    try {
+      await axios.delete(`/api/tutoria/criterios/${criterio.id_criterio}${scopedQuery}`, authHeader);
+      await loadData();
+
+      setMensaje({
+        type: 'success',
+        text: 'Criterio eliminado correctamente.',
+      });
+
+      showToast({
+        type: 'success',
+        title: 'Criterio eliminado',
+        message: 'El indicador fue retirado de la configuración.',
+      });
+    } catch (err: any) {
+      setMensaje({
+        type: 'error',
+        text:
+          err.response?.data?.message ||
+          'No se pudo eliminar el criterio. Si ya tiene registros, desactívalo para conservar el historial.',
+      });
     }
   };
 
@@ -430,7 +518,7 @@ export default function CriteriosTutoriaTab() {
               <tr className="border-y border-slate-100">
                 <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.14em] text-slate-500">Orden</th>
                 <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.14em] text-slate-500">Criterio</th>
-                <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">Usos</th>
+                <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">Uso en libretas</th>
                 <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">Estado</th>
                 <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-[0.14em] text-slate-500">Acciones</th>
               </tr>
@@ -446,9 +534,40 @@ export default function CriteriosTutoriaTab() {
                 criteriosPorTipo.map((criterio) => (
                   <tr key={criterio.id_criterio} className={`border-b border-slate-100 transition hover:bg-slate-50/70 ${!criterio.activo ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-4">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
-                        {criterio.orden}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                          {criterio.orden}
+                        </span>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moverCriterio(criterio, -1)}
+                            disabled={
+                              reordenandoId !== null ||
+                              criteriosOrdenadosTipo.findIndex((item) => item.id_criterio === criterio.id_criterio) === 0
+                            }
+                            className="inline-flex h-5 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                            title="Subir criterio"
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moverCriterio(criterio, 1)}
+                            disabled={
+                              reordenandoId !== null ||
+                              criteriosOrdenadosTipo.findIndex((item) => item.id_criterio === criterio.id_criterio) === criteriosOrdenadosTipo.length - 1
+                            }
+                            className="inline-flex h-5 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                            title="Bajar criterio"
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                        </div>
+                        {reordenandoId === criterio.id_criterio && (
+                          <Loader2 size={14} className="animate-spin text-blue-600" />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-slate-900">{criterio.descripcion}</p>
@@ -457,9 +576,20 @@ export default function CriteriosTutoriaTab() {
                       </p>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-100">
-                        {criterio.usos || 0}
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black ring-1 ${
+                          (criterio.usos || 0) > 0
+                            ? 'bg-blue-50 text-blue-700 ring-blue-100'
+                            : 'bg-slate-50 text-slate-500 ring-slate-100'
+                        }`}
+                      >
+                        {(criterio.usos || 0) > 0 ? 'En uso' : 'Sin uso'}
                       </span>
+                      {(criterio.usos || 0) > 0 && (
+                        <p className="mt-1 text-[10px] font-bold text-slate-400">
+                          {criterio.usos} registro{criterio.usos === 1 ? '' : 's'}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 ${
@@ -491,6 +621,33 @@ export default function CriteriosTutoriaTab() {
                           title={criterio.activo ? 'Desactivar criterio' : 'Reactivar criterio'}
                         >
                           {criterio.activo ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if ((criterio.usos || 0) > 0) {
+                              setMensaje({
+                                type: 'error',
+                                text: 'Este criterio está en uso en libretas o cierres anteriores. Para conservar el historial, desactívalo en lugar de eliminarlo.',
+                              });
+                              return;
+                            }
+
+                            setConfirmDelete(criterio);
+                          }}
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition ${
+                            (criterio.usos || 0) > 0
+                              ? 'cursor-not-allowed text-slate-300'
+                              : 'text-red-500 hover:bg-red-50'
+                          }`}
+                          title={
+                            (criterio.usos || 0) > 0
+                              ? 'No se puede eliminar porque está en uso'
+                              : 'Eliminar criterio'
+                          }
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -543,18 +700,9 @@ export default function CriteriosTutoriaTab() {
                 />
               </label>
 
-              <label>
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Orden de aparición
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  value={orden}
-                  onChange={(event) => setOrden(Number(event.target.value || 1))}
-                  className="h-11 w-32 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                />
-              </label>
+              <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
+                El orden se modifica desde la tabla con las flechas de subir y bajar.
+              </div>
             </div>
 
             <div className="flex flex-col-reverse gap-2 bg-slate-50/70 px-5 py-4 sm:flex-row sm:justify-end">
@@ -579,6 +727,24 @@ export default function CriteriosTutoriaTab() {
           </section>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        eyebrow="Criterios de tutoría"
+        title="Confirmar eliminación de criterio"
+        description={
+          confirmDelete
+            ? `Se eliminará definitivamente el criterio "${confirmDelete.descripcion}". Esta acción solo está permitida si no tiene registros asociados.`
+            : ''
+        }
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          void ejecutarEliminarCriterio();
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(confirmToggle)}
