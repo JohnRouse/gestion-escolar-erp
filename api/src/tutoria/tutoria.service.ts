@@ -367,8 +367,56 @@ export class TutoriaService {
     const criterios = await this.asegurarCriterios(matricula.id_colegio, matricula.id_tenant);
     const calificaciones = await this.prisma.calificacionTutoria.findMany({ where: { id_matricula: idMatricula, id_bimestre: idBimestre } });
     const calMap = new Map(calificaciones.map((c) => [c.id_criterio, c.valor || '']));
-    const comentario = await this.prisma.comentarioBimestral.findUnique({ where: { id_matricula_id_bimestre: { id_matricula: idMatricula, id_bimestre: idBimestre } } });
-    const mapCriterios = (tipo: TipoCriterio) => criterios.filter((c) => c.tipo === tipo).map((c) => ({ id_criterio: c.id_criterio, descripcion: c.descripcion, tipo: c.tipo, valor: calMap.get(c.id_criterio) || '' }));
+    const comentario = await this.prisma.comentarioBimestral.findUnique({
+      where: {
+        id_matricula_id_bimestre: {
+          id_matricula: idMatricula,
+          id_bimestre: idBimestre,
+        },
+      },
+      include: {
+        docente: {
+          include: {
+            persona: true,
+          },
+        },
+        usuario_registro: {
+          include: {
+            persona: true,
+          },
+        },
+      },
+    });
+
+    const mapCriterios = (tipo: TipoCriterio) =>
+      criterios
+        .filter((c) => c.tipo === tipo)
+        .map((c) => ({
+          id_criterio: c.id_criterio,
+          descripcion: c.descripcion,
+          tipo: c.tipo,
+          valor: calMap.get(c.id_criterio) || '',
+        }));
+
+    const conducta = mapCriterios('CONDUCTA');
+    const participacionFamiliar = mapCriterios('PARTICIPACION_FAMILIAR');
+    const comentarioTexto = comentario?.comentario || '';
+
+    const cierreCompleto =
+      Boolean(comentarioTexto.trim()) &&
+      conducta.every((item) => Boolean(item.valor)) &&
+      participacionFamiliar.every((item) => Boolean(item.valor));
+
+    const personaRegistro =
+      comentario?.usuario_registro?.persona ||
+      comentario?.docente?.persona ||
+      null;
+
+    const registradoPor = personaRegistro
+      ? `${personaRegistro.nombres || ''} ${personaRegistro.apellido_paterno || ''} ${personaRegistro.apellido_materno || ''}`
+          .replace(/\s+/g, ' ')
+          .trim()
+      : null;
 
     return {
       alumno: {
@@ -381,9 +429,14 @@ export class TutoriaService {
       },
       estadistica: { promedio_general: resumen.promedio, puntaje: resumen.puntaje, cursos_desaprobados: resumen.cursosDesaprobados, ...merito },
       cursos,
-      conducta: mapCriterios('CONDUCTA'),
-      participacion_familiar: mapCriterios('PARTICIPACION_FAMILIAR'),
-      comentario: comentario?.comentario || '',
+      conducta,
+      participacion_familiar: participacionFamiliar,
+      comentario: comentarioTexto,
+      cierre: {
+        estado: cierreCompleto ? 'Completo' : 'Pendiente',
+        actualizado_en: comentario?.updated_at || null,
+        registrado_por: registradoPor,
+      },
     };
   }
 

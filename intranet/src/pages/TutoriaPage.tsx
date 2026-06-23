@@ -53,6 +53,11 @@ type Detalle = {
   conducta: Criterio[];
   participacion_familiar: Criterio[];
   comentario: string;
+  cierre?: {
+    estado: string;
+    actualizado_en: string | null;
+    registrado_por: string | null;
+  };
 };
 
 const panelVacio: Panel = {
@@ -78,6 +83,21 @@ function headers(token: string | null) {
 function nota(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
   return String(Math.round(Number(value))).padStart(2, '0');
+}
+
+function fechaHora(value?: string | null) {
+  if (!value) return 'Sin guardado previo';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Sin guardado previo';
+
+  return date.toLocaleString('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function notaClass(value: number | null | undefined) {
@@ -502,7 +522,25 @@ export default function TutoriaPage() {
         <main className="min-h-[720px] rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
           {loadingDetalle ? <div className="flex min-h-[520px] items-center justify-center"><div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando resumen...</div></div> : !detalle ? <div className="flex min-h-[520px] items-center justify-center p-8 text-center"><div><BookOpenCheck className="mx-auto text-slate-300" size={42} /><h2 className="mt-4 text-lg font-black text-slate-800">Selecciona un alumno</h2><p className="mt-2 max-w-md text-sm text-slate-500">Aquí aparecerán sus notas consolidadas, detalle por evaluación, conducta, participación familiar y comentario final.</p></div></div> : (
             <div key={`${detalle.alumno.id_matricula}-${periodoId}`} className="space-y-5 p-5 erp-detail-enter">
-              <div className="rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Alumno seleccionado</p><h2 className="mt-1 text-2xl font-black text-slate-950">{detalle.alumno.nombre}</h2><p className="mt-1 text-sm font-semibold text-slate-500">{detalle.alumno.codigo} · {detalle.alumno.salon}</p></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Promedio', nota(detalle.estadistica.promedio_general)], ['Desaprobados', detalle.estadistica.cursos_desaprobados], ['Mérito', detalle.estadistica.orden_merito || '—'], ['Tercio', detalle.estadistica.tercio || '—']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-slate-900">{value}</p></div>)}</div></div></div>
+              <div className="rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Alumno seleccionado</p><h2 className="mt-1 text-2xl font-black text-slate-950">{detalle.alumno.nombre}</h2><p className="mt-1 text-sm font-semibold text-slate-500">{detalle.alumno.codigo} · {detalle.alumno.salon}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black ring-1 ${
+                        detalle.cierre?.estado === 'Completo'
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+                          : 'bg-amber-50 text-amber-700 ring-amber-100'
+                      }`}>
+                        {detalle.cierre?.estado === 'Completo' ? 'Cierre completo' : 'Cierre pendiente'}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">
+                        Último guardado: {fechaHora(detalle.cierre?.actualizado_en)}
+                      </span>
+                      {detalle.cierre?.registrado_por && (
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
+                          Por: {detalle.cierre.registrado_por}
+                        </span>
+                      )}
+                    </div>
+                  </div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Promedio', nota(detalle.estadistica.promedio_general)], ['Desaprobados', detalle.estadistica.cursos_desaprobados], ['Mérito', detalle.estadistica.orden_merito || '—'], ['Tercio', detalle.estadistica.tercio || '—']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-slate-900">{value}</p></div>)}</div></div></div>
 
               <section className="rounded-[24px] border border-slate-100"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-base font-black text-slate-950">Notas consolidadas</h3><p className="text-sm text-slate-500">Solo lectura. El tutor no puede modificar notas desde esta pantalla.</p></div><Eye size={18} className="text-slate-400" /></div><div className="space-y-3 p-4">{detalle.cursos.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm font-semibold text-slate-400">Sin evaluaciones para este periodo.</div> : detalle.cursos.map((curso) => <div key={curso.id_asignacion} className="overflow-hidden rounded-2xl border border-slate-100"><button type="button" onClick={() => setCursoAbierto((actual) => actual === curso.id_asignacion ? null : curso.id_asignacion)} className="flex w-full items-center justify-between gap-3 bg-white px-4 py-3 text-left transition-colors duration-200 hover:bg-slate-50"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{curso.curso}</p><p className="text-xs font-semibold text-slate-400">{curso.area} · {curso.docente || 'Docente no asignado'}</p></div><div className="flex items-center gap-3"><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(curso.promedio)}`}>{nota(curso.promedio)}</span><ChevronDown size={18} className={`text-slate-400 transition-transform duration-200 ${cursoAbierto === curso.id_asignacion ? 'rotate-180' : ''}`} /></div></button>{cursoAbierto === curso.id_asignacion && <div className="grid gap-2 border-t border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-2 xl:grid-cols-3">{curso.evaluaciones.length === 0 ? <div className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-400 ring-1 ring-slate-100">Sin evaluaciones cargadas.</div> : curso.evaluaciones.map((ev) => <div key={ev.id_evaluacion_det} className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black uppercase text-slate-800">{ev.descripcion}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ring-1 ${grupoClass(ev.grupo)}`}>{ev.grupo}</span></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(ev.nota)}`}>{nota(ev.nota)}</span></div></div>)}</div>}</div>)}</div></section>
 
