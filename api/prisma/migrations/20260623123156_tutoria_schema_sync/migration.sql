@@ -9,7 +9,7 @@ ALTER TABLE `ComentarioBimestral` DROP FOREIGN KEY `ComentarioBimestral_id_docen
 
 -- AlterTable
 ALTER TABLE `ComentarioBimestral` ADD COLUMN `id_usuario_registro` INTEGER NULL,
-    ADD COLUMN `updated_at` DATETIME(3) NOT NULL,
+    ADD COLUMN `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     MODIFY `id_docente` INTEGER NULL;
 
 -- CreateTable
@@ -40,7 +40,7 @@ CREATE TABLE `CalificacionTutoria` (
     `observacion` VARCHAR(500) NULL,
     `id_usuario_registro` INTEGER NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `CalificacionTutoria_id_matricula_idx`(`id_matricula`),
     INDEX `CalificacionTutoria_id_bimestre_idx`(`id_bimestre`),

@@ -16,7 +16,7 @@ CREATE TABLE `DatosCobroColegio` (
     `instrucciones` TEXT NULL,
     `activo` BOOLEAN NOT NULL DEFAULT true,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `DatosCobroColegio_id_colegio_key`(`id_colegio`),
     INDEX `DatosCobroColegio_activo_idx`(`activo`),

@@ -1196,7 +1196,7 @@ model ComentarioBimestral {
   id_usuario_registro Int?
   comentario          String   @db.Text
   creado_en           DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  updated_at          DateTime @default(now()) @updatedAt
 
   matricula        Matricula @relation(fields: [id_matricula], references: [id_matricula])
   bimestre         Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
@@ -1239,7 +1239,7 @@ model CalificacionTutoria {
   observacion             String?  @db.VarChar(500)
   id_usuario_registro     Int?
   created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
+  updated_at              DateTime @default(now()) @updatedAt
 
   matricula        Matricula       @relation(fields: [id_matricula], references: [id_matricula], onDelete: Cascade)
   bimestre         Bimestre        @relation(fields: [id_bimestre], references: [id_bimestre], onDelete: Cascade)

@@ -13,7 +13,7 @@ CREATE TABLE `RegistroNotasUnidad` (
     `fecha_reapertura` DATETIME(3) NULL,
     `motivo_reapertura` VARCHAR(500) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `RegistroNotasUnidad_id_asignacion_idx`(`id_asignacion`),
     INDEX `RegistroNotasUnidad_id_unidad_idx`(`id_unidad`),
