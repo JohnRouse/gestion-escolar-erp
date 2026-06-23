@@ -44,6 +44,17 @@ export class TutoriaService {
     return `${grado} "${letra}" · ${nivel}${colegio}`;
   }
 
+  private getGrupoEvaluacionTutoria(evaluacion: { grupo_evaluacion?: string | null; descripcion_actividad?: string | null; tipo?: { nombre_tipo?: string | null } | null }) {
+    const texto = `${evaluacion.grupo_evaluacion || ''} ${evaluacion.descripcion_actividad || ''} ${evaluacion.tipo?.nombre_tipo || ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+
+    if (texto.includes('PRACTICA')) return 'PRÁCTICAS';
+    if (texto.includes('EXAMEN')) return 'EXAMEN';
+    return 'TRABAJO EN CLASE';
+  }
+
   private async getUsuario(userId: number) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: userId },
@@ -315,7 +326,7 @@ export class TutoriaService {
       const evaluaciones = asig.evaluaciones.map((ev) => ({
         id_evaluacion_det: ev.id_evaluacion_det,
         descripcion: ev.descripcion_actividad || ev.tipo?.nombre_tipo || 'Evaluación',
-        grupo: ev.grupo_evaluacion || 'Trabajo en clase',
+        grupo: this.getGrupoEvaluacionTutoria(ev),
         nota: this.toNumber(ev.notas[0]?.valor_nota),
       }));
       const promedio = evaluaciones.length ? Math.round(evaluaciones.reduce((s, ev) => s + ev.nota, 0) / evaluaciones.length) : null;
@@ -375,10 +386,20 @@ export class TutoriaService {
           create: { id_matricula: idMatricula, id_bimestre: Number(body.id_bimestre), id_criterio: Number(item.id_criterio), valor: normalizar(item.valor), id_usuario_registro: user.userId },
         });
       }
+      const comentarioPayload = {
+        comentario: body.comentario || '',
+        id_usuario_registro: user.userId,
+        ...(docenteId ? { id_docente: docenteId } : {}),
+      };
+
       await tx.comentarioBimestral.upsert({
         where: { id_matricula_id_bimestre: { id_matricula: idMatricula, id_bimestre: Number(body.id_bimestre) } },
-        update: { comentario: body.comentario || '', id_docente: docenteId ?? null, id_usuario_registro: user.userId },
-        create: { id_matricula: idMatricula, id_bimestre: Number(body.id_bimestre), id_docente: docenteId ?? null, id_usuario_registro: user.userId, comentario: body.comentario || '' },
+        update: comentarioPayload,
+        create: {
+          id_matricula: idMatricula,
+          id_bimestre: Number(body.id_bimestre),
+          ...comentarioPayload,
+        },
       });
     });
 

@@ -19,7 +19,7 @@ import ReportesPage from './pages/ReportesPage';
 import { SchoolProvider } from './contexts/SchoolContext';
 import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
-import RenovacionMatriculaPage from './pages/matricula/RenovacionMatriculaPaage';
+import RenovacionMatriculaPage from './pages/matricula/RenovacionMatriculaPage';
 import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';

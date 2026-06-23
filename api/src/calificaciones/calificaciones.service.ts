@@ -993,9 +993,15 @@ export class CalificacionesService {
   include: { docente: { include: { persona: true } } },
 });
 
+  const docenteComentario = comentarioBimestral?.docente?.persona
+    ? `${comentarioBimestral.docente.persona.nombres || ''} ${comentarioBimestral.docente.persona.apellido_paterno || ''}`
+        .replace(/\s+/g, ' ')
+        .trim()
+    : 'Tutoría / Dirección';
+
   const comentarioTutor = comentarioBimestral
     ? {
-        docente: `${comentarioBimestral.docente.persona.nombres} ${comentarioBimestral.docente.persona.apellido_paterno}`,
+        docente: docenteComentario,
         comentario: comentarioBimestral.comentario,
       }
     : null;

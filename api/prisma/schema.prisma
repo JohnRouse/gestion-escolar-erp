@@ -75,8 +75,9 @@ model Usuario {
   pagos_recibidos_validados   PagoRecibido[]          @relation("PagoRecibidoValidacion")
   pagos_recibidos_historial   PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
   gestiones_cobranza          CobranzaGestion[]       @relation("CobranzaGestionUsuario")
+  comentarios_bimestrales_registrados ComentarioBimestral[] @relation("UsuarioComentariosBimestrales")
+  calificaciones_tutoria              CalificacionTutoria[] @relation("UsuarioCalificacionesTutoria")
 }
-
 model Tenant {
   id_tenant  Int      @id @default(autoincrement())
   nombre     String   @db.VarChar(150)
@@ -109,8 +110,8 @@ model Tenant {
   campanas_descuento CampanaDescuento[]
   ordenes_pago       OrdenPago[]
   pagos_recibidos    PagoRecibido[]
+  criterios_tutoria CriterioTutoria[]
 }
-
 model Colegio {
   id_colegio      Int      @id @default(autoincrement())
   id_tenant       Int
@@ -154,8 +155,8 @@ model Colegio {
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
+  criterios_tutoria   CriterioTutoria[]
 }
-
 model UsuarioTenant {
   id_usuario Int
   id_tenant  Int
@@ -350,8 +351,8 @@ model Bimestre {
   comentariosBimestrales ComentarioBimestral[]
 
   @@index([id_anio])
+  calificaciones_tutoria CalificacionTutoria[]
 }
-
 model Unidad {
   id_unidad      Int      @id @default(autoincrement())
   numero         Int      @db.TinyInt
@@ -494,8 +495,8 @@ model Matricula {
   @@index([id_matricula_origen])
   @@index([id_colegio_origen, id_anio_origen])
   @@index([tipo_proceso_matricula])
+  calificaciones_tutoria CalificacionTutoria[]
 }
-
 // ======================================================
 // DOCENTES, EVALUACIONES Y NOTAS
 // ======================================================
@@ -1188,20 +1189,68 @@ model ReaccionFoto {
 // ======================================================
 
 model ComentarioBimestral {
-  id_comentario Int      @id @default(autoincrement())
-  id_matricula  Int
-  id_bimestre   Int
-  id_docente    Int
-  comentario    String   @db.Text
-  creado_en     DateTime @default(now())
+  id_comentario       Int      @id @default(autoincrement())
+  id_matricula        Int
+  id_bimestre         Int
+  id_docente          Int?
+  id_usuario_registro Int?
+  comentario          String   @db.Text
+  creado_en           DateTime @default(now())
+  updated_at          DateTime @updatedAt
 
-  matricula Matricula @relation(fields: [id_matricula], references: [id_matricula])
-  bimestre  Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
-  docente   Docente   @relation(fields: [id_docente], references: [id_persona])
+  matricula        Matricula @relation(fields: [id_matricula], references: [id_matricula])
+  bimestre         Bimestre  @relation(fields: [id_bimestre], references: [id_bimestre])
+  docente          Docente?  @relation(fields: [id_docente], references: [id_persona])
+  usuario_registro Usuario?  @relation("UsuarioComentariosBimestrales", fields: [id_usuario_registro], references: [id_usuario], onDelete: SetNull)
 
   @@unique([id_matricula, id_bimestre])
   @@index([id_bimestre])
   @@index([id_docente])
+  @@index([id_usuario_registro])
+}
+
+model CriterioTutoria {
+  id_criterio Int      @id @default(autoincrement())
+  id_tenant   Int?
+  id_colegio  Int?
+  tipo        String   @db.VarChar(40)
+  descripcion String   @db.VarChar(250)
+  orden       Int      @default(1)
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+
+  calificaciones CalificacionTutoria[]
+
+  @@index([id_tenant])
+  @@index([id_colegio])
+  @@index([tipo])
+  @@index([activo])
+}
+
+model CalificacionTutoria {
+  id_calificacion_tutoria Int      @id @default(autoincrement())
+  id_matricula            Int
+  id_bimestre             Int
+  id_criterio             Int
+  valor                   String?  @db.VarChar(5)
+  observacion             String?  @db.VarChar(500)
+  id_usuario_registro     Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  matricula        Matricula       @relation(fields: [id_matricula], references: [id_matricula], onDelete: Cascade)
+  bimestre         Bimestre        @relation(fields: [id_bimestre], references: [id_bimestre], onDelete: Cascade)
+  criterio         CriterioTutoria @relation(fields: [id_criterio], references: [id_criterio], onDelete: Cascade)
+  usuario_registro Usuario?        @relation("UsuarioCalificacionesTutoria", fields: [id_usuario_registro], references: [id_usuario], onDelete: SetNull)
+
+  @@unique([id_matricula, id_bimestre, id_criterio], name: "uq_calificacion_tutoria")
+  @@index([id_matricula])
+  @@index([id_bimestre])
+  @@index([id_criterio])
+  @@index([id_usuario_registro])
 }
 
 // ======================================================
