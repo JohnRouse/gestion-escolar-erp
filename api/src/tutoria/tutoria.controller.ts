@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, Query, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import type { Response } from 'express';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import { TutoriaService } from './tutoria.service';
 
@@ -42,6 +43,25 @@ export class TutoriaController {
     @Query('id_bimestre') idBimestre: string,
   ) {
     return this.tutoriaService.getResumenAlumno(req.user, Number(idMatricula), Number(idBimestre));
+  }
+
+  @Get('alumnos/:id/libreta-pdf')
+  @Roles('Admin', 'Director')
+  async exportarLibretaPdf(
+    @Request() req,
+    @Param('id') idMatricula: string,
+    @Query('id_bimestre') idBimestre: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.tutoriaService.exportarLibretaPdf(
+      req.user,
+      Number(idMatricula),
+      Number(idBimestre),
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdf.filename}"`);
+    res.send(pdf.buffer);
   }
 
   @Put('alumnos/:id/cierre')

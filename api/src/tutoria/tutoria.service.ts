@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { jsPDF } from 'jspdf';
 
 type JwtUser = { userId: number; username: string; rol: string };
 type TipoCriterio = 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
@@ -362,6 +363,390 @@ export class TutoriaService {
       conducta: mapCriterios('CONDUCTA'),
       participacion_familiar: mapCriterios('PARTICIPACION_FAMILIAR'),
       comentario: comentario?.comentario || '',
+    };
+  }
+
+
+  async exportarLibretaPdf(user: JwtUser, idMatricula: number, idBimestre: number) {
+    if (!idBimestre) throw new BadRequestException('Periodo obligatorio para exportar libreta.');
+
+    const resumen = await this.getResumenAlumno(user, idMatricula, idBimestre);
+
+    const [matricula, bimestre] = await Promise.all([
+      this.prisma.matricula.findUnique({
+        where: { id_matricula: idMatricula },
+        include: {
+          colegio: true,
+          anio: true,
+          estudiante: { include: { persona: true } },
+          seccion: {
+            include: {
+              colegio: true,
+              grado: { include: { nivel: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.bimestre.findUnique({
+        where: { id_bimestre: idBimestre },
+      }),
+    ]);
+
+    if (!matricula) throw new NotFoundException('Matrícula no encontrada.');
+
+    const tutor = await this.prisma.staff.findFirst({
+      where: {
+        id_seccion: matricula.id_seccion,
+        es_tutor: true,
+      },
+      include: { persona: true },
+    });
+
+    const doc = new jsPDF({
+      unit: 'pt',
+      format: 'a4',
+      orientation: 'portrait',
+      compress: true,
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    const safe = (value: any) => String(value ?? '').replace(/\s+/g, ' ').trim();
+
+    const nota = (value: number | null | undefined) => {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+      return String(Math.round(Number(value)));
+    };
+
+    const literal = (value: number | null | undefined) => {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+      const n = Math.round(Number(value));
+      if (n >= 17) return 'AD';
+      if (n >= 14) return 'A';
+      if (n >= 11) return 'B';
+      return 'C';
+    };
+
+    const nota2 = (value: number | null | undefined) => {
+      const n = nota(value);
+      return n === '-' ? '-' : n.padStart(2, '0');
+    };
+
+    const bimNumero = Math.min(4, Math.max(1, Number(bimestre?.numero || 1)));
+    const periodoNombre = bimestre?.nombre || `${bimNumero}° BIMESTRE`;
+    const colegioNombre = safe(matricula.colegio?.nombre || matricula.seccion?.colegio?.nombre || resumen.alumno.colegio || 'Colegio Privado');
+    const colegioTitulo = colegioNombre.replace(/^Colegio\s+Privado\s+/i, '').toUpperCase();
+    const nivelNombre = safe(matricula.seccion?.grado?.nivel?.nombre_nivel || '');
+    const salonNombre = safe(`${nivelNombre} ${matricula.seccion?.grado?.nombre_grado || ''} ${matricula.seccion?.letra || ''}`);
+    const alumnoNombre = safe(resumen.alumno.nombre).toUpperCase();
+    const codigoAlumno = safe(resumen.alumno.codigo || `MAT-${idMatricula}`);
+    const ordenMerito = resumen.estadistica.orden_merito || '-';
+
+    const tutorNombre = tutor?.persona
+      ? `${tutor.persona.nombres || ''} ${tutor.persona.apellido_paterno || ''} ${tutor.persona.apellido_materno || ''}`
+          .replace(/\s+/g, ' ')
+          .trim()
+      : 'TUTOR(A)';
+
+    const fechaTexto = new Date().toLocaleDateString('es-PE', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const drawCell = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      content = '',
+      options: {
+        fill?: [number, number, number];
+        text?: [number, number, number];
+        bold?: boolean;
+        size?: number;
+        align?: 'left' | 'center' | 'right';
+        valign?: 'top' | 'middle';
+        border?: [number, number, number];
+        maxLines?: number;
+      } = {},
+    ) => {
+      const fill = options.fill;
+      const border = options.border || [80, 80, 80];
+      const textColor = options.text || [30, 41, 59];
+      const fontSize = options.size || 6.5;
+
+      doc.setLineWidth(0.45);
+      doc.setDrawColor(border[0], border[1], border[2]);
+
+      if (fill) {
+        doc.setFillColor(fill[0], fill[1], fill[2]);
+        doc.rect(x, y, w, h, 'FD');
+      } else {
+        doc.rect(x, y, w, h, 'S');
+      }
+
+      if (!content) return;
+
+      doc.setFont('helvetica', options.bold ? 'bold' : 'normal');
+      doc.setFontSize(fontSize);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      const align = options.align || 'left';
+      const maxWidth = Math.max(4, w - 4);
+      const lines = doc.splitTextToSize(String(content), maxWidth).slice(0, options.maxLines || 4);
+      const textHeight = lines.length * (fontSize + 1);
+      const textY =
+        options.valign === 'top'
+          ? y + fontSize + 2
+          : y + (h - textHeight) / 2 + fontSize;
+
+      const textX =
+        align === 'center'
+          ? x + w / 2
+          : align === 'right'
+            ? x + w - 3
+            : x + 3;
+
+      doc.text(lines, textX, textY, { align });
+    };
+
+    const blue: [number, number, number] = [190, 207, 221];
+    const blueDark: [number, number, number] = [48, 63, 84];
+    const light: [number, number, number] = [247, 248, 244];
+    const gray: [number, number, number] = [232, 236, 239];
+
+    // Fondo blanco
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    // Encabezado
+    doc.setDrawColor(90, 90, 90);
+    doc.setLineWidth(0.7);
+
+    // Logo referencial
+    doc.roundedRect(36, 26, 54, 64, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(110, 60, 60);
+    doc.text('ESCUDO', 63, 61, { align: 'center' });
+
+    // Foto
+    doc.rect(pageWidth - 92, 26, 58, 74, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(55, 66, 98);
+    doc.setFontSize(20);
+    doc.text('Colegio Privado', pageWidth / 2, 35, { align: 'center' });
+
+    doc.setTextColor(190, 70, 78);
+    doc.setFontSize(30);
+    doc.text(colegioTitulo || 'SANTA MARÍA VICTORIA', pageWidth / 2, 66, { align: 'center' });
+
+    doc.setTextColor(55, 66, 98);
+    doc.setFontSize(9);
+    doc.text('R.D. N° 003942 - 10 DRELM - UGEL 01 S.J.M', pageWidth / 2, 86, { align: 'center' });
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(14);
+    doc.text(`BOLETA DE NOTAS - ${matricula.anio?.nombre_anio?.match(/\d{4}/)?.[0] || new Date().getFullYear()}`, pageWidth / 2, 106, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.text(`${nivelNombre.toUpperCase() || 'NIVEL'} - ${periodoNombre.toUpperCase()}`, pageWidth / 2, 120, { align: 'center' });
+
+    // Datos superiores
+    const dataY = 140;
+    drawCell(36, dataY, 54, 12, 'Código', { size: 7, bold: true, align: 'center', border: [255, 255, 255] });
+    drawCell(104, dataY, 246, 12, 'Apellidos y Nombres', { size: 7, bold: true, align: 'center', border: [255, 255, 255] });
+    drawCell(358, dataY, 130, 12, 'Salón', { size: 7, bold: true, align: 'center', border: [255, 255, 255] });
+    drawCell(500, dataY, 44, 12, 'N° Ord', { size: 7, bold: true, align: 'center', border: [255, 255, 255] });
+
+    drawCell(36, dataY + 13, 54, 18, codigoAlumno, { size: 7, bold: true, align: 'center', fill: light });
+    drawCell(92, dataY + 13, 258, 18, alumnoNombre, { size: 7, bold: true, align: 'center', fill: light, maxLines: 1 });
+    drawCell(352, dataY + 13, 136, 18, salonNombre.toUpperCase(), { size: 7, bold: true, align: 'center', fill: light, maxLines: 1 });
+    drawCell(500, dataY + 13, 44, 18, String(ordenMerito), { size: 8, bold: true, align: 'center', fill: light });
+
+    // Tabla izquierda: notas
+    const leftX = 20;
+    const leftY = 180;
+    const leftW = 320;
+    const nameW = 136;
+    const pairW = 29;
+    const promW = leftW - nameW - pairW * 4;
+    const rowH = 11.2;
+    let yL = leftY;
+
+    drawCell(leftX, yL, nameW, 16, 'ÁREAS', { fill: blue, bold: true, align: 'center', size: 7, text: blueDark });
+    ['I BIM', 'II BIM', 'III BIM', 'IV BIM'].forEach((label, index) => {
+      drawCell(leftX + nameW + pairW * index, yL, pairW, 16, label, { fill: blue, bold: true, align: 'center', size: 6.5, text: blueDark });
+    });
+    drawCell(leftX + nameW + pairW * 4, yL, promW, 16, 'PROME', { fill: blue, bold: true, align: 'center', size: 6.5, text: blueDark });
+    yL += 16;
+
+    const areas = new Map<string, typeof resumen.cursos>();
+    resumen.cursos.forEach((curso) => {
+      const area = safe(curso.area || 'ÁREA');
+      const actual = areas.get(area) || [];
+      actual.push(curso);
+      areas.set(area, actual);
+    });
+
+    const drawNotaPair = (x: number, y: number, w: number, h: number, value: number | null | undefined, active: boolean) => {
+      if (!active) {
+        drawCell(x, y, w / 2, h, '', { fill: light });
+        drawCell(x + w / 2, y, w / 2, h, '', { fill: light });
+        return;
+      }
+
+      drawCell(x, y, w / 2, h, nota(value), { fill: light, size: 6.5, align: 'center' });
+      drawCell(x + w / 2, y, w / 2, h, literal(value), { fill: light, size: 6.5, bold: true, align: 'center' });
+    };
+
+    areas.forEach((cursos, area) => {
+      drawCell(leftX, yL, leftW, rowH, area.toUpperCase(), { fill: blue, bold: true, size: 7, text: blueDark, maxLines: 1 });
+      yL += rowH;
+
+      cursos.forEach((curso) => {
+        drawCell(leftX, yL, nameW, rowH, safe(curso.curso), { fill: light, size: 6.8, maxLines: 1 });
+        for (let i = 1; i <= 4; i += 1) {
+          drawNotaPair(leftX + nameW + pairW * (i - 1), yL, pairW, rowH, curso.promedio, i === bimNumero);
+        }
+        drawNotaPair(leftX + nameW + pairW * 4, yL, promW, rowH, curso.promedio, true);
+        yL += rowH;
+      });
+
+      const valores = cursos
+        .map((curso) => curso.promedio)
+        .filter((value): value is number => value !== null && value !== undefined && !Number.isNaN(Number(value)));
+      const promedioArea = valores.length
+        ? Math.round(valores.reduce((sum, value) => sum + Number(value), 0) / valores.length)
+        : null;
+
+      drawCell(leftX, yL, nameW, rowH, 'Promedio de Área:', { fill: gray, bold: true, size: 6.8 });
+      for (let i = 1; i <= 4; i += 1) {
+        drawNotaPair(leftX + nameW + pairW * (i - 1), yL, pairW, rowH, promedioArea, i === bimNumero);
+      }
+      drawNotaPair(leftX + nameW + pairW * 4, yL, promW, rowH, promedioArea, true);
+      yL += rowH;
+    });
+
+    // Tabla derecha
+    const rightX = 350;
+    const rightY = 180;
+    const rightW = 224;
+    const indicatorW = 116;
+    const bimW = (rightW - indicatorW) / 4;
+    let yR = rightY;
+
+    const drawRightHeader = (title: string) => {
+      drawCell(rightX, yR, rightW, 14, title.toUpperCase(), { fill: blue, bold: true, align: 'center', size: 7, text: blueDark });
+      yR += 14;
+      drawCell(rightX, yR, indicatorW, 14, 'INDICADOR', { fill: blue, bold: true, align: 'center', size: 6.5, text: blueDark });
+      ['I BIM', 'II BIM', 'III BIM', 'IV BIM'].forEach((label, index) => {
+        drawCell(rightX + indicatorW + bimW * index, yR, bimW, 14, label, { fill: blue, bold: true, align: 'center', size: 6.1, text: blueDark });
+      });
+      yR += 14;
+    };
+
+    const drawRightRow = (label: string, value: string, h = 32) => {
+      drawCell(rightX, yR, indicatorW, h, label, { fill: light, size: 6.2, valign: 'top', maxLines: 5 });
+      for (let i = 1; i <= 4; i += 1) {
+        drawCell(
+          rightX + indicatorW + bimW * (i - 1),
+          yR,
+          bimW,
+          h,
+          i === bimNumero ? value : '',
+          { fill: light, size: 7, bold: true, align: 'center' },
+        );
+      }
+      yR += h;
+    };
+
+    drawRightHeader('Conducta');
+    resumen.conducta.forEach((item) => {
+      drawRightRow(safe(item.descripcion), safe(item.valor || ''), 30);
+    });
+
+    const conductaValores = resumen.conducta.map((item) => safe(item.valor)).filter(Boolean);
+    const conductaProm = conductaValores[0] || '';
+    drawRightRow('PROMEDIO', conductaProm, 16);
+
+    yR += 8;
+
+    drawRightHeader('Participación de padres de familia');
+    resumen.participacion_familiar.forEach((item) => {
+      drawRightRow(safe(item.descripcion), safe(item.valor || ''), 36);
+    });
+
+    yR += 8;
+
+    drawRightHeader('Estadística');
+    const statsRows = [
+      ['Puntaje', String(resumen.estadistica.puntaje || '-')],
+      ['Promedio', resumen.estadistica.promedio_general ? Number(resumen.estadistica.promedio_general).toFixed(2) : '-'],
+      ['Cursos Desaprobados', String(resumen.estadistica.cursos_desaprobados || '-')],
+      ['Orden de Mérito', String(resumen.estadistica.orden_merito || '-')],
+      ['Tercio por Salón', String(resumen.estadistica.tercio || '-').toUpperCase().slice(0, 3)],
+    ];
+
+    statsRows.forEach(([label, value]) => drawRightRow(label, value, 15));
+
+    // Fecha
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(40, 40, 40);
+    doc.text(`Lima, ${fechaTexto}`, rightX + rightW, Math.min(yR + 20, 650), { align: 'right' });
+
+    // Comentario
+    const commentY = 666;
+    drawCell(20, commentY, pageWidth - 40, 14, 'COMENTARIOS DEL TUTOR(A)', {
+      fill: blue,
+      bold: true,
+      align: 'center',
+      size: 7,
+      text: blueDark,
+    });
+
+    const comentario = safe(resumen.comentario || 'Sin comentario registrado.');
+    const commentLines = doc.splitTextToSize(comentario, pageWidth - 54).slice(0, 5);
+
+    drawCell(20, commentY + 14, pageWidth - 40, 54, '', { fill: light });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.2);
+    doc.setTextColor(30, 30, 30);
+    doc.text(commentLines, 26, commentY + 28, { lineHeightFactor: 1.15 });
+
+    // Firmas
+    const firmaY = 775;
+    doc.setDrawColor(80, 80, 80);
+    doc.line(90, firmaY, 220, firmaY);
+    doc.line(360, firmaY, 510, firmaY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 30, 30);
+
+    doc.text(tutorNombre.toUpperCase(), 155, firmaY + 12, { align: 'center', maxWidth: 150 });
+    doc.text('TUTOR(A)', 155, firmaY + 24, { align: 'center' });
+
+    doc.text('DIRECCIÓN', 435, firmaY + 12, { align: 'center' });
+    doc.text('DIRECTOR', 435, firmaY + 24, { align: 'center' });
+
+    const buffer = Buffer.from(doc.output('arraybuffer') as ArrayBuffer);
+    const filenameBase = `${codigoAlumno}-${periodoNombre}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+
+    return {
+      filename: `boleta-${filenameBase || idMatricula}.pdf`,
+      buffer,
     };
   }
 

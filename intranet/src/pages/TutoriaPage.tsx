@@ -16,6 +16,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 
@@ -107,6 +108,8 @@ export default function TutoriaPage() {
   const [loadingAlumnos, setLoadingAlumnos] = useState(false);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmGuardar, setConfirmGuardar] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
   const puedeExportar = panel.permisos.puede_exportar || ['Admin', 'Director'].includes(user?.rol || '');
@@ -198,7 +201,7 @@ export default function TutoriaPage() {
     setDetalle((actual) => actual ? { ...actual, [grupo]: actual[grupo].map((c) => c.id_criterio === id ? { ...c, valor } : c) } : actual);
   };
 
-  const guardar = async () => {
+  const ejecutarGuardar = async () => {
     if (!token || !detalle || !periodoId || !puedeEditar) return;
     setSaving(true);
     setMensaje(null);
@@ -219,6 +222,54 @@ export default function TutoriaPage() {
     }
   };
 
+  const exportarLibreta = async () => {
+    if (!token || !detalle || !periodoId || !puedeExportar) return;
+
+    setExporting(true);
+    setMensaje(null);
+
+    try {
+      const res = await axios.get(
+        `/api/tutoria/alumnos/${detalle.alumno.id_matricula}/libreta-pdf`,
+        {
+          headers: headers(token),
+          params: { id_bimestre: periodoId },
+          responseType: 'blob',
+        },
+      );
+
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      const cleanName = `${detalle.alumno.codigo || 'alumno'}-${periodo?.label || 'periodo'}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+
+      link.href = url;
+      link.download = `libreta-${cleanName || detalle.alumno.id_matricula}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      setMensaje({ tipo: 'exito', texto: 'Libreta exportada correctamente.' });
+    } catch (err: any) {
+      setMensaje({ tipo: 'error', texto: err.response?.data?.message || 'No se pudo exportar la libreta.' });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const confirmarGuardarCierre = async () => {
+    setConfirmGuardar(false);
+    await ejecutarGuardar();
+  };
+
   const cards = [
     { label: 'Alumnos', value: resumen.total, helper: 'Del salón', icon: UsersRound },
     { label: 'Promedio', value: nota(resumen.promedio), helper: 'General del salón', icon: BarChart3 },
@@ -236,8 +287,14 @@ export default function TutoriaPage() {
         icon={BookOpenCheck}
         meta={[{ label: 'Contexto', value: scopeLabel }, { label: 'Periodo', value: periodo?.label || 'Sin periodo' }]}
         actions={puedeExportar && detalle ? (
-          <button type="button" className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50">
-            <Printer size={17} /> Exportar libreta
+          <button
+            type="button"
+            onClick={exportarLibreta}
+            disabled={exporting}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            {exporting ? <Loader2 size={17} className="animate-spin" /> : <Printer size={17} />}
+            {exporting ? 'Exportando...' : 'Exportar libreta'}
           </button>
         ) : null}
       />
@@ -306,11 +363,30 @@ export default function TutoriaPage() {
 
               <section className="grid gap-5 xl:grid-cols-2">{(['conducta', 'participacion_familiar'] as const).map((grupo) => <div key={grupo} className="rounded-[24px] border border-slate-100"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-base font-black text-slate-950">{grupo === 'conducta' ? 'Conducta del alumno' : 'Participación de padres'}</h3><p className="text-sm text-slate-500">Editable por tutor, dirección o administración.</p></div><div className="space-y-3 p-4">{detalle[grupo].map((criterio) => <label key={criterio.id_criterio} className="block rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><span className="text-sm font-black text-slate-800">{criterio.descripcion}</span><select value={criterio.valor || ''} disabled={!puedeEditar} onChange={(e) => cambiarCriterio(grupo, criterio.id_criterio, e.target.value as Literal)} className="mt-3 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition-all duration-200 focus:border-blue-300 focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:text-slate-400">{escala.map((item) => <option key={item.value || 'empty'} value={item.value}>{item.label}</option>)}</select></label>)}</div></div>)}</section>
 
-              <section className="rounded-[24px] border border-slate-100"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-base font-black text-slate-950">Comentario final del tutor</h3><p className="text-sm text-slate-500">Este texto irá en la libreta del alumno.</p></div><div className="space-y-4 p-4"><textarea value={detalle.comentario || ''} onChange={(e) => setDetalle((actual) => actual ? { ...actual, comentario: e.target.value } : actual)} disabled={!puedeEditar} rows={5} placeholder="Ej. Muestra un buen desempeño académico..." className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:text-slate-400" /><div className="flex justify-end"><button type="button" onClick={guardar} disabled={!puedeEditar || saving} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-black text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">{saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />} Guardar cierre de tutoría</button></div></div></section>
+              <section className="rounded-[24px] border border-slate-100"><div className="border-b border-slate-100 px-5 py-4"><h3 className="text-base font-black text-slate-950">Comentario final del tutor</h3><p className="text-sm text-slate-500">Este texto irá en la libreta del alumno.</p></div><div className="space-y-4 p-4"><textarea value={detalle.comentario || ''} onChange={(e) => setDetalle((actual) => actual ? { ...actual, comentario: e.target.value } : actual)} disabled={!puedeEditar} rows={5} placeholder="Ej. Muestra un buen desempeño académico..." className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:text-slate-400" /><div className="flex justify-end"><button type="button" onClick={() => setConfirmGuardar(true)} disabled={!puedeEditar || saving} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-black text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">{saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />} Guardar cierre de tutoría</button></div></div></section>
             </div>
           )}
         </main>
       </section>
+      <ConfirmDialog
+        open={confirmGuardar}
+        eyebrow="Tutoría"
+        title="Confirmar guardado de tutoría"
+        description={
+          detalle
+            ? `Se guardarán las valoraciones de conducta, participación familiar y comentario final de ${detalle.alumno.nombre}.`
+            : 'Se guardarán los cambios del cierre de tutoría.'
+        }
+        tone="neutral"
+        confirmLabel="Sí, guardar"
+        cancelLabel="Cancelar"
+        loading={saving}
+        onCancel={() => setConfirmGuardar(false)}
+        onConfirm={() => {
+          void confirmarGuardarCierre();
+        }}
+      />
+
     </div>
   );
 }
