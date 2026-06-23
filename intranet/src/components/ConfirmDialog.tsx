@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { AlertCircle, X } from 'lucide-react';
 
 interface ConfirmDialogProps {
@@ -36,8 +37,8 @@ export default function ConfirmDialog({
 
   const buttonClass = tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-950 hover:bg-slate-800';
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm animate-in fade-in duration-200" onClick={loading ? undefined : onCancel} />
 
       <section className="relative w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.75)] ring-1 ring-slate-200/70 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
@@ -64,6 +65,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -114,10 +114,34 @@ export default function TutoriaPage() {
   const [exportingSalon, setExportingSalon] = useState(false);
   const [confirmExportarSalon, setConfirmExportarSalon] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
+  const [filtroAlumnos, setFiltroAlumnos] = useState<'todos' | 'pendientes' | 'listos'>('todos');
 
   const puedeExportar = panel.permisos.puede_exportar || ['Admin', 'Director'].includes(user?.rol || '');
   const puedeEditar = panel.permisos.puede_editar_cierre || ['Admin', 'Director'].includes(user?.rol || '');
   const periodo = panel.periodos.find((item) => item.id_bimestre === periodoId) || null;
+
+  const alumnoTienePendientes = (alumno: AlumnoLista) =>
+    alumno.comentario_pendiente ||
+    alumno.conducta_pendiente > 0 ||
+    alumno.familia_pendiente > 0;
+
+  const alumnosFiltrados = useMemo(() => {
+    if (filtroAlumnos === 'pendientes') return alumnos.filter(alumnoTienePendientes);
+    if (filtroAlumnos === 'listos') return alumnos.filter((alumno) => !alumnoTienePendientes(alumno));
+    return alumnos;
+  }, [alumnos, filtroAlumnos]);
+
+  const pendientesSalon = useMemo(() => {
+    const pendientes = alumnos.filter(alumnoTienePendientes);
+
+    return {
+      total: pendientes.length,
+      listos: alumnos.length - pendientes.length,
+      comentarios: alumnos.filter((alumno) => alumno.comentario_pendiente).length,
+      conducta: alumnos.filter((alumno) => alumno.conducta_pendiente > 0).length,
+      familia: alumnos.filter((alumno) => alumno.familia_pendiente > 0).length,
+    };
+  }, [alumnos]);
 
   const resumen = useMemo(() => {
     const promedios = alumnos.map((a) => a.promedio).filter((v): v is number => v !== null && v !== undefined);
@@ -154,7 +178,7 @@ export default function TutoriaPage() {
   }, [queryParams, token]);
 
   useEffect(() => {
-    setPanel(panelVacio); setAnioId(null); setPeriodoId(null); setSalonId(null); setMatriculaId(null); setDetalle(null); setAlumnos([]);
+    setPanel(panelVacio); setAnioId(null); setPeriodoId(null); setSalonId(null); setMatriculaId(null); setDetalle(null); setAlumnos([]); setFiltroAlumnos('todos');
     cargarPanel(null);
   }, [activeScope.tipo, activeScope.id_colegio, cargarPanel]);
 
@@ -414,9 +438,59 @@ export default function TutoriaPage() {
 
       <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)] erp-section-enter">
         <aside className="rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
-          <div className="border-b border-slate-100 p-5"><h2 className="text-base font-black text-slate-950">Alumnos del salón</h2><p className="mt-1 text-sm text-slate-500">Selecciona un alumno para revisar su libreta interna.</p></div>
+          <div className="border-b border-slate-100 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-black text-slate-950">Alumnos del salón</h2>
+                <p className="mt-1 text-sm text-slate-500">Selecciona un alumno para revisar su libreta interna.</p>
+              </div>
+              <span className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[10px] font-black ring-1 ${
+                pendientesSalon.total > 0
+                  ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                  : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+              }`}>
+                {pendientesSalon.total > 0 ? `${pendientesSalon.total} pendientes` : 'Listo'}
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-slate-50 p-1 ring-1 ring-slate-100">
+              {[
+                { key: 'todos', label: 'Todos', count: alumnos.length },
+                { key: 'pendientes', label: 'Pendientes', count: pendientesSalon.total },
+                { key: 'listos', label: 'Listos', count: pendientesSalon.listos },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setFiltroAlumnos(item.key as 'todos' | 'pendientes' | 'listos')}
+                  className={`rounded-xl px-2 py-2 text-[11px] font-black transition-all duration-200 ${
+                    filtroAlumnos === item.key
+                      ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
+                      : 'text-slate-500 hover:bg-white/70 hover:text-slate-800'
+                  }`}
+                >
+                  {item.label}
+                  <span className="ml-1 text-slate-400">({item.count})</span>
+                </button>
+              ))}
+            </div>
+
+            {pendientesSalon.total > 0 && (
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
+                <span className="rounded-xl bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-100">
+                  Coment.: {pendientesSalon.comentarios}
+                </span>
+                <span className="rounded-xl bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-100">
+                  Conducta: {pendientesSalon.conducta}
+                </span>
+                <span className="rounded-xl bg-indigo-50 px-2 py-1 text-indigo-700 ring-1 ring-indigo-100">
+                  Familia: {pendientesSalon.familia}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="max-h-[720px] space-y-3 overflow-auto p-4">
-            {loadingAlumnos ? <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando alumnos...</div> : alumnos.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">Sin alumnos para mostrar.</div> : alumnos.map((alumno) => (
+            {loadingAlumnos ? <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando alumnos...</div> : alumnos.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">Sin alumnos para mostrar.</div> : alumnosFiltrados.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">No hay alumnos en este filtro.</div> : alumnosFiltrados.map((alumno) => (
               <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`w-full rounded-3xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 erp-list-item-enter ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
                 <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{alumno.alumno}</p><p className="mt-1 text-xs font-bold text-slate-400">Código: {alumno.codigo}</p></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(alumno.promedio)}`}>{nota(alumno.promedio)}</span></div>
                 <div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">Desaprobados: {alumno.cursos_desaprobados}</span>{alumno.comentario_pendiente && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-100">Comentario pendiente</span>}</div>
@@ -462,9 +536,13 @@ export default function TutoriaPage() {
         open={confirmExportarSalon}
         eyebrow="Libretas"
         title="Confirmar exportación del salón"
-        description={`Se descargarán ${alumnos.length} libretas PDF del salón seleccionado. Verifica que los cierres de tutoría estén guardados antes de exportar.`}
+        description={
+          pendientesSalon.total > 0
+            ? `Se descargarán ${alumnos.length} libretas. Hay ${pendientesSalon.total} alumno(s) con pendientes: ${pendientesSalon.comentarios} comentario(s), ${pendientesSalon.conducta} conducta(s) y ${pendientesSalon.familia} participación familiar.`
+            : `Se descargarán ${alumnos.length} libretas PDF del salón seleccionado. Todos los cierres aparecen completos.`
+        }
         tone="neutral"
-        confirmLabel="Sí, exportar"
+        confirmLabel={pendientesSalon.total > 0 ? "Exportar de todos modos" : "Sí, exportar"}
         cancelLabel="Cancelar"
         loading={exportingSalon}
         onCancel={() => setConfirmExportarSalon(false)}
