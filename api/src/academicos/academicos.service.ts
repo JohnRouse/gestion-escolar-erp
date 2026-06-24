@@ -1439,6 +1439,59 @@ export class AcademicosService {
 
   // ── CONSULTAS ──────────────────────────────────────────
 
+
+  async actualizarFotoAlumno(
+    params: ScopeParams & {
+      idEstudiante: number;
+      avatarUrl: string;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const estudiante = await this.prisma.estudiante.findFirst({
+      where: {
+        id_persona: params.idEstudiante,
+        matriculas: {
+          some: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+        },
+      },
+      include: {
+        persona: true,
+      },
+    });
+
+    if (!estudiante) {
+      throw new NotFoundException('Alumno no encontrado o sin acceso.');
+    }
+
+    const actualizado = await this.prisma.estudiante.update({
+      where: {
+        id_persona: params.idEstudiante,
+      },
+      data: {
+        avatar_url: params.avatarUrl,
+      },
+      include: {
+        persona: true,
+      },
+    });
+
+    return {
+      message: 'Foto del alumno actualizada correctamente.',
+      avatar_url: actualizado.avatar_url,
+      alumno: {
+        id_persona: actualizado.id_persona,
+        codigo_estudiante: actualizado.codigo_estudiante,
+        avatar_url: actualizado.avatar_url,
+        persona: actualizado.persona,
+      },
+    };
+  }
+
   async getNiveles(params?: Partial<ScopeParams>) {
     if (!params?.userId || !params?.rol) {
       return this.prisma.nivel.findMany({

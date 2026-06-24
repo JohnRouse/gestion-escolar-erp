@@ -9,6 +9,8 @@ import {
   Query,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
   NotFoundException,
   BadRequestException,
@@ -21,6 +23,42 @@ import { SaveAsistenciaDto } from './dto/save-asistencia.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+
+
+const alumnoAvatarStorage = diskStorage({
+  destination: (_req, _file, callback) => {
+    const uploadDir = join(process.cwd(), 'uploads', 'alumnos');
+
+    if (!existsSync(uploadDir)) {
+      mkdirSync(uploadDir, { recursive: true });
+    }
+
+    callback(null, uploadDir);
+  },
+  filename: (req, file, callback) => {
+    const allowedExt = ['.jpg', '.jpeg', '.png'];
+    const originalExt = extname(file.originalname || '').toLowerCase();
+    const ext = allowedExt.includes(originalExt) ? originalExt : '.jpg';
+    const id = String(req.params?.id || 'alumno').replace(/[^0-9a-zA-Z_-]/g, '');
+
+    callback(null, `alumno-${id}-${Date.now()}${ext}`);
+  },
+});
+
+const alumnoAvatarFileFilter = (_req: any, file: any, callback: any) => {
+  const allowed = ['image/jpeg', 'image/png'];
+
+  if (!allowed.includes(file.mimetype)) {
+    callback(new BadRequestException('Solo se permiten imágenes JPG o PNG.'), false);
+    return;
+  }
+
+  callback(null, true);
+};
 
 @Controller('academicos')
 export class AcademicosController {
@@ -533,6 +571,41 @@ async deleteGrado(
   ) {
     return this.academicosService.getDetalleAlumno({
       idEstudiante: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Post('alumnos/:id/avatar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: alumnoAvatarStorage,
+      fileFilter: alumnoAvatarFileFilter,
+      limits: {
+        fileSize: 3 * 1024 * 1024,
+      },
+    }),
+  )
+  async subirFotoAlumno(
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Selecciona una imagen JPG o PNG.');
+    }
+
+    const avatarUrl = `/uploads/alumnos/${file.filename}`;
+
+    return this.academicosService.actualizarFotoAlumno({
+      idEstudiante: Number(id),
+      avatarUrl,
       userId: req.user.userId,
       rol: req.user.rol,
       scope,

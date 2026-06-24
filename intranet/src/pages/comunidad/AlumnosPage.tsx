@@ -13,6 +13,8 @@ import {
   GraduationCap,
   Phone,
   SlidersHorizontal,
+  Camera,
+  UploadCloud,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,6 +28,7 @@ type Meta = { total: number; page: number; limit: number; totalPages: number };
 type AlumnoItem = {
   id_persona: number;
   codigo_estudiante: string;
+  avatar_url?: string | null;
   codigos_colegio?: CodigoColegio[];
   persona: {
     dni: string; nombres: string; apellido_paterno: string; apellido_materno: string;
@@ -57,6 +60,14 @@ const fecha = (value?: string | null) =>
 
 const getCodigo = (alumno: AlumnoItem) =>
   alumno.codigos_colegio?.[0]?.codigo || alumno.codigo_estudiante || 'Sin código';
+
+const assetUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:image\/)/i.test(url)) return url;
+  if (url.startsWith('/uploads/')) return `/api${url}`;
+  if (url.startsWith('uploads/')) return `/api/${url}`;
+  return url;
+};
 
 // Badge de estado de matrícula
 const estadoBadge: Record<string, string> = {
@@ -106,6 +117,7 @@ export default function AlumnosPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<AlumnoForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
   const params = useMemo(() => {
@@ -162,6 +174,74 @@ export default function AlumnosPage() {
     setForm(toForm(detalle));
     setEditOpen(true);
     setMensaje(null);
+  };
+
+  const subirFotoAlumno = async (file?: File | null) => {
+    if (!token || !detalle || !file) return;
+
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      const errorMessage = 'Selecciona una imagen JPG o PNG.';
+      setMensaje(errorMessage);
+      showToast({ type: 'error', title: 'Formato no permitido', message: errorMessage });
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      const errorMessage = 'La imagen no debe superar los 3 MB.';
+      setMensaje(errorMessage);
+      showToast({ type: 'error', title: 'Imagen muy pesada', message: errorMessage });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('foto', file);
+
+    setUploadingAvatar(true);
+    setMensaje(null);
+
+    try {
+      const res = await axios.post(
+        `/api/academicos/alumnos/${detalle.id_persona}/avatar${queryString}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const avatarUrl = res.data?.avatar_url || '';
+
+      setDetalle((prev) =>
+        prev
+          ? {
+              ...prev,
+              avatar_url: avatarUrl,
+            }
+          : prev,
+      );
+
+      await fetchAlumnos();
+
+      setMensaje('Foto del alumno actualizada correctamente.');
+      showToast({
+        type: 'success',
+        title: 'Foto actualizada',
+        message: 'La foto se usará en la libreta del alumno.',
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'No se pudo subir la foto del alumno.';
+
+      setMensaje(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'No se pudo subir',
+        message: errorMessage,
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const guardarEdicion = async () => {
@@ -310,7 +390,15 @@ export default function AlumnosPage() {
                 >
                   {/* Columna alumno */}
                   <div className="flex min-w-0 items-center gap-3">
-                    <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
+                    {alumno.avatar_url ? (
+                      <img
+                        src={assetUrl(alumno.avatar_url)}
+                        alt={nombre}
+                        className="h-11 w-11 rounded-2xl object-cover ring-1 ring-slate-200"
+                      />
+                    ) : (
+                      <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">
                         {nombre}
@@ -435,7 +523,15 @@ export default function AlumnosPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div className="flex items-center gap-4">
                 {detalle && (
-                  <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
+                  detalle.avatar_url ? (
+                    <img
+                      src={assetUrl(detalle.avatar_url)}
+                      alt={fullName(detalle.persona)}
+                      className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
+                  )
                 )}
                 <div>
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-1 text-[11px] font-bold text-accent-600 ring-1 ring-accent-100">
@@ -454,14 +550,38 @@ export default function AlumnosPage() {
               </div>
               <div className="flex shrink-0 gap-2">
                 {detalle && (
-                  <button
-                    type="button"
-                    onClick={abrirEdicion}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
-                  >
-                    <Edit3 size={13} />
-                    Editar
-                  </button>
+                  <>
+                    <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
+                      {uploadingAvatar ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : detalle.avatar_url ? (
+                        <Camera size={13} />
+                      ) : (
+                        <UploadCloud size={13} />
+                      )}
+                      {uploadingAvatar ? 'Subiendo...' : detalle.avatar_url ? 'Cambiar foto' : 'Subir foto'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        className="hidden"
+                        disabled={uploadingAvatar}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = '';
+                          void subirFotoAlumno(file);
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={abrirEdicion}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                    >
+                      <Edit3 size={13} />
+                      Editar
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
