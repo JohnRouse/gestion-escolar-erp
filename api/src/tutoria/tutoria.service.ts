@@ -719,9 +719,11 @@ export class TutoriaService {
       },
     });
 
+    const criteriosActivos = criterios.filter((c) => c.activo);
+
     const mapCriterios = (tipo: TipoCriterio) =>
-      criterios
-        .filter((c) => c.tipo === tipo)
+      criteriosActivos
+        .filter((c) => c.activo && c.tipo === tipo)
         .map((c) => ({
           id_criterio: c.id_criterio,
           descripcion: c.descripcion,
@@ -836,6 +838,29 @@ export class TutoriaService {
     const nota2 = (value: number | null | undefined) => {
       const n = nota(value);
       return n === '-' ? '-' : n.padStart(2, '0');
+    };
+
+    const promedioLiteralTutoria = (values: string[]) => {
+      const escala: Record<string, number> = {
+        AD: 4,
+        A: 3,
+        B: 2,
+        C: 1,
+      };
+
+      const validos = values
+        .map((value) => safe(value).toUpperCase())
+        .filter((value) => Object.prototype.hasOwnProperty.call(escala, value));
+
+      if (!validos.length) return '';
+
+      const promedio =
+        validos.reduce((sum, value) => sum + escala[value], 0) / validos.length;
+
+      if (promedio >= 3.5) return 'AD';
+      if (promedio >= 2.5) return 'A';
+      if (promedio >= 1.5) return 'B';
+      return 'C';
     };
 
     const bimNumero = Math.min(4, Math.max(1, Number(bimestre?.numero || 1)));
@@ -1075,8 +1100,8 @@ export class TutoriaService {
       drawRightRow(safe(item.descripcion), safe(item.valor || ''), 30);
     });
 
-    const conductaValores = resumen.conducta.map((item) => safe(item.valor)).filter(Boolean);
-    const conductaProm = conductaValores[0] || '';
+    const conductaValores = resumen.conducta.map((item) => safe(item.valor));
+    const conductaProm = promedioLiteralTutoria(conductaValores);
     drawRightRow('PROMEDIO', conductaProm, 16);
 
     yR += 8;

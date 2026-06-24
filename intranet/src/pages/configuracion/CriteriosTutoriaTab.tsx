@@ -103,7 +103,8 @@ export default function CriteriosTutoriaTab() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [reordenandoId, setReordenandoId] = useState<number | null>(null);
+  const [guardandoOrden, setGuardandoOrden] = useState(false);
+  const [ordenEditado, setOrdenEditado] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<CriterioTutoria | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CriterioTutoria | null>(null);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -123,6 +124,7 @@ export default function CriteriosTutoriaTab() {
     try {
       const res = await axios.get(`/api/tutoria/criterios${scopedQuery}`, authHeader);
       setCriterios(Array.isArray(res.data?.criterios) ? res.data.criterios : []);
+      setOrdenEditado(false);
     } catch (err: any) {
       setMensaje({
         type: 'error',
@@ -244,8 +246,8 @@ export default function CriteriosTutoriaTab() {
     }
   };
 
-  const moverCriterio = async (criterio: CriterioTutoria, direccion: -1 | 1) => {
-    if (!token || reordenandoId) return;
+  const moverCriterio = (criterio: CriterioTutoria, direccion: -1 | 1) => {
+    if (guardandoOrden) return;
 
     const lista = criterios
       .filter((item) => item.tipo === criterio.tipo)
@@ -261,14 +263,37 @@ export default function CriteriosTutoriaTab() {
     const [movido] = nuevaLista.splice(index, 1);
     nuevaLista.splice(destino, 0, movido);
 
-    setReordenandoId(criterio.id_criterio);
+    const reordenados = nuevaLista.map((item, itemIndex) => ({
+      ...item,
+      orden: itemIndex + 1,
+    }));
+
+    setCriterios((prev) => {
+      const otros = prev.filter((item) => item.tipo !== criterio.tipo);
+      return [...otros, ...reordenados];
+    });
+
+    setOrdenEditado(true);
+    setMensaje(null);
+  };
+
+  const guardarOrdenCriterios = async () => {
+    if (!token || guardandoOrden || !ordenEditado) return;
+
+    const lista = criterios
+      .filter((item) => item.tipo === tipoActivo)
+      .slice()
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.id_criterio - b.id_criterio);
+
+    setGuardandoOrden(true);
+    setMensaje(null);
 
     try {
       await axios.post(
         `/api/tutoria/criterios/reordenar${scopedQuery}`,
         {
-          tipo: criterio.tipo,
-          orden: nuevaLista.map((item, itemIndex) => ({
+          tipo: tipoActivo,
+          orden: lista.map((item, itemIndex) => ({
             id_criterio: item.id_criterio,
             orden: itemIndex + 1,
           })),
@@ -280,16 +305,21 @@ export default function CriteriosTutoriaTab() {
 
       showToast({
         type: 'success',
-        title: 'Orden actualizado',
-        message: 'Los criterios se reordenaron correctamente.',
+        title: 'Orden guardado',
+        message: 'El orden de los criterios fue actualizado correctamente.',
+      });
+
+      setMensaje({
+        type: 'success',
+        text: 'Orden de criterios guardado correctamente.',
       });
     } catch (err: any) {
       setMensaje({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudo reordenar el criterio.',
+        text: err.response?.data?.message || 'No se pudo guardar el orden de los criterios.',
       });
     } finally {
-      setReordenandoId(null);
+      setGuardandoOrden(false);
     }
   };
 
@@ -467,6 +497,7 @@ export default function CriteriosTutoriaTab() {
                     onClick={() => {
                       setTipoActivo(tipo);
                       setSearch('');
+                      setMensaje(null);
                     }}
                     className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
                       active
@@ -488,14 +519,28 @@ export default function CriteriosTutoriaTab() {
               })}
             </div>
 
-            <div className="relative min-w-0 lg:w-80">
-              <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar criterio..."
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {ordenEditado && (
+                <button
+                  type="button"
+                  onClick={guardarOrdenCriterios}
+                  disabled={guardandoOrden}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {guardandoOrden ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Guardar orden
+                </button>
+              )}
+
+              <div className="relative min-w-0 lg:w-80">
+                <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar criterio..."
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -543,7 +588,7 @@ export default function CriteriosTutoriaTab() {
                             type="button"
                             onClick={() => moverCriterio(criterio, -1)}
                             disabled={
-                              reordenandoId !== null ||
+                              guardandoOrden ||
                               criteriosOrdenadosTipo.findIndex((item) => item.id_criterio === criterio.id_criterio) === 0
                             }
                             className="inline-flex h-5 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
@@ -555,7 +600,7 @@ export default function CriteriosTutoriaTab() {
                             type="button"
                             onClick={() => moverCriterio(criterio, 1)}
                             disabled={
-                              reordenandoId !== null ||
+                              guardandoOrden ||
                               criteriosOrdenadosTipo.findIndex((item) => item.id_criterio === criterio.id_criterio) === criteriosOrdenadosTipo.length - 1
                             }
                             className="inline-flex h-5 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
@@ -564,9 +609,6 @@ export default function CriteriosTutoriaTab() {
                             <ArrowDown size={13} />
                           </button>
                         </div>
-                        {reordenandoId === criterio.id_criterio && (
-                          <Loader2 size={14} className="animate-spin text-blue-600" />
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
