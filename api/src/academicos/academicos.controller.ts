@@ -581,10 +581,19 @@ async deleteGrado(
       throw new BadRequestException('Selecciona una imagen JPG o PNG.');
     }
 
+    const alumnoArchivo = await this.academicosService.getCodigoAlumnoParaArchivo({
+      idEstudiante: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+
     const savedImage = await this.storageService.saveImage(file, {
       folder: 'alumnos',
       prefix: 'alumno',
       entityId: id,
+      filenameBase: alumnoArchivo.codigo_estudiante,
     });
 
     return this.academicosService.actualizarFotoAlumno({

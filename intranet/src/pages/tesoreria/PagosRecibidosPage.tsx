@@ -119,6 +119,18 @@ const fullName = (persona?: {
       }`.trim()
     : '—';
 
+function assetUrl(url?: string | null) {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:image\/)/i.test(url)) return url;
+  if (url.startsWith('/uploads/')) return `/api${url}`;
+  if (url.startsWith('uploads/')) return `/api/${url}`;
+  return url;
+}
+
+function cleanFileUrl(url?: string | null) {
+  return String(url || '').split('?')[0];
+}
+
 function estadoTone(estado: string) {
   if (estado === 'Aplicado') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
   if (estado === 'Identificado') return 'bg-sky-50 text-sky-700 ring-sky-100';
@@ -607,7 +619,7 @@ export default function PagosRecibidosPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a
-                      href={selected.captura_url}
+                      href={assetUrl(selected.captura_url)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
@@ -617,7 +629,7 @@ export default function PagosRecibidosPage() {
                     </a>
 
                     <a
-                      href={selected.captura_url}
+                      href={assetUrl(selected.captura_url)}
                       download
                       className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-200"
                     >
@@ -626,15 +638,15 @@ export default function PagosRecibidosPage() {
                   </div>
                 </div>
 
-                {selected.captura_url.match(/\.(png|jpg|jpeg|webp)$/i) && (
+                {cleanFileUrl(selected.captura_url).match(/\.(png|jpg|jpeg|webp)$/i) && (
                   <img
-                    src={selected.captura_url}
+                    src={assetUrl(selected.captura_url)}
                     alt="Comprobante de pago"
                     className="max-h-80 w-full rounded-2xl object-contain bg-white"
                   />
                 )}
 
-                {selected.captura_url.match(/\.pdf$/i) && (
+                {cleanFileUrl(selected.captura_url).match(/\.pdf$/i) && (
                   <div className="rounded-2xl bg-white p-4 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-100">
                     El comprobante es un PDF. Usa "Abrir" para revisarlo en otra pestaña.
                   </div>

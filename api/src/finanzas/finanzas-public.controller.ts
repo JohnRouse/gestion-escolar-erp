@@ -1,13 +1,25 @@
-import { Body, Controller, Get, Param, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
 import { FinanzasService } from './finanzas.service';
+import { StorageService } from '../storage/storage.service';
 
 @Controller('tesoreria/public')
 export class FinanzasPublicController {
-  constructor(private readonly finanzasService: FinanzasService) {}
+  constructor(
+    private readonly finanzasService: FinanzasService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Get('colegios')
   async listarColegiosPublicos() {
@@ -35,21 +47,17 @@ export class FinanzasPublicController {
   @Post('reportar-pago')
   @UseInterceptors(
     FileInterceptor('comprobante', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const dir = './uploads/comprobantes';
-          if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-          cb(null, dir);
-        },
-        filename: (_req, file, cb) => {
-          const safeExt = extname(file.originalname || '').toLowerCase() || '.jpg';
-          cb(null, `comprobante-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-        cb(null, allowed.includes(file.mimetype));
+
+        if (!allowed.includes(file.mimetype)) {
+          cb(new BadRequestException('Solo se permiten imágenes JPG, PNG, WEBP o PDF.'), false);
+          return;
+        }
+
+        cb(null, true);
       },
     }),
   )
@@ -57,7 +65,35 @@ export class FinanzasPublicController {
     @Body() body: any,
     @UploadedFile() file?: any,
   ) {
-    const capturaUrl = file ? `/uploads/comprobantes/${file.filename}` : null;
+    let capturaUrl: string | null = null;
+
+    if (file) {
+      const codigoPago =
+        String(
+          body.referencia_pago ||
+            body.codigo_pago ||
+            body.id_cronograma ||
+            'comprobante',
+        )
+          .replace(/\s+/g, '-')
+          .trim();
+
+      const saved = await this.storageService.saveFile(file, {
+        folder: 'comprobantes',
+        prefix: 'comprobante',
+        entityId: body.id_cronograma,
+        filenameBase: codigoPago,
+        allowedMimeExtensions: {
+          'image/jpeg': '.jpg',
+          'image/png': '.png',
+          'image/webp': '.webp',
+          'application/pdf': '.pdf',
+        },
+      });
+
+      capturaUrl = saved.url;
+    }
+
     return this.finanzasService.reportarPagoPublico(body, capturaUrl);
   }
 }

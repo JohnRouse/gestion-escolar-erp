@@ -1440,6 +1440,41 @@ export class AcademicosService {
   // ── CONSULTAS ──────────────────────────────────────────
 
 
+
+  async getCodigoAlumnoParaArchivo(
+    params: ScopeParams & {
+      idEstudiante: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const estudiante = await this.prisma.estudiante.findFirst({
+      where: {
+        id_persona: params.idEstudiante,
+        matriculas: {
+          some: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+        },
+      },
+      select: {
+        id_persona: true,
+        codigo_estudiante: true,
+      },
+    });
+
+    if (!estudiante) {
+      throw new NotFoundException('Alumno no encontrado o sin acceso.');
+    }
+
+    return {
+      codigo_estudiante:
+        estudiante.codigo_estudiante || `ALUMNO-${estudiante.id_persona}`,
+    };
+  }
+
   async actualizarFotoAlumno(
     params: ScopeParams & {
       idEstudiante: number;
