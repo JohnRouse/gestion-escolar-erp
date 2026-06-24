@@ -24,30 +24,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { StorageService } from '../storage/storage.service';
+import { memoryStorage } from 'multer';
 
-
-const alumnoAvatarStorage = diskStorage({
-  destination: (_req, _file, callback) => {
-    const uploadDir = join(process.cwd(), 'uploads', 'alumnos');
-
-    if (!existsSync(uploadDir)) {
-      mkdirSync(uploadDir, { recursive: true });
-    }
-
-    callback(null, uploadDir);
-  },
-  filename: (req, file, callback) => {
-    const allowedExt = ['.jpg', '.jpeg', '.png'];
-    const originalExt = extname(file.originalname || '').toLowerCase();
-    const ext = allowedExt.includes(originalExt) ? originalExt : '.jpg';
-    const id = String(req.params?.id || 'alumno').replace(/[^0-9a-zA-Z_-]/g, '');
-
-    callback(null, `alumno-${id}-${Date.now()}${ext}`);
-  },
-});
 
 const alumnoAvatarFileFilter = (_req: any, file: any, callback: any) => {
   const allowed = ['image/jpeg', 'image/png'];
@@ -65,6 +44,7 @@ export class AcademicosController {
   constructor(
     private readonly academicosService: AcademicosService,
     private prisma: PrismaService,
+    private readonly storageService: StorageService,
   ) {}
 
   // ── NIVELES ──────────────────────────────────────────
@@ -583,7 +563,7 @@ async deleteGrado(
   @Roles('Admin', 'Secretaria', 'Director')
   @UseInterceptors(
     FileInterceptor('foto', {
-      storage: alumnoAvatarStorage,
+      storage: memoryStorage(),
       fileFilter: alumnoAvatarFileFilter,
       limits: {
         fileSize: 3 * 1024 * 1024,
@@ -601,11 +581,15 @@ async deleteGrado(
       throw new BadRequestException('Selecciona una imagen JPG o PNG.');
     }
 
-    const avatarUrl = `/uploads/alumnos/${file.filename}`;
+    const savedImage = await this.storageService.saveImage(file, {
+      folder: 'alumnos',
+      prefix: 'alumno',
+      entityId: id,
+    });
 
     return this.academicosService.actualizarFotoAlumno({
       idEstudiante: Number(id),
-      avatarUrl,
+      avatarUrl: savedImage.url,
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
