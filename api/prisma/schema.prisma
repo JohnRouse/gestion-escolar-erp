@@ -122,6 +122,7 @@ model Colegio {
   telefono        String?  @db.VarChar(30)
   logo_url        String?  @db.VarChar(500)
   color_principal String?  @db.VarChar(20)
+  cabecera_libreta_texto String? @db.VarChar(150)
   estado          String   @default("Activo") @db.VarChar(20)
   created_at      DateTime @default(now())
 

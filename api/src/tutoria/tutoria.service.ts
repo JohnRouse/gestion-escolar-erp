@@ -241,6 +241,7 @@ export class TutoriaService {
         nombre: colegio.nombre,
         nombre_corto: colegio.nombre_corto,
         codigo: colegio.codigo,
+        cabecera_libreta_texto: colegio.cabecera_libreta_texto,
         direccion: colegio.direccion,
         telefono: colegio.telefono,
         logo_url: colegio.logo_url,
@@ -258,6 +259,7 @@ export class TutoriaService {
         nombre?: string;
         nombre_corto?: string | null;
         codigo?: string | null;
+        cabecera_libreta_texto?: string | null;
         logo_url?: string | null;
         color_principal?: string | null;
         direccion?: string | null;
@@ -282,6 +284,9 @@ export class TutoriaService {
     }
 
     const logoUrl = this.normalizarTextoLibre(params.body.logo_url, 500);
+    const cabeceraTexto =
+      this.normalizarTextoLibre(params.body.cabecera_libreta_texto, 150) ||
+      this.normalizarTextoLibre(params.body.codigo, 150);
 
     if (logoUrl && !/^(https?:\/\/|data:image\/|\/uploads\/|uploads\/)/i.test(logoUrl)) {
       throw new BadRequestException('La URL del escudo debe ser https://, data:image o una ruta /uploads/.');
@@ -294,7 +299,7 @@ export class TutoriaService {
       data: {
         nombre,
         nombre_corto: this.normalizarTextoLibre(params.body.nombre_corto, 50),
-        codigo: this.normalizarTextoLibre(params.body.codigo, 30),
+        cabecera_libreta_texto: cabeceraTexto,
         logo_url: logoUrl,
         color_principal: color,
         direccion: this.normalizarTextoLibre(params.body.direccion, 255),
@@ -309,6 +314,7 @@ export class TutoriaService {
         nombre: actualizado.nombre,
         nombre_corto: actualizado.nombre_corto,
         codigo: actualizado.codigo,
+        cabecera_libreta_texto: actualizado.cabecera_libreta_texto,
         direccion: actualizado.direccion,
         telefono: actualizado.telefono,
         logo_url: actualizado.logo_url,
@@ -711,6 +717,7 @@ export class TutoriaService {
         id_matricula: mat.id_matricula,
         codigo: mat.codigo_matricula || mat.estudiante.codigo_estudiante || `MAT-${mat.id_matricula}`,
         alumno: this.formatAlumno(mat.estudiante.persona),
+        avatar_url: mat.estudiante.avatar_url || null,
         promedio: prom.promedio,
         cursos_desaprobados: prom.cursosDesaprobados,
         conducta_pendiente: conductaIds.filter((id) => !calificados.has(id)).length,
@@ -851,6 +858,7 @@ export class TutoriaService {
         id_matricula: matricula.id_matricula,
         codigo: matricula.codigo_matricula || matricula.estudiante.codigo_estudiante || `MAT-${matricula.id_matricula}`,
         nombre: this.formatAlumno(matricula.estudiante.persona),
+        avatar_url: matricula.estudiante.avatar_url || null,
         colegio: matricula.colegio?.nombre || matricula.seccion?.colegio?.nombre || 'Colegio',
         anio: matricula.anio?.nombre_anio || '',
         salon: this.formatSeccion(matricula.seccion),
@@ -1096,7 +1104,7 @@ export class TutoriaService {
     const colorInstitucional = hexToRgb(colegio?.color_principal);
     const logoInfo = await getImageDataUrl(colegio?.logo_url);
     const fotoAlumnoInfo = await getImageDataUrl(matricula.estudiante?.avatar_url);
-    const codigoInstitucional = safe(colegio?.codigo || '');
+    const codigoInstitucional = safe(colegio?.cabecera_libreta_texto || colegio?.codigo || '');
     const nivelNombre = safe(matricula.seccion?.grado?.nivel?.nombre_nivel || '');
     const salonNombre = safe(`${nivelNombre} ${matricula.seccion?.grado?.nombre_grado || ''} ${matricula.seccion?.letra || ''}`);
     const alumnoNombre = safe(resumen.alumno.nombre).toUpperCase();
@@ -1210,7 +1218,29 @@ export class TutoriaService {
 
     if (fotoAlumnoInfo) {
       try {
-        doc.addImage(fotoAlumnoInfo.dataUrl, fotoAlumnoInfo.format, pageWidth - 89, 29, 52, 68, undefined, 'FAST');
+        const boxX = pageWidth - 89;
+        const boxY = 29;
+        const boxW = 52;
+        const boxH = 68;
+        const props = doc.getImageProperties(fotoAlumnoInfo.dataUrl);
+        const imageRatio = props.width / props.height;
+        const boxRatio = boxW / boxH;
+
+        let drawW = boxW;
+        let drawH = boxH;
+
+        if (imageRatio > boxRatio) {
+          drawW = boxW;
+          drawH = boxW / imageRatio;
+        } else {
+          drawH = boxH;
+          drawW = boxH * imageRatio;
+        }
+
+        const drawX = boxX + (boxW - drawW) / 2;
+        const drawY = boxY + (boxH - drawH) / 2;
+
+        doc.addImage(fotoAlumnoInfo.dataUrl, fotoAlumnoInfo.format, drawX, drawY, drawW, drawH, undefined, 'FAST');
       } catch {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);

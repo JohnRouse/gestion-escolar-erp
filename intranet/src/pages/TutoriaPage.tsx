@@ -36,6 +36,7 @@ type AlumnoLista = {
   id_matricula: number;
   codigo: string;
   alumno: string;
+  avatar_url?: string | null;
   promedio: number | null;
   cursos_desaprobados: number;
   conducta_pendiente: number;
@@ -47,7 +48,7 @@ type Criterio = { id_criterio: number; descripcion: string; tipo: string; valor:
 type Evaluacion = { id_evaluacion_det: number; descripcion: string; grupo: string; nota: number };
 type Curso = { id_asignacion: number; curso: string; area: string; docente: string; promedio: number | null; evaluaciones: Evaluacion[] };
 type Detalle = {
-  alumno: { id_matricula: number; codigo: string; nombre: string; colegio: string; salon: string; anio: string };
+  alumno: { id_matricula: number; codigo: string; nombre: string; avatar_url?: string | null; colegio: string; salon: string; anio: string };
   estadistica: { promedio_general: number | null; puntaje: number; cursos_desaprobados: number; orden_merito: number | null; total_alumnos: number; tercio: string };
   cursos: Curso[];
   conducta: Criterio[];
@@ -78,6 +79,24 @@ const escala: { value: Literal; label: string }[] = [
 
 function headers(token: string | null) {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
+
+function assetUrl(url?: string | null) {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:image\/)/i.test(url)) return url;
+  if (url.startsWith('/uploads/')) return `/api${url}`;
+  if (url.startsWith('uploads/')) return `/api/${url}`;
+  return url;
+}
+
+function iniciales(nombre?: string | null) {
+  return String(nombre || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'AL';
 }
 
 function nota(value: number | null | undefined) {
@@ -512,8 +531,34 @@ export default function TutoriaPage() {
           <div className="max-h-[720px] space-y-3 overflow-auto p-4">
             {loadingAlumnos ? <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando alumnos...</div> : alumnos.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">Sin alumnos para mostrar.</div> : alumnosFiltrados.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">No hay alumnos en este filtro.</div> : alumnosFiltrados.map((alumno) => (
               <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`w-full rounded-3xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 erp-list-item-enter ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
-                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{alumno.alumno}</p><p className="mt-1 text-xs font-bold text-slate-400">Código: {alumno.codigo}</p></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(alumno.promedio)}`}>{nota(alumno.promedio)}</span></div>
-                <div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">Desaprobados: {alumno.cursos_desaprobados}</span>{alumno.comentario_pendiente && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-100">Comentario pendiente</span>}</div>
+                <div className="flex items-center gap-3">
+                  {alumno.avatar_url ? (
+                    <img
+                      src={assetUrl(alumno.avatar_url)}
+                      alt={alumno.alumno}
+                      className="h-11 w-11 shrink-0 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                      {iniciales(alumno.alumno)}
+                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-900">{alumno.alumno}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-400">Código: {alumno.codigo}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(alumno.promedio)}`}>{nota(alumno.promedio)}</span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">Desaprobados: {alumno.cursos_desaprobados}</span>
+                      {alumno.comentario_pendiente && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-100">Comentario pendiente</span>}
+                    </div>
+                  </div>
+                </div>
               </button>
             ))}
           </div>

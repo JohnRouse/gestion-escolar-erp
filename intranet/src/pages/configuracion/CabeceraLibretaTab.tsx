@@ -21,6 +21,7 @@ interface ColegioCabecera {
   nombre: string;
   nombre_corto?: string | null;
   codigo?: string | null;
+  cabecera_libreta_texto?: string | null;
   direccion?: string | null;
   telefono?: string | null;
   logo_url?: string | null;
@@ -35,6 +36,7 @@ const emptyColegio: ColegioCabecera = {
   nombre: '',
   nombre_corto: '',
   codigo: '',
+  cabecera_libreta_texto: '',
   direccion: '',
   telefono: '',
   logo_url: '',
@@ -165,7 +167,7 @@ export default function CabeceraLibretaTab() {
         {
           nombre: form.nombre,
           nombre_corto: form.nombre_corto || null,
-          codigo: form.codigo || null,
+          cabecera_libreta_texto: form.cabecera_libreta_texto || form.codigo || null,
           logo_url: form.logo_url || null,
           color_principal: form.color_principal || '#2563eb',
           direccion: form.direccion || null,
@@ -314,17 +316,17 @@ export default function CabeceraLibretaTab() {
                 value={form.nombre_corto || ''}
                 onChange={(event) => updateField('nombre_corto', event.target.value)}
                 className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                placeholder="SGD"
+                placeholder="R.D. N° 003942 - 10 DRELM - UGEL 01"
               />
             </label>
 
             <label>
               <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                Código modular / código interno
+                Texto institucional de libreta
               </span>
               <input
-                value={form.codigo || ''}
-                onChange={(event) => updateField('codigo', event.target.value)}
+                value={form.cabecera_libreta_texto || form.codigo || ''}
+                onChange={(event) => updateField('cabecera_libreta_texto', event.target.value)}
                 className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
                 placeholder="SGD"
               />
@@ -433,7 +435,7 @@ export default function CabeceraLibretaTab() {
                     {titulo || 'INSTITUCIÓN EDUCATIVA'}
                   </p>
                   <p className="mt-1 text-[11px] font-bold text-slate-500">
-                    {form.codigo ? form.codigo : 'R.D. / UGEL / Código institucional'}
+                    {form.cabecera_libreta_texto || form.codigo || 'R.D. / UGEL / Código institucional'}
                   </p>
                   <p className="mt-2 text-sm font-black text-slate-900">BOLETA DE NOTAS - 2027</p>
                   <p className="text-xs font-black text-slate-700">NIVEL INICIAL - BIMESTRE 1</p>

@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -104,6 +105,7 @@ export default function ApoderadosPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<ApoderadoForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmEditApoderado, setConfirmEditApoderado] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
   const params = useMemo(() => {
@@ -182,7 +184,7 @@ export default function ApoderadosPage() {
   };
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full space-y-5 erp-page-enter">
       <PageHeader
         eyebrow="Comunidad escolar"
         title="Apoderados"
@@ -229,7 +231,7 @@ export default function ApoderadosPage() {
       </div>
 
       {/* ── Tabla de apoderados ── */}
-      <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-100/80">
+      <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white/95 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] ring-1 ring-slate-100/70">
 
         {/* Encabezado de columnas */}
         <div className="hidden border-b border-slate-100 bg-slate-50/60 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.6fr_auto] xl:gap-4">
@@ -265,7 +267,7 @@ export default function ApoderadosPage() {
               return (
                 <div
                   key={apoderado.id_persona}
-                  className="group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50/70 xl:grid-cols-[2fr_1.4fr_1.6fr_auto]"
+                  className="group grid items-center gap-4 px-5 py-4 transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50/80 xl:grid-cols-[2fr_1.4fr_1.6fr_auto]"
                 >
                   {/* Columna apoderado */}
                   <div className="flex min-w-0 items-center gap-3">
@@ -382,7 +384,7 @@ export default function ApoderadosPage() {
       {/* ── Modal de detalle ── */}
       {detalleOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
 
             {/* Header del modal */}
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
@@ -490,7 +492,7 @@ export default function ApoderadosPage() {
       {/* ── Modal de edición ── */}
       {editOpen && form && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
             <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar apoderado</h3>
@@ -538,7 +540,7 @@ export default function ApoderadosPage() {
               </button>
               <button
                 type="button"
-                onClick={guardarEdicion}
+                onClick={() => setConfirmEditApoderado(true)}
                 disabled={saving}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 text-sm font-bold text-white transition hover:bg-accent-600 disabled:opacity-50"
               >
@@ -549,6 +551,22 @@ export default function ApoderadosPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmEditApoderado}
+        eyebrow="Apoderado"
+        title="Confirmar edición"
+        description="Se actualizarán los datos generales del apoderado. Esta información puede usarse en comunicaciones, reportes y vinculación familiar."
+        tone="neutral"
+        confirmLabel="Sí, guardar"
+        cancelLabel="Cancelar"
+        loading={saving}
+        onCancel={() => setConfirmEditApoderado(false)}
+        onConfirm={() => {
+          setConfirmEditApoderado(false);
+          void guardarEdicion();
+        }}
+      />
     </div>
   );
 }

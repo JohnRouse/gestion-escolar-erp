@@ -31,6 +31,7 @@ export class TutoriaController {
       nombre?: string;
       nombre_corto?: string | null;
       codigo?: string | null;
+      cabecera_libreta_texto?: string | null;
       logo_url?: string | null;
       color_principal?: string | null;
       direccion?: string | null;

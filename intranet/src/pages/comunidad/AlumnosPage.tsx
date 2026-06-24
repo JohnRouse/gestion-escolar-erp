@@ -17,6 +17,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -118,6 +119,10 @@ export default function AlumnosPage() {
   const [form, setForm] = useState<AlumnoForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarDraft, setAvatarDraft] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [avatarZoom, setAvatarZoom] = useState(1.08);
+  const [avatarOffsetY, setAvatarOffsetY] = useState(0);
+  const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
   const params = useMemo(() => {
@@ -174,6 +179,102 @@ export default function AlumnosPage() {
     setForm(toForm(detalle));
     setEditOpen(true);
     setMensaje(null);
+  };
+
+  const prepararFotoAlumno = (file?: File | null) => {
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      const errorMessage = 'Selecciona una imagen JPG o PNG.';
+      setMensaje(errorMessage);
+      showToast({ type: 'error', title: 'Formato no permitido', message: errorMessage });
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      const errorMessage = 'La imagen no debe superar los 3 MB.';
+      setMensaje(errorMessage);
+      showToast({ type: 'error', title: 'Imagen muy pesada', message: errorMessage });
+      return;
+    }
+
+    if (avatarDraft?.previewUrl) {
+      URL.revokeObjectURL(avatarDraft.previewUrl);
+    }
+
+    setAvatarZoom(1.08);
+    setAvatarOffsetY(0);
+    setAvatarDraft({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    });
+  };
+
+  const crearFotoAjustada = async (file: File, zoom: number, offsetY: number) => {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
+    const width = 420;
+    const height = 560;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return file;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    const baseScale = Math.max(width / image.width, height / image.height);
+    const scale = baseScale * zoom;
+    const drawW = image.width * scale;
+    const drawH = image.height * scale;
+    const drawX = (width - drawW) / 2;
+    const drawY = (height - drawH) / 2 + offsetY;
+
+    ctx.drawImage(image, drawX, drawY, drawW, drawH);
+
+    return new Promise<File>((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+
+          resolve(
+            new File(
+              [blob],
+              file.name.replace(/\.(png|jpg|jpeg)$/i, '') + '-libreta.jpg',
+              { type: 'image/jpeg' },
+            ),
+          );
+        },
+        'image/jpeg',
+        0.92,
+      );
+    });
+  };
+
+  const confirmarSubidaFoto = async () => {
+    if (!avatarDraft) return;
+
+    const adjustedFile = await crearFotoAjustada(
+      avatarDraft.file,
+      avatarZoom,
+      avatarOffsetY,
+    );
+
+    await subirFotoAlumno(adjustedFile);
+
+    URL.revokeObjectURL(avatarDraft.previewUrl);
+    setAvatarDraft(null);
   };
 
   const subirFotoAlumno = async (file?: File | null) => {
@@ -278,7 +379,7 @@ export default function AlumnosPage() {
   const hasFilters = q.trim() !== '' || estado !== 'Todos';
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full space-y-5 erp-page-enter">
       <PageHeader
         eyebrow="Comunidad escolar"
         title="Alumnos"
@@ -350,7 +451,7 @@ export default function AlumnosPage() {
       </div>
 
       {/* ── Tabla de alumnos ── */}
-      <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-100/80">
+      <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white/95 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] ring-1 ring-slate-100/70">
         {/* Encabezado de columnas */}
         <div className="hidden border-b border-slate-100 bg-slate-50/60 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumno</span>
@@ -394,7 +495,7 @@ export default function AlumnosPage() {
                       <img
                         src={assetUrl(alumno.avatar_url)}
                         alt={nombre}
-                        className="h-11 w-11 rounded-2xl object-cover ring-1 ring-slate-200"
+                        className="h-11 w-11 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
                       />
                     ) : (
                       <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
@@ -518,7 +619,7 @@ export default function AlumnosPage() {
       {/* ── Modal de detalle ── */}
       {detalleOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
             {/* Header del modal */}
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
               <div className="flex items-center gap-4">
@@ -527,7 +628,7 @@ export default function AlumnosPage() {
                     <img
                       src={assetUrl(detalle.avatar_url)}
                       alt={fullName(detalle.persona)}
-                      className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200"
+                      className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
                     />
                   ) : (
                     <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
@@ -568,7 +669,7 @@ export default function AlumnosPage() {
                         onChange={(event) => {
                           const file = event.target.files?.[0];
                           event.target.value = '';
-                          void subirFotoAlumno(file);
+                          prepararFotoAlumno(file);
                         }}
                       />
                     </label>
@@ -683,7 +784,7 @@ export default function AlumnosPage() {
       {/* ── Modal de edición ── */}
       {editOpen && form && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
             <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar alumno</h3>
@@ -731,7 +832,7 @@ export default function AlumnosPage() {
               </button>
               <button
                 type="button"
-                onClick={guardarEdicion}
+                onClick={() => setConfirmEditAlumno(true)}
                 disabled={saving}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 text-sm font-bold text-white transition hover:bg-accent-600 disabled:opacity-50"
               >
@@ -742,6 +843,126 @@ export default function AlumnosPage() {
           </div>
         </div>
       )}
+
+      {avatarDraft && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
+          <section className="w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-200 erp-detail-enter">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-500">
+                  Foto del alumno
+                </p>
+                <h3 className="mt-1 text-lg font-black text-slate-950">
+                  Ajustar foto del alumno
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  Ajusta el encuadre antes de guardar. Esta imagen aparecerá en la libreta.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  URL.revokeObjectURL(avatarDraft.previewUrl);
+                  setAvatarDraft(null);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-5 md:grid-cols-[260px_minmax(0,1fr)]">
+              <div className="flex justify-center">
+                <div className="h-[280px] w-[210px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-inner">
+                  <img
+                    src={avatarDraft.previewUrl}
+                    alt="Vista previa"
+                    className="h-full w-full object-cover"
+                    style={{
+                      transform: `scale(${avatarZoom}) translateY(${avatarOffsetY}px)`,
+                      transformOrigin: 'center',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="rounded-3xl bg-blue-50 p-4 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
+                  Usa el zoom para acercar el rostro y el ajuste vertical para centrarlo mejor.
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Zoom
+                  </span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="1.8"
+                    step="0.02"
+                    value={avatarZoom}
+                    onChange={(event) => setAvatarZoom(Number(event.target.value))}
+                    className="w-full"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Ajuste vertical
+                  </span>
+                  <input
+                    type="range"
+                    min="-90"
+                    max="90"
+                    step="2"
+                    value={avatarOffsetY}
+                    onChange={(event) => setAvatarOffsetY(Number(event.target.value))}
+                    className="w-full"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  URL.revokeObjectURL(avatarDraft.previewUrl);
+                  setAvatarDraft(null);
+                }}
+                className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmarSubidaFoto()}
+                disabled={uploadingAvatar}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {uploadingAvatar && <Loader2 size={15} className="animate-spin" />}
+                Confirmar y subir
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmEditAlumno}
+        eyebrow="Alumno"
+        title="Confirmar edición"
+        description="Se actualizarán los datos generales del alumno. Esta información puede usarse en matrícula, reportes y libreta."
+        tone="neutral"
+        confirmLabel="Sí, guardar"
+        cancelLabel="Cancelar"
+        loading={saving}
+        onCancel={() => setConfirmEditAlumno(false)}
+        onConfirm={() => {
+          setConfirmEditAlumno(false);
+          void guardarEdicion();
+        }}
+      />
     </div>
   );
 }
