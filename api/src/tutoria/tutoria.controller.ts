@@ -9,6 +9,43 @@ import { TutoriaService } from './tutoria.service';
 export class TutoriaController {
   constructor(private readonly tutoriaService: TutoriaService) {}
 
+  @Get('libreta/config')
+  @Roles('Admin', 'Director')
+  async obtenerCabeceraLibreta(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.obtenerCabeceraLibretaConfig(req.user, {
+      scope,
+      colegioId,
+    });
+  }
+
+  @Patch('libreta/config')
+  @Roles('Admin', 'Director')
+  async actualizarCabeceraLibreta(
+    @Request() req,
+    @Body()
+    body: {
+      nombre?: string;
+      nombre_corto?: string | null;
+      codigo?: string | null;
+      logo_url?: string | null;
+      color_principal?: string | null;
+      direccion?: string | null;
+      telefono?: string | null;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.tutoriaService.actualizarCabeceraLibretaConfig(req.user, {
+      scope,
+      colegioId,
+      body,
+    });
+  }
+
   @Get('criterios')
   @Roles('Admin', 'Director')
   async listarCriterios(

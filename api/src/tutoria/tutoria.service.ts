@@ -226,6 +226,97 @@ export class TutoriaService {
     };
   }
 
+
+  private normalizarTextoLibre(value: any, max = 500) {
+    const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+    return text ? text.slice(0, max) : null;
+  }
+
+  async obtenerCabeceraLibretaConfig(user: JwtUser, query: { scope?: string; colegioId?: string }) {
+    const { colegio } = await this.getColegioConfigTutoria(user, query);
+
+    return {
+      colegio: {
+        id_colegio: colegio.id_colegio,
+        nombre: colegio.nombre,
+        nombre_corto: colegio.nombre_corto,
+        codigo: colegio.codigo,
+        direccion: colegio.direccion,
+        telefono: colegio.telefono,
+        logo_url: colegio.logo_url,
+        color_principal: colegio.color_principal || '#2563eb',
+      },
+    };
+  }
+
+  async actualizarCabeceraLibretaConfig(
+    user: JwtUser,
+    params: {
+      scope?: string;
+      colegioId?: string;
+      body: {
+        nombre?: string;
+        nombre_corto?: string | null;
+        codigo?: string | null;
+        logo_url?: string | null;
+        color_principal?: string | null;
+        direccion?: string | null;
+        telefono?: string | null;
+      };
+    },
+  ) {
+    const { colegio } = await this.getColegioConfigTutoria(user, {
+      scope: params.scope,
+      colegioId: params.colegioId,
+    });
+
+    const nombre = this.normalizarTextoLibre(params.body.nombre, 150);
+    const color = this.normalizarTextoLibre(params.body.color_principal, 20) || '#2563eb';
+
+    if (!nombre) {
+      throw new BadRequestException('El nombre oficial del colegio es obligatorio.');
+    }
+
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+      throw new BadRequestException('El color institucional debe tener formato hexadecimal. Ejemplo: #2563eb');
+    }
+
+    const logoUrl = this.normalizarTextoLibre(params.body.logo_url, 500);
+
+    if (logoUrl && !/^(https?:\/\/|data:image\/|\/uploads\/|uploads\/)/i.test(logoUrl)) {
+      throw new BadRequestException('La URL del escudo debe ser https://, data:image o una ruta /uploads/.');
+    }
+
+    const actualizado = await this.prisma.colegio.update({
+      where: {
+        id_colegio: colegio.id_colegio,
+      },
+      data: {
+        nombre,
+        nombre_corto: this.normalizarTextoLibre(params.body.nombre_corto, 50),
+        codigo: this.normalizarTextoLibre(params.body.codigo, 30),
+        logo_url: logoUrl,
+        color_principal: color,
+        direccion: this.normalizarTextoLibre(params.body.direccion, 255),
+        telefono: this.normalizarTextoLibre(params.body.telefono, 30),
+      },
+    });
+
+    return {
+      message: 'Cabecera de libreta actualizada correctamente.',
+      colegio: {
+        id_colegio: actualizado.id_colegio,
+        nombre: actualizado.nombre,
+        nombre_corto: actualizado.nombre_corto,
+        codigo: actualizado.codigo,
+        direccion: actualizado.direccion,
+        telefono: actualizado.telefono,
+        logo_url: actualizado.logo_url,
+        color_principal: actualizado.color_principal || '#2563eb',
+      },
+    };
+  }
+
   async listarCriteriosConfig(user: JwtUser, query: { scope?: string; colegioId?: string }) {
     const { colegio, idColegio, idTenant } = await this.getColegioConfigTutoria(user, query);
 
