@@ -1,6 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { jsPDF } from 'jspdf';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import * as https from 'https';
+import * as http from 'http';
 
 type JwtUser = { userId: number; username: string; rol: string };
 type TipoCriterio = 'CONDUCTA' | 'PARTICIPACION_FAMILIAR';
@@ -821,6 +825,136 @@ export class TutoriaService {
 
     const safe = (value: any) => String(value ?? '').replace(/\s+/g, ' ').trim();
 
+    const hexToRgb = (hex?: string | null): [number, number, number] => {
+      const clean = safe(hex || '').replace('#', '');
+
+      if (!/^[0-9a-fA-F]{6}$/.test(clean)) return [190, 70, 78];
+
+      return [
+        parseInt(clean.slice(0, 2), 16),
+        parseInt(clean.slice(2, 4), 16),
+        parseInt(clean.slice(4, 6), 16),
+      ];
+    };
+
+    const downloadRemoteImage = (imageUrl: string, redirects = 0): Promise<{ buffer: Buffer; contentType: string }> =>
+      new Promise((resolve, reject) => {
+        if (redirects > 4) {
+          reject(new Error('Demasiadas redirecciones al descargar imagen.'));
+          return;
+        }
+
+        const client = imageUrl.startsWith('https://') ? https : http;
+
+        const req = client.get(imageUrl, (response) => {
+          const status = response.statusCode || 0;
+          const location = response.headers.location;
+
+          if ([301, 302, 303, 307, 308].includes(status) && location) {
+            const nextUrl = new URL(location, imageUrl).toString();
+            response.resume();
+
+            downloadRemoteImage(nextUrl, redirects + 1)
+              .then(resolve)
+              .catch(reject);
+
+            return;
+          }
+
+          if (status < 200 || status >= 300) {
+            response.resume();
+            reject(new Error(`No se pudo descargar imagen. HTTP ${status}`));
+            return;
+          }
+
+          const chunks: Buffer[] = [];
+
+          response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+          response.on('end', () => {
+            resolve({
+              buffer: Buffer.concat(chunks),
+              contentType: String(response.headers['content-type'] || ''),
+            });
+          });
+        });
+
+        req.on('error', reject);
+        req.setTimeout(8000, () => {
+          req.destroy(new Error('Tiempo de descarga de imagen agotado.'));
+        });
+      });
+
+    const getImageDataUrl = async (
+      imageUrl?: string | null,
+    ): Promise<{ dataUrl: string; format: 'PNG' | 'JPEG' } | null> => {
+      const raw = safe(imageUrl);
+
+      if (!raw) return null;
+
+      if (raw.startsWith('data:image/')) {
+        return {
+          dataUrl: raw,
+          format: raw.includes('image/png') ? 'PNG' : 'JPEG',
+        };
+      }
+
+      const lowerRaw = raw.toLowerCase();
+      const inferFormat = (value: string, contentType = ''): 'PNG' | 'JPEG' | null => {
+        const lower = value.toLowerCase();
+        const ct = contentType.toLowerCase();
+
+        if (ct.includes('image/png') || lower.endsWith('.png')) return 'PNG';
+        if (ct.includes('image/jpeg') || ct.includes('image/jpg') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'JPEG';
+
+        return null;
+      };
+
+      if (/^https?:\/\//i.test(raw)) {
+        try {
+          const downloaded = await downloadRemoteImage(raw);
+          const format = inferFormat(raw, downloaded.contentType);
+
+          if (!format) return null;
+
+          const mime = format === 'PNG' ? 'image/png' : 'image/jpeg';
+
+          return {
+            dataUrl: `data:${mime};base64,${downloaded.buffer.toString('base64')}`,
+            format,
+          };
+        } catch {
+          return null;
+        }
+      }
+
+      const clean = raw.split('?')[0];
+      let localPath = '';
+
+      if (clean.startsWith('/uploads/')) {
+        localPath = join(process.cwd(), clean.replace(/^\/uploads\//, 'uploads/'));
+      } else if (clean.startsWith('uploads/')) {
+        localPath = join(process.cwd(), clean);
+      } else if (clean.startsWith('/')) {
+        localPath = clean;
+      } else {
+        localPath = join(process.cwd(), clean);
+      }
+
+      if (!existsSync(localPath)) return null;
+
+      const format = inferFormat(localPath);
+
+      if (!format) return null;
+
+      const mime = format === 'PNG' ? 'image/png' : 'image/jpeg';
+      const base64 = readFileSync(localPath).toString('base64');
+
+      return {
+        dataUrl: `data:${mime};base64,${base64}`,
+        format,
+      };
+    };
+
     const nota = (value: number | null | undefined) => {
       if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
       return String(Math.round(Number(value)));
@@ -865,8 +999,13 @@ export class TutoriaService {
 
     const bimNumero = Math.min(4, Math.max(1, Number(bimestre?.numero || 1)));
     const periodoNombre = bimestre?.nombre || `${bimNumero}° BIMESTRE`;
-    const colegioNombre = safe(matricula.colegio?.nombre || matricula.seccion?.colegio?.nombre || resumen.alumno.colegio || 'Colegio Privado');
+    const colegio = matricula.colegio || matricula.seccion?.colegio;
+    const colegioNombre = safe(colegio?.nombre || resumen.alumno.colegio || 'Colegio Privado');
     const colegioTitulo = colegioNombre.replace(/^Colegio\s+Privado\s+/i, '').toUpperCase();
+    const colorInstitucional = hexToRgb(colegio?.color_principal);
+    const logoInfo = await getImageDataUrl(colegio?.logo_url);
+    const fotoAlumnoInfo = await getImageDataUrl(matricula.estudiante?.avatar_url);
+    const codigoInstitucional = safe(colegio?.codigo || '');
     const nivelNombre = safe(matricula.seccion?.grado?.nivel?.nombre_nivel || '');
     const salonNombre = safe(`${nivelNombre} ${matricula.seccion?.grado?.nombre_grado || ''} ${matricula.seccion?.letra || ''}`);
     const alumnoNombre = safe(resumen.alumno.nombre).toUpperCase();
@@ -956,28 +1095,63 @@ export class TutoriaService {
     doc.setDrawColor(90, 90, 90);
     doc.setLineWidth(0.7);
 
-    // Logo referencial
+    // Logo institucional
     doc.roundedRect(36, 26, 54, 64, 2, 2, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.setTextColor(110, 60, 60);
-    doc.text('ESCUDO', 63, 61, { align: 'center' });
 
-    // Foto
+    if (logoInfo) {
+      try {
+        doc.addImage(logoInfo.dataUrl, logoInfo.format, 39, 29, 48, 58, undefined, 'FAST');
+      } catch {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(110, 60, 60);
+        doc.text('ESCUDO', 63, 61, { align: 'center' });
+      }
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(110, 60, 60);
+      doc.text('ESCUDO', 63, 61, { align: 'center' });
+    }
+
+    // Foto del alumno
     doc.rect(pageWidth - 92, 26, 58, 74, 'S');
+
+    if (fotoAlumnoInfo) {
+      try {
+        doc.addImage(fotoAlumnoInfo.dataUrl, fotoAlumnoInfo.format, pageWidth - 89, 29, 52, 68, undefined, 'FAST');
+      } catch {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text('FOTO', pageWidth - 63, 64, { align: 'center' });
+      }
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text('FOTO', pageWidth - 63, 64, { align: 'center' });
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(55, 66, 98);
     doc.setFontSize(20);
     doc.text('Colegio Privado', pageWidth / 2, 35, { align: 'center' });
 
-    doc.setTextColor(190, 70, 78);
-    doc.setFontSize(30);
-    doc.text(colegioTitulo || 'SANTA MARÍA VICTORIA', pageWidth / 2, 66, { align: 'center' });
+    doc.setTextColor(colorInstitucional[0], colorInstitucional[1], colorInstitucional[2]);
+    doc.setFontSize(colegioTitulo.length > 24 ? 24 : 30);
+    doc.text(colegioTitulo || 'INSTITUCIÓN EDUCATIVA', pageWidth / 2, 66, { align: 'center', maxWidth: 430 });
 
     doc.setTextColor(55, 66, 98);
     doc.setFontSize(9);
-    doc.text('R.D. N° 003942 - 10 DRELM - UGEL 01 S.J.M', pageWidth / 2, 86, { align: 'center' });
+    doc.text(
+      codigoInstitucional
+        ? `Código modular: ${codigoInstitucional}`
+        : 'R.D. N° 003942 - 10 DRELM - UGEL 01 S.J.M',
+      pageWidth / 2,
+      86,
+      { align: 'center' },
+    );
 
     doc.setTextColor(30, 30, 30);
     doc.setFontSize(14);
