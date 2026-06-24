@@ -1187,18 +1187,18 @@ export class TutoriaService {
     doc.setLineWidth(0.7);
 
     // Logo institucional
-    doc.roundedRect(36, 26, 54, 64, 2, 2, 'S');
-
     if (logoInfo) {
       try {
-        doc.addImage(logoInfo.dataUrl, logoInfo.format, 39, 29, 48, 58, undefined, 'FAST');
+        doc.addImage(logoInfo.dataUrl, logoInfo.format, 36, 26, 54, 64, undefined, 'FAST');
       } catch {
+        doc.roundedRect(36, 26, 54, 64, 2, 2, 'S');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(110, 60, 60);
         doc.text('ESCUDO', 63, 61, { align: 'center' });
       }
     } else {
+      doc.roundedRect(36, 26, 54, 64, 2, 2, 'S');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(110, 60, 60);
@@ -1237,7 +1237,7 @@ export class TutoriaService {
     doc.setFontSize(9);
     doc.text(
       codigoInstitucional
-        ? `Código modular: ${codigoInstitucional}`
+        ? codigoInstitucional
         : 'R.D. N° 003942 - 10 DRELM - UGEL 01 S.J.M',
       pageWidth / 2,
       86,
@@ -1249,7 +1249,7 @@ export class TutoriaService {
     doc.text(`BOLETA DE NOTAS - ${matricula.anio?.nombre_anio?.match(/\d{4}/)?.[0] || new Date().getFullYear()}`, pageWidth / 2, 106, { align: 'center' });
 
     doc.setFontSize(9);
-    doc.text(`${nivelNombre.toUpperCase() || 'NIVEL'} - ${periodoNombre.toUpperCase()}`, pageWidth / 2, 120, { align: 'center' });
+    doc.text(`NIVEL ${nivelNombre.toUpperCase() || ''} - ${periodoNombre.toUpperCase()}`.replace(/\s+/g, ' ').trim(), pageWidth / 2, 120, { align: 'center' });
 
     // Datos superiores
     const dataY = 140;

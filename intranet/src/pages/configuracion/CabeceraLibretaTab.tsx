@@ -412,7 +412,7 @@ export default function CabeceraLibretaTab() {
           <div className="bg-slate-50 p-5">
             <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
               <div className="grid grid-cols-[56px_minmax(0,1fr)_56px] items-start gap-3">
-                <div className="flex h-16 w-14 items-center justify-center overflow-hidden rounded border border-slate-300 bg-white">
+                <div className="flex h-16 w-14 items-center justify-center overflow-hidden rounded bg-white">
                   {form.logo_url ? (
                     <img
                       src={form.logo_url}
@@ -433,10 +433,10 @@ export default function CabeceraLibretaTab() {
                     {titulo || 'INSTITUCIÓN EDUCATIVA'}
                   </p>
                   <p className="mt-1 text-[11px] font-bold text-slate-500">
-                    {form.codigo ? `Código modular: ${form.codigo}` : 'R.D. / UGEL / Código institucional'}
+                    {form.codigo ? form.codigo : 'R.D. / UGEL / Código institucional'}
                   </p>
                   <p className="mt-2 text-sm font-black text-slate-900">BOLETA DE NOTAS - 2027</p>
-                  <p className="text-xs font-black text-slate-700">INICIAL - BIMESTRE 1</p>
+                  <p className="text-xs font-black text-slate-700">NIVEL INICIAL - BIMESTRE 1</p>
                 </div>
 
                 <div className="flex h-20 w-14 items-center justify-center rounded border border-slate-300 bg-white">
