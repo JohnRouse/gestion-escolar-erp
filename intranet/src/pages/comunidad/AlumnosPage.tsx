@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   ChevronLeft,
@@ -51,7 +52,7 @@ type AlumnoForm = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
 
 const fullName = (p: AlumnoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -70,7 +71,6 @@ const assetUrl = (url?: string | null) => {
   return url;
 };
 
-// Badge de estado de matrícula
 const estadoBadge: Record<string, string> = {
   Activo: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   Reserva: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
@@ -114,6 +114,7 @@ export default function AlumnosPage() {
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalle, setDetalle] = useState<AlumnoItem | null>(null);
+  const [avatarViewOpen, setAvatarViewOpen] = useState(false); // Nuevo estado para el visor de fotos
 
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<AlumnoForm | null>(null);
@@ -392,7 +393,7 @@ export default function AlumnosPage() {
       />
 
       {/* ── Barra de búsqueda y filtros ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
         {/* Búsqueda */}
         <div className="relative flex-1">
           <Search
@@ -406,7 +407,7 @@ export default function AlumnosPage() {
               setQ(e.target.value);
             }}
             placeholder="Buscar por código, DNI, alumno, apoderado, distrito…"
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:ring-4 focus:ring-accent-100"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           />
           {q && (
             <button
@@ -428,7 +429,7 @@ export default function AlumnosPage() {
           <select
             value={estado}
             onChange={(e) => { setPage(1); setEstado(e.target.value); }}
-            className="h-11 appearance-none rounded-2xl border border-slate-200 bg-white py-0 pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:ring-4 focus:ring-accent-100"
+            className="h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 py-0 pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           >
             <option value="Todos">Todos los estados</option>
             <option value="Pre-matriculado">Pre-matriculado</option>
@@ -438,12 +439,12 @@ export default function AlumnosPage() {
           </select>
         </div>
 
-        {/* Limpiar filtros — solo visible si hay filtros activos */}
+        {/* Limpiar filtros */}
         {hasFilters && (
           <button
             type="button"
             onClick={() => { setQ(''); setEstado('Todos'); setPage(1); }}
-            className="h-11 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            className="h-11 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             Limpiar
           </button>
@@ -451,7 +452,7 @@ export default function AlumnosPage() {
       </div>
 
       {/* ── Tabla de alumnos ── */}
-      <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white/95 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] ring-1 ring-slate-100/70">
+      <div className="overflow-hidden rounded-[20px] border border-slate-100 bg-white shadow-xl ring-1 ring-slate-100/70">
         {/* Encabezado de columnas */}
         <div className="hidden border-b border-slate-100 bg-slate-50/60 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumno</span>
@@ -487,7 +488,7 @@ export default function AlumnosPage() {
               return (
                 <div
                   key={alumno.id_persona}
-                  className="group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50/70 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
+                  className="group grid items-center gap-4 px-5 py-4 transition-all hover:bg-slate-50/70 border-l-4 border-transparent hover:border-accent-500 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
                 >
                   {/* Columna alumno */}
                   <div className="flex min-w-0 items-center gap-3">
@@ -568,7 +569,7 @@ export default function AlumnosPage() {
                     <button
                       type="button"
                       onClick={() => abrirDetalle(alumno.id_persona)}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 group-hover:border-slate-300"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 group-hover:border-accent-300"
                     >
                       <Eye size={13} />
                       Ver
@@ -616,20 +617,29 @@ export default function AlumnosPage() {
         </div>
       </div>
 
-      {/* ── Modal de detalle ── */}
-      {detalleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
+      {/* ── Modal de detalle usando Portal ── */}
+      {detalleOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
             {/* Header del modal */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div className="flex items-center gap-4">
                 {detalle && (
                   detalle.avatar_url ? (
-                    <img
-                      src={assetUrl(detalle.avatar_url)}
-                      alt={fullName(detalle.persona)}
-                      className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setAvatarViewOpen(true)}
+                      className="group relative h-14 w-14 shrink-0 rounded-2xl outline-none transition focus:ring-4 focus:ring-accent-100"
+                    >
+                      <img
+                        src={assetUrl(detalle.avatar_url)}
+                        alt={fullName(detalle.persona)}
+                        className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200 transition group-hover:opacity-80 group-hover:ring-accent-300"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/30 group-hover:opacity-100">
+                        <Eye size={18} className="text-white" />
+                      </div>
+                    </button>
                   ) : (
                     <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
                   )
@@ -677,7 +687,7 @@ export default function AlumnosPage() {
                     <button
                       type="button"
                       onClick={abrirEdicion}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
                     >
                       <Edit3 size={13} />
                       Editar
@@ -720,11 +730,7 @@ export default function AlumnosPage() {
                             key={r.apoderado.id_persona}
                             className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
                           >
-                            <PersonAvatar
-  persona={r.apoderado.persona}
-  size="sm"
-  rounded="xl"
-/>
+                            <PersonAvatar persona={r.apoderado.persona} size="sm" rounded="xl" />
                             <div>
                               <p className="text-sm font-bold text-slate-800">
                                 {r.parentesco}:{' '}
@@ -778,14 +784,40 @@ export default function AlumnosPage() {
               ) : null}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ── Modal de edición ── */}
-      {editOpen && form && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
+      {/* ── Modal de visualización de foto (Visor) ── */}
+      {avatarViewOpen && detalle?.avatar_url && createPortal(
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setAvatarViewOpen(false)}
+        >
+          <div className="relative flex max-h-[90vh] w-full max-w-3xl items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setAvatarViewOpen(false)}
+              className="absolute -top-2 right-0 z-10 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 sm:top-2 sm:right-2"
+            >
+              <X size={20} />
+            </button>
+            <img 
+              src={assetUrl(detalle.avatar_url)} 
+              alt={fullName(detalle.persona)} 
+              className="max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()} 
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modal de edición usando Portal ── */}
+      {editOpen && form && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar alumno</h3>
                 <p className="mt-0.5 text-xs text-slate-400">
@@ -801,7 +833,7 @@ export default function AlumnosPage() {
               </button>
             </div>
 
-            <div className="grid max-h-[72vh] gap-3 overflow-y-auto p-6 md:grid-cols-2">
+            <div className="grid max-h-[72vh] gap-4 overflow-y-auto p-6 md:grid-cols-2">
               <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
               <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
               <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
@@ -822,7 +854,7 @@ export default function AlumnosPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-3 border-t border-slate-100 p-5">
+            <div className="flex justify-end gap-3 border-t border-slate-100 p-5 bg-slate-50/50">
               <button
                 type="button"
                 onClick={() => setEditOpen(false)}
@@ -841,13 +873,14 @@ export default function AlumnosPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {avatarDraft && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
-          <section className="w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-200 erp-detail-enter">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+      {avatarDraft && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
+          <section className="w-full max-w-3xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200 erp-detail-enter my-auto">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-5">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-500">
                   Foto del alumno
@@ -923,7 +956,7 @@ export default function AlumnosPage() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/50 p-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -945,7 +978,8 @@ export default function AlumnosPage() {
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmDialog
@@ -969,7 +1003,7 @@ export default function AlumnosPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:ring-slate-200">
       <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">{label}</p>
       <p className="mt-1.5 text-sm font-bold text-slate-900">{value}</p>
     </div>

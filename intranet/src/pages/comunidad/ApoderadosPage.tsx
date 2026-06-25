@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   Briefcase,
@@ -51,7 +52,7 @@ type ApoderadoForm = {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
 
 const fullName = (p: ApoderadoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -197,7 +198,7 @@ export default function ApoderadosPage() {
       />
 
       {/* ── Barra de búsqueda ── */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
         <div className="relative flex-1">
           <Search
             size={15}
@@ -207,7 +208,7 @@ export default function ApoderadosPage() {
             value={q}
             onChange={(e) => { setPage(1); setQ(e.target.value); }}
             placeholder="Buscar por DNI, nombre, teléfono, correo, alumno…"
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:ring-4 focus:ring-accent-100"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           />
           {q && (
             <button
@@ -223,7 +224,7 @@ export default function ApoderadosPage() {
           <button
             type="button"
             onClick={() => { setQ(''); setPage(1); }}
-            className="h-11 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            className="h-11 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             Limpiar
           </button>
@@ -231,8 +232,7 @@ export default function ApoderadosPage() {
       </div>
 
       {/* ── Tabla de apoderados ── */}
-      <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white/95 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] ring-1 ring-slate-100/70">
-
+      <div className="overflow-hidden rounded-[20px] border border-slate-100 bg-white shadow-xl ring-1 ring-slate-100/70">
         {/* Encabezado de columnas */}
         <div className="hidden border-b border-slate-100 bg-slate-50/60 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.6fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderado</span>
@@ -267,7 +267,7 @@ export default function ApoderadosPage() {
               return (
                 <div
                   key={apoderado.id_persona}
-                  className="group grid items-center gap-4 px-5 py-4 transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50/80 xl:grid-cols-[2fr_1.4fr_1.6fr_auto]"
+                  className="group grid items-center gap-4 px-5 py-4 transition-all hover:bg-slate-50/70 border-l-4 border-transparent hover:border-accent-500 xl:grid-cols-[2fr_1.4fr_1.6fr_auto]"
                 >
                   {/* Columna apoderado */}
                   <div className="flex min-w-0 items-center gap-3">
@@ -333,7 +333,7 @@ export default function ApoderadosPage() {
                     <button
                       type="button"
                       onClick={() => abrirDetalle(apoderado.id_persona)}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 group-hover:border-slate-300"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 group-hover:border-accent-300"
                     >
                       <Eye size={13} />
                       Ver
@@ -381,13 +381,12 @@ export default function ApoderadosPage() {
         </div>
       </div>
 
-      {/* ── Modal de detalle ── */}
-      {detalleOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
-
+      {/* ── Modal de detalle usando Portal ── */}
+      {detalleOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
             {/* Header del modal */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div className="flex items-center gap-4">
                 {detalle && (
                   <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
@@ -410,7 +409,7 @@ export default function ApoderadosPage() {
                   <button
                     type="button"
                     onClick={abrirEdicion}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
                   >
                     <Edit3 size={13} />
                     Editar
@@ -486,14 +485,15 @@ export default function ApoderadosPage() {
               ) : null}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ── Modal de edición ── */}
-      {editOpen && form && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
+      {/* ── Modal de edición usando Portal ── */}
+      {editOpen && form && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar apoderado</h3>
                 <p className="mt-0.5 text-xs text-slate-400">
@@ -509,7 +509,7 @@ export default function ApoderadosPage() {
               </button>
             </div>
 
-            <div className="grid max-h-[72vh] gap-3 overflow-y-auto p-6 md:grid-cols-2">
+            <div className="grid max-h-[72vh] gap-4 overflow-y-auto p-6 md:grid-cols-2">
               <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
               <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
               <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
@@ -530,7 +530,7 @@ export default function ApoderadosPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-3 border-t border-slate-100 p-5">
+            <div className="flex justify-end gap-3 border-t border-slate-100 p-5 bg-slate-50/50">
               <button
                 type="button"
                 onClick={() => setEditOpen(false)}
@@ -549,7 +549,8 @@ export default function ApoderadosPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmDialog
@@ -575,7 +576,7 @@ export default function ApoderadosPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:ring-slate-200">
       <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">{label}</p>
       <p className="mt-1.5 text-sm font-bold text-slate-900">{value}</p>
     </div>
