@@ -252,13 +252,13 @@ body {
    Sidebar Carbon-inspired
    ========================================================== */
 
-.carbon-shell aside {
+.carbon-shell .app-sidebar {
   padding: 0 !important;
   background: var(--cds-layer);
   border-right: 1px solid var(--cds-border-subtle);
 }
 
-.carbon-shell aside > div {
+.carbon-shell .app-sidebar > div {
   height: 100vh !important;
   border-radius: 0 !important;
   border: 0 !important;
@@ -269,17 +269,17 @@ body {
   backdrop-filter: none !important;
 }
 
-.carbon-shell aside button {
+.carbon-shell .app-sidebar button {
   border-radius: var(--cds-radius-sm) !important;
   box-shadow: none !important;
 }
 
-.carbon-shell aside button:hover {
+.carbon-shell .app-sidebar button:hover {
   transform: none !important;
 }
 
-.carbon-shell aside [class*="rounded-2xl"],
-.carbon-shell aside [class*="rounded-xl"] {
+.carbon-shell .app-sidebar [class*="rounded-2xl"],
+.carbon-shell .app-sidebar [class*="rounded-xl"] {
   border-radius: var(--cds-radius-sm) !important;
 }
 
@@ -521,27 +521,27 @@ body {
 
 /* ---------- Sidebar más Carbon ---------- */
 
-.carbon-shell aside {
+.carbon-shell .app-sidebar {
   background: #ffffff !important;
 }
 
-.carbon-shell aside > div {
+.carbon-shell .app-sidebar > div {
   border-right: 1px solid #e0e0e0 !important;
 }
 
-.carbon-shell aside button {
+.carbon-shell .app-sidebar button {
   border-radius: 2px !important;
 }
 
-.carbon-shell aside button[class*="bg-slate-950"] {
+.carbon-shell .app-sidebar button[class*="bg-slate-950"] {
   background: #161616 !important;
 }
 
-.carbon-shell aside button[class*="bg-slate-950"] * {
+.carbon-shell .app-sidebar button[class*="bg-slate-950"] * {
   color: #ffffff !important;
 }
 
-.carbon-shell aside [class*="tracking"] {
+.carbon-shell .app-sidebar [class*="tracking"] {
   letter-spacing: 0.12em;
 }
 
@@ -1201,6 +1201,105 @@ body {
 }
 
 /* Anular animaciones que puedan alterar posición vertical */
+.carbon-shell .tutoria-alumnos-list .erp-list-item-enter {
+  animation-name: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ==========================================================
+   Carbon refinement v6
+   Fix definitivo: el estilo del sidebar ya no debe afectar
+   los <aside> internos de páginas como Tutoría o Configuración.
+   ========================================================== */
+
+/* El sidebar real sí conserva el comportamiento Carbon */
+.carbon-shell .app-sidebar {
+  padding: 0 !important;
+  background: var(--cds-layer);
+  border-right: 1px solid var(--cds-border-subtle);
+}
+
+.carbon-shell .app-sidebar > div {
+  height: 100vh !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-right: 1px solid var(--cds-border-subtle) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Los aside internos de las páginas NO deben comportarse como sidebar */
+.carbon-shell main aside {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-self: start !important;
+}
+
+/* Esta era la regla que empujaba el contenido hacia abajo */
+.carbon-shell main aside > div {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-self: start !important;
+}
+
+/* Cabecera de libreta: preview siempre arriba */
+.carbon-shell .cabecera-libreta-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .cabecera-libreta-preview {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.carbon-shell .cabecera-libreta-preview-body {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-top: 20px !important;
+}
+
+.carbon-shell .cabecera-libreta-preview-card {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  align-self: start !important;
+}
+
+/* Tutoría: lista de alumnos siempre arriba */
+.carbon-shell .tutoria-main-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .tutoria-panel-alumnos {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.carbon-shell .tutoria-alumnos-list {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 560px !important;
+  overflow-y: auto !important;
+  padding-top: 16px !important;
+}
+
+.carbon-shell .tutoria-alumno-card {
+  display: block !important;
+  margin-top: 0 !important;
+  margin-bottom: 12px !important;
+}
+
+/* Evita que animaciones muevan verticalmente los alumnos */
 .carbon-shell .tutoria-alumnos-list .erp-list-item-enter {
   animation-name: none !important;
   opacity: 1 !important;
