@@ -1,0 +1,1208 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ==========================================================
+   Carbon-inspired foundation
+   Base visual inspirada en IBM Carbon Design System.
+   No instala @carbon/react; trabaja sobre Tailwind actual.
+   ========================================================== */
+
+:root {
+  --cds-blue-60: #0f62fe;
+  --cds-blue-70: #0043ce;
+  --cds-blue-50: #4589ff;
+  --cds-blue-20: #a6c8ff;
+  --cds-blue-10: #d0e2ff;
+
+  --cds-gray-10: #f4f4f4;
+  --cds-gray-20: #e0e0e0;
+  --cds-gray-30: #c6c6c6;
+  --cds-gray-40: #a8a8a8;
+  --cds-gray-50: #8d8d8d;
+  --cds-gray-60: #6f6f6f;
+  --cds-gray-70: #525252;
+  --cds-gray-80: #393939;
+  --cds-gray-90: #262626;
+  --cds-gray-100: #161616;
+
+  --cds-green-60: #198038;
+  --cds-red-60: #da1e28;
+  --cds-yellow-30: #f1c21b;
+  --cds-cyan-60: #009d9a;
+  --cds-purple-60: #8a3ffc;
+
+  --cds-bg: #f4f4f4;
+  --cds-layer: #ffffff;
+  --cds-layer-alt: #f4f4f4;
+  --cds-border-subtle: #e0e0e0;
+  --cds-border-strong: #8d8d8d;
+  --cds-text-primary: #161616;
+  --cds-text-secondary: #525252;
+  --cds-text-helper: #6f6f6f;
+  --cds-focus: #0f62fe;
+
+  --cds-radius-sm: 2px;
+  --cds-radius-md: 4px;
+  --cds-radius-lg: 8px;
+  --cds-transition: 110ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--cds-bg);
+  color: var(--cds-text-primary);
+}
+
+/* Contenedor general de la intranet */
+.carbon-shell {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--cds-bg);
+  color: var(--cds-text-primary);
+}
+
+.carbon-shell main {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 244, 0.96), rgba(244, 244, 244, 1)),
+    var(--cds-bg);
+}
+
+/* ==========================================================
+   Componentes base existentes del proyecto
+   ========================================================== */
+
+.carbon-shell .btn {
+  border-radius: var(--cds-radius-sm) !important;
+  box-shadow: none !important;
+  font-weight: 500;
+  transition:
+    background-color var(--cds-transition),
+    border-color var(--cds-transition),
+    color var(--cds-transition),
+    transform var(--cds-transition);
+}
+
+.carbon-shell .btn:active {
+  transform: none !important;
+}
+
+.carbon-shell .btn-primary {
+  background: var(--cds-blue-60) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--cds-blue-60) !important;
+}
+
+.carbon-shell .btn-primary:hover {
+  background: var(--cds-blue-70) !important;
+  border-color: var(--cds-blue-70) !important;
+}
+
+.carbon-shell .btn-secondary {
+  background: transparent !important;
+  color: var(--cds-blue-60) !important;
+  border: 1px solid var(--cds-blue-60) !important;
+  box-shadow: none !important;
+}
+
+.carbon-shell .btn-secondary:hover {
+  background: var(--cds-blue-10) !important;
+}
+
+.carbon-shell .btn-ghost {
+  color: var(--cds-text-secondary) !important;
+  border-radius: var(--cds-radius-sm) !important;
+}
+
+.carbon-shell .btn-ghost:hover {
+  background: var(--cds-gray-20) !important;
+  color: var(--cds-text-primary) !important;
+}
+
+.carbon-shell .input {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--cds-gray-50) !important;
+  background: var(--cds-gray-10) !important;
+  box-shadow: none !important;
+  color: var(--cds-text-primary) !important;
+}
+
+.carbon-shell .input:hover {
+  border-bottom-color: var(--cds-gray-70) !important;
+}
+
+.carbon-shell .input:focus {
+  background: #ffffff !important;
+  border-color: transparent !important;
+  border-bottom-color: var(--cds-blue-60) !important;
+  box-shadow: none !important;
+  outline: 2px solid transparent;
+}
+
+.carbon-shell .label {
+  color: var(--cds-text-secondary) !important;
+  font-weight: 600 !important;
+}
+
+.carbon-shell .card {
+  border: 1px solid var(--cds-border-subtle) !important;
+  border-radius: var(--cds-radius-md) !important;
+  box-shadow: none !important;
+  background: var(--cds-layer) !important;
+}
+
+.carbon-shell .section-title {
+  color: var(--cds-text-primary) !important;
+  letter-spacing: -0.01em;
+}
+
+.carbon-shell .subsection-title {
+  color: var(--cds-text-primary) !important;
+}
+
+.carbon-shell .badge {
+  border-radius: var(--cds-radius-sm) !important;
+  font-weight: 600 !important;
+}
+
+/* ==========================================================
+   Header Carbon-inspired
+   Se aplica sobre AppHeader sin reescribir toda su lógica.
+   ========================================================== */
+
+.carbon-shell header {
+  top: 0 !important;
+  padding: 0 !important;
+  background: var(--cds-gray-100);
+  border-bottom: 1px solid var(--cds-gray-80);
+}
+
+.carbon-shell header::before {
+  content: '';
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--cds-blue-60), var(--cds-blue-50), var(--cds-cyan-60));
+}
+
+.carbon-shell header > div.relative {
+  max-width: none !important;
+  height: 56px !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  background: var(--cds-gray-100) !important;
+  box-shadow: none !important;
+  ring: 0 !important;
+  backdrop-filter: none !important;
+}
+
+.carbon-shell header button {
+  border-radius: var(--cds-radius-sm) !important;
+}
+
+.carbon-shell header form {
+  border-radius: 0 !important;
+  border-color: var(--cds-gray-80) !important;
+  background: var(--cds-gray-90) !important;
+  box-shadow: none !important;
+}
+
+.carbon-shell header form input {
+  color: #ffffff !important;
+}
+
+.carbon-shell header form input::placeholder {
+  color: var(--cds-gray-40) !important;
+}
+
+.carbon-shell header svg {
+  color: inherit;
+}
+
+.carbon-shell header p,
+.carbon-shell header span {
+  color: inherit;
+}
+
+/* Botones del header sobre fondo oscuro */
+.carbon-shell header > div.relative > div button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cds-gray-30);
+  box-shadow: none !important;
+}
+
+.carbon-shell header > div.relative > div button:hover {
+  background: var(--cds-gray-90) !important;
+  color: #ffffff !important;
+  transform: none !important;
+}
+
+/* Dropdowns del header: mantenerlos claros */
+.carbon-shell .header-dropdown-enter {
+  border-radius: var(--cds-radius-md) !important;
+  border: 1px solid var(--cds-border-subtle) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16) !important;
+}
+
+.carbon-shell .header-dropdown-enter,
+.carbon-shell .header-dropdown-enter * {
+  color: inherit;
+}
+
+/* ==========================================================
+   Sidebar Carbon-inspired
+   ========================================================== */
+
+.carbon-shell aside {
+  padding: 0 !important;
+  background: var(--cds-layer);
+  border-right: 1px solid var(--cds-border-subtle);
+}
+
+.carbon-shell aside > div {
+  height: 100vh !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-right: 1px solid var(--cds-border-subtle) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  ring: 0 !important;
+  backdrop-filter: none !important;
+}
+
+.carbon-shell aside button {
+  border-radius: var(--cds-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+.carbon-shell aside button:hover {
+  transform: none !important;
+}
+
+.carbon-shell aside [class*="rounded-2xl"],
+.carbon-shell aside [class*="rounded-xl"] {
+  border-radius: var(--cds-radius-sm) !important;
+}
+
+/* ==========================================================
+   Tablas, tarjetas y secciones frecuentes
+   ========================================================== */
+
+.carbon-shell table {
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.carbon-shell thead th {
+  background: var(--cds-gray-10) !important;
+  color: var(--cds-text-secondary) !important;
+  border-bottom: 2px solid var(--cds-gray-30) !important;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.carbon-shell tbody td {
+  border-bottom: 1px solid var(--cds-border-subtle) !important;
+  color: var(--cds-text-primary);
+}
+
+.carbon-shell tbody tr:hover {
+  background: var(--cds-gray-10) !important;
+}
+
+/* Reducir exceso visual de sombras muy fuertes */
+.carbon-shell [class*="shadow-2xl"],
+.carbon-shell [class*="shadow-xl"],
+.carbon-shell [class*="shadow-lg"] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10) !important;
+}
+
+.carbon-shell [class*="rounded-[1.75rem]"] {
+  border-radius: var(--cds-radius-lg) !important;
+}
+
+/* Focus accesible tipo Carbon */
+.carbon-shell button:focus-visible,
+.carbon-shell a:focus-visible,
+.carbon-shell input:focus-visible,
+.carbon-shell select:focus-visible,
+.carbon-shell textarea:focus-visible {
+  outline: 2px solid var(--cds-focus) !important;
+  outline-offset: -2px !important;
+}
+
+/* ==========================================================
+   Utilidades Carbon para futuras pantallas
+   ========================================================== */
+
+.carbon-page-title {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--cds-text-primary);
+}
+
+.carbon-eyebrow {
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cds-text-secondary);
+}
+
+.carbon-panel {
+  background: var(--cds-layer);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: var(--cds-radius-md);
+  box-shadow: none;
+}
+
+.carbon-kpi {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: var(--cds-radius-md);
+  padding: 16px 20px;
+}
+
+.carbon-kpi::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background: var(--cds-blue-60);
+}
+
+.carbon-kpi-label {
+  padding-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cds-text-secondary);
+}
+
+.carbon-kpi-value {
+  padding-left: 8px;
+  margin-top: 6px;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 300;
+  color: var(--cds-text-primary);
+}
+
+@media (max-width: 768px) {
+  .carbon-shell header > div.relative {
+    height: 56px !important;
+  }
+
+  .carbon-shell main {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* ==========================================================
+   Carbon dashboard refinement v2
+   Correcciones visuales para Dashboard, selector de colegios
+   y menú personal.
+   ========================================================== */
+
+/* ---------- Header: contraste correcto ---------- */
+
+.carbon-shell header {
+  color: #ffffff !important;
+}
+
+.carbon-shell header > div.relative {
+  color: #ffffff !important;
+}
+
+.carbon-shell header > div.relative > div > button,
+.carbon-shell header > div.relative > div > div > button {
+  color: #f4f4f4 !important;
+}
+
+.carbon-shell header > div.relative > div > button *,
+.carbon-shell header > div.relative > div > div > button * {
+  color: inherit !important;
+}
+
+/* Buscador superior */
+.carbon-shell header form {
+  border: 1px solid var(--cds-gray-80) !important;
+  background: #262626 !important;
+}
+
+.carbon-shell header form:focus-within {
+  border-color: var(--cds-blue-60) !important;
+  box-shadow: inset 0 -2px 0 var(--cds-blue-60) !important;
+}
+
+.carbon-shell header form input {
+  color: #f4f4f4 !important;
+}
+
+.carbon-shell header form input::placeholder {
+  color: #a8a8a8 !important;
+}
+
+/* ---------- Dropdown selector de colegios y menú personal ---------- */
+
+.carbon-shell header .header-dropdown-enter {
+  background: #ffffff !important;
+  color: #161616 !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+}
+
+.carbon-shell header .header-dropdown-enter *,
+.carbon-shell header .header-dropdown-enter p,
+.carbon-shell header .header-dropdown-enter span,
+.carbon-shell header .header-dropdown-enter button,
+.carbon-shell header .header-dropdown-enter div {
+  color: #161616 !important;
+}
+
+.carbon-shell header .header-dropdown-enter p[class*="text-slate-500"],
+.carbon-shell header .header-dropdown-enter p[class*="text-slate-400"],
+.carbon-shell header .header-dropdown-enter span[class*="text-slate-500"],
+.carbon-shell header .header-dropdown-enter span[class*="text-slate-400"],
+.carbon-shell header .header-dropdown-enter p[class*="text-xs"],
+.carbon-shell header .header-dropdown-enter span[class*="text-xs"] {
+  color: #525252 !important;
+}
+
+.carbon-shell header .header-dropdown-enter button {
+  background: transparent !important;
+  border-radius: 2px !important;
+}
+
+.carbon-shell header .header-dropdown-enter button:hover {
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  transform: none !important;
+}
+
+.carbon-shell header .header-dropdown-enter button:hover * {
+  color: #161616 !important;
+}
+
+.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"],
+.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"] *,
+.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] * {
+  color: #ffffff !important;
+}
+
+/* Botón de rol Admin dentro del dropdown */
+.carbon-shell header .header-dropdown-enter [class*="bg-blue-50"] {
+  background: #d0e2ff !important;
+}
+
+.carbon-shell header .header-dropdown-enter [class*="text-blue-700"],
+.carbon-shell header .header-dropdown-enter [class*="text-blue-600"] {
+  color: #0043ce !important;
+}
+
+/* Botón cerrar sesión */
+.carbon-shell header .header-dropdown-enter [class*="text-red-600"] {
+  color: #da1e28 !important;
+}
+
+/* ---------- Sidebar más Carbon ---------- */
+
+.carbon-shell aside {
+  background: #ffffff !important;
+}
+
+.carbon-shell aside > div {
+  border-right: 1px solid #e0e0e0 !important;
+}
+
+.carbon-shell aside button {
+  border-radius: 2px !important;
+}
+
+.carbon-shell aside button[class*="bg-slate-950"] {
+  background: #161616 !important;
+}
+
+.carbon-shell aside button[class*="bg-slate-950"] * {
+  color: #ffffff !important;
+}
+
+.carbon-shell aside [class*="tracking"] {
+  letter-spacing: 0.12em;
+}
+
+/* ---------- Dashboard Carbon ---------- */
+
+.carbon-dashboard {
+  --dashboard-accent: #0f62fe;
+  --dashboard-border: #e0e0e0;
+  --dashboard-muted: #525252;
+  --dashboard-soft: #f4f4f4;
+}
+
+.carbon-dashboard .rounded-2xl,
+.carbon-dashboard .rounded-xl,
+.carbon-dashboard .rounded-full,
+.carbon-dashboard [class*="rounded-2xl"],
+.carbon-dashboard [class*="rounded-xl"],
+.carbon-dashboard [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-dashboard [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-dashboard section {
+  scroll-margin-top: 72px;
+}
+
+.carbon-dashboard h2,
+.carbon-dashboard h3,
+.carbon-dashboard h4 {
+  color: #161616 !important;
+  letter-spacing: -0.01em;
+}
+
+.carbon-dashboard p {
+  color: inherit;
+}
+
+/* Header interno del dashboard */
+.carbon-dashboard > div:first-child > div {
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Botones del dashboard */
+.carbon-dashboard button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard button:hover {
+  transform: none !important;
+}
+
+.carbon-dashboard button[class*="bg-neutral-900"],
+.carbon-dashboard button[class*="bg-slate-950"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-dashboard button[class*="bg-neutral-900"]:hover,
+.carbon-dashboard button[class*="bg-slate-950"]:hover {
+  background: #393939 !important;
+}
+
+/* KPI cards */
+.carbon-dashboard-card,
+.carbon-dashboard [class*="min-h-[120px]"] {
+  position: relative;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard-card::before,
+.carbon-dashboard [class*="min-h-[120px]"]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background: var(--dashboard-accent);
+}
+
+.carbon-dashboard-card:hover,
+.carbon-dashboard [class*="min-h-[120px]"]:hover {
+  border-color: #c6c6c6 !important;
+}
+
+/* Paneles grandes */
+.carbon-dashboard-panel,
+.carbon-dashboard section[class*="bg-white"],
+.carbon-dashboard section[class*="border"] {
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Cajas internas */
+.carbon-dashboard [class*="bg-neutral-50"] {
+  background: #f4f4f4 !important;
+}
+
+.carbon-dashboard [class*="ring-neutral-200"] {
+  --tw-ring-color: #e0e0e0 !important;
+}
+
+.carbon-dashboard [class*="border-neutral-200"] {
+  border-color: #e0e0e0 !important;
+}
+
+/* Textos secundarios más legibles */
+.carbon-dashboard [class*="text-neutral-400"],
+.carbon-dashboard [class*="text-slate-400"] {
+  color: #6f6f6f !important;
+}
+
+.carbon-dashboard [class*="text-neutral-500"],
+.carbon-dashboard [class*="text-slate-500"] {
+  color: #525252 !important;
+}
+
+.carbon-dashboard [class*="text-neutral-900"],
+.carbon-dashboard [class*="text-slate-950"] {
+  color: #161616 !important;
+}
+
+/* Iconos y acentos */
+.carbon-dashboard [class*="bg-blue-50"],
+.carbon-dashboard [class*="bg-violet-50"],
+.carbon-dashboard [class*="bg-emerald-50"],
+.carbon-dashboard [class*="bg-amber-50"],
+.carbon-dashboard [class*="bg-red-50"] {
+  border-radius: 4px !important;
+}
+
+/* Barra de progreso: quitar verde fosforescente y usar azul Carbon */
+.carbon-dashboard .carbon-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 0 !important;
+  background: #e0e0e0 !important;
+}
+
+.carbon-dashboard .carbon-progress-fill {
+  height: 100%;
+  border-radius: 0 !important;
+  background: #0f62fe !important;
+  transition: width 180ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+/* Compatibilidad si queda la clase antigua de Tailwind */
+.carbon-dashboard [class*="bg-[#CCF32F]"] {
+  background: #0f62fe !important;
+}
+
+/* Badges tipo Carbon */
+.carbon-dashboard [class*="rounded-full"][class*="ring"] {
+  border-radius: 2px !important;
+}
+
+/* Tarjetas de colegio */
+.carbon-dashboard .school-summary-card {
+  border: 1px solid #e0e0e0 !important;
+  background: #ffffff !important;
+  border-radius: 4px !important;
+}
+
+/* Secciones tipo tabla/lista */
+.carbon-dashboard [class*="space-y-3"] > div[class*="bg-neutral-50"] {
+  border-radius: 4px !important;
+  background: #f4f4f4 !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+/* Mobile dropdown search */
+.carbon-shell .header-search-enter {
+  background: #ffffff !important;
+  color: #161616 !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+}
+
+.carbon-shell .header-search-enter input {
+  color: #161616 !important;
+}
+
+.carbon-shell .header-search-enter input::placeholder {
+  color: #6f6f6f !important;
+}
+
+/* ==========================================================
+   Carbon refinement v3
+   Header dropdowns, Comunidad escolar, Configuración libreta
+   y Tutoría.
+   ========================================================== */
+
+/* ==========================================================
+   1) Header / selector de colegios / menú personal
+   ========================================================== */
+
+.carbon-shell header .header-dropdown-enter {
+  z-index: 1000 !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Forzar contraste correcto dentro de dropdowns */
+.carbon-shell header .header-dropdown-enter,
+.carbon-shell header .header-dropdown-enter div,
+.carbon-shell header .header-dropdown-enter p,
+.carbon-shell header .header-dropdown-enter span,
+.carbon-shell header .header-dropdown-enter button {
+  color: #161616 !important;
+}
+
+.carbon-shell header .header-dropdown-enter p[class*="text-xs"],
+.carbon-shell header .header-dropdown-enter span[class*="text-xs"],
+.carbon-shell header .header-dropdown-enter p[class*="text-slate-500"],
+.carbon-shell header .header-dropdown-enter span[class*="text-slate-500"],
+.carbon-shell header .header-dropdown-enter p[class*="text-slate-400"],
+.carbon-shell header .header-dropdown-enter span[class*="text-slate-400"] {
+  color: #525252 !important;
+}
+
+/* Esta regla evita que las filas del selector se pongan negras al hover */
+.carbon-shell header > div.relative .header-dropdown-enter button,
+.carbon-shell header > div.relative > div .header-dropdown-enter button,
+.carbon-shell header > div.relative > div > div .header-dropdown-enter button {
+  background: transparent !important;
+  color: #161616 !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-shell header > div.relative .header-dropdown-enter button:hover,
+.carbon-shell header > div.relative > div .header-dropdown-enter button:hover,
+.carbon-shell header > div.relative > div > div .header-dropdown-enter button:hover {
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  transform: none !important;
+}
+
+.carbon-shell header > div.relative .header-dropdown-enter button:hover *,
+.carbon-shell header > div.relative > div .header-dropdown-enter button:hover *,
+.carbon-shell header > div.relative > div > div .header-dropdown-enter button:hover * {
+  color: #161616 !important;
+}
+
+/* Icono de opción seleccionada: se mantiene oscuro, pero sin tapar textos */
+.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"],
+.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"] *,
+.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] * {
+  color: #ffffff !important;
+}
+
+/* Fila elegida / hover dentro del selector */
+.carbon-shell header .header-dropdown-enter button[aria-current="true"],
+.carbon-shell header .header-dropdown-enter button[data-active="true"] {
+  background: #d0e2ff !important;
+  color: #161616 !important;
+}
+
+/* Menú personal: opciones visibles */
+.carbon-shell header .header-dropdown-enter button[class*="text-slate"],
+.carbon-shell header .header-dropdown-enter button[class*="text-red"] {
+  color: #161616 !important;
+}
+
+.carbon-shell header .header-dropdown-enter button[class*="text-red"] {
+  color: #da1e28 !important;
+}
+
+.carbon-shell header .header-dropdown-enter button[class*="text-red"]:hover {
+  background: #fff1f1 !important;
+  color: #da1e28 !important;
+}
+
+.carbon-shell header .header-dropdown-enter button[class*="text-red"]:hover * {
+  color: #da1e28 !important;
+}
+
+/* ==========================================================
+   2) Comunidad escolar: Alumnos y Apoderados Carbon
+   ========================================================== */
+
+.carbon-community-page {
+  --community-border: #e0e0e0;
+  --community-muted: #525252;
+  --community-soft: #f4f4f4;
+  --community-blue: #0f62fe;
+}
+
+/* Cabecera de página más Carbon */
+.carbon-community-page > div:first-child,
+.carbon-community-page [class*="PageHeader"] {
+  border-radius: 4px !important;
+}
+
+/* Buscador y filtros */
+.carbon-community-page > div[class*="bg-white"][class*="p-3"] {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page input,
+.carbon-community-page select {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  box-shadow: none !important;
+  color: #161616 !important;
+}
+
+.carbon-community-page input:focus,
+.carbon-community-page select:focus {
+  border-bottom-color: #0f62fe !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Tabla/listado */
+.carbon-community-page .carbon-list-panel,
+.carbon-community-page > div[class*="overflow-hidden"][class*="bg-white"] {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page .carbon-list-header,
+.carbon-community-page [class*="xl:grid"][class*="bg-slate-50"] {
+  background: #f4f4f4 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.carbon-community-page .carbon-list-header span,
+.carbon-community-page [class*="xl:grid"][class*="bg-slate-50"] span {
+  color: #525252 !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* Filas: sin línea azul lateral al hover */
+.carbon-community-page .carbon-list-row {
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page .carbon-list-row:hover {
+  background: #f4f4f4 !important;
+  border-left: 0 !important;
+}
+
+.carbon-community-page .carbon-list-row::before,
+.carbon-community-page .carbon-list-row::after {
+  display: none !important;
+}
+
+/* Compatibilidad por si queda la clase anterior */
+.carbon-community-page [class*="hover:border-accent"],
+.carbon-community-page [class*="border-l-4"] {
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
+}
+
+.carbon-community-page .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e0e0e0 !important;
+}
+
+/* Botones Ver */
+.carbon-community-page button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page button:hover {
+  transform: none !important;
+}
+
+.carbon-community-page button[class*="hover:border-accent"],
+.carbon-community-page button[class*="group-hover:border-accent"] {
+  border-color: #c6c6c6 !important;
+}
+
+.carbon-community-page button[class*="hover:bg-accent"] {
+  background: #ffffff !important;
+}
+
+.carbon-community-page button[class*="hover:bg-accent"]:hover {
+  background: #d0e2ff !important;
+  color: #0043ce !important;
+}
+
+/* Avatares más sobrios */
+.carbon-community-page [class*="rounded-2xl"],
+.carbon-community-page [class*="rounded-xl"],
+.carbon-community-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+/* ==========================================================
+   3) Configuración de libreta: preview arriba
+   ========================================================== */
+
+.carbon-shell .cabecera-libreta-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .cabecera-libreta-preview {
+  align-self: start !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  position: sticky;
+  top: 76px;
+}
+
+.carbon-shell .cabecera-libreta-preview > div:last-child {
+  display: block !important;
+  min-height: 0 !important;
+}
+
+.carbon-shell .cabecera-libreta-preview [class*="rounded-2xl"],
+.carbon-shell .cabecera-libreta-preview [class*="rounded-xl"] {
+  border-radius: 4px !important;
+}
+
+/* ==========================================================
+   4) Tutoría: paneles alineados arriba
+   ========================================================== */
+
+.carbon-shell .tutoria-main-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .tutoria-main-grid > aside,
+.carbon-shell .tutoria-main-grid > main {
+  align-self: start !important;
+}
+
+.carbon-shell .tutoria-main-grid [class*="rounded-[28px]"],
+.carbon-shell .tutoria-main-grid [class*="rounded-[24px]"],
+.carbon-shell .tutoria-main-grid [class*="rounded-3xl"],
+.carbon-shell .tutoria-main-grid [class*="rounded-2xl"],
+.carbon-shell .tutoria-main-grid [class*="rounded-xl"] {
+  border-radius: 4px !important;
+}
+
+/* Evitar saltos visuales por hover en Tutoría */
+.carbon-shell .tutoria-main-grid button:hover {
+  transform: none !important;
+}
+
+/* ==========================================================
+   Carbon refinement v4
+   Corrige alineación vertical de:
+   - Previsualización de libreta
+   - Lista de alumnos en Tutoría
+   ========================================================== */
+
+/* ---------- Configuración / Cabecera de libreta ---------- */
+
+.carbon-shell .cabecera-libreta-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .cabecera-libreta-grid > * {
+  align-self: start !important;
+}
+
+.carbon-shell .cabecera-libreta-form-panel {
+  align-self: start !important;
+}
+
+.carbon-shell .cabecera-libreta-preview {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: block !important;
+  position: sticky;
+  top: 76px;
+}
+
+.carbon-shell .cabecera-libreta-preview-body {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.carbon-shell .cabecera-libreta-preview-card {
+  align-self: flex-start !important;
+  margin-top: 0 !important;
+}
+
+/* Si alguna regla anterior empujó el último div al centro, la anulamos */
+.carbon-shell .cabecera-libreta-preview > div:last-child {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+}
+
+/* ---------- Tutoría / Libreta ---------- */
+
+.carbon-shell .tutoria-main-grid {
+  align-items: start !important;
+}
+
+.carbon-shell .tutoria-main-grid > aside,
+.carbon-shell .tutoria-main-grid > main {
+  align-self: start !important;
+}
+
+.carbon-shell .tutoria-alumnos-list {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.carbon-shell .tutoria-alumnos-list > * {
+  margin-top: 0 !important;
+  align-self: stretch !important;
+}
+
+.carbon-shell .tutoria-alumno-card {
+  margin-top: 0 !important;
+  align-self: stretch !important;
+}
+
+/* Evita que el panel izquierdo parezca vacío con el alumno abajo */
+.carbon-shell .tutoria-panel-alumnos {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* El panel detalle sí puede ser largo, pero no debe arrastrar el aside */
+.carbon-shell .tutoria-panel-detalle {
+  align-self: start !important;
+}
+
+/* ==========================================================
+   Carbon refinement v5
+   Corrección fuerte de paneles que se estiran y empujan
+   contenido hacia abajo.
+   ========================================================== */
+
+/* ---------- Cabecera de libreta ---------- */
+
+.carbon-shell .cabecera-libreta-grid {
+  align-items: start !important;
+  grid-auto-rows: max-content !important;
+}
+
+.carbon-shell .cabecera-libreta-grid > * {
+  align-self: start !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+}
+
+.carbon-shell .cabecera-libreta-form-panel {
+  align-self: start !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+}
+
+.carbon-shell .cabecera-libreta-preview {
+  align-self: start !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+.carbon-shell .cabecera-libreta-preview-body {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-top: 20px !important;
+}
+
+.carbon-shell .cabecera-libreta-preview-card {
+  display: block !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  align-self: start !important;
+}
+
+/* Eliminar cualquier empuje automático heredado */
+.carbon-shell .cabecera-libreta-preview-card,
+.carbon-shell .cabecera-libreta-preview-card * {
+  transform: none !important;
+}
+
+/* ---------- Tutoría ---------- */
+
+.carbon-shell .tutoria-main-grid {
+  align-items: start !important;
+  grid-auto-rows: max-content !important;
+}
+
+.carbon-shell .tutoria-main-grid > * {
+  align-self: start !important;
+}
+
+.carbon-shell .tutoria-panel-alumnos {
+  align-self: start !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.carbon-shell .tutoria-alumnos-list {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 520px !important;
+  overflow-y: auto !important;
+  padding-top: 16px !important;
+}
+
+.carbon-shell .tutoria-alumnos-list > button,
+.carbon-shell .tutoria-alumno-card {
+  display: block !important;
+  margin-top: 0 !important;
+  margin-bottom: 12px !important;
+  align-self: stretch !important;
+}
+
+.carbon-shell .tutoria-panel-detalle {
+  align-self: start !important;
+}
+
+/* Anular animaciones que puedan alterar posición vertical */
+.carbon-shell .tutoria-alumnos-list .erp-list-item-enter {
+  animation-name: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}

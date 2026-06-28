@@ -475,8 +475,8 @@ export default function TutoriaPage() {
         })}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)] erp-section-enter">
-        <aside className="rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
+      <section className="tutoria-main-grid grid items-start gap-5 xl:grid-cols-[380px_minmax(0,1fr)] erp-section-enter">
+        <aside className="tutoria-panel-alumnos self-start rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -528,9 +528,9 @@ export default function TutoriaPage() {
               </div>
             )}
           </div>
-          <div className="max-h-[720px] space-y-3 overflow-auto p-4">
+          <div className="tutoria-alumnos-list overflow-y-auto p-4">
             {loadingAlumnos ? <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando alumnos...</div> : alumnos.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">Sin alumnos para mostrar.</div> : alumnosFiltrados.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-400">No hay alumnos en este filtro.</div> : alumnosFiltrados.map((alumno) => (
-              <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`w-full rounded-3xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 erp-list-item-enter ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
+              <button key={alumno.id_matricula} type="button" onClick={() => setMatriculaId(alumno.id_matricula)} className={`tutoria-alumno-card w-full rounded-3xl border p-4 text-left transition-all duration-200 erp-list-item-enter ${matriculaId === alumno.id_matricula ? 'border-blue-200 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
                 <div className="flex items-center gap-3">
                   {alumno.avatar_url ? (
                     <img
@@ -539,7 +539,7 @@ export default function TutoriaPage() {
                       className="h-11 w-11 shrink-0 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
                     />
                   ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">
                       {iniciales(alumno.alumno)}
                     </div>
                   )}
@@ -564,7 +564,7 @@ export default function TutoriaPage() {
           </div>
         </aside>
 
-        <main className="min-h-[720px] rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
+        <main className="tutoria-panel-detalle self-start min-h-[720px] rounded-[28px] border border-slate-100 bg-white shadow-sm shadow-slate-200/70 erp-detail-enter">
           {loadingDetalle ? <div className="flex min-h-[520px] items-center justify-center"><div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500"><Loader2 size={16} className="animate-spin" /> Cargando resumen...</div></div> : !detalle ? <div className="flex min-h-[520px] items-center justify-center p-8 text-center"><div><BookOpenCheck className="mx-auto text-slate-300" size={42} /><h2 className="mt-4 text-lg font-black text-slate-800">Selecciona un alumno</h2><p className="mt-2 max-w-md text-sm text-slate-500">Aquí aparecerán sus notas consolidadas, detalle por evaluación, conducta, participación familiar y comentario final.</p></div></div> : (
             <div key={`${detalle.alumno.id_matricula}-${periodoId}`} className="space-y-5 p-5 erp-detail-enter">
               <div className="rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Alumno seleccionado</p><h2 className="mt-1 text-2xl font-black text-slate-950">{detalle.alumno.nombre}</h2><p className="mt-1 text-sm font-semibold text-slate-500">{detalle.alumno.codigo} · {detalle.alumno.salon}</p>

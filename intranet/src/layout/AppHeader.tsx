@@ -203,7 +203,7 @@ export default function AppHeader() {
               {schoolDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setSchoolDropdownOpen(false)} />
-                  <div className="header-dropdown-enter absolute left-0 z-50 mt-3 w-84 max-w-[calc(100vw-2rem)] overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-2xl shadow-slate-950/10">
+                  <div className="header-dropdown-enter absolute left-0 z-[1000] mt-3 w-84 max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
                     <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
@@ -346,7 +346,7 @@ export default function AppHeader() {
             {dropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                <div className="header-dropdown-enter absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-2xl shadow-slate-950/10">
+                <div className="header-dropdown-enter absolute right-0 z-[1000] mt-3 w-80 overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
                   <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                     <div className="flex items-center gap-3">
                       {avatarUrl ? (

@@ -7,7 +7,7 @@ export default function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="carbon-shell flex h-screen overflow-hidden bg-[var(--cds-bg)]">
       <AppSidebar />
       <Backdrop />
 

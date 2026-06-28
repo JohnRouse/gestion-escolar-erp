@@ -380,7 +380,7 @@ export default function AlumnosPage() {
   const hasFilters = q.trim() !== '' || estado !== 'Todos';
 
   return (
-    <div className="w-full space-y-5 erp-page-enter">
+    <div className="carbon-community-page w-full space-y-5 erp-page-enter">
       <PageHeader
         eyebrow="Comunidad escolar"
         title="Alumnos"
@@ -452,9 +452,9 @@ export default function AlumnosPage() {
       </div>
 
       {/* ── Tabla de alumnos ── */}
-      <div className="overflow-hidden rounded-[20px] border border-slate-100 bg-white shadow-xl ring-1 ring-slate-100/70">
+      <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         {/* Encabezado de columnas */}
-        <div className="hidden border-b border-slate-100 bg-slate-50/60 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
+        <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumno</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Matrícula</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderado</span>
@@ -488,7 +488,7 @@ export default function AlumnosPage() {
               return (
                 <div
                   key={alumno.id_persona}
-                  className="group grid items-center gap-4 px-5 py-4 transition-all hover:bg-slate-50/70 border-l-4 border-transparent hover:border-accent-500 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
+                  className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
                 >
                   {/* Columna alumno */}
                   <div className="flex min-w-0 items-center gap-3">
@@ -569,7 +569,7 @@ export default function AlumnosPage() {
                     <button
                       type="button"
                       onClick={() => abrirDetalle(alumno.id_persona)}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 group-hover:border-accent-300"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 "
                     >
                       <Eye size={13} />
                       Ver

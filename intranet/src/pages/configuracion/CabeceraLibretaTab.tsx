@@ -283,8 +283,8 @@ export default function CabeceraLibretaTab() {
         </div>
       )}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_460px]">
-        <div className={`${panelClass} p-5 erp-section-enter`}>
+      <section className="cabecera-libreta-grid grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_460px]">
+        <div className={`${panelClass} cabecera-libreta-form-panel self-start p-5 erp-section-enter`}>
           <div className="mb-5 flex items-center gap-3">
             <div className="rounded-2xl bg-blue-50 p-2 text-blue-600">
               <School size={19} />
@@ -398,7 +398,7 @@ export default function CabeceraLibretaTab() {
           </div>
         </div>
 
-        <aside className={`${panelClass} overflow-hidden erp-detail-enter`}>
+        <aside className={`${panelClass} cabecera-libreta-preview self-start overflow-hidden erp-detail-enter`}>
           <div className="border-b border-slate-100 px-5 py-4">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-blue-50 p-2 text-blue-600">
@@ -411,8 +411,8 @@ export default function CabeceraLibretaTab() {
             </div>
           </div>
 
-          <div className="bg-slate-50 p-5">
-            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="cabecera-libreta-preview-body bg-slate-50 p-5">
+            <div className="cabecera-libreta-preview-card rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
               <div className="grid grid-cols-[56px_minmax(0,1fr)_56px] items-start gap-3">
                 <div className="flex h-16 w-14 items-center justify-center overflow-hidden rounded bg-white">
                   {form.logo_url ? (
