@@ -856,7 +856,7 @@ export default function NotasPage() {
   const labelClass = "mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400";
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-notas-page w-full space-y-6">
       <style>{`
         @keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalOverlayOut { from { opacity: 1; } to { opacity: 0; } }
@@ -1298,27 +1298,27 @@ export default function NotasPage() {
               </div>
 
               {/* Vista desktop: tabla */}
-              <div className="hidden overflow-auto lg:block">
-                <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-sm">
+              <div className="carbon-notas-table-wrap hidden overflow-auto lg:block">
+                <table className="carbon-notas-table w-full min-w-[1180px] text-sm">
                   <thead>
-                    <tr>
-                      <th rowSpan={2} className="sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
-                      <th rowSpan={2} className="sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
+                    <tr className="carbon-notas-group-row">
+                      <th rowSpan={2} className="carbon-rowspan-header carbon-sticky-start sticky left-0 z-30 w-14 border-b border-r border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400">N°</th>
+                      <th rowSpan={2} className="carbon-rowspan-header carbon-sticky-name sticky left-[56px] z-30 w-[270px] border-b border-r border-neutral-100 bg-neutral-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Nombre completo</th>
                       {evaluacionesAgrupadas.map(([grupoNombre, items]) => {
                         const style = getGrupoStyle(grupoNombre);
                         return (
-                          <th key={grupoNombre} colSpan={items.length} className={`border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header || ''}`}>
+                          <th key={grupoNombre} colSpan={items.length} className={`carbon-group-header border-b border-r border-neutral-100 px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest ${style.header || ''}`}>
                             {grupoNombre}
                           </th>
                         );
                       })}
-                      <th rowSpan={2} className="sticky right-0 z-30 w-24 border-b border-l border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">Prom.</th>
+                      <th rowSpan={2} className="carbon-rowspan-header carbon-sticky-prom sticky right-0 z-30 w-24 border-b border-l border-neutral-100 bg-neutral-50 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-neutral-400 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">Prom.</th>
                     </tr>
-                    <tr>
+                    <tr className="carbon-notas-eval-row">
                       {evaluacionesAgrupadas.flatMap(([grupoNombre, items]) => {
                         const style = getGrupoStyle(grupoNombre);
                         return items.map((eva) => (
-                          <th key={eva.id} className={`group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader || ''}`}>
+                          <th key={eva.id} className={`carbon-eval-header group min-w-[116px] border-b border-r border-neutral-100 px-2 py-2 text-center align-middle ${style.subHeader || ''}`}>
                             <div className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5">
                               <span className="line-clamp-2 text-[11px] font-semibold leading-4 tracking-wide">{textoMayusculas(eva.descripcion)}</span>
                               {puedeGestionarEvaluaciones && (
@@ -1361,7 +1361,7 @@ export default function NotasPage() {
                                     onFocus={(e) => e.currentTarget.select()}
                                     onChange={(e) => handleNotaChange(fila.id_matricula, eva.id, e.target.value)}
                                     disabled={!notasEditables}
-                                    className={`mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
+                                    className={`carbon-nota-input mx-auto h-9 w-16 rounded-xl border text-center text-sm font-semibold tabular-nums outline-none transition-all focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 ${getNotaColor(fila[eva.id])}`}
                                     aria-label={`Nota de ${fila.alumno} en ${textoMayusculas(eva.descripcion)}`}
                                   />
                                 </td>

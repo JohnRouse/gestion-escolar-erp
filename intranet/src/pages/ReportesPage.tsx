@@ -118,7 +118,7 @@ function KpiCard({
   const t = tones[tone];
 
   return (
-    <div className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-neutral-300/60">
+    <div className="carbon-report-kpi rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-neutral-300/60">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-3">
@@ -139,7 +139,7 @@ function KpiCard({
 /* ─── Empty Panel ───────────────────────────────────── */
 function EmptyPanel({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-8 text-center">
+    <div className="carbon-report-empty flex min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-8 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-300">
         <BarChart3 size={22} />
       </div>
@@ -156,10 +156,10 @@ function SectionCard({
   title: string; description: string; icon: any; children: ReactNode; action?: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <section className="carbon-report-section rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#CCF32F]/10 text-[#CCF32F]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
             <Icon size={18} strokeWidth={2} />
           </div>
           <div>
@@ -192,7 +192,7 @@ function ProgressRow({
   const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
   return (
-    <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+    <div className="carbon-report-progress-row rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-neutral-800">{label}</p>
@@ -213,7 +213,7 @@ function ProgressRow({
 /* ─── Amount Row ────────────────────────────────────── */
 function AmountRow({ label, value, helper }: { label: string; value: number; helper?: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+    <div className="carbon-report-amount-row flex items-center justify-between gap-4 rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-neutral-800">{label}</p>
         {helper && <p className="mt-0.5 text-xs text-neutral-400">{helper}</p>}
@@ -262,7 +262,7 @@ function StatBlock({
   const t = tones[tone];
 
   return (
-    <div className={`rounded-2xl ${t.bg} p-5 ring-1 ${t.ring}`}>
+    <div className={`carbon-report-stat rounded-2xl ${t.bg} p-5 ring-1 ${t.ring}`}>
       <div className="flex items-center gap-2 mb-3">
         <Icon size={14} className={t.icon} />
         <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">{label}</p>
@@ -333,7 +333,7 @@ export default function ReportesPage() {
 
   if (!canView) {
     return (
-      <div className="w-full">
+      <div className="carbon-reportes-page w-full">
         <section className="flex flex-col items-center justify-center rounded-2xl border border-neutral-200/60 bg-white p-12 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 mb-5">
             <AlertTriangle size={28} />
@@ -348,7 +348,7 @@ export default function ReportesPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-reportes-page w-full space-y-6">
       <div className={`transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
         <PageHeader
           eyebrow="Centro de reportes"
@@ -368,7 +368,7 @@ export default function ReportesPage() {
               type="button"
               onClick={cargarReportes}
               disabled={loading}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-100 disabled:opacity-50"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
               Actualizar
@@ -464,7 +464,7 @@ export default function ReportesPage() {
                         </div>
                         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
                           <div
-                            className="h-full rounded-full bg-[#CCF32F] transition-all duration-700"
+                            className="h-full rounded-full bg-blue-600 transition-all duration-700"
                             style={{ width: `${Math.round((item.total / max) * 100)}%` }}
                           />
                         </div>
@@ -602,10 +602,10 @@ export default function ReportesPage() {
           </section>
 
           {/* ── Footer ── */}
-          <section className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <section className="carbon-report-section carbon-report-footer rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#CCF32F]/10 text-[#CCF32F]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <CheckCircle2 size={18} strokeWidth={2} />
                 </div>
                 <div>

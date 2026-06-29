@@ -43,7 +43,7 @@ type Seccion = { id_seccion: number; letra: string; capacidad: number; matricula
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
 
-const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400 appearance-none";
+const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400 appearance-none";
 const selectClass = inputClass;
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-neutral-400";
 
@@ -86,7 +86,7 @@ function Card({ icon: Icon, title, subtitle, children }: { icon: any; title: str
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-3 border-b border-neutral-100 px-5 py-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#CCF32F]/10 text-[#CCF32F]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0f62fe]/10 text-[#0f62fe]">
           <Icon size={18} strokeWidth={2} />
         </div>
         <div>
@@ -257,7 +257,7 @@ export default function RenovacionMatriculaPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-matricula-page w-full space-y-6">
       <div className={`transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
         <PageHeader eyebrow="Matrícula" title="Renovación / Re-matrícula" description="Pre-matricula alumnos vigentes para el siguiente año, con opción de conservar sede o cambiar de colegio dentro del grupo." icon={ArrowRightLeft} meta={[{ label: 'Contexto activo', value: scopeLabel }, { label: 'Proceso', value: 'Continuidad y cambio de sede' }]} />
       </div>
@@ -369,7 +369,7 @@ export default function RenovacionMatriculaPage() {
                   <button key={seccion.id_seccion} type="button" disabled={sinCupos} onClick={() => setSeccionDestinoId(selected ? '' : seccion.id_seccion)}
                     className={cx(
                       'rounded-2xl border p-4 text-left transition-all duration-150',
-                      selected ? 'border-[#CCF32F] bg-[#CCF32F]/5 ring-1 ring-[#CCF32F]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
+                      selected ? 'border-[#0f62fe] bg-[#0f62fe]/5 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
                       sinCupos && 'cursor-not-allowed opacity-50'
                     )}
                   >
@@ -378,10 +378,10 @@ export default function RenovacionMatriculaPage() {
                         <p className="text-sm font-medium text-neutral-800">{seccion.grado.nombre_grado} "{seccion.letra}"</p>
                         <p className="mt-1 text-xs text-neutral-400">{seccion.grado.nivel?.nombre_nivel || 'Nivel'} · {seccion.capacidad} cupos</p>
                       </div>
-                      {selected && <CheckCircle2 size={18} className="text-[#CCF32F] flex-shrink-0" />}
+                      {selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}
                     </div>
                     <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
-                      <div className="h-full rounded-full bg-[#CCF32F] transition-all duration-500" style={{ width: `${porcentaje}%` }} />
+                      <div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} />
                     </div>
                     <p className="mt-2 text-xs text-neutral-500">{seccion.matriculados} registrados · {seccion.disponibles} disponibles</p>
                   </button>
@@ -401,7 +401,7 @@ export default function RenovacionMatriculaPage() {
 
             <label className="mt-5 block">
               <span className={labelClass}>Observación del proceso</span>
-              <textarea className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej. Renovación anticipada por campaña noviembre-diciembre." />
+              <textarea className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej. Renovación anticipada por campaña noviembre-diciembre." />
             </label>
 
             {!puedeRenovar && alumno && (
@@ -411,7 +411,7 @@ export default function RenovacionMatriculaPage() {
             )}
 
             <button type="button" disabled={!puedeRenovar || guardando} onClick={registrarRenovacion}
-              className="mt-5 h-12 w-full rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"
+              className="mt-5 h-12 w-full rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"
             >
               {guardando ? <Loader2 size={16} className="animate-spin" /> : <CalendarDays size={16} />} Registrar renovación / re-matrícula
             </button>

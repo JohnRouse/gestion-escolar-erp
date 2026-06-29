@@ -299,7 +299,7 @@ export default function AgendaCobranzasPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="carbon-tesoreria-page space-y-6">
       <PageHeader
         eyebrow="Tesorería"
         title="Agenda de cobranzas"

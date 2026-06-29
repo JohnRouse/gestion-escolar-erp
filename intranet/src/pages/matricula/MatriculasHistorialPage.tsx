@@ -195,7 +195,7 @@ const ModalSection = ({
 }) => (
   <div className="rounded-2xl bg-neutral-50 p-5 ring-1 ring-neutral-200/60">
     <h4 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-      <Icon size={16} className="text-[#CCF32F]" />
+      <Icon size={16} className="text-[#0f62fe]" />
       {title}
     </h4>
     <div className="mt-4">{children}</div>
@@ -604,14 +604,14 @@ export default function MatriculasHistorialPage() {
 
   // ─── Input class helper ────────────────────────────────
   const inputClass =
-    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400';
+    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400';
 
   const selectClass =
-    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 appearance-none cursor-pointer';
+    'h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 appearance-none cursor-pointer';
 
   // ═══════════════════════════════════════════════════════
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-matricula-page w-full space-y-6">
       {/* Animaciones del modal */}
       <style>{`
         @keyframes modalOverlayIn {
@@ -714,7 +714,7 @@ export default function MatriculasHistorialPage() {
         {loading ? (
           <div className="flex min-h-[340px] items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <Loader2 size={28} className="animate-spin text-[#CCF32F]" />
+              <Loader2 size={28} className="animate-spin text-[#0f62fe]" />
               <p className="text-sm text-neutral-400">Cargando matrículas…</p>
             </div>
           </div>
@@ -812,20 +812,20 @@ export default function MatriculasHistorialPage() {
       {/* ══════════ Modal de detalle ══════════ */}
       {detalleOpen && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 backdrop-blur-sm px-4 py-6 ${
+          className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center bg-neutral-950/40 backdrop-blur-sm px-4 py-6 ${
             isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'
           }`}
           onClick={(e) => { if (e.target === e.currentTarget) cerrarDetalle(); }}
         >
           <div
-            className={`w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${
+            className={`carbon-matricula-modal-panel w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${
               isClosing ? 'modal-panel-exit' : 'modal-panel-enter'
             }`}
           >
             {/* ── Header del modal ── */}
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#CCF32F]/10 px-3 py-1 text-xs font-semibold text-neutral-800">
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#0f62fe]/10 px-3 py-1 text-xs font-semibold text-neutral-800">
                   <GraduationCap size={13} />
                   Detalle de matrícula
                 </div>
@@ -852,7 +852,7 @@ export default function MatriculasHistorialPage() {
               {detalleLoading ? (
                 <div className="flex min-h-[260px] items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={28} className="animate-spin text-[#CCF32F]" />
+                    <Loader2 size={28} className="animate-spin text-[#0f62fe]" />
                     <p className="text-sm text-neutral-400">Cargando detalle…</p>
                   </div>
                 </div>
@@ -1101,7 +1101,7 @@ export default function MatriculasHistorialPage() {
                               type="button"
                               onClick={activarMatricula}
                               disabled={savingPago}
-                              className="h-11 rounded-2xl bg-[#CCF32F] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
                               {savingPago ? (
                                 <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Activando…</span>
@@ -1152,7 +1152,7 @@ export default function MatriculasHistorialPage() {
                               type="button"
                               onClick={registrarPagoMatricula}
                               disabled={savingPago}
-                              className="h-11 rounded-2xl bg-[#CCF32F] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
                               {savingPago ? (
                                 <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Registrando…</span>
@@ -1226,7 +1226,7 @@ export default function MatriculasHistorialPage() {
                     >
                       <div>
                         <h4 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                          <CreditCard size={16} className="text-[#CCF32F]" />
+                          <CreditCard size={16} className="text-[#0f62fe]" />
                           Cronograma de pagos
                         </h4>
                         <p className="mt-1 text-xs text-neutral-400">

@@ -1305,3 +1305,1685 @@ body {
   opacity: 1 !important;
   transform: none !important;
 }
+
+/* ==========================================================
+   Carbon refinement v7
+   Notas + Tesorería
+   ========================================================== */
+
+/* ==========================================================
+   1) Registro de Notas
+   ========================================================== */
+
+.carbon-notas-page {
+  --carbon-line: #e0e0e0;
+  --carbon-line-strong: #c6c6c6;
+  --carbon-layer: #ffffff;
+  --carbon-layer-alt: #f4f4f4;
+  --carbon-text: #161616;
+  --carbon-muted: #525252;
+  --carbon-blue: #0f62fe;
+}
+
+.carbon-notas-page [class*="rounded-[24px]"],
+.carbon-notas-page [class*="rounded-[26px]"],
+.carbon-notas-page [class*="rounded-[28px]"],
+.carbon-notas-page [class*="rounded-3xl"],
+.carbon-notas-page [class*="rounded-2xl"],
+.carbon-notas-page [class*="rounded-xl"],
+.carbon-notas-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-notas-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-notas-page section {
+  border-color: var(--carbon-line) !important;
+}
+
+.carbon-notas-page select,
+.carbon-notas-page input:not(.carbon-nota-input),
+.carbon-notas-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-notas-page select:focus,
+.carbon-notas-page input:not(.carbon-nota-input):focus,
+.carbon-notas-page textarea:focus {
+  border-bottom-color: #0f62fe !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-notas-page button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-notas-page button:hover {
+  transform: none !important;
+}
+
+/* Tabla de notas: cabeceras separadas y estables */
+.carbon-notas-table-wrap {
+  width: 100%;
+  overflow: auto !important;
+  border-top: 1px solid var(--carbon-line);
+  background: #ffffff;
+}
+
+.carbon-notas-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  table-layout: fixed !important;
+  background: #ffffff !important;
+}
+
+.carbon-notas-table th,
+.carbon-notas-table td {
+  border-color: var(--carbon-line) !important;
+}
+
+.carbon-notas-table thead th {
+  background: #f4f4f4 !important;
+  color: #393939 !important;
+  box-shadow: none !important;
+  vertical-align: middle !important;
+}
+
+.carbon-notas-table .carbon-notas-group-row th {
+  height: 42px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--carbon-line-strong) !important;
+  white-space: nowrap !important;
+}
+
+.carbon-notas-table .carbon-notas-eval-row th {
+  height: 58px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--carbon-line-strong) !important;
+  white-space: normal !important;
+  line-height: 1.15 !important;
+}
+
+.carbon-notas-table .carbon-rowspan-header {
+  height: 100px !important;
+  vertical-align: middle !important;
+  background: #f4f4f4 !important;
+  color: #393939 !important;
+  border-bottom: 1px solid var(--carbon-line-strong) !important;
+}
+
+.carbon-notas-table .carbon-group-header {
+  font-size: 11px !important;
+  letter-spacing: 0.12em !important;
+  font-weight: 600 !important;
+  background: #e8eefc !important;
+  color: #0f3a8a !important;
+}
+
+.carbon-notas-table .carbon-eval-header {
+  background: #f4f4f4 !important;
+  color: #393939 !important;
+}
+
+.carbon-notas-table .carbon-eval-header span {
+  display: block !important;
+  max-width: 120px !important;
+  margin-inline: auto !important;
+  overflow-wrap: anywhere !important;
+}
+
+.carbon-notas-table tbody td {
+  background: #ffffff !important;
+}
+
+.carbon-notas-table tbody tr:hover td {
+  background: #f4f4f4 !important;
+}
+
+.carbon-notas-table .carbon-sticky-start,
+.carbon-notas-table .carbon-sticky-name,
+.carbon-notas-table .carbon-sticky-prom {
+  background: #f4f4f4 !important;
+}
+
+.carbon-notas-table tbody .sticky {
+  background: #ffffff !important;
+}
+
+.carbon-notas-table tbody tr:hover .sticky {
+  background: #f4f4f4 !important;
+}
+
+.carbon-notas-table .carbon-nota-input {
+  width: 58px !important;
+  height: 32px !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+/* ==========================================================
+   2) Tesorería Carbon
+   ========================================================== */
+
+.carbon-tesoreria-page {
+  --teso-border: #e0e0e0;
+  --teso-border-strong: #c6c6c6;
+  --teso-bg: #f4f4f4;
+  --teso-layer: #ffffff;
+  --teso-text: #161616;
+  --teso-muted: #525252;
+  --teso-blue: #0f62fe;
+}
+
+.carbon-tesoreria-page [class*="rounded-[24px]"],
+.carbon-tesoreria-page [class*="rounded-[28px]"],
+.carbon-tesoreria-page [class*="rounded-[30px]"],
+.carbon-tesoreria-page [class*="rounded-3xl"],
+.carbon-tesoreria-page [class*="rounded-2xl"],
+.carbon-tesoreria-page [class*="rounded-xl"],
+.carbon-tesoreria-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-tesoreria-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page section[class*="bg-white"],
+.carbon-tesoreria-page article,
+.carbon-tesoreria-page section > div[class*="bg-white"] {
+  border: 1px solid var(--teso-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page article {
+  transition: border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9), background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9) !important;
+}
+
+.carbon-tesoreria-page article:hover {
+  transform: none !important;
+  border-color: var(--teso-border-strong) !important;
+  background: #ffffff !important;
+}
+
+.carbon-tesoreria-page input,
+.carbon-tesoreria-page select,
+.carbon-tesoreria-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page input:focus,
+.carbon-tesoreria-page select:focus,
+.carbon-tesoreria-page textarea:focus {
+  border-bottom-color: #0f62fe !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page button:hover {
+  transform: none !important;
+}
+
+/* KPIs y cajas de monto */
+.carbon-tesoreria-page section.grid > div,
+.carbon-tesoreria-page article div[class*="bg-slate-50"],
+.carbon-tesoreria-page article div[class*="bg-rose-50"],
+.carbon-tesoreria-page article div[class*="bg-emerald-50"] {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page article div[class*="bg-rose-50"] {
+  border: 1px solid #ffd7d9 !important;
+}
+
+.carbon-tesoreria-page article div[class*="bg-emerald-50"] {
+  border: 1px solid #a7f0ba !important;
+}
+
+.carbon-tesoreria-page article div[class*="bg-slate-50"] {
+  border: 1px solid #e0e0e0 !important;
+  background: #f4f4f4 !important;
+}
+
+/* Etiquetas tipo chip */
+.carbon-tesoreria-page span[class*="rounded-full"],
+.carbon-tesoreria-page span[class*="ring-"] {
+  border-radius: 2px !important;
+}
+
+/* Botones principales de tesorería */
+.carbon-tesoreria-page button[class*="bg-slate-950"],
+.carbon-tesoreria-page button[class*="bg-neutral-900"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-page button[class*="bg-emerald-600"] {
+  background: #198038 !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-page button[class*="bg-indigo-50"] {
+  background: #edf5ff !important;
+  color: #0043ce !important;
+  border: 1px solid #a6c8ff !important;
+}
+
+/* ==========================================================
+   Carbon refinement v8
+   Reportes institucionales
+   ========================================================== */
+
+.carbon-reportes-page {
+  --report-border: #e0e0e0;
+  --report-border-strong: #c6c6c6;
+  --report-bg: #f4f4f4;
+  --report-layer: #ffffff;
+  --report-layer-alt: #f4f4f4;
+  --report-text: #161616;
+  --report-muted: #525252;
+  --report-helper: #6f6f6f;
+  --report-blue: #0f62fe;
+  --report-blue-dark: #0043ce;
+  --report-green: #198038;
+  --report-red: #da1e28;
+  --report-yellow: #f1c21b;
+}
+
+/* Base visual */
+.carbon-reportes-page [class*="rounded-[24px]"],
+.carbon-reportes-page [class*="rounded-[26px]"],
+.carbon-reportes-page [class*="rounded-[28px]"],
+.carbon-reportes-page [class*="rounded-[30px]"],
+.carbon-reportes-page [class*="rounded-3xl"],
+.carbon-reportes-page [class*="rounded-2xl"],
+.carbon-reportes-page [class*="rounded-xl"],
+.carbon-reportes-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-reportes-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page section,
+.carbon-reportes-page article,
+.carbon-reportes-page .carbon-report-kpi,
+.carbon-reportes-page .carbon-report-section {
+  border-color: var(--report-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page section:hover,
+.carbon-reportes-page .carbon-report-kpi:hover,
+.carbon-reportes-page .carbon-report-section:hover {
+  border-color: var(--report-border-strong) !important;
+}
+
+/* KPIs superiores */
+.carbon-report-kpi {
+  position: relative;
+  min-height: 122px;
+  transition: border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9) !important;
+}
+
+.carbon-report-kpi::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background: var(--report-blue);
+}
+
+.carbon-report-kpi p:first-of-type {
+  color: var(--report-muted) !important;
+}
+
+.carbon-report-kpi p[class*="text-3xl"] {
+  font-size: 30px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--report-text) !important;
+}
+
+.carbon-report-kpi p[class*="text-xs"] {
+  color: var(--report-helper) !important;
+}
+
+.carbon-report-kpi [class*="rounded-xl"] {
+  background: #edf5ff !important;
+  color: var(--report-blue) !important;
+}
+
+/* Paneles grandes */
+.carbon-report-section {
+  padding: 24px !important;
+}
+
+.carbon-report-section h2 {
+  color: var(--report-text) !important;
+  font-weight: 600 !important;
+}
+
+.carbon-report-section p {
+  color: inherit;
+}
+
+/* Íconos de sección: quitar verde lima, usar azul Carbon */
+.carbon-report-section > div:first-child [class*="bg-blue-50"],
+.carbon-report-section > div:first-child [class*="bg-"][class*="text-blue"],
+.carbon-report-section > div:first-child > div:first-child > div:first-child {
+  background: #edf5ff !important;
+  color: var(--report-blue) !important;
+  border: 1px solid #d0e2ff !important;
+}
+
+/* Empty panels */
+.carbon-report-empty {
+  background: #ffffff !important;
+  border: 1px dashed var(--report-border-strong) !important;
+}
+
+.carbon-report-empty > div {
+  background: #f4f4f4 !important;
+  color: #8d8d8d !important;
+}
+
+.carbon-report-empty p:first-of-type {
+  color: var(--report-muted) !important;
+  font-weight: 600 !important;
+}
+
+.carbon-report-empty p:last-of-type {
+  color: var(--report-helper) !important;
+}
+
+/* Progress rows */
+.carbon-report-progress-row,
+.carbon-report-amount-row,
+.carbon-report-stat,
+.carbon-reportes-page div[class*="bg-neutral-50"][class*="ring-neutral"] {
+  background: #f4f4f4 !important;
+  border: 1px solid var(--report-border) !important;
+  box-shadow: none !important;
+}
+
+.carbon-report-progress-row:hover,
+.carbon-report-amount-row:hover,
+.carbon-report-stat:hover,
+.carbon-reportes-page div[class*="bg-neutral-50"][class*="ring-neutral"]:hover {
+  border-color: var(--report-border-strong) !important;
+}
+
+/* Barras de progreso */
+.carbon-reportes-page div[class*="h-1.5"][class*="bg-neutral-200"] {
+  height: 6px !important;
+  border-radius: 0 !important;
+  background: #e0e0e0 !important;
+}
+
+.carbon-reportes-page div[class*="h-full"][class*="rounded-full"] {
+  border-radius: 0 !important;
+}
+
+/* Eliminar verde lima heredado */
+.carbon-reportes-page [class*="bg-[#CCF32F]"] {
+  background: var(--report-blue) !important;
+}
+
+.carbon-reportes-page [class*="text-[#CCF32F]"] {
+  color: var(--report-blue) !important;
+}
+
+/* Stat blocks */
+.carbon-report-stat {
+  min-height: 116px;
+}
+
+.carbon-report-stat p[class*="text-2xl"] {
+  font-weight: 400 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Badges */
+.carbon-reportes-page span[class*="rounded-full"],
+.carbon-reportes-page span[class*="ring-"] {
+  border-radius: 2px !important;
+}
+
+/* Botones */
+.carbon-reportes-page button,
+.carbon-reportes-page a {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page button:hover,
+.carbon-reportes-page a:hover {
+  transform: none !important;
+}
+
+/* Footer */
+.carbon-report-footer {
+  border-left: 3px solid var(--report-blue) !important;
+}
+
+/* Ajuste de grillas internas */
+.carbon-reportes-page .space-y-3 > div,
+.carbon-reportes-page .space-y-4 > div {
+  border-radius: 4px !important;
+}
+
+/* Contraste de textos secundarios */
+.carbon-reportes-page [class*="text-neutral-400"],
+.carbon-reportes-page [class*="text-slate-400"] {
+  color: #6f6f6f !important;
+}
+
+.carbon-reportes-page [class*="text-neutral-500"],
+.carbon-reportes-page [class*="text-slate-500"] {
+  color: #525252 !important;
+}
+
+.carbon-reportes-page [class*="text-neutral-900"],
+.carbon-reportes-page [class*="text-slate-950"] {
+  color: #161616 !important;
+}
+
+/* Skeleton/loading */
+.carbon-reportes-page .animate-pulse {
+  border-radius: 4px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .carbon-reportes-page .carbon-report-section {
+    padding: 18px !important;
+  }
+
+  .carbon-report-kpi p[class*="text-3xl"] {
+    font-size: 26px !important;
+  }
+}
+
+/* ==========================================================
+   Carbon refinement v9
+   Configuración
+   ========================================================== */
+
+.carbon-config-page {
+  --config-border: #e0e0e0;
+  --config-border-strong: #c6c6c6;
+  --config-bg: #f4f4f4;
+  --config-layer: #ffffff;
+  --config-layer-alt: #f4f4f4;
+  --config-text: #161616;
+  --config-muted: #525252;
+  --config-helper: #6f6f6f;
+  --config-blue: #0f62fe;
+  --config-blue-dark: #0043ce;
+  --config-green: #198038;
+  --config-red: #da1e28;
+  --config-yellow: #f1c21b;
+}
+
+/* Base: menos SaaS redondeado, más Carbon */
+.carbon-config-page [class*="rounded-[24px]"],
+.carbon-config-page [class*="rounded-[26px]"],
+.carbon-config-page [class*="rounded-[28px]"],
+.carbon-config-page [class*="rounded-[30px]"],
+.carbon-config-page [class*="rounded-3xl"],
+.carbon-config-page [class*="rounded-2xl"],
+.carbon-config-page [class*="rounded-xl"],
+.carbon-config-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-config-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-config-shell {
+  border: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-tabs {
+  border-bottom: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+}
+
+/* Tabs principales */
+.carbon-config-group-tab {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  letter-spacing: 0.12em !important;
+  transition:
+    background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9) !important;
+}
+
+.carbon-config-group-tab:hover {
+  transform: none !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-950"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+  border: 1px solid #161616 !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-50"] {
+  background: #f4f4f4 !important;
+  color: #525252 !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-50"]:hover {
+  background: #e0e0e0 !important;
+  color: #161616 !important;
+}
+
+/* Subtabs */
+.carbon-config-sub-tab {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  transition:
+    background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9) !important;
+}
+
+.carbon-config-sub-tab:hover {
+  transform: none !important;
+}
+
+.carbon-config-sub-tab[class*="bg-blue-600"] {
+  background: var(--config-blue) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--config-blue) !important;
+}
+
+.carbon-config-sub-tab[class*="bg-slate-50"] {
+  background: #f4f4f4 !important;
+  color: #525252 !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+.carbon-config-sub-tab[class*="bg-slate-50"]:hover {
+  background: #e0e0e0 !important;
+  color: #161616 !important;
+}
+
+/* Contenido del tab */
+.carbon-config-content {
+  background: #ffffff !important;
+}
+
+/* Paneles, cards y bloques internos */
+.carbon-config-content section,
+.carbon-config-content article,
+.carbon-config-content > div[class*="rounded"],
+.carbon-config-content div[class*="bg-white"],
+.carbon-config-content div[class*="bg-slate-50"],
+.carbon-config-content div[class*="bg-neutral-50"] {
+  box-shadow: none !important;
+}
+
+.carbon-config-content section[class*="border"],
+.carbon-config-content article[class*="border"],
+.carbon-config-content div[class*="ring-1"],
+.carbon-config-content div[class*="border"] {
+  border-color: var(--config-border) !important;
+}
+
+/* Inputs y selects */
+.carbon-config-page input,
+.carbon-config-page select,
+.carbon-config-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-page input:hover,
+.carbon-config-page select:hover,
+.carbon-config-page textarea:hover {
+  border-bottom-color: #525252 !important;
+}
+
+.carbon-config-page input:focus,
+.carbon-config-page select:focus,
+.carbon-config-page textarea:focus {
+  border-bottom-color: var(--config-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Botones */
+.carbon-config-page button,
+.carbon-config-page a {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-page button:hover,
+.carbon-config-page a:hover {
+  transform: none !important;
+}
+
+/* Botones negros principales */
+.carbon-config-page button[class*="bg-slate-950"],
+.carbon-config-page button[class*="bg-neutral-900"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+  border-color: #161616 !important;
+}
+
+.carbon-config-page button[class*="bg-slate-950"]:hover,
+.carbon-config-page button[class*="bg-neutral-900"]:hover {
+  background: #393939 !important;
+}
+
+/* Botones azules */
+.carbon-config-page button[class*="bg-blue-600"],
+.carbon-config-page button[class*="bg-accent"] {
+  background: var(--config-blue) !important;
+  color: #ffffff !important;
+  border-color: var(--config-blue) !important;
+}
+
+.carbon-config-page button[class*="bg-blue-600"]:hover,
+.carbon-config-page button[class*="bg-accent"]:hover {
+  background: var(--config-blue-dark) !important;
+}
+
+/* KPIs internos */
+.carbon-config-content div[class*="grid"] > div[class*="bg-white"],
+.carbon-config-content div[class*="grid"] > div[class*="bg-slate-50"],
+.carbon-config-content div[class*="grid"] > div[class*="bg-neutral-50"] {
+  border: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+}
+
+/* Bloques verdes/amarillos/rojos de preparación */
+.carbon-config-page [class*="bg-emerald-50"],
+.carbon-config-page [class*="bg-green-50"] {
+  background: #defbe6 !important;
+  border-color: #a7f0ba !important;
+}
+
+.carbon-config-page [class*="text-emerald-"],
+.carbon-config-page [class*="text-green-"] {
+  color: #0e6027 !important;
+}
+
+.carbon-config-page [class*="bg-amber-50"],
+.carbon-config-page [class*="bg-yellow-50"] {
+  background: #fcf4d6 !important;
+  border-color: #fddc69 !important;
+}
+
+.carbon-config-page [class*="text-amber-"],
+.carbon-config-page [class*="text-yellow-"] {
+  color: #8a3800 !important;
+}
+
+.carbon-config-page [class*="bg-rose-50"],
+.carbon-config-page [class*="bg-red-50"] {
+  background: #fff1f1 !important;
+  border-color: #ffd7d9 !important;
+}
+
+.carbon-config-page [class*="text-rose-"],
+.carbon-config-page [class*="text-red-"] {
+  color: #a2191f !important;
+}
+
+/* Badges/chips */
+.carbon-config-page span[class*="rounded-full"],
+.carbon-config-page span[class*="ring-"] {
+  border-radius: 2px !important;
+}
+
+/* Tablas */
+.carbon-config-page table {
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.carbon-config-page thead,
+.carbon-config-page thead tr,
+.carbon-config-page thead th {
+  background: #f4f4f4 !important;
+}
+
+.carbon-config-page thead th {
+  border-bottom: 2px solid #c6c6c6 !important;
+  color: #525252 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-config-page tbody td {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.carbon-config-page tbody tr:hover {
+  background: #f4f4f4 !important;
+}
+
+/* Cards de niveles, cursos y unidades */
+.carbon-config-page .config-tab-content div[class*="ring-slate"],
+.carbon-config-page .config-tab-content div[class*="ring-neutral"],
+.carbon-config-page .config-tab-content div[class*="ring-blue"],
+.carbon-config-page .config-tab-content div[class*="ring-emerald"],
+.carbon-config-page .config-tab-content div[class*="ring-amber"],
+.carbon-config-page .config-tab-content div[class*="ring-red"],
+.carbon-config-page .config-tab-content div[class*="ring-rose"] {
+  box-shadow: none !important;
+}
+
+/* Barras de progreso */
+.carbon-config-page div[class*="h-1.5"],
+.carbon-config-page div[class*="h-2"] {
+  border-radius: 0 !important;
+}
+
+.carbon-config-page div[class*="bg-[#CCF32F]"],
+.carbon-config-page div[class*="bg-lime"],
+.carbon-config-page [class*="bg-lime"] {
+  background: var(--config-blue) !important;
+}
+
+/* Texto secundario más legible */
+.carbon-config-page [class*="text-slate-400"],
+.carbon-config-page [class*="text-neutral-400"] {
+  color: #6f6f6f !important;
+}
+
+.carbon-config-page [class*="text-slate-500"],
+.carbon-config-page [class*="text-neutral-500"] {
+  color: #525252 !important;
+}
+
+.carbon-config-page [class*="text-slate-950"],
+.carbon-config-page [class*="text-neutral-900"] {
+  color: #161616 !important;
+}
+
+/* Tarjetas de áreas/cursos: menos “flotantes” */
+.carbon-config-page .config-tab-content [class*="hover:-translate"],
+.carbon-config-page .config-tab-content [class*="hover:scale"] {
+  transform: none !important;
+}
+
+/* Modal y acciones dentro de Configuración */
+.carbon-config-page [class*="shadow-2xl"],
+.carbon-config-page [class*="shadow-xl"],
+.carbon-config-page [class*="shadow-lg"] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10) !important;
+}
+
+/* Ajuste responsive */
+@media (max-width: 768px) {
+  .carbon-config-content {
+    padding: 16px !important;
+  }
+
+  .carbon-config-sub-tab {
+    height: 40px !important;
+    padding-inline: 12px !important;
+  }
+}
+
+/* ==========================================================
+   Carbon refinement v10
+   Configuración completa + modales centrados
+   ========================================================== */
+
+.carbon-config-page {
+  --config-border: #e0e0e0;
+  --config-border-strong: #c6c6c6;
+  --config-layer: #ffffff;
+  --config-layer-alt: #f4f4f4;
+  --config-text: #161616;
+  --config-muted: #525252;
+  --config-helper: #6f6f6f;
+  --config-blue: #0f62fe;
+  --config-blue-dark: #0043ce;
+}
+
+/* ---------- Shell principal ---------- */
+
+.carbon-config-page {
+  color: var(--config-text);
+}
+
+.carbon-config-page [class*="rounded-[24px]"],
+.carbon-config-page [class*="rounded-[26px]"],
+.carbon-config-page [class*="rounded-[28px]"],
+.carbon-config-page [class*="rounded-[30px]"],
+.carbon-config-page [class*="rounded-3xl"],
+.carbon-config-page [class*="rounded-2xl"],
+.carbon-config-page [class*="rounded-xl"],
+.carbon-config-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-config-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-config-shell {
+  border: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-tabs {
+  border-bottom: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+  padding: 16px 16px 14px !important;
+}
+
+.carbon-config-content {
+  background: #ffffff !important;
+  padding: 24px !important;
+}
+
+/* ---------- Tabs principales y secundarios ---------- */
+
+.carbon-config-group-tab,
+.carbon-config-sub-tab {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  transition:
+    background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9) !important;
+}
+
+.carbon-config-group-tab:hover,
+.carbon-config-sub-tab:hover {
+  transform: none !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-950"] {
+  background: #161616 !important;
+  border: 1px solid #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-50"],
+.carbon-config-sub-tab[class*="bg-slate-50"] {
+  background: #f4f4f4 !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #525252 !important;
+}
+
+.carbon-config-group-tab[class*="bg-slate-50"]:hover,
+.carbon-config-sub-tab[class*="bg-slate-50"]:hover {
+  background: #e0e0e0 !important;
+  color: #161616 !important;
+}
+
+.carbon-config-sub-tab[class*="bg-blue-600"] {
+  background: var(--config-blue) !important;
+  border: 1px solid var(--config-blue) !important;
+  color: #ffffff !important;
+}
+
+/* ---------- Paneles internos ---------- */
+
+.carbon-config-content > section,
+.carbon-config-content > div,
+.carbon-config-content article {
+  box-shadow: none !important;
+}
+
+.carbon-config-content section[class*="border"],
+.carbon-config-content article[class*="border"],
+.carbon-config-content div[class*="border"],
+.carbon-config-content div[class*="ring-1"] {
+  border-color: var(--config-border) !important;
+}
+
+.carbon-config-content div[class*="bg-white"] {
+  background: #ffffff !important;
+}
+
+.carbon-config-content div[class*="bg-slate-50"],
+.carbon-config-content div[class*="bg-neutral-50"] {
+  background: #f4f4f4 !important;
+}
+
+/* KPIs internos: conceptos, criterios, escala, plantillas */
+.carbon-config-content .grid > div[class*="bg-white"],
+.carbon-config-content .grid > div[class*="bg-slate-50"],
+.carbon-config-content .grid > div[class*="bg-neutral-50"] {
+  border: 1px solid var(--config-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Inputs/selects Carbon ---------- */
+
+.carbon-config-page input,
+.carbon-config-page select,
+.carbon-config-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-page input:hover,
+.carbon-config-page select:hover,
+.carbon-config-page textarea:hover {
+  border-bottom-color: #525252 !important;
+}
+
+.carbon-config-page input:focus,
+.carbon-config-page select:focus,
+.carbon-config-page textarea:focus {
+  border-bottom-color: var(--config-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Color input: mantener cuadrado visible */
+.carbon-config-page input[type="color"] {
+  padding: 2px !important;
+  height: 38px !important;
+  min-width: 48px !important;
+  border: 1px solid #8d8d8d !important;
+  background: #ffffff !important;
+}
+
+/* ---------- Botones ---------- */
+
+.carbon-config-page button,
+.carbon-config-page a {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-page button:hover,
+.carbon-config-page a:hover {
+  transform: none !important;
+}
+
+.carbon-config-page button[class*="bg-slate-950"],
+.carbon-config-page button[class*="bg-neutral-900"] {
+  background: #161616 !important;
+  border-color: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-config-page button[class*="bg-slate-950"]:hover,
+.carbon-config-page button[class*="bg-neutral-900"]:hover {
+  background: #393939 !important;
+}
+
+.carbon-config-page button[class*="bg-blue-600"] {
+  background: var(--config-blue) !important;
+  border-color: var(--config-blue) !important;
+  color: #ffffff !important;
+}
+
+.carbon-config-page button[class*="bg-blue-600"]:hover {
+  background: var(--config-blue-dark) !important;
+}
+
+/* Botones secundarios */
+.carbon-config-page button[class*="bg-white"],
+.carbon-config-page button[class*="bg-slate-50"],
+.carbon-config-page button[class*="bg-slate-100"] {
+  border: 1px solid #c6c6c6 !important;
+}
+
+/* ---------- Tablas Carbon ---------- */
+
+.carbon-config-page table {
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.carbon-config-page thead,
+.carbon-config-page thead tr,
+.carbon-config-page thead th {
+  background: #f4f4f4 !important;
+}
+
+.carbon-config-page thead th {
+  border-bottom: 2px solid #c6c6c6 !important;
+  color: #525252 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-config-page tbody td {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.carbon-config-page tbody tr:hover {
+  background: #f4f4f4 !important;
+}
+
+/* ---------- Estados y chips ---------- */
+
+.carbon-config-page span[class*="rounded-full"],
+.carbon-config-page span[class*="ring-"] {
+  border-radius: 2px !important;
+}
+
+.carbon-config-page [class*="bg-emerald-50"],
+.carbon-config-page [class*="bg-green-50"] {
+  background: #defbe6 !important;
+  border-color: #a7f0ba !important;
+}
+
+.carbon-config-page [class*="text-emerald-"],
+.carbon-config-page [class*="text-green-"] {
+  color: #0e6027 !important;
+}
+
+.carbon-config-page [class*="bg-amber-50"],
+.carbon-config-page [class*="bg-yellow-50"] {
+  background: #fcf4d6 !important;
+  border-color: #fddc69 !important;
+}
+
+.carbon-config-page [class*="text-amber-"],
+.carbon-config-page [class*="text-yellow-"] {
+  color: #8a3800 !important;
+}
+
+.carbon-config-page [class*="bg-red-50"],
+.carbon-config-page [class*="bg-rose-50"] {
+  background: #fff1f1 !important;
+  border-color: #ffd7d9 !important;
+}
+
+.carbon-config-page [class*="text-red-"],
+.carbon-config-page [class*="text-rose-"] {
+  color: #a2191f !important;
+}
+
+/* ---------- Barras de progreso ---------- */
+
+.carbon-config-page div[class*="h-1.5"],
+.carbon-config-page div[class*="h-2"] {
+  border-radius: 0 !important;
+}
+
+.carbon-config-page [class*="bg-[#CCF32F]"],
+.carbon-config-page [class*="bg-lime"] {
+  background: var(--config-blue) !important;
+}
+
+/* ---------- Listas y cards de áreas/plantillas ---------- */
+
+.carbon-config-page .config-tab-content article,
+.carbon-config-page .config-tab-content [class*="soft-fade-up"] {
+  box-shadow: none !important;
+}
+
+.carbon-config-page .config-tab-content article:hover {
+  transform: none !important;
+  border-color: var(--config-border-strong) !important;
+}
+
+.carbon-config-page .config-tab-content [class*="hover:-translate"],
+.carbon-config-page .config-tab-content [class*="hover:scale"] {
+  transform: none !important;
+}
+
+/* ---------- Texto secundario ---------- */
+
+.carbon-config-page [class*="text-slate-400"],
+.carbon-config-page [class*="text-neutral-400"] {
+  color: #6f6f6f !important;
+}
+
+.carbon-config-page [class*="text-slate-500"],
+.carbon-config-page [class*="text-neutral-500"] {
+  color: #525252 !important;
+}
+
+.carbon-config-page [class*="text-slate-950"],
+.carbon-config-page [class*="text-neutral-900"] {
+  color: #161616 !important;
+}
+
+/* ==========================================================
+   Modales de Configuración
+   ========================================================== */
+
+.carbon-config-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.carbon-config-modal-overlay > .absolute {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(22, 22, 22, 0.56) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.carbon-config-modal-panel {
+  margin: auto !important;
+  border-radius: 4px !important;
+  border: 1px solid #c6c6c6 !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+  transform: none !important;
+}
+
+.carbon-config-modal-panel > div:first-child {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.carbon-config-modal-panel input,
+.carbon-config-modal-panel select,
+.carbon-config-modal-panel textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-modal-panel button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-modal-panel [class*="rounded-3xl"],
+.carbon-config-modal-panel [class*="rounded-2xl"],
+.carbon-config-modal-panel [class*="rounded-xl"],
+.carbon-config-modal-panel [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+/* Fallback para otros modales locales dentro de configuración */
+.carbon-config-page .fixed.inset-0[class*="items-center"][class*="justify-center"] {
+  z-index: 1200 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+  .carbon-config-content {
+    padding: 16px !important;
+  }
+
+  .carbon-config-tabs {
+    padding: 12px !important;
+  }
+
+  .carbon-config-sub-tab {
+    height: 40px !important;
+    padding-inline: 12px !important;
+  }
+
+  .carbon-config-modal-overlay {
+    padding: 12px !important;
+  }
+
+  .carbon-config-modal-panel {
+    max-height: 92vh !important;
+  }
+}
+
+/* ==========================================================
+   Carbon refinement v11
+   Matrícula + modales + legibilidad general
+   ========================================================== */
+
+/* ==========================================================
+   1) Legibilidad general
+   Pensado para usuarios adultos y personas mayores.
+   ========================================================== */
+
+.carbon-shell {
+  --readable-text: #161616;
+  --readable-muted: #393939;
+  --readable-helper: #525252;
+  --readable-border: #c6c6c6;
+}
+
+/* Evitar textos demasiado claros */
+.carbon-shell [class*="text-neutral-400"],
+.carbon-shell [class*="text-slate-400"],
+.carbon-shell [class*="text-gray-400"] {
+  color: #525252 !important;
+}
+
+.carbon-shell [class*="text-neutral-500"],
+.carbon-shell [class*="text-slate-500"],
+.carbon-shell [class*="text-gray-500"] {
+  color: #393939 !important;
+}
+
+.carbon-shell [class*="placeholder:text-neutral-400"]::placeholder,
+.carbon-shell [class*="placeholder:text-slate-400"]::placeholder,
+.carbon-shell [class*="placeholder:text-gray-400"]::placeholder,
+.carbon-shell input::placeholder,
+.carbon-shell textarea::placeholder {
+  color: #6f6f6f !important;
+  opacity: 1 !important;
+}
+
+.carbon-shell p,
+.carbon-shell label,
+.carbon-shell span,
+.carbon-shell td,
+.carbon-shell th,
+.carbon-shell input,
+.carbon-shell select,
+.carbon-shell textarea,
+.carbon-shell button {
+  text-rendering: geometricPrecision;
+}
+
+.carbon-shell input,
+.carbon-shell select,
+.carbon-shell textarea {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.carbon-shell h1,
+.carbon-shell h2,
+.carbon-shell h3,
+.carbon-shell h4 {
+  color: #161616 !important;
+}
+
+/* ==========================================================
+   2) Matrícula: páginas principales
+   ========================================================== */
+
+.carbon-matricula-page {
+  --mat-border: #e0e0e0;
+  --mat-border-strong: #c6c6c6;
+  --mat-layer: #ffffff;
+  --mat-alt: #f4f4f4;
+  --mat-text: #161616;
+  --mat-muted: #393939;
+  --mat-helper: #525252;
+  --mat-blue: #0f62fe;
+  --mat-blue-dark: #0043ce;
+  --mat-green: #198038;
+  --mat-red: #da1e28;
+  --mat-yellow: #f1c21b;
+}
+
+/* Base Carbon */
+.carbon-matricula-page [class*="rounded-[24px]"],
+.carbon-matricula-page [class*="rounded-[26px]"],
+.carbon-matricula-page [class*="rounded-[28px]"],
+.carbon-matricula-page [class*="rounded-[30px]"],
+.carbon-matricula-page [class*="rounded-3xl"],
+.carbon-matricula-page [class*="rounded-2xl"],
+.carbon-matricula-page [class*="rounded-xl"],
+.carbon-matricula-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-matricula-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-matricula-page section,
+.carbon-matricula-page article,
+.carbon-matricula-page div[class*="bg-white"] {
+  box-shadow: none !important;
+}
+
+.carbon-matricula-page section[class*="border"],
+.carbon-matricula-page article[class*="border"],
+.carbon-matricula-page div[class*="ring-1"],
+.carbon-matricula-page div[class*="border"] {
+  border-color: var(--mat-border) !important;
+}
+
+/* Cards */
+.carbon-matricula-page section[class*="bg-white"],
+.carbon-matricula-page div[class*="bg-white"] {
+  background: #ffffff !important;
+}
+
+.carbon-matricula-page div[class*="bg-neutral-50"],
+.carbon-matricula-page div[class*="bg-slate-50"],
+.carbon-matricula-page div[class*="bg-gray-50"] {
+  background: #f4f4f4 !important;
+}
+
+/* Inputs Carbon */
+.carbon-matricula-page input,
+.carbon-matricula-page select,
+.carbon-matricula-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-matricula-page input:hover,
+.carbon-matricula-page select:hover,
+.carbon-matricula-page textarea:hover {
+  border-bottom-color: #525252 !important;
+}
+
+.carbon-matricula-page input:focus,
+.carbon-matricula-page select:focus,
+.carbon-matricula-page textarea:focus {
+  border-bottom-color: var(--mat-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Botones */
+.carbon-matricula-page button,
+.carbon-matricula-page a {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-matricula-page button:hover,
+.carbon-matricula-page a:hover {
+  transform: none !important;
+}
+
+.carbon-matricula-page button[class*="bg-neutral-900"],
+.carbon-matricula-page button[class*="bg-slate-950"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-page button[class*="bg-blue"],
+.carbon-matricula-page button[class*="bg-[#0f62fe]"] {
+  background: var(--mat-blue) !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-page button[class*="bg-blue"]:hover,
+.carbon-matricula-page button[class*="bg-[#0043ce]"]:hover {
+  background: var(--mat-blue-dark) !important;
+}
+
+/* Eliminar verde lima que quedaba en matrículas */
+.carbon-matricula-page [class*="bg-[#CCF32F]"],
+.carbon-matricula-page [class*="bg-lime"] {
+  background: var(--mat-blue) !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-page [class*="text-[#CCF32F]"],
+.carbon-matricula-page [class*="text-lime"] {
+  color: var(--mat-blue) !important;
+}
+
+.carbon-matricula-page [class*="border-[#CCF32F]"] {
+  border-color: var(--mat-blue) !important;
+}
+
+.carbon-matricula-page [class*="ring-[#CCF32F]"] {
+  --tw-ring-color: rgba(15, 98, 254, 0.30) !important;
+}
+
+/* Barras de progreso */
+.carbon-matricula-page div[class*="h-1.5"],
+.carbon-matricula-page div[class*="h-2"] {
+  border-radius: 0 !important;
+}
+
+.carbon-matricula-page div[class*="h-full"][class*="rounded-full"] {
+  border-radius: 0 !important;
+  background: var(--mat-blue) !important;
+}
+
+/* Avisos */
+.carbon-matricula-page [class*="bg-emerald-50"],
+.carbon-matricula-page [class*="bg-green-50"] {
+  background: #defbe6 !important;
+  border-color: #a7f0ba !important;
+}
+
+.carbon-matricula-page [class*="text-emerald-"],
+.carbon-matricula-page [class*="text-green-"] {
+  color: #0e6027 !important;
+}
+
+.carbon-matricula-page [class*="bg-amber-50"],
+.carbon-matricula-page [class*="bg-yellow-50"] {
+  background: #fcf4d6 !important;
+  border-color: #fddc69 !important;
+}
+
+.carbon-matricula-page [class*="text-amber-"],
+.carbon-matricula-page [class*="text-yellow-"] {
+  color: #8a3800 !important;
+}
+
+.carbon-matricula-page [class*="bg-red-50"],
+.carbon-matricula-page [class*="bg-rose-50"] {
+  background: #fff1f1 !important;
+  border-color: #ffd7d9 !important;
+}
+
+.carbon-matricula-page [class*="text-red-"],
+.carbon-matricula-page [class*="text-rose-"] {
+  color: #a2191f !important;
+}
+
+/* Chips / badges */
+.carbon-matricula-page span[class*="rounded-full"],
+.carbon-matricula-page span[class*="ring-"] {
+  border-radius: 2px !important;
+}
+
+/* Listas e historial */
+.carbon-matricula-page .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e0e0e0 !important;
+}
+
+.carbon-matricula-page [class*="hover:bg-neutral-50"]:hover,
+.carbon-matricula-page [class*="hover:bg-slate-50"]:hover {
+  background: #f4f4f4 !important;
+}
+
+/* ==========================================================
+   3) Modales de Matrícula
+   ========================================================== */
+
+.carbon-matricula-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.carbon-matricula-modal-overlay > .absolute {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(22, 22, 22, 0.56) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.carbon-matricula-modal-panel {
+  margin: auto !important;
+  border-radius: 4px !important;
+  border: 1px solid #c6c6c6 !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+  transform: none !important;
+}
+
+.carbon-matricula-modal-panel > div:first-child {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.carbon-matricula-modal-panel input,
+.carbon-matricula-modal-panel select,
+.carbon-matricula-modal-panel textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  box-shadow: none !important;
+  color: #161616 !important;
+}
+
+.carbon-matricula-modal-panel button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-matricula-modal-panel [class*="rounded-3xl"],
+.carbon-matricula-modal-panel [class*="rounded-2xl"],
+.carbon-matricula-modal-panel [class*="rounded-xl"],
+.carbon-matricula-modal-panel [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-matricula-modal-panel [class*="text-neutral-400"],
+.carbon-matricula-modal-panel [class*="text-slate-400"],
+.carbon-matricula-modal-panel [class*="text-gray-400"] {
+  color: #525252 !important;
+}
+
+.carbon-matricula-modal-panel [class*="text-neutral-500"],
+.carbon-matricula-modal-panel [class*="text-slate-500"],
+.carbon-matricula-modal-panel [class*="text-gray-500"] {
+  color: #393939 !important;
+}
+
+/* Fallback para modales locales */
+.carbon-matricula-page .fixed.inset-0[class*="items-center"][class*="justify-center"] {
+  z-index: 1200 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ==========================================================
+   4) Modal de Configuración: Tipos de Evaluación y similares
+   ========================================================== */
+
+.carbon-config-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.carbon-config-modal-overlay > .absolute {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(22, 22, 22, 0.56) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.carbon-config-modal-panel {
+  margin: auto !important;
+  border-radius: 4px !important;
+  border: 1px solid #c6c6c6 !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+  transform: none !important;
+}
+
+.carbon-config-modal-panel input,
+.carbon-config-modal-panel select,
+.carbon-config-modal-panel textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-config-modal-panel button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================
+   5) Responsive
+   ========================================================== */
+
+@media (max-width: 768px) {
+  .carbon-matricula-modal-overlay,
+  .carbon-config-modal-overlay {
+    padding: 12px !important;
+  }
+
+  .carbon-matricula-modal-panel,
+  .carbon-config-modal-panel {
+    max-height: 92vh !important;
+  }
+
+  .carbon-shell input,
+  .carbon-shell select,
+  .carbon-shell textarea {
+    font-size: 15px !important;
+  }
+}

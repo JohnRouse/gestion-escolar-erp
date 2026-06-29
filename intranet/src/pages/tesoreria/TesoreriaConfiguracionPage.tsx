@@ -153,7 +153,7 @@ function GuideCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[28px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="carbon-tesoreria-page rounded-[28px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
         Paso {step}
       </p>

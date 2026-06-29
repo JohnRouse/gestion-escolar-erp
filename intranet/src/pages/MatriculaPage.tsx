@@ -86,7 +86,7 @@ const emptyAlumno: PersonaForm = { dni: '', nombres: '', apellido_paterno: '', a
 const emptyApoderado: PersonaForm = { dni: '', nombres: '', apellido_paterno: '', apellido_materno: '', telefono: '', correo: '', direccion: '', pais: 'Perú', departamento: '', provincia: '', distrito: '', ocupacion: '' };
 const parentescos = ['Madre','Padre','Abuela','Abuelo','Tía','Tío','Tutor legal','Otro'];
 
-const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400 appearance-none";
+const inputClass = "h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400 appearance-none";
 const selectClass = inputClass;
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-neutral-400";
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
@@ -353,7 +353,7 @@ export default function MatriculaPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-matricula-page w-full space-y-6">
       <style>{`
         @keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalOverlayOut { from { opacity: 1; } to { opacity: 0; } }
@@ -380,7 +380,7 @@ export default function MatriculaPage() {
                 {buscandoAlumno ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />} Buscar
               </button>
             </div>
-            <button type="button" onClick={() => { setFormAlumno({ ...emptyAlumno, dni }); setErrorPersona(null); setClosingModal(null); setModalAlumno(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#CCF32F] hover:bg-[#CCF32F]/5 hover:text-neutral-900">
+            <button type="button" onClick={() => { setFormAlumno({ ...emptyAlumno, dni }); setErrorPersona(null); setClosingModal(null); setModalAlumno(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#0f62fe] hover:bg-[#0f62fe]/5 hover:text-neutral-900">
               <UserPlus size={15} /> Nuevo alumno
             </button>
           </Card>
@@ -485,21 +485,21 @@ export default function MatriculaPage() {
               <Card icon={ShieldCheck} title="Apoderados" subtitle="Debes vincular al menos un apoderado.">
                 <div className="flex gap-3">
                   <input value={apoderadoDni} onChange={(e) => setApoderadoDni(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && buscarApoderado()} placeholder="DNI del apoderado" className={inputClass} />
-                  <select value={parentesco} onChange={(e) => setParentesco(e.target.value)} className="h-11 w-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 appearance-none">
+                  <select value={parentesco} onChange={(e) => setParentesco(e.target.value)} className="h-11 w-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 appearance-none">
                     {parentescos.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                   <button type="button" onClick={buscarApoderado} disabled={!apoderadoDni || buscandoApoderado} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-50">
                     {buscandoApoderado ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />} Buscar
                   </button>
                 </div>
-                <button type="button" onClick={() => { setFormApoderado({ ...emptyApoderado }); setErrorPersona(null); setClosingModal(null); setModalApoderado(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#CCF32F] hover:bg-[#CCF32F]/5 hover:text-neutral-900">
+                <button type="button" onClick={() => { setFormApoderado({ ...emptyApoderado }); setErrorPersona(null); setClosingModal(null); setModalApoderado(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#0f62fe] hover:bg-[#0f62fe]/5 hover:text-neutral-900">
                   <UserPlus size={15} /> Nuevo apoderado
                 </button>
                 {apoderadoEncontrado && (
                   <div className="mt-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200/60">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0"><p className="truncate text-sm font-medium text-neutral-800">{apoderadoEncontrado.nombres} {apoderadoEncontrado.apellido_paterno} {apoderadoEncontrado.apellido_materno}</p><p className="mt-0.5 text-xs text-neutral-400">DNI {apoderadoEncontrado.dni} · {apoderadoEncontrado.telefono || 'Sin teléfono'} · {apoderadoEncontrado.distrito || 'Sin distrito'}</p></div>
-                      <button type="button" onClick={() => agregarApoderado({ ...apoderadoEncontrado, parentesco })} className="shrink-0 h-9 rounded-xl bg-[#CCF32F] px-3 text-xs font-semibold text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98]">Agregar como {parentesco}</button>
+                      <button type="button" onClick={() => agregarApoderado({ ...apoderadoEncontrado, parentesco })} className="shrink-0 h-9 rounded-xl bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98]">Agregar como {parentesco}</button>
                     </div>
                   </div>
                 )}
@@ -553,9 +553,9 @@ export default function MatriculaPage() {
 
                 <div className="mt-5 grid max-h-[310px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
                   {seccionesFiltradas.map((s) => { const selected = s.id_seccion === seccionId; const sinCupos = s.disponibles <= 0; const porcentaje = s.capacidad > 0 ? Math.min(100, Math.round((s.matriculados / s.capacidad) * 100)) : 0; return (
-                    <button key={s.id_seccion} type="button" disabled={sinCupos} onClick={() => { setSeccionId(selected ? '' : s.id_seccion); setExcepcionTraslado(false); }} className={cx('rounded-2xl border p-4 text-left transition-all duration-150', selected ? 'border-[#CCF32F] bg-[#CCF32F]/5 ring-1 ring-[#CCF32F]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300', sinCupos && 'cursor-not-allowed opacity-50')}>
-                      <div className="flex justify-between gap-3"><div><p className="text-sm font-medium text-neutral-800">{s.grado.nombre_grado} &quot;{s.letra}&quot;</p><p className="mt-0.5 text-xs text-neutral-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p></div>{selected && <CheckCircle2 size={18} className="text-[#CCF32F] flex-shrink-0" />}</div>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60"><div className="h-full rounded-full bg-[#CCF32F] transition-all duration-500" style={{ width: `${porcentaje}%` }} /></div>
+                    <button key={s.id_seccion} type="button" disabled={sinCupos} onClick={() => { setSeccionId(selected ? '' : s.id_seccion); setExcepcionTraslado(false); }} className={cx('rounded-2xl border p-4 text-left transition-all duration-150', selected ? 'border-[#0f62fe] bg-[#0f62fe]/5 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300', sinCupos && 'cursor-not-allowed opacity-50')}>
+                      <div className="flex justify-between gap-3"><div><p className="text-sm font-medium text-neutral-800">{s.grado.nombre_grado} &quot;{s.letra}&quot;</p><p className="mt-0.5 text-xs text-neutral-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p></div>{selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}</div>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60"><div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} /></div>
                       <p className="mt-2 text-xs text-neutral-500">{s.matriculados} registrados · {s.disponibles} disponibles</p>
                     </button> ); })}
                 </div>
@@ -568,7 +568,7 @@ export default function MatriculaPage() {
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label><span className={labelClass}>Tipo de ingreso</span><select value={tipoIngreso} onChange={(e) => setTipoIngreso(e.target.value)} className={selectClass} disabled={tiposIngresoPermitidos.length === 0}>{tiposIngresoPermitidos.length === 0 ? <option value="">Sin opciones disponibles</option> : tiposIngresoPermitidos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}</select>{anioSeleccionado && <p className="mt-2 text-xs text-neutral-400">{getEstadoOperativoAnioFrontend(anioSeleccionado) === 'Planificación' ? 'Año en planificación: solo permite reservas.' : getEstadoOperativoAnioFrontend(anioSeleccionado) === 'En curso' ? 'Año en curso: solo permite traslado, reingreso o regularización.' : 'Matrícula abierta: permite ingreso regular.'}</p>}</label>
                     {(tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso') && (<><label><span className={labelClass}>Colegio de procedencia</span><input value={colegioProcedencia} onChange={(e) => setColegioProcedencia(e.target.value)} placeholder="Nombre del colegio anterior" className={inputClass} /></label><label><span className={labelClass}>Código modular</span><input value={codigoModularProcedencia} onChange={(e) => setCodigoModularProcedencia(e.target.value)} placeholder="Opcional" className={inputClass} /></label><label><span className={labelClass}>Grado procedencia</span><input value={gradoProcedencia} onChange={(e) => setGradoProcedencia(e.target.value)} placeholder="Ej. Inicial 4 años, 2do primaria" className={inputClass} /></label></>)}
-                    <label className="md:col-span-2"><span className={labelClass}>Observación</span><textarea value={observacionProcedencia} onChange={(e) => setObservacionProcedencia(e.target.value)} placeholder="Información adicional sobre ingreso, traslado o continuidad" className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#CCF32F] focus:bg-white focus:ring-2 focus:ring-[#CCF32F]/20 hover:border-neutral-300 placeholder:text-neutral-400" /></label>
+                    <label className="md:col-span-2"><span className={labelClass}>Observación</span><textarea value={observacionProcedencia} onChange={(e) => setObservacionProcedencia(e.target.value)} placeholder="Información adicional sobre ingreso, traslado o continuidad" className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400" /></label>
                   </div>
                 </div>
 
@@ -589,7 +589,7 @@ export default function MatriculaPage() {
 
                 <StepHint step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 6 : 5} title="Revisa y registra" description="Confirma que alumno, apoderado, sede, sección y tipo de ingreso estén correctos." done={Boolean(alumno && apoderados.length > 0 && seccionSeleccionada)} />
 
-                <button type="button" onClick={revisarMatricula} disabled={aniosDisponibles.length === 0} className="mt-5 h-12 w-full rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2">
+                <button type="button" onClick={revisarMatricula} disabled={aniosDisponibles.length === 0} className="mt-5 h-12 w-full rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2">
                   {tipoIngreso === 'Reserva' ? 'Revisar y registrar reserva' : 'Revisar y registrar pre-matrícula'}
                 </button>
               </Card>
@@ -600,9 +600,9 @@ export default function MatriculaPage() {
 
       {/* ── Modal confirmación ── */}
       {confirmOpen && alumno && seccionSeleccionada && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
+        <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
-          <div className={`relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
+          <div className={`carbon-matricula-modal-panel relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             <ModalHead title="Revisar pre-matrícula" subtitle="Verifica los datos antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
             <div className="space-y-4 p-6 overflow-y-auto">
               {alertaEdad && (<div className="flex items-start gap-2 rounded-xl bg-amber-50/50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60"><AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />{alertaEdad}</div>)}
@@ -620,7 +620,7 @@ export default function MatriculaPage() {
             </div>
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={() => closeModal(setConfirmOpen, 'confirm')} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Corregir</button>
-              <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
+              <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
                 {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar pre-matrícula
               </button>
             </div>
@@ -650,12 +650,12 @@ export default function MatriculaPage() {
 
       {/* ── Modal detalle matrícula ── */}
       {detalleOpen && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm ${closingModal === 'detail' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setDetalleOpen, 'detail'); }}>
+        <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'detail' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setDetalleOpen, 'detail'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
           <div className={`relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${closingModal === 'detail' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 p-6 flex-shrink-0">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-[#CCF32F]/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-800 ring-1 ring-[#CCF32F]/20">Detalle de matrícula</div>
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0f62fe]/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-800 ring-1 ring-[#0f62fe]/20">Detalle de matrícula</div>
                 <h3 className="mt-2 text-lg font-semibold text-neutral-900 tracking-tight">{detalleMatricula?.estudiante?.persona ? `${getCodigoDetalleMatricula(detalleMatricula)} · ${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}` : 'Cargando matrícula'}</h3>
                 <p className="mt-0.5 text-xs text-neutral-400">Información académica, apoderados y cronograma generado.</p>
               </div>
@@ -666,7 +666,7 @@ export default function MatriculaPage() {
             </div>
             <div className="max-h-[72vh] overflow-y-auto p-6">
               {detalleLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center"><Loader2 size={22} className="animate-spin text-[#CCF32F]" /></div>
+                <div className="flex min-h-[260px] items-center justify-center"><Loader2 size={22} className="animate-spin text-[#0f62fe]" /></div>
               ) : detalleMatricula ? (
                 <div className="space-y-5">
                   <div className="grid gap-3 md:grid-cols-4">
@@ -746,7 +746,7 @@ function Card({ icon: Icon, title, subtitle, children, action }: { icon: any; ti
     <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#CCF32F]/10 text-[#CCF32F]"><Icon size={15} strokeWidth={2} /></div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#0f62fe]/10 text-[#0f62fe]"><Icon size={15} strokeWidth={2} /></div>
           <div><h2 className="text-sm font-semibold text-neutral-900 tracking-tight">{title}</h2><p className="text-[11px] text-neutral-400">{subtitle}</p></div>
         </div>
         {action}
@@ -804,7 +804,7 @@ function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: stri
   return (
     <div className="flex items-start justify-between gap-4 border-b border-neutral-100 p-6 flex-shrink-0">
       <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#CCF32F]/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-800 ring-1 ring-[#CCF32F]/20"><UserPlus size={11} /> Registro</div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0f62fe]/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-800 ring-1 ring-[#0f62fe]/20"><UserPlus size={11} /> Registro</div>
         <h3 className="mt-2 text-lg font-semibold text-neutral-900 tracking-tight">{title}</h3>
         <p className="mt-0.5 text-xs text-neutral-400">{subtitle}</p>
       </div>
@@ -816,9 +816,9 @@ function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: stri
 function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, alumno, apoderado, aviso, parentesco, onParentescoChange, isClosing }: any) {
   const set = (key: keyof PersonaForm, value: string) => setForm({ ...form, [key]: value });
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute inset-0 bg-neutral-950/40" />
-      <div className={`relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
+      <div className={`carbon-matricula-modal-panel relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
         <ModalHead title={title} subtitle="Registra datos básicos y ubicación." onClose={onClose} />
         <div className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid gap-4 md:grid-cols-2">
@@ -843,7 +843,7 @@ function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, a
         </div>
         <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
           <button type="button" onClick={onClose} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Cancelar</button>
-          <button type="button" onClick={onSave} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#CCF32F] px-5 text-sm font-medium text-black transition-all duration-150 hover:bg-[#BCE325] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
+          <button type="button" onClick={onSave} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
             {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Guardar
           </button>
         </div>

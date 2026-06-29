@@ -72,7 +72,7 @@ export default function ConfiguracionPage() {
   const grupoActivo = tabActual.group;
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-config-page w-full space-y-6">
       <PageHeader
         eyebrow="Centro de configuración"
         title="Configuración"
@@ -90,8 +90,8 @@ export default function ConfiguracionPage() {
         ]}
       />
 
-      <section className="overflow-hidden rounded-[30px] border border-white bg-white/90 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
-        <div className="border-b border-slate-100 px-4 pt-4">
+      <section className="carbon-config-shell overflow-hidden rounded-[30px] border border-white bg-white/90 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100">
+        <div className="carbon-config-tabs border-b border-slate-100 px-4 pt-4">
           {/* Categorías principales */}
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {CONFIG_GROUPS.map((group) => {
@@ -103,7 +103,7 @@ export default function ConfiguracionPage() {
                   key={group.key}
                   type="button"
                   onClick={() => firstTab && setTab(firstTab.key)}
-                  className={`inline-flex h-9 shrink-0 items-center rounded-2xl px-3 text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
+                  className={`carbon-config-group-tab inline-flex h-9 shrink-0 items-center rounded-2xl px-3 text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
                     active
                       ? 'bg-slate-950 text-white shadow-sm'
                       : 'bg-slate-50 text-slate-400 ring-1 ring-slate-100 hover:bg-white hover:text-slate-700'
@@ -126,7 +126,7 @@ export default function ConfiguracionPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setTab(tab.key)}
-                  className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-bold transition-all duration-200 ${
+                  className={`carbon-config-sub-tab inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-bold transition-all duration-200 ${
                     active
                       ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
                       : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100 hover:-translate-y-0.5 hover:bg-white hover:text-slate-800 hover:shadow-sm'
@@ -140,7 +140,7 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
-        <div key={`${contextKey}-${tabActivo}`} className="config-tab-content p-5">
+        <div key={`${contextKey}-${tabActivo}`} className="config-tab-content carbon-config-content p-5">
           {tabActivo === 'anios' && <AniosLectivosTab />}
           {tabActivo === 'periodos' && <PeriodosUnidadesTab />}
           {tabActivo === 'preparacion' && <PreparacionAnioTab />}

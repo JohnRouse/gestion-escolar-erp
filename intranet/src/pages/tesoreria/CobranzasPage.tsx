@@ -138,7 +138,7 @@ function buildMensaje(deuda: DeudaRegistro) {
 
 function GuideCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+    <div className="carbon-tesoreria-page rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
       <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-accent-600 ring-1 ring-slate-100">
         <Icon size={16} />
       </div>
