@@ -1,0 +1,126 @@
+/* ==========================================================
+   09 - Corrección final PageHeader + selector colegios
+   Este archivo debe cargarse después de 07.
+   ========================================================== */
+
+/* ==========================================================
+   PerfilPage:
+   El primer hijo es PageHeader. No debe tener layout propio.
+   ========================================================== */
+
+.carbon-perfil-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+}
+
+/* PageHeader de Perfil: igualar al PageHeader usado en Dashboard y demás páginas */
+.carbon-perfil-page > section:first-of-type {
+  display: block !important;
+  grid-template-columns: unset !important;
+  gap: unset !important;
+  align-items: unset !important;
+  min-height: unset !important;
+
+  padding: 24px !important;
+  overflow: hidden !important;
+  border-radius: 28px !important;
+  border: 1px solid #e0e0e0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Respetar la distribución interna del componente PageHeader */
+.carbon-perfil-page > section:first-of-type > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+@media (min-width: 1280px) {
+  .carbon-perfil-page > section:first-of-type > div {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+}
+
+/* Meta cards del PageHeader, igual que en las demás pantallas */
+.carbon-perfil-page > section:first-of-type > div > div:last-child > div {
+  border-radius: 18px !important;
+  background: #f8fafc !important;
+  border: 1px solid #eef2f7 !important;
+  box-shadow: none !important;
+}
+
+/* El diseño especial empieza recién debajo del PageHeader */
+.carbon-perfil-page > section:first-of-type + div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr) !important;
+  gap: 24px !important;
+  align-items: start !important;
+}
+
+.carbon-perfil-page > section:first-of-type + div > section {
+  border: 1px solid #d8e0ea !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 1180px) {
+  .carbon-perfil-page > section:first-of-type + div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==========================================================
+   Selector de colegios:
+   Evitar que reglas globales pongan negro sobre iconos oscuros.
+   ========================================================== */
+
+/* El bloque anterior forzaba todos los span a negro.
+   Aquí devolvemos contraste correcto a los iconos circulares. */
+.erp-app-header .header-dropdown-enter span[class*="h-10"][class*="w-10"],
+.carbon-shell header .header-dropdown-enter span[class*="h-10"][class*="w-10"] {
+  color: inherit !important;
+}
+
+/* Icono "Todas las instituciones": fondo negro, icono blanco */
+.erp-app-header .header-dropdown-enter span[class*="bg-slate-950"],
+.carbon-shell header .header-dropdown-enter span[class*="bg-slate-950"],
+.erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"],
+.carbon-shell header .header-dropdown-enter span[class*="bg-neutral-950"] {
+  color: #ffffff !important;
+}
+
+.erp-app-header .header-dropdown-enter span[class*="bg-slate-950"] svg,
+.carbon-shell header .header-dropdown-enter span[class*="bg-slate-950"] svg,
+.erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"] svg,
+.carbon-shell header .header-dropdown-enter span[class*="bg-neutral-950"] svg {
+  color: #ffffff !important;
+  stroke: currentColor !important;
+}
+
+/* Iconos de colegios con color institucional */
+.erp-app-header .header-dropdown-enter span[style*="background-color"] svg,
+.carbon-shell header .header-dropdown-enter span[style*="background-color"] svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Texto dentro del selector: legible, pero sin afectar iconos */
+.erp-app-header .header-dropdown-enter p,
+.carbon-shell header .header-dropdown-enter p {
+  color: #161616 !important;
+}
+
+.erp-app-header .header-dropdown-enter [class*="text-slate-500"],
+.carbon-shell header .header-dropdown-enter [class*="text-slate-500"] {
+  color: #525252 !important;
+}

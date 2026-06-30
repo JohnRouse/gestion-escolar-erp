@@ -19,6 +19,7 @@
 }
 
 .carbon-shell header [class*="header-dropdown-enter"] p,
+.carbon-shell header [class*="header-dropdown-enter"] span,
 .carbon-shell header [class*="header-dropdown-enter"] button {
   color: #161616 !important;
 }
