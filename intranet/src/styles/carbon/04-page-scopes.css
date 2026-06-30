@@ -1,0 +1,195 @@
+/* ==========================================================
+   Carbon UI Consolidado - Scopes de páginas
+   Normalización común para pantallas ya avanzadas.
+   ========================================================== */
+
+.carbon-dashboard,
+.carbon-community-page,
+.carbon-config-page,
+.carbon-matricula-page,
+.carbon-reportes-page,
+.carbon-notas-page,
+.carbon-tesoreria-page {
+  color: var(--erp-carbon-text);
+}
+
+/* Redondeos consistentes */
+.carbon-dashboard [class*="rounded-[24px]"],
+.carbon-dashboard [class*="rounded-[26px]"],
+.carbon-dashboard [class*="rounded-[28px]"],
+.carbon-dashboard [class*="rounded-[30px]"],
+.carbon-dashboard [class*="rounded-3xl"],
+.carbon-dashboard [class*="rounded-2xl"],
+.carbon-dashboard [class*="rounded-xl"],
+.carbon-dashboard [class*="rounded-full"],
+.carbon-community-page [class*="rounded-[24px]"],
+.carbon-community-page [class*="rounded-[26px]"],
+.carbon-community-page [class*="rounded-[28px]"],
+.carbon-community-page [class*="rounded-[30px]"],
+.carbon-community-page [class*="rounded-3xl"],
+.carbon-community-page [class*="rounded-2xl"],
+.carbon-community-page [class*="rounded-xl"],
+.carbon-community-page [class*="rounded-full"],
+.carbon-config-page [class*="rounded-[24px]"],
+.carbon-config-page [class*="rounded-[26px]"],
+.carbon-config-page [class*="rounded-[28px]"],
+.carbon-config-page [class*="rounded-[30px]"],
+.carbon-config-page [class*="rounded-3xl"],
+.carbon-config-page [class*="rounded-2xl"],
+.carbon-config-page [class*="rounded-xl"],
+.carbon-config-page [class*="rounded-full"],
+.carbon-matricula-page [class*="rounded-[24px]"],
+.carbon-matricula-page [class*="rounded-[26px]"],
+.carbon-matricula-page [class*="rounded-[28px]"],
+.carbon-matricula-page [class*="rounded-[30px]"],
+.carbon-matricula-page [class*="rounded-3xl"],
+.carbon-matricula-page [class*="rounded-2xl"],
+.carbon-matricula-page [class*="rounded-xl"],
+.carbon-matricula-page [class*="rounded-full"],
+.carbon-reportes-page [class*="rounded-[24px]"],
+.carbon-reportes-page [class*="rounded-[26px]"],
+.carbon-reportes-page [class*="rounded-[28px]"],
+.carbon-reportes-page [class*="rounded-[30px]"],
+.carbon-reportes-page [class*="rounded-3xl"],
+.carbon-reportes-page [class*="rounded-2xl"],
+.carbon-reportes-page [class*="rounded-xl"],
+.carbon-reportes-page [class*="rounded-full"],
+.carbon-notas-page [class*="rounded-[24px]"],
+.carbon-notas-page [class*="rounded-[26px]"],
+.carbon-notas-page [class*="rounded-[28px]"],
+.carbon-notas-page [class*="rounded-[30px]"],
+.carbon-notas-page [class*="rounded-3xl"],
+.carbon-notas-page [class*="rounded-2xl"],
+.carbon-notas-page [class*="rounded-xl"],
+.carbon-notas-page [class*="rounded-full"],
+.carbon-tesoreria-page [class*="rounded-[24px]"],
+.carbon-tesoreria-page [class*="rounded-[26px]"],
+.carbon-tesoreria-page [class*="rounded-[28px]"],
+.carbon-tesoreria-page [class*="rounded-[30px]"],
+.carbon-tesoreria-page [class*="rounded-3xl"],
+.carbon-tesoreria-page [class*="rounded-2xl"],
+.carbon-tesoreria-page [class*="rounded-xl"],
+.carbon-tesoreria-page [class*="rounded-full"] {
+  border-radius: var(--erp-carbon-radius-sm) !important;
+}
+
+/* Sombras menos pesadas */
+.carbon-dashboard [class*="shadow"],
+.carbon-community-page [class*="shadow"],
+.carbon-config-page [class*="shadow"],
+.carbon-matricula-page [class*="shadow"],
+.carbon-reportes-page [class*="shadow"],
+.carbon-notas-page [class*="shadow"],
+.carbon-tesoreria-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+/* Inputs consistentes por scope */
+.carbon-community-page input,
+.carbon-community-page select,
+.carbon-community-page textarea,
+.carbon-config-page input,
+.carbon-config-page select,
+.carbon-config-page textarea,
+.carbon-matricula-page input,
+.carbon-matricula-page select,
+.carbon-matricula-page textarea,
+.carbon-reportes-page input,
+.carbon-reportes-page select,
+.carbon-reportes-page textarea,
+.carbon-notas-page input:not(.carbon-nota-input),
+.carbon-notas-page select,
+.carbon-notas-page textarea,
+.carbon-tesoreria-page input,
+.carbon-tesoreria-page select,
+.carbon-tesoreria-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page input:focus,
+.carbon-community-page select:focus,
+.carbon-community-page textarea:focus,
+.carbon-config-page input:focus,
+.carbon-config-page select:focus,
+.carbon-config-page textarea:focus,
+.carbon-matricula-page input:focus,
+.carbon-matricula-page select:focus,
+.carbon-matricula-page textarea:focus,
+.carbon-reportes-page input:focus,
+.carbon-reportes-page select:focus,
+.carbon-reportes-page textarea:focus,
+.carbon-notas-page input:not(.carbon-nota-input):focus,
+.carbon-notas-page select:focus,
+.carbon-notas-page textarea:focus,
+.carbon-tesoreria-page input:focus,
+.carbon-tesoreria-page select:focus,
+.carbon-tesoreria-page textarea:focus {
+  border-bottom-color: var(--erp-carbon-blue-60) !important;
+  background: #ffffff !important;
+}
+
+/* Botones */
+.carbon-dashboard button,
+.carbon-community-page button,
+.carbon-config-page button,
+.carbon-matricula-page button,
+.carbon-reportes-page button,
+.carbon-notas-page button,
+.carbon-tesoreria-page button {
+  border-radius: var(--erp-carbon-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* Quitar verde lima/fosforescente heredado */
+.carbon-shell [class*="bg-[#CCF32F]"],
+.carbon-shell [class*="bg-lime"] {
+  background: var(--erp-carbon-blue-60) !important;
+}
+
+.carbon-shell [class*="text-[#CCF32F]"],
+.carbon-shell [class*="text-lime"] {
+  color: var(--erp-carbon-blue-60) !important;
+}
+
+.carbon-shell [class*="border-[#CCF32F]"] {
+  border-color: var(--erp-carbon-blue-60) !important;
+}
+
+/* Estados accesibles */
+.carbon-shell [class*="bg-emerald-50"],
+.carbon-shell [class*="bg-green-50"] {
+  background: #defbe6 !important;
+  border-color: #a7f0ba !important;
+}
+
+.carbon-shell [class*="text-emerald-"],
+.carbon-shell [class*="text-green-"] {
+  color: #0e6027 !important;
+}
+
+.carbon-shell [class*="bg-amber-50"],
+.carbon-shell [class*="bg-yellow-50"] {
+  background: #fcf4d6 !important;
+  border-color: #fddc69 !important;
+}
+
+.carbon-shell [class*="text-amber-"],
+.carbon-shell [class*="text-yellow-"] {
+  color: #8a3800 !important;
+}
+
+.carbon-shell [class*="bg-red-50"],
+.carbon-shell [class*="bg-rose-50"] {
+  background: #fff1f1 !important;
+  border-color: #ffd7d9 !important;
+}
+
+.carbon-shell [class*="text-red-"],
+.carbon-shell [class*="text-rose-"] {
+  color: #a2191f !important;
+}

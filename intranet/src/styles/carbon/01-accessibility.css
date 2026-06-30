@@ -1,0 +1,82 @@
+/* ==========================================================
+   Carbon UI Consolidado - Accesibilidad
+   Reglas de legibilidad para usuarios adultos y adultos mayores.
+   ========================================================== */
+
+.carbon-shell {
+  color: var(--erp-carbon-text);
+}
+
+/* Evita textos demasiado pálidos */
+.carbon-shell [class*="text-slate-300"],
+.carbon-shell [class*="text-gray-300"],
+.carbon-shell [class*="text-neutral-300"],
+.carbon-shell [class*="text-slate-400"],
+.carbon-shell [class*="text-gray-400"],
+.carbon-shell [class*="text-neutral-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+.carbon-shell [class*="text-slate-500"],
+.carbon-shell [class*="text-gray-500"],
+.carbon-shell [class*="text-neutral-500"] {
+  color: var(--erp-carbon-text-secondary) !important;
+}
+
+.carbon-shell [class*="text-slate-950"],
+.carbon-shell [class*="text-gray-950"],
+.carbon-shell [class*="text-neutral-950"],
+.carbon-shell [class*="text-slate-900"],
+.carbon-shell [class*="text-gray-900"],
+.carbon-shell [class*="text-neutral-900"] {
+  color: var(--erp-carbon-text) !important;
+}
+
+/* Placeholders más legibles */
+.carbon-shell input::placeholder,
+.carbon-shell textarea::placeholder,
+.carbon-shell [class*="placeholder:text-slate-400"]::placeholder,
+.carbon-shell [class*="placeholder:text-gray-400"]::placeholder,
+.carbon-shell [class*="placeholder:text-neutral-400"]::placeholder {
+  color: var(--erp-carbon-text-placeholder) !important;
+  opacity: 1 !important;
+}
+
+/* Tamaño mínimo cómodo */
+.carbon-shell input,
+.carbon-shell select,
+.carbon-shell textarea,
+.carbon-shell button {
+  font-size: 14px;
+}
+
+/* Focus visible */
+.carbon-shell button:focus-visible,
+.carbon-shell a:focus-visible,
+.carbon-shell input:focus-visible,
+.carbon-shell select:focus-visible,
+.carbon-shell textarea:focus-visible {
+  outline: 2px solid var(--erp-carbon-focus) !important;
+  outline-offset: -2px !important;
+}
+
+/* Desactivar transformaciones exageradas */
+.carbon-shell button:hover,
+.carbon-shell a:hover,
+.carbon-shell [class*="hover:-translate"],
+.carbon-shell [class*="hover:scale"] {
+  transform: none !important;
+}
+
+/* Tipografía más limpia */
+.carbon-shell p,
+.carbon-shell span,
+.carbon-shell label,
+.carbon-shell td,
+.carbon-shell th,
+.carbon-shell input,
+.carbon-shell select,
+.carbon-shell textarea,
+.carbon-shell button {
+  text-rendering: geometricPrecision;
+}

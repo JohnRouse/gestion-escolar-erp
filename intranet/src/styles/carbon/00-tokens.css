@@ -1,0 +1,47 @@
+/* ==========================================================
+   Carbon UI Consolidado - Tokens
+   Base estable para el rediseño de la intranet.
+   ========================================================== */
+
+:root {
+  --erp-carbon-blue-60: #0f62fe;
+  --erp-carbon-blue-70: #0043ce;
+  --erp-carbon-blue-80: #002d9c;
+  --erp-carbon-blue-10: #d0e2ff;
+
+  --erp-carbon-gray-10: #f4f4f4;
+  --erp-carbon-gray-20: #e0e0e0;
+  --erp-carbon-gray-30: #c6c6c6;
+  --erp-carbon-gray-40: #a8a8a8;
+  --erp-carbon-gray-50: #8d8d8d;
+  --erp-carbon-gray-60: #6f6f6f;
+  --erp-carbon-gray-70: #525252;
+  --erp-carbon-gray-80: #393939;
+  --erp-carbon-gray-90: #262626;
+  --erp-carbon-gray-100: #161616;
+
+  --erp-carbon-green-60: #198038;
+  --erp-carbon-red-60: #da1e28;
+  --erp-carbon-yellow-30: #f1c21b;
+  --erp-carbon-orange-40: #ff832b;
+
+  --erp-carbon-bg: #f4f4f4;
+  --erp-carbon-layer: #ffffff;
+  --erp-carbon-layer-alt: #f4f4f4;
+
+  --erp-carbon-border: #e0e0e0;
+  --erp-carbon-border-strong: #c6c6c6;
+  --erp-carbon-border-input: #8d8d8d;
+
+  --erp-carbon-text: #161616;
+  --erp-carbon-text-secondary: #393939;
+  --erp-carbon-text-helper: #525252;
+  --erp-carbon-text-placeholder: #6f6f6f;
+
+  --erp-carbon-radius-xs: 2px;
+  --erp-carbon-radius-sm: 4px;
+  --erp-carbon-radius-md: 8px;
+
+  --erp-carbon-focus: #0f62fe;
+  --erp-carbon-transition: 110ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}

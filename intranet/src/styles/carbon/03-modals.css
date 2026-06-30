@@ -1,0 +1,82 @@
+/* ==========================================================
+   Carbon UI Consolidado - Modales
+   Base común para evitar modales desplazados por contenedores.
+   ========================================================== */
+
+.erp-carbon-modal-overlay,
+.carbon-config-modal-overlay,
+.carbon-matricula-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.erp-carbon-modal-overlay > .absolute,
+.carbon-config-modal-overlay > .absolute,
+.carbon-matricula-modal-overlay > .absolute {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(22, 22, 22, 0.56) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.erp-carbon-modal-panel,
+.carbon-config-modal-panel,
+.carbon-matricula-modal-panel {
+  position: relative;
+  margin: auto !important;
+  border: 1px solid var(--erp-carbon-border-strong) !important;
+  border-radius: var(--erp-carbon-radius-sm) !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+  transform: none !important;
+}
+
+.erp-carbon-modal-panel input,
+.erp-carbon-modal-panel select,
+.erp-carbon-modal-panel textarea,
+.carbon-config-modal-panel input,
+.carbon-config-modal-panel select,
+.carbon-config-modal-panel textarea,
+.carbon-matricula-modal-panel input,
+.carbon-matricula-modal-panel select,
+.carbon-matricula-modal-panel textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+.erp-carbon-modal-panel button,
+.carbon-config-modal-panel button,
+.carbon-matricula-modal-panel button {
+  border-radius: var(--erp-carbon-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* Fallback para modales que aún no fueron migrados a portal */
+.carbon-shell main .fixed.inset-0[class*="items-center"][class*="justify-center"] {
+  z-index: 1200 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 768px) {
+  .erp-carbon-modal-overlay,
+  .carbon-config-modal-overlay,
+  .carbon-matricula-modal-overlay {
+    padding: 12px !important;
+  }
+
+  .erp-carbon-modal-panel,
+  .carbon-config-modal-panel,
+  .carbon-matricula-modal-panel {
+    max-height: 92vh !important;
+  }
+}

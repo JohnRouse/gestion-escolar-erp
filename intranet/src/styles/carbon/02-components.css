@@ -1,0 +1,162 @@
+/* ==========================================================
+   Carbon UI Consolidado - Componentes reutilizables
+   Estas clases deben usarse de ahora en adelante en nuevas pantallas.
+   ========================================================== */
+
+.erp-carbon-page {
+  width: 100%;
+  color: var(--erp-carbon-text);
+}
+
+.erp-carbon-panel,
+.erp-carbon-card {
+  background: var(--erp-carbon-layer);
+  border: 1px solid var(--erp-carbon-border);
+  border-radius: var(--erp-carbon-radius-sm);
+  box-shadow: none;
+}
+
+.erp-carbon-panel-header {
+  border-bottom: 1px solid var(--erp-carbon-border);
+  background: var(--erp-carbon-layer);
+}
+
+.erp-carbon-kpi {
+  position: relative;
+  min-height: 112px;
+  background: var(--erp-carbon-layer);
+  border: 1px solid var(--erp-carbon-border);
+  border-radius: var(--erp-carbon-radius-sm);
+  box-shadow: none;
+}
+
+.erp-carbon-kpi::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background: var(--erp-carbon-blue-60);
+}
+
+.erp-carbon-kpi-label {
+  color: var(--erp-carbon-text-helper);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.erp-carbon-kpi-value {
+  color: var(--erp-carbon-text);
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.erp-carbon-button-primary {
+  border-radius: var(--erp-carbon-radius-xs);
+  border: 1px solid var(--erp-carbon-blue-60);
+  background: var(--erp-carbon-blue-60);
+  color: #ffffff;
+  box-shadow: none;
+  transition:
+    background-color var(--erp-carbon-transition),
+    border-color var(--erp-carbon-transition);
+}
+
+.erp-carbon-button-primary:hover {
+  border-color: var(--erp-carbon-blue-70);
+  background: var(--erp-carbon-blue-70);
+}
+
+.erp-carbon-button-secondary {
+  border-radius: var(--erp-carbon-radius-xs);
+  border: 1px solid var(--erp-carbon-border-strong);
+  background: #ffffff;
+  color: var(--erp-carbon-text);
+  box-shadow: none;
+}
+
+.erp-carbon-button-secondary:hover {
+  background: var(--erp-carbon-gray-10);
+}
+
+.erp-carbon-button-danger {
+  border-radius: var(--erp-carbon-radius-xs);
+  border: 1px solid var(--erp-carbon-red-60);
+  background: var(--erp-carbon-red-60);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.erp-carbon-input,
+.erp-carbon-select,
+.erp-carbon-textarea {
+  border-radius: 0;
+  border: 1px solid transparent;
+  border-bottom: 2px solid var(--erp-carbon-border-input);
+  background: var(--erp-carbon-gray-10);
+  color: var(--erp-carbon-text);
+  box-shadow: none;
+}
+
+.erp-carbon-input:hover,
+.erp-carbon-select:hover,
+.erp-carbon-textarea:hover {
+  border-bottom-color: var(--erp-carbon-gray-70);
+}
+
+.erp-carbon-input:focus,
+.erp-carbon-select:focus,
+.erp-carbon-textarea:focus {
+  border-bottom-color: var(--erp-carbon-blue-60);
+  background: #ffffff;
+  box-shadow: none;
+  outline: 2px solid transparent;
+}
+
+.erp-carbon-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.erp-carbon-table thead th {
+  background: var(--erp-carbon-gray-10);
+  border-bottom: 2px solid var(--erp-carbon-border-strong);
+  color: var(--erp-carbon-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.erp-carbon-table tbody td {
+  border-bottom: 1px solid var(--erp-carbon-border);
+  color: var(--erp-carbon-text);
+}
+
+.erp-carbon-table tbody tr:hover {
+  background: var(--erp-carbon-gray-10);
+}
+
+.erp-carbon-badge {
+  border-radius: var(--erp-carbon-radius-xs);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.erp-carbon-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--erp-carbon-gray-20);
+}
+
+.erp-carbon-progress-fill {
+  height: 100%;
+  border-radius: 0;
+  background: var(--erp-carbon-blue-60);
+}
