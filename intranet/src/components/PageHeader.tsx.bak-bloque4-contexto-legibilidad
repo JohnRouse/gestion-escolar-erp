@@ -1,5 +1,4 @@
 import type { ElementType, ReactNode } from 'react';
-import { normalizeCurrentScopeLabel } from '../utils/entityLabels';
 
 interface PageHeaderProps {
   eyebrow: string;
@@ -49,7 +48,7 @@ export default function PageHeader({
                 className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100"
               >
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                  {normalizeCurrentScopeLabel(item.label)}
+                  {item.label}
                 </p>
                 <p className="mt-1 text-sm font-black text-slate-800">
                   {item.value || '—'}

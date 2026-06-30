@@ -254,7 +254,7 @@ export default function AppHeader() {
                         >
                           <span className="flex min-w-0 items-center gap-3">
                             <span className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-semibold text-white">
-                              <Globe2 size={20} strokeWidth={3} />
+                              <Globe2 size={18} />
                             </span>
                             <span className="min-w-0">
                               <span className="block text-sm font-bold text-slate-950">Todas las instituciones</span>
@@ -285,7 +285,7 @@ export default function AppHeader() {
                                 className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-semibold text-white shadow-sm"
                                 style={{ backgroundColor: colegio.color_principal || '#0f62fe', color: getReadableIconColor(colegio.color_principal || '#0f62fe') }}
                               >
-                                <School size={20} strokeWidth={3} />
+                                <School size={18} />
                               </span>
                               <span className="min-w-0">
                                 <span className="block truncate text-sm font-bold text-slate-950">{colegio.nombre}</span>

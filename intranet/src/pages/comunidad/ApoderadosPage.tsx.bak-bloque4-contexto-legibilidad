@@ -287,8 +287,8 @@ export default function ApoderadosPage() {
                     <PersonAvatar persona={apoderado.persona} size="md" rounded="2xl" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">{nombre}</p>
-                      <p className="erp-compact-meta mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-400">
-                        <span className="erp-compact-code font-semibold text-slate-500">DNI {apoderado.persona.dni}</span>
+                      <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-400">
+                        <span className="font-semibold text-slate-500">DNI {apoderado.persona.dni}</span>
                         {apoderado.persona.telefono && (
                           <>
                             <span className="text-slate-300">·</span>
@@ -325,7 +325,7 @@ export default function ApoderadosPage() {
                   <div className="min-w-0">
                     {primerHijo ? (
                       <>
-                        <p className="erp-compact-code truncate text-sm font-semibold text-slate-800">
+                        <p className="truncate text-sm font-semibold text-slate-800">
                           {getCodigo(primerHijo)} · {primerHijo.persona.nombres}{' '}
                           {primerHijo.persona.apellido_paterno}
                         </p>

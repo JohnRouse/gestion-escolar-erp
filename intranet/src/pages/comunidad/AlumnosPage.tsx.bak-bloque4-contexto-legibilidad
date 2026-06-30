@@ -518,8 +518,8 @@ export default function AlumnosPage() {
                       <p className="truncate text-sm font-bold text-slate-900">
                         {nombre}
                       </p>
-                      <p className="erp-compact-meta mt-0.5 truncate text-xs text-slate-400">
-                        <span className="erp-compact-code font-semibold text-slate-500">{getCodigo(alumno)}</span>
+                      <p className="mt-0.5 truncate text-xs text-slate-400">
+                        <span className="font-semibold text-slate-500">{getCodigo(alumno)}</span>
                         {' · '}DNI {alumno.persona.dni}
                         {alumno.persona.distrito
                           ? ` · ${alumno.persona.distrito}`
