@@ -1,0 +1,16 @@
+/* ==========================================================
+   16 - Selects de ubicación
+   ========================================================== */
+
+.carbon-matricula-page select,
+.carbon-docentes-page select {
+  color: #161616 !important;
+  font-weight: 800;
+}
+
+.carbon-matricula-page select:disabled,
+.carbon-docentes-page select:disabled {
+  cursor: not-allowed;
+  color: #6b7280 !important;
+  background: #e5e7eb !important;
+}

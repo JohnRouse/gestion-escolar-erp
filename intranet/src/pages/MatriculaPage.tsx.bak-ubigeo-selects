@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
 import { useToast } from '../contexts/ToastContext';
-import LocationSelects from '../components/LocationSelects';
 import {
   AlertCircle, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Circle, Clock,
   GraduationCap, Loader2, MapPin, Phone, Search, ShieldCheck, UserPlus, Users, X,
@@ -833,27 +832,10 @@ function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, a
             {apoderado && <Field label="Ocupación" value={form.ocupacion || ''} onChange={(v: string) => set('ocupacion', v)} />}
             <Field label="Teléfono" value={form.telefono} onChange={(v: string) => set('telefono', v)} />
             <Field label="Correo" type="email" value={form.correo} onChange={(v: string) => set('correo', v)} />
-            <div className="md:col-span-2">
-              <LocationSelects
-                value={{
-                  pais: form.pais || 'Perú',
-                  departamento: form.departamento,
-                  provincia: form.provincia,
-                  distrito: form.distrito,
-                }}
-                onChange={(location) =>
-                  setForm({
-                    ...form,
-                    pais: location.pais || 'Perú',
-                    departamento: location.departamento || '',
-                    provincia: location.provincia || '',
-                    distrito: location.distrito || '',
-                  })
-                }
-                labelClass={labelClass}
-                selectClass={selectClass}
-              />
-            </div>
+            <Field label="País" value={form.pais} onChange={(v: string) => set('pais', v)} />
+            <Field label="Departamento" value={form.departamento} onChange={(v: string) => set('departamento', v)} />
+            <Field label="Provincia" value={form.provincia} onChange={(v: string) => set('provincia', v)} />
+            <Field label="Distrito" value={form.distrito} onChange={(v: string) => set('distrito', v)} />
             <div className="md:col-span-2"><Field label="Dirección" value={form.direccion} onChange={(v: string) => set('direccion', v)} /></div>
           </div>
           {aviso && <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50/50 p-3 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60"><AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />{aviso}</div>}

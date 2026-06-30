@@ -1,0 +1,24 @@
+/* ==========================================================
+   15 - Docentes CRUD
+   ========================================================== */
+
+.carbon-docentes-page {
+  color: #161616;
+}
+
+.carbon-docentes-page button {
+  box-shadow: none !important;
+}
+
+.carbon-docentes-page button:hover {
+  transform: none !important;
+}
+
+.carbon-docentes-page input,
+.carbon-docentes-page select {
+  min-height: 44px;
+}
+
+.carbon-docentes-page article {
+  transition: background-color 140ms ease;
+}

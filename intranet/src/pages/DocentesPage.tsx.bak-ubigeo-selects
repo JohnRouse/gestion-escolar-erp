@@ -23,7 +23,6 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import { useToast } from '../contexts/ToastContext';
-import LocationSelects from '../components/LocationSelects';
 
 type Meta = {
   total: number;
@@ -89,8 +88,6 @@ type DocenteForm = {
   telefono: string;
   correo: string;
   direccion: string;
-  departamento: string;
-  provincia: string;
   distrito: string;
   fecha_ingreso: string;
   especialidades: number[];
@@ -106,8 +103,6 @@ const emptyForm: DocenteForm = {
   telefono: '',
   correo: '',
   direccion: '',
-  departamento: '',
-  provincia: '',
   distrito: '',
   fecha_ingreso: '',
   especialidades: [],
@@ -138,8 +133,6 @@ function toForm(docente: DocenteItem): DocenteForm {
     telefono: docente.persona.telefono || '',
     correo: docente.persona.correo || '',
     direccion: docente.persona.direccion || '',
-    departamento: docente.persona.departamento || '',
-    provincia: docente.persona.provincia || '',
     distrito: docente.persona.distrito || '',
     fecha_ingreso: toDateInput(docente.fecha_ingreso),
     especialidades: (docente.especialidades || []).map((item) => item.id_area),
@@ -597,26 +590,7 @@ export default function DocentesPage() {
                 <Field label="Fecha de ingreso" type="date" value={form.fecha_ingreso} onChange={(value) => setForm({ ...form, fecha_ingreso: value })} />
                 <Field label="Teléfono" value={form.telefono} onChange={(value) => setForm({ ...form, telefono: value })} />
                 <Field label="Correo" value={form.correo} onChange={(value) => setForm({ ...form, correo: value })} />
-                <div className="md:col-span-2">
-                  <LocationSelects
-                    value={{
-                      pais: 'Perú',
-                      departamento: form.departamento,
-                      provincia: form.provincia,
-                      distrito: form.distrito,
-                    }}
-                    onChange={(location) =>
-                      setForm({
-                        ...form,
-                        departamento: location.departamento || '',
-                        provincia: location.provincia || '',
-                        distrito: location.distrito || '',
-                      })
-                    }
-                    selectClass={inputClass}
-                    wrapperClassName="grid gap-4 md:grid-cols-3"
-                  />
-                </div>
+                <Field label="Distrito" value={form.distrito} onChange={(value) => setForm({ ...form, distrito: value })} />
                 <label className="space-y-1">
                   <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">Género</span>
                   <select

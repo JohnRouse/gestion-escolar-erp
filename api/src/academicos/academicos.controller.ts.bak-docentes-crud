@@ -971,88 +971,8 @@ async deleteGrado(
     @Request() req,
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
-    @Query('q') q?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
   ) {
-    return this.academicosService.listarDocentesCrudGestion({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      q,
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    });
-  }
-
-  @Get('docentes/:id/detalle')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async getDetalleDocente(
-    @Param('id') id: string,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.getDetalleDocenteCrudGestion({
-      idDocente: Number(id),
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
-  }
-
-  @Post('docentes')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async crearDocente(
-    @Body() body: any,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.crearDocenteCrudGestion({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      body,
-    });
-  }
-
-  @Put('docentes/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async actualizarDocente(
-    @Param('id') id: string,
-    @Body() body: any,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.actualizarDocenteCrudGestion({
-      idDocente: Number(id),
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      body,
-    });
-  }
-
-  @Delete('docentes/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async eliminarDocente(
-    @Param('id') id: string,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.eliminarDocenteCrudGestion({
-      idDocente: Number(id),
+    return this.academicosService.listarDocentesGestion({
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
