@@ -1,0 +1,312 @@
+/* ==========================================================
+   10 - Tesorería + Comunidad escolar + legibilidad
+   Ajuste visual tipo Carbon UI, pensando en usuarios mayores.
+   ========================================================== */
+
+:root {
+  --erp-readable-black: #161616;
+  --erp-readable-text: #262626;
+  --erp-readable-muted: #393939;
+  --erp-readable-soft: #525252;
+  --erp-border-carbon: #d0d7de;
+  --erp-panel-carbon: #ffffff;
+  --erp-bg-carbon: #f4f4f4;
+  --erp-blue-carbon: #0f62fe;
+}
+
+/* ==========================================================
+   Base de legibilidad
+   ========================================================== */
+
+.carbon-community-page,
+.carbon-tesoreria-page,
+.carbon-cobranzas-page,
+.carbon-tesoreria-config-page {
+  color: var(--erp-readable-text) !important;
+}
+
+.carbon-community-page h1,
+.carbon-community-page h2,
+.carbon-community-page h3,
+.carbon-tesoreria-page h1,
+.carbon-tesoreria-page h2,
+.carbon-tesoreria-page h3,
+.carbon-cobranzas-page h1,
+.carbon-cobranzas-page h2,
+.carbon-cobranzas-page h3,
+.carbon-tesoreria-config-page h1,
+.carbon-tesoreria-config-page h2,
+.carbon-tesoreria-config-page h3 {
+  color: var(--erp-readable-black) !important;
+  letter-spacing: -0.01em;
+}
+
+.carbon-community-page p,
+.carbon-community-page span,
+.carbon-community-page button,
+.carbon-community-page td,
+.carbon-tesoreria-page p,
+.carbon-tesoreria-page span,
+.carbon-tesoreria-page button,
+.carbon-cobranzas-page p,
+.carbon-cobranzas-page span,
+.carbon-cobranzas-page button,
+.carbon-tesoreria-config-page p,
+.carbon-tesoreria-config-page span,
+.carbon-tesoreria-config-page button {
+  text-rendering: geometricPrecision;
+}
+
+/* Textos secundarios: antes se veían muy claros */
+.carbon-community-page [class*="text-slate-400"],
+.carbon-community-page [class*="text-neutral-400"],
+.carbon-community-page [class*="text-gray-400"],
+.carbon-community-page [class*="text-slate-500"],
+.carbon-community-page [class*="text-neutral-500"],
+.carbon-community-page [class*="text-gray-500"],
+.carbon-cobranzas-page [class*="text-slate-400"],
+.carbon-cobranzas-page [class*="text-neutral-400"],
+.carbon-cobranzas-page [class*="text-gray-400"],
+.carbon-cobranzas-page [class*="text-slate-500"],
+.carbon-cobranzas-page [class*="text-neutral-500"],
+.carbon-cobranzas-page [class*="text-gray-500"],
+.carbon-tesoreria-config-page [class*="text-slate-400"],
+.carbon-tesoreria-config-page [class*="text-neutral-400"],
+.carbon-tesoreria-config-page [class*="text-gray-400"],
+.carbon-tesoreria-config-page [class*="text-slate-500"],
+.carbon-tesoreria-config-page [class*="text-neutral-500"],
+.carbon-tesoreria-config-page [class*="text-gray-500"] {
+  color: var(--erp-readable-muted) !important;
+}
+
+/* Labels muy espaciados: mantener estilo, pero con más contraste */
+.carbon-community-page [class*="tracking-[0.15em]"],
+.carbon-community-page [class*="tracking-[0.16em]"],
+.carbon-community-page [class*="tracking-[0.18em]"],
+.carbon-cobranzas-page [class*="tracking-[0.15em]"],
+.carbon-cobranzas-page [class*="tracking-[0.16em]"],
+.carbon-cobranzas-page [class*="tracking-[0.18em]"],
+.carbon-tesoreria-config-page [class*="tracking-[0.15em]"],
+.carbon-tesoreria-config-page [class*="tracking-[0.16em]"],
+.carbon-tesoreria-config-page [class*="tracking-[0.18em]"] {
+  color: #4b5563 !important;
+  font-weight: 900 !important;
+}
+
+/* ==========================================================
+   Comunidad escolar: Alumnos y Apoderados
+   ========================================================== */
+
+.carbon-community-page > section:first-of-type {
+  border-radius: 28px !important;
+  border: 1px solid #e0e0e0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .carbon-list-panel {
+  overflow: hidden !important;
+  border-radius: 24px !important;
+  border: 1px solid var(--erp-border-carbon) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .carbon-list-header {
+  background: #f4f4f4 !important;
+  border-bottom: 2px solid #8d8d8d !important;
+}
+
+.carbon-community-page .carbon-list-header span {
+  color: #262626 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.carbon-community-page .carbon-list-row {
+  min-height: 76px;
+  border-bottom-color: #e0e0e0 !important;
+}
+
+.carbon-community-page .carbon-list-row:hover {
+  background: #f4f4f4 !important;
+}
+
+.carbon-community-page .carbon-list-row p {
+  line-height: 1.45 !important;
+}
+
+.carbon-community-page .carbon-list-row p[class*="text-xs"],
+.carbon-community-page .carbon-list-row span[class*="text-xs"] {
+  font-size: 12px !important;
+}
+
+.carbon-community-page .carbon-list-row span[class*="font-semibold"],
+.carbon-community-page .carbon-list-row span[class*="font-bold"] {
+  color: #1f2937 !important;
+}
+
+/* Chips de estado: más legibles */
+.carbon-community-page .carbon-list-row span[class*="rounded-full"] {
+  min-height: 24px;
+  border-radius: 4px !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #111827 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em;
+}
+
+/* Botones Ver */
+.carbon-community-page .carbon-list-row button {
+  min-height: 38px;
+  border-radius: 4px !important;
+  border-color: #b8c1cc !important;
+  color: #111827 !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+/* Buscadores y filtros */
+.carbon-community-page input,
+.carbon-community-page select {
+  min-height: 44px;
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  font-weight: 700 !important;
+}
+
+.carbon-community-page input::placeholder {
+  color: #525252 !important;
+  opacity: 1 !important;
+}
+
+/* ==========================================================
+   Tesorería: Centro de pagos / Cobranzas
+   ========================================================== */
+
+.carbon-cobranzas-page > section,
+.carbon-cobranzas-page article,
+.carbon-cobranzas-page div[class*="bg-white"] {
+  border-color: var(--erp-border-carbon) !important;
+  box-shadow: none !important;
+}
+
+.carbon-cobranzas-page > section:first-of-type {
+  border-radius: 24px !important;
+}
+
+.carbon-cobranzas-page article {
+  border-radius: 24px !important;
+  background: #ffffff !important;
+}
+
+.carbon-cobranzas-page article:hover {
+  border-color: #aeb8c2 !important;
+  background: #ffffff !important;
+}
+
+.carbon-cobranzas-page article h3 {
+  font-size: 17px !important;
+}
+
+.carbon-cobranzas-page article p[class*="text-xs"],
+.carbon-cobranzas-page article span[class*="text-xs"] {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.carbon-cobranzas-page article span[class*="rounded-full"],
+.carbon-cobranzas-page article p[class*="rounded-2xl"],
+.carbon-cobranzas-page article div[class*="rounded-2xl"] {
+  border-radius: 6px !important;
+  font-weight: 900 !important;
+}
+
+/* Valores de dinero */
+.carbon-cobranzas-page article [class*="text-rose"],
+.carbon-cobranzas-page article [class*="text-emerald"],
+.carbon-cobranzas-page article [class*="text-amber"] {
+  font-weight: 900 !important;
+}
+
+/* Botones principales */
+.carbon-cobranzas-page button,
+.carbon-tesoreria-config-page button {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+.carbon-cobranzas-page button:hover,
+.carbon-tesoreria-config-page button:hover {
+  transform: none !important;
+}
+
+/* Inputs de tesorería */
+.carbon-cobranzas-page input,
+.carbon-cobranzas-page select,
+.carbon-tesoreria-config-page input,
+.carbon-tesoreria-config-page select,
+.carbon-tesoreria-config-page textarea {
+  min-height: 44px;
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  font-weight: 700 !important;
+}
+
+.carbon-cobranzas-page input::placeholder,
+.carbon-tesoreria-config-page input::placeholder,
+.carbon-tesoreria-config-page textarea::placeholder {
+  color: #525252 !important;
+  opacity: 1 !important;
+}
+
+/* ==========================================================
+   TesoreriaConfiguracionPage
+   ========================================================== */
+
+.carbon-tesoreria-config-page > section,
+.carbon-tesoreria-config-page article,
+.carbon-tesoreria-config-page div[class*="bg-white"] {
+  border-color: var(--erp-border-carbon) !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page > section:first-of-type {
+  border-radius: 24px !important;
+}
+
+.carbon-tesoreria-config-page section {
+  border-radius: 24px !important;
+}
+
+.carbon-tesoreria-config-page [class*="rounded-[28px]"],
+.carbon-tesoreria-config-page [class*="rounded-[30px]"],
+.carbon-tesoreria-config-page [class*="rounded-2xl"],
+.carbon-tesoreria-config-page [class*="rounded-3xl"] {
+  border-radius: 12px !important;
+}
+
+/* Mantener PageHeader redondeado, no cuadrado */
+.carbon-tesoreria-config-page > section:first-child,
+.carbon-cobranzas-page > section:first-child {
+  border-radius: 28px !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .carbon-community-page .carbon-list-row {
+    align-items: start !important;
+  }
+
+  .carbon-cobranzas-page article h3 {
+    font-size: 16px !important;
+  }
+}

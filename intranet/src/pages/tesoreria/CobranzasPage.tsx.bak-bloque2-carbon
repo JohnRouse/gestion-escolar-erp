@@ -203,7 +203,7 @@ export default function CobranzasPage() {
       const params = new URLSearchParams(queryString.replace('?', ''));
       if (q.trim()) params.set('q', q.trim());
       if (estado) params.set('estado', estado);
-      params.set('limit', '35');
+      params.set('limit', '150');
 
       const res = await axios.get(`/api/tesoreria/deudas-pendientes?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -337,7 +337,7 @@ export default function CobranzasPage() {
   };
 
   return (
-    <div className="carbon-tesoreria-page carbon-cobranzas-page w-full space-y-6 animate-page-soft">
+    <div className="carbon-cobranzas-page w-full space-y-6 animate-page-soft">
       <PageHeader
         eyebrow="Tesorería"
         title="Centro de pagos"

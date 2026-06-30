@@ -641,7 +641,7 @@ export default function TesoreriaConfiguracionPage() {
   };
 
   return (
-    <div className="carbon-tesoreria-page carbon-tesoreria-config-page w-full space-y-6">
+    <div className="carbon-tesoreria-config-page w-full space-y-6">
       <PageHeader
         eyebrow="Tesorería"
         title="Pensiones y descuentos"
