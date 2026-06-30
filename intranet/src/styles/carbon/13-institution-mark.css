@@ -1,0 +1,24 @@
+/* ==========================================================
+   13 - Marcador visual de colegio / institución
+   ========================================================== */
+
+.erp-app-header .school-mark {
+  position: relative;
+  isolation: isolate;
+}
+
+.erp-app-header .school-mark svg {
+  color: #161616 !important;
+  stroke: #161616 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.erp-app-header .school-mark img {
+  display: block;
+  background: #ffffff;
+}
+
+.erp-app-header .school-mark:hover {
+  transform: translateY(-1px);
+}

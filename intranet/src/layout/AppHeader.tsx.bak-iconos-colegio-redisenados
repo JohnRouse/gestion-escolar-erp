@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -16,9 +19,6 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useSchool } from '../contexts/SchoolContext';
-import { useSidebar } from '../contexts/SidebarContext';
 import { assetUrl } from '../utils/assets';
 
 function obtenerPartesNombre(nombre?: string | null): string[] {
@@ -53,75 +53,24 @@ function obtenerNombreCortoUsuario(nombre?: string | null): string {
 
   if (!apellidoPaterno || apellidoPaterno === primerNombre) return primerNombre;
 
-  return `${primerNombre} ${apellidoPaterno}`;
+  return `${primerNombre} ${apellidoPaterno}`;  // ← primer nombre completo + apellido
 }
 
-type ColegioLike = {
-  id_colegio?: number;
-  nombre?: string | null;
-  logo_url?: string | null;
-  color_principal?: string | null;
-  niveles?: Array<{ nombre_nivel?: string | null }>;
-};
+function getReadableIconColor(hex?: string | null) {
+  const clean = String(hex || '').replace('#', '').trim();
 
-type InstitutionMarkProps = {
-  kind: 'group' | 'all' | 'school';
-  colegio?: ColegioLike | null;
-  compact?: boolean;
-};
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '#ffffff';
 
-function InstitutionMark({ kind, colegio, compact = false }: InstitutionMarkProps) {
-  const [logoFailed, setLogoFailed] = useState(false);
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-  const isSchool = kind === 'school';
-  const logoSrc = isSchool ? assetUrl(colegio?.logo_url || '') : '';
-  const showLogo = Boolean(logoSrc && !logoFailed);
-
-  useEffect(() => {
-    setLogoFailed(false);
-  }, [logoSrc]);
-
-  const color = isSchool
-    ? colegio?.color_principal || '#0f62fe'
-    : kind === 'all'
-      ? '#161616'
-      : '#ffffff';
-
-  const outerSize = compact ? 'h-9 w-9 rounded-xl p-1' : 'h-11 w-11 rounded-2xl p-1';
-  const innerSize = compact ? 'h-7 w-7 rounded-lg' : 'h-9 w-9 rounded-xl';
-  const iconSize = compact ? 18 : 20;
-
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center ${outerSize} ${
-        kind === 'group'
-          ? 'border border-slate-200 bg-white shadow-sm'
-          : 'shadow-[0_0_0_2px_rgba(255,255,255,0.95),0_5px_14px_rgba(15,23,42,0.22)]'
-      }`}
-      style={kind !== 'group' ? { backgroundColor: color } : undefined}
-    >
-      <span className={`flex ${innerSize} items-center justify-center overflow-hidden bg-white text-slate-950 shadow-sm ring-1 ring-slate-200`}>
-        {showLogo ? (
-          <img
-            src={logoSrc}
-            alt={colegio?.nombre || 'Colegio'}
-            className="h-full w-full object-contain p-0.5"
-            onError={() => setLogoFailed(true)}
-          />
-        ) : kind === 'all' ? (
-          <Globe2 size={iconSize} strokeWidth={2.8} />
-        ) : kind === 'group' ? (
-          <Building2 size={iconSize} strokeWidth={2.8} />
-        ) : (
-          <School size={iconSize} strokeWidth={2.8} />
-        )}
-      </span>
-    </span>
-  );
+  return luminance > 0.58 ? '#161616' : '#ffffff';
 }
 
 const iconButtonClass =
-  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
+  'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
 
 export default function AppHeader() {
   const { user, logout } = useAuth();
@@ -149,23 +98,14 @@ export default function AppHeader() {
   const userShortName = obtenerNombreCortoUsuario(userName);
   const userInitials = obtenerInicialesUsuario(userName);
   const userRole = user?.rol || 'Admin';
-  const userEmail = (user as any)?.email || (user as any)?.correo || 'admin@smv.edu.pe';
-
   const avatarUrl =
     (user as any)?.avatar_url ||
     (user as any)?.foto_url ||
     (user as any)?.foto_perfil_url ||
     null;
-
   const avatarSrc = assetUrl(avatarUrl);
 
   const canShowSchoolSelector = colegios.length > 0;
-  const activeTipo = activeScope?.tipo || 'todos';
-
-  const activeSchoolTitle =
-    activeTipo === 'colegio'
-      ? activeColegio?.nombre || scopeLabel || 'Colegio seleccionado'
-      : scopeLabel || 'Todos los colegios';
 
   const handleLogout = () => {
     logout();
@@ -245,21 +185,27 @@ export default function AppHeader() {
                   setSchoolDropdownOpen((value) => !value);
                   setDropdownOpen(false);
                 }}
-                className="group hidden h-11 max-w-sm items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
+                className="group hidden h-11 max-w-xs items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
               >
-                <InstitutionMark
-                  kind={activeTipo === 'todos' ? 'all' : 'school'}
-                  colegio={activeColegio as any}
-                  compact
-                />
+                <span
+                  className={`school-scope-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-slate-200 ${activeScope.tipo === 'todos' ? 'bg-slate-950 text-white' : 'bg-white text-blue-700'}`}
+                  style={
+                    activeScope.tipo === 'colegio' && activeColegio?.color_principal
+                      ? {
+                          backgroundColor: activeColegio.color_principal,
+                          color: getReadableIconColor(activeColegio.color_principal),
+                        }
+                      : undefined
+                  }
+                >
+                  {activeScope.tipo === 'todos' ? <Globe2 size={20} strokeWidth={2.8} /> : <School size={20} strokeWidth={2.8} />}
+                </span>
 
                 <span className="min-w-0">
                   <span className="block truncate text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                     {tenant?.nombre || 'Grupo educativo'}
                   </span>
-                  <span className="block max-w-[15rem] truncate text-sm font-bold text-slate-900">
-                    {activeSchoolTitle}
-                  </span>
+                  <span className="block truncate text-sm font-bold text-slate-800">{scopeLabel}</span>
                 </span>
 
                 <ChevronDown
@@ -277,27 +223,21 @@ export default function AppHeader() {
                 aria-label="Cambiar institución"
                 className={`${iconButtonClass} sm:hidden`}
               >
-                <InstitutionMark
-                  kind={activeTipo === 'todos' ? 'all' : 'school'}
-                  colegio={activeColegio as any}
-                  compact
-                />
+                {activeScope.tipo === 'todos' ? <Globe2 size={20} strokeWidth={2.8} /> : <School size={20} strokeWidth={2.8} />}
               </button>
 
               {schoolDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setSchoolDropdownOpen(false)} />
-                  <div className="header-dropdown-enter absolute left-0 z-[1000] mt-3 w-[21rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
+                  <div className="header-dropdown-enter absolute left-0 z-[1000] mt-3 w-84 max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
                     <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <InstitutionMark kind="group" />
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+                          <Building2 size={20} />
+                        </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-black text-slate-950">
-                            {tenant?.nombre || 'Grupo educativo'}
-                          </p>
-                          <p className="truncate text-xs font-medium text-slate-600">
-                            Selecciona el colegio de trabajo
-                          </p>
+                          <p className="truncate text-sm font-black text-slate-950">{tenant?.nombre || 'Grupo educativo'}</p>
+                          <p className="truncate text-xs font-medium text-slate-500">Selecciona el contexto de trabajo</p>
                         </div>
                       </div>
                     </div>
@@ -313,28 +253,22 @@ export default function AppHeader() {
                           className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 hover:bg-slate-50"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <InstitutionMark kind="all" />
+                            <span className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-semibold text-white">
+                              <Globe2 size={20} strokeWidth={3} />
+                            </span>
                             <span className="min-w-0">
-                              <span className="block text-sm font-bold text-slate-950">
-                                Todas las instituciones
-                              </span>
-                              <span className="block truncate text-xs font-medium text-slate-600">
-                                Vista consolidada del grupo
-                              </span>
+                              <span className="block text-sm font-bold text-slate-950">Todas las instituciones</span>
+                              <span className="block truncate text-xs font-medium text-slate-500">Vista consolidada del grupo</span>
                             </span>
                           </span>
-                          {activeTipo === 'todos' && <Check size={18} className="shrink-0 text-blue-600" />}
+                          {activeScope.tipo === 'todos' && <Check size={18} className="shrink-0 text-blue-600" />}
                         </button>
                       )}
 
                       {puedeVerConsolidado && colegios.length > 1 && <div className="my-2 border-t border-slate-100" />}
 
-                      {colegios.map((colegio: any) => {
-                        const selected = activeTipo === 'colegio' && activeScope?.id_colegio === colegio.id_colegio;
-                        const niveles = (colegio.niveles || [])
-                          .map((nivel: any) => nivel.nombre_nivel)
-                          .filter(Boolean)
-                          .join(' · ');
+                      {colegios.map((colegio) => {
+                        const selected = activeScope.tipo === 'colegio' && activeScope.id_colegio === colegio.id_colegio;
 
                         return (
                           <button
@@ -347,13 +281,16 @@ export default function AppHeader() {
                             className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 hover:bg-slate-50"
                           >
                             <span className="flex min-w-0 items-center gap-3">
-                              <InstitutionMark kind="school" colegio={colegio} />
+                              <span
+                                className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-semibold text-white shadow-sm"
+                                style={{ backgroundColor: colegio.color_principal || '#0f62fe', color: getReadableIconColor(colegio.color_principal || '#0f62fe') }}
+                              >
+                                <School size={20} strokeWidth={3} />
+                              </span>
                               <span className="min-w-0">
-                                <span className="block truncate text-sm font-bold text-slate-950">
-                                  {colegio.nombre}
-                                </span>
-                                <span className="block truncate text-xs font-medium text-slate-600">
-                                  {niveles || 'Sin niveles configurados'}
+                                <span className="block truncate text-sm font-bold text-slate-950">{colegio.nombre}</span>
+                                <span className="block truncate text-xs font-medium text-slate-500">
+                                  {(colegio.niveles || []).map((nivel) => nivel.nombre_nivel).join(' · ') || 'Sin niveles configurados'}
                                 </span>
                               </span>
                             </span>
@@ -375,13 +312,13 @@ export default function AppHeader() {
               handleSearch((event.currentTarget.elements.namedItem('search') as HTMLInputElement).value);
             }}
           >
-            <Search size={17} className="shrink-0 text-slate-500" />
+            <Search size={17} className="shrink-0 text-slate-400" />
             <input
               ref={searchInputRef}
               name="search"
               type="text"
               placeholder="Buscar alumno o DNI..."
-              className="h-full min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-500"
+              className="h-full min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
           </form>
         </div>
@@ -415,19 +352,17 @@ export default function AppHeader() {
                 <img
                   src={avatarSrc}
                   alt={userName}
-                  className="h-9 w-9 rounded-xl bg-white object-cover ring-1 ring-slate-200/70"
+                  className="h-9 w-9 rounded-xl object-cover bg-white ring-1 ring-slate-200/70"
                 />
               ) : (
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-950 ring-1 ring-slate-200/70">
                   {userInitials}
                 </span>
               )}
-
               <div className="hidden min-w-0 text-left leading-tight sm:block">
-                <p className="max-w-28 truncate text-sm font-semibold text-slate-900">{userShortName}</p>
+                <p className="max-w-28 truncate text-sm font-semibold text-slate-800">{userShortName}</p>
                 <p className="max-w-28 truncate text-xs font-medium text-slate-500">{userRole}</p>
               </div>
-
               <ChevronDown
                 size={16}
                 className={`hidden text-slate-400 transition-transform duration-200 sm:block ${dropdownOpen ? 'rotate-180' : ''}`}
@@ -444,17 +379,18 @@ export default function AppHeader() {
                         <img
                           src={avatarSrc}
                           alt={userName}
-                          className="h-12 w-12 rounded-xl bg-white object-cover ring-1 ring-slate-200/70"
+                          className="h-12 w-12 rounded-xl object-cover bg-white ring-1 ring-slate-200/70"
                         />
                       ) : (
                         <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-sm font-black text-slate-950 ring-1 ring-slate-200/70">
                           {userInitials}
                         </span>
                       )}
-
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black text-slate-950">{userName}</p>
-                        <p className="truncate text-xs font-medium text-slate-600">{userEmail}</p>
+                        <p className="truncate text-xs font-medium text-slate-500">
+                          {user?.email || user?.correo || 'admin@smv.edu.pe'}
+                        </p>
                       </div>
                     </div>
 
@@ -470,7 +406,7 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         navigate('/perfil');
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
+                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                         <User size={16} />
@@ -484,7 +420,7 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         navigate('/configuracion');
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
+                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
                         <Settings size={16} />
@@ -498,7 +434,7 @@ export default function AppHeader() {
                         setDropdownOpen(false);
                         alert('Soporte: contacta al administrador.');
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
+                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
                         <HelpCircle size={16} />
@@ -533,19 +469,19 @@ export default function AppHeader() {
               handleSearch((event.currentTarget.elements.namedItem('mobileSearch') as HTMLInputElement).value);
             }}
           >
-            <Search size={17} className="text-slate-500" />
+            <Search size={17} className="text-slate-400" />
             <input
               name="mobileSearch"
               autoFocus
               type="text"
               placeholder="Buscar alumno o DNI..."
-              className="h-9 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-500"
+              className="h-9 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
             />
             <button
               type="button"
               onClick={() => setMobileSearchOpen(false)}
               aria-label="Cerrar búsqueda"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
             >
               <X size={16} />
             </button>

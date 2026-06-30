@@ -1,0 +1,70 @@
+import { useEffect, useState } from 'react';
+import { Building2, Globe2, School } from 'lucide-react';
+import { assetUrl } from '../utils/assets';
+
+type InstitutionMarkKind = 'group' | 'all' | 'school';
+
+type InstitutionMarkColegio = {
+  nombre?: string | null;
+  logo_url?: string | null;
+  color_principal?: string | null;
+};
+
+type InstitutionMarkProps = {
+  kind: InstitutionMarkKind;
+  colegio?: InstitutionMarkColegio | null;
+  compact?: boolean;
+};
+
+export default function InstitutionMark({
+  kind,
+  colegio,
+  compact = false,
+}: InstitutionMarkProps) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  const isSchool = kind === 'school';
+  const logoSrc = isSchool ? assetUrl(colegio?.logo_url || '') : '';
+  const showLogo = Boolean(logoSrc && !logoFailed);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoSrc]);
+
+  const color = isSchool
+    ? colegio?.color_principal || '#0f62fe'
+    : kind === 'all'
+      ? '#161616'
+      : '#ffffff';
+
+  const outerSize = compact ? 'h-9 w-9 rounded-xl p-1' : 'h-11 w-11 rounded-2xl p-1';
+  const innerSize = compact ? 'h-7 w-7 rounded-lg' : 'h-9 w-9 rounded-xl';
+
+  const Icon = kind === 'all' ? Globe2 : kind === 'group' ? Building2 : School;
+
+  return (
+    <span
+      className={`school-mark inline-flex shrink-0 items-center justify-center ${outerSize} ${
+        kind === 'group'
+          ? 'border border-slate-200 bg-white shadow-sm'
+          : 'shadow-[0_0_0_2px_rgba(255,255,255,0.92),0_5px_14px_rgba(15,23,42,0.2)]'
+      }`}
+      style={kind !== 'group' ? { backgroundColor: color } : undefined}
+    >
+      <span
+        className={`flex ${innerSize} items-center justify-center overflow-hidden bg-white text-slate-950 shadow-sm ring-1 ring-slate-200`}
+      >
+        {showLogo ? (
+          <img
+            src={logoSrc}
+            alt={colegio?.nombre || 'Colegio'}
+            className="h-full w-full object-contain p-0.5"
+            onError={() => setLogoFailed(true)}
+          />
+        ) : (
+          <Icon size={compact ? 18 : 20} strokeWidth={2.8} />
+        )}
+      </span>
+    </span>
+  );
+}
