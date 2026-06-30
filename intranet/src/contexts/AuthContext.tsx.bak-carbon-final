@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
-import { safePersistentAvatarUrl } from '../utils/assets';
 
 export interface ColegioSaas {
   id_colegio: number;
@@ -105,12 +104,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const normalizeUser = (data: any): User => ({
-  ...data,
-  avatar_url: safePersistentAvatarUrl(data?.avatar_url),
-});
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -122,8 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setToken(storedToken);
-    setUser(normalizeUser(res.data));
-    localStorage.setItem('user_intranet', JSON.stringify(normalizeUser(res.data)));
+    setUser(res.data);
+    localStorage.setItem('user_intranet', JSON.stringify(res.data));
   };
 
   useEffect(() => {
@@ -149,10 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { access_token, user: userData } = response.data;
 
     localStorage.setItem('token_intranet', access_token);
-    localStorage.setItem('user_intranet', JSON.stringify(normalizeUser(userData)));
+    localStorage.setItem('user_intranet', JSON.stringify(userData));
 
     setToken(access_token);
-    setUser(normalizeUser(userData));
+    setUser(userData);
   };
 
   const refreshUser = async () => {

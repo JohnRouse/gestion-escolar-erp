@@ -1,0 +1,331 @@
+/* ==========================================================
+   Carbon UI - Pulido final visual
+   Perfil + Dashboard + Comunidad + Tesorería + Avatar
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Avatar seguro
+   ---------------------------------------------------------- */
+
+[data-avatar-image],
+[data-profile-avatar] {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
+  display: block;
+  background: #ffffff;
+}
+
+[data-avatar-image][src=""],
+[data-profile-avatar][src=""] {
+  display: none !important;
+}
+
+/* ----------------------------------------------------------
+   Dashboard: header redondeado como el resto de pantallas
+   ---------------------------------------------------------- */
+
+.carbon-dashboard .carbon-dashboard-hero {
+  border-radius: 28px !important;
+  border: 1px solid var(--erp-carbon-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard .carbon-dashboard-hero [class*="rounded"],
+.carbon-dashboard .carbon-dashboard-hero [class*="rounded-2xl"],
+.carbon-dashboard .carbon-dashboard-hero [class*="rounded-3xl"] {
+  border-radius: 8px !important;
+}
+
+/* ----------------------------------------------------------
+   Perfil: rediseño completo en Carbon
+   ---------------------------------------------------------- */
+
+.carbon-perfil-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  color: var(--erp-carbon-text);
+}
+
+.carbon-perfil-page h1 {
+  font-size: 32px !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.04em !important;
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-perfil-page h2,
+.carbon-perfil-page h3 {
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-perfil-page p,
+.carbon-perfil-page span,
+.carbon-perfil-page label {
+  color: var(--erp-carbon-text-secondary);
+}
+
+.carbon-perfil-page [class*="text-black"] {
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-perfil-page [class*="text-neutral-400"],
+.carbon-perfil-page [class*="text-slate-400"],
+.carbon-perfil-page [class*="text-gray-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+.carbon-perfil-page [class*="text-neutral-500"],
+.carbon-perfil-page [class*="text-slate-500"],
+.carbon-perfil-page [class*="text-gray-500"] {
+  color: var(--erp-carbon-text-secondary) !important;
+}
+
+.carbon-perfil-page [class*="rounded-[24px]"],
+.carbon-perfil-page [class*="rounded-[26px]"],
+.carbon-perfil-page [class*="rounded-[28px]"],
+.carbon-perfil-page [class*="rounded-[30px]"],
+.carbon-perfil-page [class*="rounded-3xl"],
+.carbon-perfil-page [class*="rounded-2xl"],
+.carbon-perfil-page [class*="rounded-xl"],
+.carbon-perfil-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-perfil-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page [class*="bg-white"] {
+  background: #ffffff !important;
+  border-color: var(--erp-carbon-border) !important;
+}
+
+.carbon-perfil-page [class*="bg-[#CCF32F]"],
+.carbon-perfil-page [class*="bg-lime"] {
+  background: var(--erp-carbon-blue-60) !important;
+  color: #ffffff !important;
+}
+
+.carbon-perfil-page [class*="ring-[#CCF32F]"] {
+  --tw-ring-color: rgba(15, 98, 254, 0.28) !important;
+}
+
+.carbon-perfil-page input,
+.carbon-perfil-page select,
+.carbon-perfil-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page input:focus,
+.carbon-perfil-page select:focus,
+.carbon-perfil-page textarea:focus {
+  border-bottom-color: var(--erp-carbon-blue-60) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page button:hover {
+  transform: none !important;
+}
+
+.carbon-perfil-page button[class*="bg-blue"],
+.carbon-perfil-page button[class*="bg-[#0f62fe]"] {
+  background: var(--erp-carbon-blue-60) !important;
+  color: #ffffff !important;
+}
+
+.carbon-perfil-page button[class*="bg-neutral-900"],
+.carbon-perfil-page button[class*="bg-slate-950"] {
+  background: var(--erp-carbon-gray-100) !important;
+  color: #ffffff !important;
+}
+
+/* ----------------------------------------------------------
+   Comunidad escolar: Alumnos y Apoderados más legibles
+   ---------------------------------------------------------- */
+
+.carbon-community-page {
+  color: var(--erp-carbon-text);
+}
+
+.carbon-community-page h1 {
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-community-page p,
+.carbon-community-page span,
+.carbon-community-page td,
+.carbon-community-page button {
+  color: var(--erp-carbon-text-secondary);
+}
+
+.carbon-community-page [class*="text-slate-400"],
+.carbon-community-page [class*="text-neutral-400"],
+.carbon-community-page [class*="text-gray-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+.carbon-community-page [class*="text-slate-500"],
+.carbon-community-page [class*="text-neutral-500"],
+.carbon-community-page [class*="text-gray-500"] {
+  color: var(--erp-carbon-text-secondary) !important;
+}
+
+.carbon-community-page table {
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page thead th {
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text-secondary) !important;
+  border-bottom: 2px solid var(--erp-carbon-border-strong) !important;
+  font-weight: 800 !important;
+}
+
+.carbon-community-page tbody td {
+  color: var(--erp-carbon-text) !important;
+  border-bottom: 1px solid var(--erp-carbon-border) !important;
+  font-size: 14px !important;
+}
+
+.carbon-community-page tbody tr:hover {
+  background: var(--erp-carbon-gray-10) !important;
+}
+
+.carbon-community-page span[class*="bg-blue"],
+.carbon-community-page span[class*="bg-sky"],
+.carbon-community-page span[class*="bg-cyan"],
+.carbon-community-page span[class*="bg-emerald"],
+.carbon-community-page span[class*="bg-green"],
+.carbon-community-page span[class*="bg-amber"],
+.carbon-community-page span[class*="bg-yellow"],
+.carbon-community-page span[class*="bg-rose"],
+.carbon-community-page span[class*="bg-red"] {
+  border-radius: 2px !important;
+  font-weight: 800 !important;
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-community-page button {
+  border-radius: 2px !important;
+}
+
+/* ----------------------------------------------------------
+   Selector de colegios del header: texto legible
+   ---------------------------------------------------------- */
+
+.carbon-shell header [class*="absolute"][class*="bg-white"],
+.carbon-shell header [class*="absolute"][class*="bg-slate"],
+.carbon-shell header [class*="absolute"][class*="bg-neutral"] {
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-shell header [class*="absolute"] button,
+.carbon-shell header [class*="absolute"] p,
+.carbon-shell header [class*="absolute"] span,
+.carbon-shell header [class*="absolute"] div {
+  color: var(--erp-carbon-text) !important;
+}
+
+.carbon-shell header [class*="absolute"] [class*="text-slate-400"],
+.carbon-shell header [class*="absolute"] [class*="text-neutral-400"],
+.carbon-shell header [class*="absolute"] [class*="text-gray-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+/* ----------------------------------------------------------
+   Tesorería: mantener legibilidad y consistencia Carbon
+   ---------------------------------------------------------- */
+
+.carbon-tesoreria-page {
+  color: var(--erp-carbon-text);
+}
+
+.carbon-tesoreria-page p,
+.carbon-tesoreria-page span,
+.carbon-tesoreria-page label,
+.carbon-tesoreria-page td {
+  color: var(--erp-carbon-text-secondary);
+}
+
+.carbon-tesoreria-page [class*="text-slate-400"],
+.carbon-tesoreria-page [class*="text-neutral-400"],
+.carbon-tesoreria-page [class*="text-gray-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+.carbon-tesoreria-page [class*="text-slate-500"],
+.carbon-tesoreria-page [class*="text-neutral-500"],
+.carbon-tesoreria-page [class*="text-gray-500"] {
+  color: var(--erp-carbon-text-secondary) !important;
+}
+
+.carbon-tesoreria-page [class*="rounded-[24px]"],
+.carbon-tesoreria-page [class*="rounded-[26px]"],
+.carbon-tesoreria-page [class*="rounded-[28px]"],
+.carbon-tesoreria-page [class*="rounded-[30px]"],
+.carbon-tesoreria-page [class*="rounded-3xl"],
+.carbon-tesoreria-page [class*="rounded-2xl"],
+.carbon-tesoreria-page [class*="rounded-xl"],
+.carbon-tesoreria-page [class*="rounded-full"] {
+  border-radius: 4px !important;
+}
+
+.carbon-tesoreria-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page button {
+  border-radius: 2px !important;
+}
+
+.carbon-tesoreria-page button:hover {
+  transform: none !important;
+}
+
+/* ----------------------------------------------------------
+   Modales: encima de header/sidebar y centrados
+   ---------------------------------------------------------- */
+
+.erp-carbon-modal-overlay,
+.carbon-config-modal-overlay,
+.carbon-matricula-modal-overlay {
+  z-index: 5000 !important;
+}
+
+.erp-carbon-modal-panel,
+.carbon-config-modal-panel,
+.carbon-matricula-modal-panel {
+  border-radius: 4px !important;
+  border: 1px solid var(--erp-carbon-border-strong) !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .carbon-perfil-page {
+    padding: 20px 14px 36px;
+  }
+
+  .carbon-dashboard .carbon-dashboard-hero {
+    border-radius: 18px !important;
+  }
+}
