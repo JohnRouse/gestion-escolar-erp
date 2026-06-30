@@ -10,7 +10,6 @@ import { CreateApoderadoDto } from './dto/create-apoderado.dto';
 import { CreateMatriculaDto } from './dto/create-matricula.dto';
 import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
-import { normalizePersonaInput } from '../common/persona-normalizer';
 
 interface ScopeParams {
   userId: number;
@@ -3067,9 +3066,7 @@ async obtenerPreparacionAnioLectivo(
   // ── CREAR ALUMNO ──────────────────────────────────────
 
   async createAlumno(dto: CreateAlumnoDto) {
-    
-    dto = normalizePersonaInput(dto) as CreateAlumnoDto;
-const existente = await this.prisma.persona.findUnique({
+    const existente = await this.prisma.persona.findUnique({
       where: { dni: dto.dni },
       include: { estudiantes: true },
     });
@@ -3190,9 +3187,7 @@ const existente = await this.prisma.persona.findUnique({
   // ── CREAR APODERADO ───────────────────────────────────
 
   async createApoderado(dto: CreateApoderadoDto) {
-    
-    dto = normalizePersonaInput(dto) as CreateApoderadoDto;
-const existente = await this.prisma.persona.findUnique({
+    const existente = await this.prisma.persona.findUnique({
       where: { dni: dto.dni },
       include: { apoderados: true },
     });
@@ -5048,7 +5043,7 @@ const existente = await this.prisma.persona.findUnique({
       throw new BadRequestException('Selecciona un colegio válido.');
     }
 
-    const body = normalizePersonaInput(params.body || {});
+    const body = params.body || {};
     const dni = String(body.dni || '').trim();
 
     if (!/^\d{8}$/.test(dni)) {
@@ -5161,7 +5156,7 @@ const existente = await this.prisma.persona.findUnique({
       throw new BadRequestException('No tienes acceso a este docente.');
     }
 
-    const body = normalizePersonaInput(params.body || {});
+    const body = params.body || {};
     const dataPersona: any = {};
 
     for (const key of [

@@ -7,7 +7,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { normalizePersonaInput } from '../common/persona-normalizer';
 
 @Injectable()
 export class AuthService {
