@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -701,11 +702,11 @@ export default function CriteriosTutoriaTab() {
         </div>
       </section>
 
-      {modal && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      {modal && createPortal(
+        <div className="carbon-config-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" onClick={closeModal} />
 
-          <section className="relative w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.75)] ring-1 ring-slate-200/70">
+          <section className="carbon-config-modal-panel relative w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.75)] ring-1 ring-slate-200/70">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
@@ -767,7 +768,8 @@ export default function CriteriosTutoriaTab() {
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <ConfirmDialog

@@ -226,7 +226,7 @@ export default function PagosExtraordinariosPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-tesoreria-page w-full space-y-6">
       <PageHeader
         eyebrow="Tesorería · Cobro puntual"
         title="Pagos extraordinarios"

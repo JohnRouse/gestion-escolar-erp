@@ -235,7 +235,7 @@ export default function EstadoCuentaInternoPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-tesoreria-page w-full space-y-6">
       <PageHeader
         eyebrow="Tesorería"
         title="Estado de cuenta interno"

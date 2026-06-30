@@ -1,0 +1,257 @@
+/* ==========================================================
+   Carbon UI Consolidado - Pulido de pantallas pendientes
+   Perfil + Tesorería + modales de configuración
+   ========================================================== */
+
+/* ==========================================================
+   1) Perfil
+   ========================================================== */
+
+.carbon-perfil-page {
+  color: var(--erp-carbon-text);
+}
+
+.carbon-perfil-page [class*="rounded-[24px]"],
+.carbon-perfil-page [class*="rounded-[26px]"],
+.carbon-perfil-page [class*="rounded-[28px]"],
+.carbon-perfil-page [class*="rounded-[30px]"],
+.carbon-perfil-page [class*="rounded-3xl"],
+.carbon-perfil-page [class*="rounded-2xl"],
+.carbon-perfil-page [class*="rounded-xl"],
+.carbon-perfil-page [class*="rounded-full"] {
+  border-radius: var(--erp-carbon-radius-sm) !important;
+}
+
+.carbon-perfil-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page > div,
+.carbon-perfil-page [class*="bg-white"] {
+  border-color: var(--erp-carbon-border) !important;
+}
+
+.carbon-perfil-page [class*="bg-[#CCF32F]"],
+.carbon-perfil-page [class*="bg-lime"] {
+  background: var(--erp-carbon-blue-60) !important;
+  color: #ffffff !important;
+}
+
+.carbon-perfil-page [class*="ring-[#CCF32F]"] {
+  --tw-ring-color: rgba(15, 98, 254, 0.22) !important;
+}
+
+.carbon-perfil-page [class*="text-black"] {
+  color: #ffffff !important;
+}
+
+.carbon-perfil-page input,
+.carbon-perfil-page select,
+.carbon-perfil-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page input:focus,
+.carbon-perfil-page select:focus,
+.carbon-perfil-page textarea:focus {
+  border-bottom-color: var(--erp-carbon-blue-60) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page button {
+  border-radius: var(--erp-carbon-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page button:hover {
+  transform: none !important;
+}
+
+/* ==========================================================
+   2) Tesorería pendiente
+   ========================================================== */
+
+.carbon-tesoreria-page {
+  color: var(--erp-carbon-text);
+}
+
+.carbon-tesoreria-page section,
+.carbon-tesoreria-page article,
+.carbon-tesoreria-page > div[class*="bg-white"],
+.carbon-tesoreria-page div[class*="ring-1"] {
+  border-color: var(--erp-carbon-border) !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page section[class*="bg-white"],
+.carbon-tesoreria-page article[class*="bg-white"],
+.carbon-tesoreria-page div[class*="bg-white"] {
+  background: #ffffff !important;
+}
+
+.carbon-tesoreria-page div[class*="bg-slate-50"],
+.carbon-tesoreria-page div[class*="bg-neutral-50"],
+.carbon-tesoreria-page div[class*="bg-gray-50"] {
+  background: var(--erp-carbon-gray-10) !important;
+}
+
+.carbon-tesoreria-page [class*="rounded-[24px]"],
+.carbon-tesoreria-page [class*="rounded-[26px]"],
+.carbon-tesoreria-page [class*="rounded-[28px]"],
+.carbon-tesoreria-page [class*="rounded-[30px]"],
+.carbon-tesoreria-page [class*="rounded-3xl"],
+.carbon-tesoreria-page [class*="rounded-2xl"],
+.carbon-tesoreria-page [class*="rounded-xl"],
+.carbon-tesoreria-page [class*="rounded-full"] {
+  border-radius: var(--erp-carbon-radius-sm) !important;
+}
+
+.carbon-tesoreria-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page input,
+.carbon-tesoreria-page select,
+.carbon-tesoreria-page textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page input:focus,
+.carbon-tesoreria-page select:focus,
+.carbon-tesoreria-page textarea:focus {
+  border-bottom-color: var(--erp-carbon-blue-60) !important;
+  background: #ffffff !important;
+}
+
+.carbon-tesoreria-page button,
+.carbon-tesoreria-page a {
+  border-radius: var(--erp-carbon-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-page button:hover,
+.carbon-tesoreria-page a:hover {
+  transform: none !important;
+}
+
+.carbon-tesoreria-page button[class*="bg-slate-950"],
+.carbon-tesoreria-page button[class*="bg-neutral-900"] {
+  background: var(--erp-carbon-gray-100) !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-page button[class*="bg-blue"],
+.carbon-tesoreria-page button[class*="bg-indigo"] {
+  background: var(--erp-carbon-blue-60) !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-page [class*="bg-[#CCF32F]"],
+.carbon-tesoreria-page [class*="bg-lime"] {
+  background: var(--erp-carbon-blue-60) !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-page div[class*="h-full"][class*="rounded-full"],
+.carbon-tesoreria-page div[class*="h-1.5"],
+.carbon-tesoreria-page div[class*="h-2"] {
+  border-radius: 0 !important;
+}
+
+/* Tablas de estado de cuenta */
+.carbon-tesoreria-page table {
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.carbon-tesoreria-page thead th {
+  background: var(--erp-carbon-gray-10) !important;
+  border-bottom: 2px solid var(--erp-carbon-border-strong) !important;
+  color: var(--erp-carbon-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-tesoreria-page tbody td {
+  border-bottom: 1px solid var(--erp-carbon-border) !important;
+}
+
+.carbon-tesoreria-page tbody tr:hover {
+  background: var(--erp-carbon-gray-10) !important;
+}
+
+/* ==========================================================
+   3) Modales de configuración forzados a pantalla completa
+   ========================================================== */
+
+.carbon-config-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 5000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.carbon-config-modal-overlay > .absolute {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(22, 22, 22, 0.56) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.carbon-config-modal-panel {
+  margin: auto !important;
+  border: 1px solid var(--erp-carbon-border-strong) !important;
+  border-radius: var(--erp-carbon-radius-sm) !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24) !important;
+  transform: none !important;
+}
+
+.carbon-config-modal-panel input,
+.carbon-config-modal-panel select,
+.carbon-config-modal-panel textarea {
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid var(--erp-carbon-border-input) !important;
+  background: var(--erp-carbon-gray-10) !important;
+  color: var(--erp-carbon-text) !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================
+   4) Legibilidad adicional
+   ========================================================== */
+
+.carbon-shell [class*="text-slate-400"],
+.carbon-shell [class*="text-neutral-400"],
+.carbon-shell [class*="text-gray-400"] {
+  color: var(--erp-carbon-text-helper) !important;
+}
+
+.carbon-shell [class*="text-slate-500"],
+.carbon-shell [class*="text-neutral-500"],
+.carbon-shell [class*="text-gray-500"] {
+  color: var(--erp-carbon-text-secondary) !important;
+}
+
+.carbon-shell input::placeholder,
+.carbon-shell textarea::placeholder {
+  color: var(--erp-carbon-text-placeholder) !important;
+  opacity: 1 !important;
+}

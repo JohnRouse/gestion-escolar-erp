@@ -231,7 +231,7 @@ export default function TesoreriaPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="carbon-tesoreria-page w-full space-y-6">
       <PageHeader
         eyebrow="Gestión de tesorería"
         title="Tesorería"

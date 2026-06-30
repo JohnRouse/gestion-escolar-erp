@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -186,7 +187,7 @@ export default function PerfilPage() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-5xl mx-auto space-y-6 p-1">
+      <div className="carbon-perfil-page w-full max-w-5xl mx-auto space-y-6 p-1">
         <div className="h-8 w-32 rounded-lg bg-neutral-100 animate-pulse" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -400,14 +401,14 @@ export default function PerfilPage() {
       </div>
 
       {/* ═══ Modal de Edición ═══ */}
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div 
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`}
+          className={`erp-carbon-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`}
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
           <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
           
-          <div className={`relative bg-white rounded-2xl shadow-2xl ring-1 ring-neutral-200/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
+          <div className={`erp-carbon-modal-panel relative bg-white rounded-2xl shadow-2xl ring-1 ring-neutral-200/50 w-full max-w-2xl max-h-[88vh] overflow-y-auto flex flex-col ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
               <div>
@@ -499,7 +500,8 @@ export default function PerfilPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

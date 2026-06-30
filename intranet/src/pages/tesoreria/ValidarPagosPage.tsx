@@ -306,7 +306,7 @@ export default function ValidarPagosPage() {
   };
 
   return (
-    <div className="w-full space-y-6 animate-page-soft">
+    <div className="carbon-tesoreria-page w-full space-y-6 animate-page-soft">
       <PageHeader
         eyebrow="Tesorería"
         title="Validar pagos"
