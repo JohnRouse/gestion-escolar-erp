@@ -337,7 +337,7 @@ export default function CobranzasPage() {
   };
 
   return (
-    <div className="carbon-cobranzas-page w-full space-y-6 animate-page-soft">
+    <div className="w-full space-y-6 animate-page-soft">
       <PageHeader
         eyebrow="Tesorería"
         title="Centro de pagos"

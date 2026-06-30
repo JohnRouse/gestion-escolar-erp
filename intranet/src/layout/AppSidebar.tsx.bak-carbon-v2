@@ -186,7 +186,7 @@ export default function AppSidebar() {
 
   const renderItem = (item: NavItem) => {
     const hasChildren = Boolean(item.children?.length);
-    const isActive = isRouteActive(item.path) || Boolean(item.children?.some((child) => isRouteActive(child.path)));
+    const isActive = isRouteActive(item.path);
     const Icon = item.icon;
 
     if (hasChildren) {

@@ -1,0 +1,313 @@
+
+/* =========================================================
+   06 - Usabilidad final
+   Perfil + Tesorería + Header contexto
+   ========================================================= */
+
+:root {
+  --erp-carbon-text-strong: #111827;
+  --erp-carbon-text: #1f2937;
+  --erp-carbon-text-soft: #5b6574;
+  --erp-carbon-border-2: #d8e0ea;
+  --erp-carbon-bg-card: #ffffff;
+  --erp-carbon-bg-soft: #f8fafc;
+  --erp-carbon-primary-strong: #0f62fe;
+  --erp-carbon-chip-text: #243142;
+}
+
+/* =========================================================
+   1) Header / selector de contexto
+   ========================================================= */
+
+.erp-app-header {
+  color: var(--erp-carbon-text-strong);
+}
+
+.erp-app-header [class*="bg-black"] svg,
+.erp-app-header [class*="bg-neutral-950"] svg,
+.erp-app-header [class*="bg-slate-950"] svg,
+.erp-app-header [class*="bg-slate-900"] svg {
+  color: #ffffff !important;
+  stroke: currentColor !important;
+}
+
+.erp-app-header [class*="bg-lime"] svg,
+.erp-app-header [class*="bg-lime-"] svg,
+.erp-app-header [class*="bg-green"] svg,
+.erp-app-header [class*="bg-emerald"] svg,
+.erp-app-header [class*="bg-blue"] svg,
+.erp-app-header [class*="bg-sky"] svg,
+.erp-app-header [class*="bg-cyan"] svg {
+  color: #0f172a !important;
+  stroke: currentColor !important;
+}
+
+.erp-app-header [class*="rounded-full"] img {
+  object-fit: cover;
+}
+
+.erp-app-header [class*="rounded-full"]:not(:has(img)) {
+  font-weight: 700;
+  color: #111827 !important;
+}
+
+/* =========================================================
+   2) Legibilidad general tesorería / perfil
+   ========================================================= */
+
+.carbon-perfil-page,
+.carbon-cobranzas-page,
+.carbon-tesoreria-config-page,
+.carbon-estado-cuenta-page {
+  color: var(--erp-carbon-text);
+}
+
+.carbon-perfil-page *,
+.carbon-cobranzas-page *,
+.carbon-tesoreria-config-page *,
+.carbon-estado-cuenta-page * {
+  text-rendering: optimizeLegibility;
+}
+
+.carbon-perfil-page [class*="text-gray-500"],
+.carbon-perfil-page [class*="text-slate-500"],
+.carbon-perfil-page [class*="text-neutral-500"],
+.carbon-cobranzas-page [class*="text-gray-500"],
+.carbon-cobranzas-page [class*="text-slate-500"],
+.carbon-cobranzas-page [class*="text-neutral-500"],
+.carbon-tesoreria-config-page [class*="text-gray-500"],
+.carbon-tesoreria-config-page [class*="text-slate-500"],
+.carbon-tesoreria-config-page [class*="text-neutral-500"],
+.carbon-estado-cuenta-page [class*="text-gray-500"],
+.carbon-estado-cuenta-page [class*="text-slate-500"],
+.carbon-estado-cuenta-page [class*="text-neutral-500"] {
+  color: var(--erp-carbon-text-soft) !important;
+}
+
+.carbon-perfil-page [class*="tracking-[0.25em]"],
+.carbon-perfil-page [class*="tracking-[0.28em]"],
+.carbon-cobranzas-page [class*="tracking-[0.25em]"],
+.carbon-cobranzas-page [class*="tracking-[0.28em]"],
+.carbon-tesoreria-config-page [class*="tracking-[0.25em]"],
+.carbon-tesoreria-config-page [class*="tracking-[0.28em]"],
+.carbon-estado-cuenta-page [class*="tracking-[0.25em]"],
+.carbon-estado-cuenta-page [class*="tracking-[0.28em]"] {
+  letter-spacing: 0.14em !important;
+  font-size: 11px !important;
+  color: #64748b !important;
+}
+
+.carbon-perfil-page [class*="rounded-full"],
+.carbon-cobranzas-page [class*="rounded-full"],
+.carbon-tesoreria-config-page [class*="rounded-full"],
+.carbon-estado-cuenta-page [class*="rounded-full"] {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+}
+
+/* =========================================================
+   3) PerfilPage
+   ========================================================= */
+
+.carbon-perfil-page {
+  width: 100% !important;
+  max-width: none !important;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.carbon-perfil-page > :first-child {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 24px !important;
+  align-items: start !important;
+  min-height: 136px;
+  padding: 32px 24px !important;
+  border: 1px solid var(--erp-carbon-border-2) !important;
+  border-radius: 24px !important;
+  background: var(--erp-carbon-bg-card) !important;
+}
+
+.carbon-perfil-page > :nth-child(2) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr) !important;
+  gap: 24px !important;
+  align-items: start !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :first-child,
+.carbon-perfil-page > :nth-child(2) > :last-child {
+  width: 100%;
+  border: 1px solid var(--erp-carbon-border-2) !important;
+  border-radius: 24px !important;
+  background: var(--erp-carbon-bg-card) !important;
+  box-shadow: none !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :first-child {
+  overflow: hidden;
+}
+
+.carbon-perfil-page > :nth-child(2) > :first-child > :first-child {
+  min-height: 130px;
+  padding: 24px !important;
+  border-bottom: 1px solid var(--erp-carbon-border-2) !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :first-child > :last-child {
+  padding: 24px !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :first-child > :last-child > * {
+  min-height: 128px;
+  border: 1px solid var(--erp-carbon-border-2) !important;
+  border-radius: 16px !important;
+  background: var(--erp-carbon-bg-card) !important;
+  padding: 18px !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :last-child > :first-child {
+  padding: 22px 22px 18px 22px !important;
+  border-bottom: 1px solid var(--erp-carbon-border-2) !important;
+}
+
+.carbon-perfil-page > :nth-child(2) > :last-child > :last-child {
+  padding: 20px 22px 22px 22px !important;
+}
+
+.carbon-perfil-page input {
+  min-height: 40px;
+}
+
+/* =========================================================
+   4) Centro de pagos / Cobranzas
+   ========================================================= */
+
+.carbon-cobranzas-page {
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.carbon-cobranzas-page > * {
+  border-radius: 24px !important;
+}
+
+.carbon-cobranzas-page [class*="bg-white"] {
+  border-color: var(--erp-carbon-border-2) !important;
+  box-shadow: none !important;
+}
+
+.carbon-cobranzas-page .rounded-full {
+  padding: 6px 10px !important;
+}
+
+.carbon-cobranzas-page button {
+  min-height: 38px;
+}
+
+.carbon-cobranzas-page input,
+.carbon-cobranzas-page select {
+  min-height: 40px;
+}
+
+.carbon-cobranzas-page [class*="grid-cols-3"] {
+  gap: 16px !important;
+}
+
+.carbon-cobranzas-page [class*="grid-cols-4"] {
+  gap: 16px !important;
+}
+
+/* =========================================================
+   5) TesoreriaConfiguracion / Pensiones y descuentos
+   ========================================================= */
+
+.carbon-tesoreria-config-page {
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.carbon-tesoreria-config-page > * {
+  border-radius: 24px !important;
+}
+
+.carbon-tesoreria-config-page [class*="bg-white"] {
+  border-color: var(--erp-carbon-border-2) !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page input,
+.carbon-tesoreria-config-page select,
+.carbon-tesoreria-config-page textarea {
+  min-height: 40px;
+}
+
+.carbon-tesoreria-config-page .rounded-full {
+  padding: 6px 10px !important;
+}
+
+/* =========================================================
+   6) Estado de cuenta interno
+   ========================================================= */
+
+.carbon-estado-cuenta-page {
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.carbon-estado-cuenta-page > * {
+  border-radius: 24px !important;
+}
+
+.carbon-estado-cuenta-page [class*="bg-white"] {
+  border-color: var(--erp-carbon-border-2) !important;
+  box-shadow: none !important;
+}
+
+.carbon-estado-cuenta-page table,
+.carbon-estado-cuenta-page [role="table"] {
+  width: 100%;
+}
+
+.carbon-estado-cuenta-page th,
+.carbon-estado-cuenta-page td {
+  vertical-align: top;
+}
+
+.carbon-estado-cuenta-page .rounded-full {
+  padding: 6px 10px !important;
+}
+
+/* =========================================================
+   7) Responsive
+   ========================================================= */
+
+@media (max-width: 1180px) {
+  .carbon-perfil-page > :nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .carbon-perfil-page > :first-child {
+    grid-template-columns: 1fr !important;
+  }
+
+  .carbon-perfil-page > :nth-child(2) > :first-child > :last-child {
+    grid-template-columns: 1fr !important;
+  }
+}

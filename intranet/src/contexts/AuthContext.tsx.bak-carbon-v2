@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (data: Partial<User>) => {
     if (user) {
-      const updated = normalizeUser({ ...user, ...data });
+      const updated = { ...user, ...data };
       setUser(updated);
       localStorage.setItem('user_intranet', JSON.stringify(updated));
     }

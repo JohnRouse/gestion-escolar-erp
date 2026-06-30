@@ -103,7 +103,6 @@ export default function AppHeader() {
     (user as any)?.foto_url ||
     (user as any)?.foto_perfil_url ||
     null;
-  const avatarSrc = assetUrl(avatarUrl);
 
   const canShowSchoolSelector = colegios.length > 0;
 
@@ -144,7 +143,7 @@ export default function AppHeader() {
   }, []);
 
   return (
-    <header className="erp-app-header sticky top-3 z-30 px-4 md:px-6 lg:px-8">
+    <header className="sticky top-3 z-30 px-4 md:px-6 lg:px-8">
       <style>{`
         @keyframes headerDropdownIn {
           from { opacity: 0; transform: translateY(8px) scale(0.98); }

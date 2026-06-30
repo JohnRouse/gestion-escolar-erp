@@ -1,0 +1,63 @@
+/* =========================================================
+   08 - Consistencia PageHeader
+   Perfil debe usar el mismo PageHeader que las demás páginas
+   ========================================================= */
+
+/* PerfilPage: NO rediseñar manualmente el PageHeader.
+   Solo asegurar ancho y separación general. */
+.carbon-perfil-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Primer hijo = PageHeader.
+   Se restaura para que mantenga el estilo global del componente. */
+.carbon-perfil-page > :first-child {
+  display: flex !important;
+  grid-template-columns: unset !important;
+  gap: unset !important;
+  align-items: unset !important;
+  min-height: unset !important;
+  padding: unset !important;
+  border-radius: unset !important;
+  background: unset !important;
+  box-shadow: unset !important;
+}
+
+/* El layout personalizado empieza recién DESPUÉS del PageHeader. */
+.carbon-perfil-page > :nth-child(2) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr) !important;
+  gap: 24px !important;
+  align-items: start !important;
+}
+
+/* Tarjetas internas de Perfil */
+.carbon-perfil-page > :nth-child(2) > section {
+  border: 1px solid #d8e0ea !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+/* Mantener campos y botones Carbon dentro del contenido, no en el PageHeader */
+.carbon-perfil-page > :nth-child(2) input {
+  min-height: 40px;
+  border-radius: 0 !important;
+}
+
+.carbon-perfil-page > :nth-child(2) button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1180px) {
+  .carbon-perfil-page > :nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -214,7 +214,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const scopeLabel =
     activeScope.tipo === 'todos'
       ? 'Todos los colegios'
-      : activeColegio?.nombre || activeColegio?.nombre_corto || 'Colegio';
+      : activeColegio?.nombre_corto || activeColegio?.nombre || 'Colegio';
 
   return (
     <SchoolContext.Provider

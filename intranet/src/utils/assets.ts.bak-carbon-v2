@@ -19,6 +19,7 @@ export function safePersistentAvatarUrl(value?: string | null) {
 
   if (!url || url === 'null' || url === 'undefined') return null;
 
+  // Los blob: no deben quedar persistidos porque se rompen al recargar.
   if (/^blob:/i.test(url)) return null;
 
   return url;

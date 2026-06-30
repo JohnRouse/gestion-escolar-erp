@@ -9,22 +9,16 @@ import {
   Request,
   Put,
   BadRequestException,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private prisma: PrismaService,
-    private storageService: StorageService,
   ) {}
 
   @Post('login')
@@ -60,49 +54,6 @@ export class AuthController {
     });
 
     return { message: 'Estado actualizado' };
-  }
-
-  @Post('perfil/avatar')
-  @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(
-    FileInterceptor('avatar', {
-      storage: memoryStorage(),
-      limits: { fileSize: 3 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-
-        if (!allowed.includes(file.mimetype)) {
-          cb(new BadRequestException('Solo se permiten imágenes JPG, PNG o WEBP.'), false);
-          return;
-        }
-
-        cb(null, true);
-      },
-    }),
-  )
-  async subirAvatarPerfil(@Request() req, @UploadedFile() file?: any) {
-    if (!file) {
-      throw new BadRequestException('No se recibió la imagen.');
-    }
-
-    const saved = await this.storageService.saveFile(file, {
-      folder: 'usuarios',
-      prefix: 'avatar',
-      entityId: req.user.userId,
-      filenameBase: `usuario-${req.user.userId}`,
-      allowedMimeExtensions: {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/webp': '.webp',
-      },
-    });
-
-    await this.prisma.usuario.update({
-      where: { id_usuario: req.user.userId },
-      data: { avatar_url: saved.url },
-    });
-
-    return this.authService.getPerfil(req.user.userId);
   }
 
   @Put('perfil')

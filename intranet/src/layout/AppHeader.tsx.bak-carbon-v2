@@ -56,19 +56,6 @@ function obtenerNombreCortoUsuario(nombre?: string | null): string {
   return `${primerNombre} ${apellidoPaterno}`;  // ← primer nombre completo + apellido
 }
 
-function getReadableIconColor(hex?: string | null) {
-  const clean = String(hex || '').replace('#', '').trim();
-
-  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '#ffffff';
-
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  return luminance > 0.58 ? '#161616' : '#ffffff';
-}
-
 const iconButtonClass =
   'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
 
@@ -79,7 +66,6 @@ export default function AppHeader() {
     colegios,
     puedeVerConsolidado,
     activeScope,
-    activeColegio,
     scopeLabel,
     setColegioActivo,
     setTodosLosColegios,
@@ -103,7 +89,6 @@ export default function AppHeader() {
     (user as any)?.foto_url ||
     (user as any)?.foto_perfil_url ||
     null;
-  const avatarSrc = assetUrl(avatarUrl);
 
   const canShowSchoolSelector = colegios.length > 0;
 
@@ -144,7 +129,7 @@ export default function AppHeader() {
   }, []);
 
   return (
-    <header className="erp-app-header sticky top-3 z-30 px-4 md:px-6 lg:px-8">
+    <header className="sticky top-3 z-30 px-4 md:px-6 lg:px-8">
       <style>{`
         @keyframes headerDropdownIn {
           from { opacity: 0; transform: translateY(8px) scale(0.98); }
@@ -187,17 +172,7 @@ export default function AppHeader() {
                 }}
                 className="group hidden h-11 max-w-xs items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
               >
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 ring-1 ring-slate-200"
-                  style={
-                    activeScope.tipo === 'colegio' && activeColegio?.color_principal
-                      ? {
-                          backgroundColor: activeColegio.color_principal,
-                          color: getReadableIconColor(activeColegio.color_principal),
-                        }
-                      : undefined
-                  }
-                >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 ring-1 ring-slate-200">
                   {activeScope.tipo === 'todos' ? <Globe2 size={16} /> : <School size={16} />}
                 </span>
 
@@ -283,7 +258,7 @@ export default function AppHeader() {
                             <span className="flex min-w-0 items-center gap-3">
                               <span
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold text-white shadow-sm"
-                                style={{ backgroundColor: colegio.color_principal || '#0f62fe', color: getReadableIconColor(colegio.color_principal || '#0f62fe') }}
+                                style={{ backgroundColor: colegio.color_principal || '#0f172a' }}
                               >
                                 <School size={18} />
                               </span>
@@ -348,14 +323,14 @@ export default function AppHeader() {
               aria-expanded={dropdownOpen}
               className="group flex h-11 items-center gap-2.5 rounded-2xl border border-transparent bg-transparent py-1 pl-1 pr-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200/70 hover:bg-slate-50"
             >
-              {avatarSrc ? (
+              {avatarUrl ? (
                 <img
-                  src={avatarSrc}
+                  src={avatarUrl}
                   alt={userName}
-                  className="h-9 w-9 rounded-xl object-cover bg-white ring-1 ring-slate-200/70"
+                  className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-200/70"
                 />
               ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-950 ring-1 ring-slate-200/70">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200/70">
                   {userInitials}
                 </span>
               )}
@@ -375,14 +350,14 @@ export default function AppHeader() {
                 <div className="header-dropdown-enter absolute right-0 z-[1000] mt-3 w-80 overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
                   <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                     <div className="flex items-center gap-3">
-                      {avatarSrc ? (
+                      {avatarUrl ? (
                         <img
-                          src={avatarSrc}
+                          src={avatarUrl}
                           alt={userName}
-                          className="h-12 w-12 rounded-xl object-cover bg-white ring-1 ring-slate-200/70"
+                          className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200/70"
                         />
                       ) : (
-                        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-sm font-black text-slate-950 ring-1 ring-slate-200/70">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-sm font-black text-slate-700 ring-1 ring-slate-200/70">
                           {userInitials}
                         </span>
                       )}
