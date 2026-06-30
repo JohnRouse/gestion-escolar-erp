@@ -1,0 +1,29 @@
+/* ==========================================================
+   14 - Error Boundary
+   Pantalla clara cuando React no puede renderizar un componente.
+   ========================================================== */
+
+.erp-error-boundary {
+  color: #161616;
+}
+
+.erp-error-boundary pre {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace;
+}
+
+.erp-error-boundary button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.erp-error-boundary button:hover {
+  transform: none !important;
+}

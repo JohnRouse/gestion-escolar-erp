@@ -4,12 +4,9 @@ import './index.css'
 import './styles/carbon-theme.css'
 import './styles/carbon/carbon-refactor.css'
 import App from './App.tsx'
-import ErrorBoundary from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <App />
   </StrictMode>,
 )
