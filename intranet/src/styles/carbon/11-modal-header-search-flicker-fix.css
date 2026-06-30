@@ -1,0 +1,80 @@
+/* ==========================================================
+   11 - Modal comprobante + selector colegios + tablas sin parpadeo
+   ========================================================== */
+
+/* Modal de comprobante: debe oscurecer el fondo, no quedar blanco */
+@media screen {
+  .erp-payment-modal-overlay {
+    background: rgba(22, 22, 22, 0.62) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  .erp-payment-modal-panel {
+    background: #ffffff !important;
+    border: 1px solid #d0d7de !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28) !important;
+  }
+}
+
+@media print {
+  .erp-payment-modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+  }
+
+  .erp-payment-modal-panel {
+    max-width: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Selector de colegios: iconos más visibles */
+.erp-app-header .school-scope-icon,
+.erp-app-header .school-option-icon {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 1px 2px rgba(0, 0, 0, 0.18) !important;
+}
+
+.erp-app-header .school-scope-icon svg,
+.erp-app-header .school-option-icon svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+  stroke-width: 2.8px !important;
+  opacity: 1 !important;
+}
+
+/* Cuando el fondo institucional sea muy claro, dar un borde exterior real */
+.erp-app-header .school-option-icon {
+  border: 1px solid rgba(22, 22, 22, 0.18) !important;
+}
+
+.erp-app-header .school-scope-icon {
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Mientras se consulta en Alumnos/Apoderados, no cambiar toda la tabla por loader */
+.carbon-community-page .erp-table-refreshing {
+  pointer-events: none;
+  opacity: 0.72;
+  transition: opacity 160ms ease;
+}
+
+.carbon-community-page .erp-inline-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 900;
+}

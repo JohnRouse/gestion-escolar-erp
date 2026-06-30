@@ -107,7 +107,6 @@ export default function AlumnosPage() {
   const [data, setData] = useState<AlumnoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
   const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
   const [estado, setEstado] = useState('Todos');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -127,20 +126,15 @@ export default function AlumnosPage() {
   const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 350);
-    return () => window.clearTimeout(timer);
-  }, [q]);
-
   const params = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
-    if (debouncedQ) search.set('q', debouncedQ);
+    if (q.trim()) search.set('q', q.trim());
     if (estado !== 'Todos') search.set('estado', estado);
     search.set('page', String(page));
     search.set('limit', '10');
     const query = search.toString();
     return query ? `?${query}` : '';
-  }, [debouncedQ, estado, page, queryString]);
+  }, [estado, page, q, queryString]);
 
   useEffect(() => {
     fetchAlumnos();
@@ -457,13 +451,6 @@ export default function AlumnosPage() {
         )}
       </div>
 
-      {loading && data.length > 0 && (
-        <div className="erp-inline-loading">
-          <Loader2 size={14} className="animate-spin" />
-          Actualizando resultados...
-        </div>
-      )}
-
       {/* ── Tabla de alumnos ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         {/* Encabezado de columnas */}
@@ -474,7 +461,7 @@ export default function AlumnosPage() {
           <span className="w-20" />
         </div>
 
-        {loading && data.length === 0 ? (
+        {loading ? (
           <div className="flex min-h-[320px] items-center justify-center">
             <Loader2 size={24} className="animate-spin text-accent-500" />
           </div>
@@ -491,7 +478,7 @@ export default function AlumnosPage() {
             </div>
           </div>
         ) : (
-          <div className={`divide-y divide-slate-100/80 ${loading ? "erp-table-refreshing" : ""}`}>
+          <div className="divide-y divide-slate-100/80">
             {data.map((alumno) => {
               const ultimaMatricula = alumno.matriculas?.[0];
               const apoderado = alumno.apoderados?.[0];

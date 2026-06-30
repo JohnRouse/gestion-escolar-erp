@@ -188,7 +188,7 @@ export default function AppHeader() {
                 className="group hidden h-11 max-w-xs items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
               >
                 <span
-                  className={`school-scope-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-slate-200 ${activeScope.tipo === 'todos' ? 'bg-slate-950 text-white' : 'bg-white text-blue-700'}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 ring-1 ring-slate-200"
                   style={
                     activeScope.tipo === 'colegio' && activeColegio?.color_principal
                       ? {
@@ -198,7 +198,7 @@ export default function AppHeader() {
                       : undefined
                   }
                 >
-                  {activeScope.tipo === 'todos' ? <Globe2 size={20} strokeWidth={2.8} /> : <School size={20} strokeWidth={2.8} />}
+                  {activeScope.tipo === 'todos' ? <Globe2 size={16} /> : <School size={16} />}
                 </span>
 
                 <span className="min-w-0">
@@ -223,7 +223,7 @@ export default function AppHeader() {
                 aria-label="Cambiar institución"
                 className={`${iconButtonClass} sm:hidden`}
               >
-                {activeScope.tipo === 'todos' ? <Globe2 size={20} strokeWidth={2.8} /> : <School size={20} strokeWidth={2.8} />}
+                {activeScope.tipo === 'todos' ? <Globe2 size={18} /> : <School size={18} />}
               </button>
 
               {schoolDropdownOpen && (
@@ -253,7 +253,7 @@ export default function AppHeader() {
                           className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 hover:bg-slate-50"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-semibold text-white">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-semibold text-white">
                               <Globe2 size={18} />
                             </span>
                             <span className="min-w-0">
@@ -282,7 +282,7 @@ export default function AppHeader() {
                           >
                             <span className="flex min-w-0 items-center gap-3">
                               <span
-                                className="school-option-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-semibold text-white shadow-sm"
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold text-white shadow-sm"
                                 style={{ backgroundColor: colegio.color_principal || '#0f62fe', color: getReadableIconColor(colegio.color_principal || '#0f62fe') }}
                               >
                                 <School size={18} />
