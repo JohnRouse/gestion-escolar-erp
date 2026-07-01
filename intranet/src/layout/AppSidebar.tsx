@@ -137,8 +137,19 @@ export default function AppSidebar() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const categorias = useMemo(() => {
+    const esProfesor = user?.rol === 'Profesor';
+    const tieneTutoria =
+      Boolean(user?.contexto?.tutoria?.es_tutor) ||
+      Boolean(user?.contexto?.tutoria?.secciones?.length);
+
     const filterByRole = (items: NavItem[]) =>
-      items.filter((item) => !item.roles || item.roles.includes(user?.rol || ''));
+      items
+        .filter((item) => !item.roles || item.roles.includes(user?.rol || ''))
+        .filter((item) => {
+          if (item.path !== '/tutoria') return true;
+          if (!esProfesor) return true;
+          return tieneTutoria;
+        });
 
     return [
       { titulo: 'Principal', items: filterByRole(menuPrincipal) },
@@ -152,7 +163,7 @@ export default function AppSidebar() {
       { titulo: 'Reportes', items: filterByRole(menuReportes) },
       { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
     ].filter((cat) => cat.items.length > 0);
-  }, [user?.rol]);
+  }, [user?.rol, user?.contexto?.tutoria?.es_tutor, user?.contexto?.tutoria?.secciones]);
 
   const isRouteActive = (path?: string) => {
     if (!path) return false;

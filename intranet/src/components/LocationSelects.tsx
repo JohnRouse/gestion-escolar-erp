@@ -24,6 +24,22 @@ const defaultLabelClass = 'mb-1.5 block text-[11px] font-black uppercase trackin
 const defaultSelectClass =
   'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
 
+function normalizeLocationKey(value?: string | null) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolveOption(options: string[], raw?: string | null) {
+  const key = normalizeLocationKey(raw);
+  if (!key) return '';
+
+  return options.find((item) => normalizeLocationKey(item) === key) || '';
+}
+
 export default function LocationSelects({
   value,
   onChange,
@@ -33,13 +49,15 @@ export default function LocationSelects({
   disabled = false,
 }: LocationSelectsProps) {
   const pais = value.pais || 'Perú';
-  const departamento = value.departamento || '';
-  const provincia = value.provincia || '';
-  const distrito = value.distrito || '';
 
   const departamentos = getDepartamentosPeru();
+  const departamento = resolveOption(departamentos, value.departamento);
+
   const provincias = getProvinciasPeru(departamento);
+  const provincia = resolveOption(provincias, value.provincia);
+
   const distritos = getDistritosPeru(departamento, provincia);
+  const distrito = resolveOption(distritos, value.distrito);
 
   return (
     <div className={wrapperClassName}>

@@ -16,16 +16,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: { sub: number; username: string; rol: string }) {
     const user = await this.prisma.usuario.findUnique({
       where: { id_usuario: payload.sub },
+      include: {
+        rol: true,
+      },
     });
 
     if (!user || !user.estado) {
       throw new UnauthorizedException();
     }
 
+    const rol = user.rol?.nombre_rol || payload.rol;
+    const rolNormalizado = String(rol || '').trim().toLowerCase();
+
+    if (['apoderado', 'padre', 'madre'].includes(rolNormalizado)) {
+      throw new UnauthorizedException();
+    }
+
     return {
       userId: payload.sub,
       username: payload.username,
-      rol: payload.rol,
+      rol,
     };
   }
 }

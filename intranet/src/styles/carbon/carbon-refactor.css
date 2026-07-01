@@ -15,3 +15,37 @@
 @import './15-docentes-crud.css';
 @import './16-location-selects.css';
 @import './17-horario-academico.css';
+
+/* ==========================================================
+   Navegación: scroll limpio y aparición suave
+   ========================================================== */
+
+@keyframes erpRouteFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.erp-route-fade {
+  animation: erpRouteFade 180ms ease-out both;
+}
+
+.erp-page-enter {
+  animation-duration: 180ms !important;
+  animation-timing-function: ease-out !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-route-fade,
+  .erp-page-enter {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+

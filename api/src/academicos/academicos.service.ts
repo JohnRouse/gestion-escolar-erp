@@ -4801,8 +4801,46 @@ const existente = await this.prisma.persona.findUnique({
       },
     };
 
+    const rolUsuario = String(params.rol || '').trim().toLowerCase();
+    const esProfesor = rolUsuario === 'profesor' || rolUsuario === 'docente';
+
+    if (esProfesor) {
+      const usuario = await this.prisma.usuario.findUnique({
+        where: {
+          id_usuario: params.userId,
+        },
+        select: {
+          id_persona: true,
+          persona: {
+            select: {
+              docentes: {
+                select: {
+                  id_persona: true,
+                },
+                take: 1,
+              },
+            },
+          },
+        },
+      });
+
+      const idDocente =
+        usuario?.persona?.docentes?.[0]?.id_persona ||
+        usuario?.id_persona ||
+        null;
+
+      if (!idDocente) {
+        return [];
+      }
+
+      // Seguridad: un Profesor nunca puede listar horarios de otro docente,
+      // aunque manipule query params desde el navegador.
+      where.id_docente = idDocente;
+    } else if (params.docenteId) {
+      where.id_docente = params.docenteId;
+    }
+
     if (params.seccionId) where.id_seccion = params.seccionId;
-    if (params.docenteId) where.id_docente = params.docenteId;
     if (params.cursoId) where.id_curso = params.cursoId;
 
     const horarios = await this.prisma.horario.findMany({
@@ -6631,8 +6669,24 @@ const existente = await this.prisma.persona.findUnique({
             estudiante: {
               is: {
                 OR: [
-                  { matriculas: { some: { id_colegio: { in: scope.colegioIds } } } },
-                  { codigos_colegio: { some: { id_colegio: { in: scope.colegioIds } } } },
+                  {
+                    matriculas: {
+                      some: {
+                        id_colegio: {
+                          in: scope.colegioIds,
+                        },
+                      },
+                    },
+                  },
+                  {
+                    codigos_colegio: {
+                      some: {
+                        id_colegio: {
+                          in: scope.colegioIds,
+                        },
+                      },
+                    },
+                  },
                 ],
               },
             },
@@ -6694,7 +6748,15 @@ const existente = await this.prisma.persona.findUnique({
       this.prisma.apoderado.findMany({
         where,
         include: {
-          persona: true,
+          persona: {
+            include: {
+              usuarios: {
+                include: {
+                  rol: true,
+                },
+              },
+            },
+          },
           estudiantes: {
             include: {
               estudiante: {
@@ -6706,10 +6768,18 @@ const existente = await this.prisma.persona.findUnique({
                       colegio: true,
                       anio: true,
                       seccion: {
-                        include: { grado: { include: { nivel: true } } },
+                        include: {
+                          grado: {
+                            include: {
+                              nivel: true,
+                            },
+                          },
+                        },
                       },
                     },
-                    orderBy: { fecha_matricula: 'desc' },
+                    orderBy: {
+                      fecha_matricula: 'desc',
+                    },
                     take: 3,
                   },
                 },
@@ -6717,19 +6787,45 @@ const existente = await this.prisma.persona.findUnique({
             },
           },
         },
-        orderBy: { id_persona: 'desc' },
+        orderBy: {
+          id_persona: 'desc',
+        },
         skip,
         take: limit,
       }),
     ]);
 
+    const dataConCredencial = data.map((apoderado: any) => {
+      const persona = apoderado.persona || {};
+      const usuarioApoderado =
+        (persona.usuarios || []).find(
+          (usuario: any) => usuario.rol?.nombre_rol === 'Apoderado',
+        ) || null;
+
+      const { usuarios, ...personaSinUsuarios } = persona;
+
+      return {
+        ...apoderado,
+        persona: personaSinUsuarios,
+        credencial: {
+          existe: Boolean(usuarioApoderado),
+          estado: Boolean(usuarioApoderado?.estado),
+          label: usuarioApoderado
+            ? usuarioApoderado.estado
+              ? 'Activo'
+              : 'Inactivo'
+            : 'Sin credencial',
+        },
+      };
+    });
+
     return {
-      data,
+      data: dataConCredencial,
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
   }

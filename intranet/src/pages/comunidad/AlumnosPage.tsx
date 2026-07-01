@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ChevronLeft,
@@ -23,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
+import LocationSelects from '../../components/LocationSelects';
 
 type CodigoColegio = { id_colegio: number; codigo: string };
 type Meta = { total: number; page: number; limit: number; totalPages: number };
@@ -52,7 +54,7 @@ type AlumnoForm = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
 
 const fullName = (p: AlumnoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -103,6 +105,8 @@ export default function AlumnosPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [data, setData] = useState<AlumnoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -126,6 +130,7 @@ export default function AlumnosPage() {
   const [avatarOffsetY, setAvatarOffsetY] = useState(0);
   const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const [confirmApoderadoDestino, setConfirmApoderadoDestino] = useState<{ id: number; nombre: string } | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 350);
@@ -180,6 +185,26 @@ export default function AlumnosPage() {
       setDetalleLoading(false);
     }
   };
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const alumnoParamId = Number(search.get('alumno') || 0);
+
+    if (!alumnoParamId || !token) return;
+
+    void abrirDetalle(alumnoParamId);
+
+    search.delete('alumno');
+    const nextSearch = search.toString();
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.search, navigate, token]);
 
   const abrirEdicion = () => {
     if (!detalle) return;
@@ -470,7 +495,7 @@ export default function AlumnosPage() {
         <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumno</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Matrícula</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderado</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderados vinculados</span>
           <span className="w-20" />
         </div>
 
@@ -494,7 +519,7 @@ export default function AlumnosPage() {
           <div className={`divide-y divide-slate-100/80 ${loading ? "erp-table-refreshing" : ""}`}>
             {data.map((alumno) => {
               const ultimaMatricula = alumno.matriculas?.[0];
-              const apoderado = alumno.apoderados?.[0];
+              const apoderadosList = alumno.apoderados || [];
               const nombre = fullName(alumno.persona);
               const estadoMatricula = ultimaMatricula?.estado_matricula;
 
@@ -551,31 +576,42 @@ export default function AlumnosPage() {
                       <span className="text-xs text-slate-400">Sin matrícula visible</span>
                     )}
                   </div>
-
-                  {/* Columna apoderado */}
+                  {/* Columna apoderados */}
                   <div className="min-w-0">
-                    {apoderado ? (
-                      <>
-                        <p className="truncate text-sm font-semibold text-slate-700">
-                          {apoderado.parentesco}:{' '}
-                          {apoderado.apoderado.persona.nombres}{' '}
-                          {apoderado.apoderado.persona.apellido_paterno}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-                          {apoderado.apoderado.persona.telefono ? (
-                            <>
-                              <Phone size={11} className="shrink-0" />
-                              {apoderado.apoderado.persona.telefono}
-                            </>
-                          ) : (
-                            'Sin teléfono'
-                          )}
-                        </p>
-                      </>
+                    {apoderadosList.length ? (
+                      <div className="space-y-1.5">
+                        {apoderadosList.slice(0, 3).map((rel) => {
+                          const personaApoderado = rel.apoderado.persona;
+                          const nombreApoderado = [
+                            personaApoderado.nombres,
+                            personaApoderado.apellido_paterno,
+                            personaApoderado.apellido_materno,
+                          ].filter(Boolean).join(' ');
+
+                          return (
+                            <div key={rel.apoderado.id_persona} className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-700">
+                                {rel.parentesco}: {nombreApoderado}
+                              </p>
+                              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
+                                <Phone size={11} className="shrink-0" />
+                                {personaApoderado.telefono || 'Sin teléfono'}
+                              </p>
+                            </div>
+                          );
+                        })}
+
+                        {apoderadosList.length > 3 && (
+                          <p className="text-xs font-bold text-slate-400">
+                            +{apoderadosList.length - 3} apoderado(s) más
+                          </p>
+                        )}
+                      </div>
                     ) : (
-                      <span className="text-xs text-slate-400">Sin apoderado</span>
+                      <span className="text-xs text-slate-400">Sin apoderados vinculados</span>
                     )}
                   </div>
+
 
                   {/* Acción */}
                   <div className="flex justify-end">
@@ -735,28 +771,52 @@ export default function AlumnosPage() {
                     <Info label="Dirección" value={detalle.persona.direccion || '—'} />
                   </div>
 
-                  <Section title="Apoderados">
+                  <Section title="Apoderados vinculados">
                     {detalle.apoderados?.length ? (
                       <div className="grid gap-3 md:grid-cols-2">
-                        {detalle.apoderados.map((r) => (
-                          <div
-                            key={r.apoderado.id_persona}
-                            className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
-                          >
-                            <PersonAvatar persona={r.apoderado.persona} size="sm" rounded="xl" />
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">
-                                {r.parentesco}:{' '}
-                                {r.apoderado.persona.nombres}{' '}
-                                {r.apoderado.persona.apellido_paterno}
-                              </p>
-                              <p className="mt-0.5 text-xs text-slate-400">
-                                DNI: {r.apoderado.persona.dni} ·{' '}
-                                {r.apoderado.persona.telefono || 'Sin teléfono'}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                        {detalle.apoderados.map((r) => {
+                          const personaApoderado = r.apoderado.persona;
+                          const nombreApoderado = [
+                            personaApoderado.nombres,
+                            personaApoderado.apellido_paterno,
+                            personaApoderado.apellido_materno,
+                          ].filter(Boolean).join(' ');
+
+                          return (
+                            <button
+                              type="button"
+                              key={r.apoderado.id_persona}
+                              onClick={() =>
+                                setConfirmApoderadoDestino({
+                                  id: r.apoderado.id_persona,
+                                  nombre: nombreApoderado,
+                                })
+                              }
+                              className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
+                            >
+                              <PersonAvatar persona={personaApoderado} size="sm" rounded="xl" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-bold text-slate-900">
+                                  Apoderado: {nombreApoderado}
+                                </p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  Parentesco registrado: {r.parentesco}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  DNI: {personaApoderado.dni} · {personaApoderado.telefono || 'Sin teléfono'}
+                                </p>
+                                {personaApoderado.correo && (
+                                  <p className="mt-0.5 truncate text-xs text-slate-400">
+                                    {personaApoderado.correo}
+                                  </p>
+                                )}
+                                <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
+                                  Ver ficha del apoderado
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-slate-400">Sin apoderados vinculados.</p>
@@ -829,7 +889,7 @@ export default function AlumnosPage() {
       {/* ── Modal de edición usando Portal ── */}
       {editOpen && form && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
             <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar alumno</h3>
@@ -846,19 +906,42 @@ export default function AlumnosPage() {
               </button>
             </div>
 
-            <div className="grid max-h-[72vh] gap-4 overflow-y-auto p-6 md:grid-cols-2">
-              <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
-              <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
-              <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
-              <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
-              <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={(v) => setForm({ ...form, fecha_nacimiento: v })} />
-              <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
-              <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
-              <Field label="País" value={form.pais} onChange={(v) => setForm({ ...form, pais: v })} />
-              <Field label="Departamento" value={form.departamento} onChange={(v) => setForm({ ...form, departamento: v })} />
-              <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} />
-              <Field label="Distrito" value={form.distrito} onChange={(v) => setForm({ ...form, distrito: v })} />
-              <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+            <div className="max-h-[72vh] overflow-y-auto p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
+                <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
+                <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
+                <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
+                <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={(v) => setForm({ ...form, fecha_nacimiento: v })} />
+                <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
+                <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
+
+                <div className="md:col-span-2">
+                  <LocationSelects
+                    value={{
+                      pais: form.pais || 'Perú',
+                      departamento: form.departamento,
+                      provincia: form.provincia,
+                      distrito: form.distrito,
+                    }}
+                    onChange={(location) =>
+                      setForm({
+                        ...form,
+                        pais: location.pais || 'Perú',
+                        departamento: location.departamento || '',
+                        provincia: location.provincia || '',
+                        distrito: location.distrito || '',
+                      })
+                    }
+                    wrapperClassName="grid gap-4 md:grid-cols-3"
+                    selectClass={inputClass}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+                </div>
+              </div>
             </div>
 
             {mensaje && (
@@ -1008,6 +1091,25 @@ export default function AlumnosPage() {
         onConfirm={() => {
           setConfirmEditAlumno(false);
           void guardarEdicion();
+        }}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmApoderadoDestino)}
+        eyebrow="Apoderado vinculado"
+        title="Ver ficha del apoderado"
+        description={`Se abrirá la ficha de ${confirmApoderadoDestino?.nombre || 'este apoderado'} en la página de Apoderados.`}
+        tone="neutral"
+        confirmLabel="Sí, ver apoderado"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmApoderadoDestino(null)}
+        onConfirm={() => {
+          const targetId = confirmApoderadoDestino?.id;
+          setConfirmApoderadoDestino(null);
+          setDetalleOpen(false);
+
+          if (targetId) {
+            navigate(`/comunidad/apoderados?apoderado=${targetId}`);
+          }
         }}
       />
     </div>

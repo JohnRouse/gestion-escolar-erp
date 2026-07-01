@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Briefcase,
@@ -22,6 +23,7 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import AccessCredentialsCard from '../../components/AccessCredentialsCard';
+import LocationSelects from '../../components/LocationSelects';
 
 type Meta = { total: number; page: number; limit: number; totalPages: number };
 
@@ -32,6 +34,11 @@ type ApoderadoItem = {
     dni: string; nombres: string; apellido_paterno: string; apellido_materno: string;
     telefono?: string | null; correo?: string | null; direccion?: string | null;
     pais?: string | null; departamento?: string | null; provincia?: string | null; distrito?: string | null;
+  };
+  credencial?: {
+    existe: boolean;
+    estado: boolean;
+    label: string;
   };
   estudiantes?: {
     parentesco: string;
@@ -53,7 +60,7 @@ type ApoderadoForm = {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
 
 const fullName = (p: ApoderadoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -72,6 +79,30 @@ const estadoBadge: Record<string, string> = {
 
 const getEstadoBadge = (estado?: string) =>
   estadoBadge[estado || ''] || 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
+
+const apoderadoEstado = (apoderado: ApoderadoItem) => {
+  if (!apoderado.credencial?.existe) return 'sin_credencial';
+  return apoderado.credencial.estado ? 'activo' : 'inactivo';
+};
+
+const apoderadoEstadoLabel = (apoderado: ApoderadoItem) => {
+  const estado = apoderadoEstado(apoderado);
+
+  if (estado === 'activo') return 'Activo';
+  if (estado === 'inactivo') return 'Inactivo';
+
+  return 'Sin credencial';
+};
+
+const apoderadoEstadoClass = (apoderado: ApoderadoItem) => {
+  const estado = apoderadoEstado(apoderado);
+
+  if (estado === 'activo') return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+  if (estado === 'inactivo') return 'bg-slate-100 text-slate-600 ring-slate-200';
+
+  return 'bg-amber-50 text-amber-700 ring-amber-200';
+};
+
 
 const toForm = (d: ApoderadoItem): ApoderadoForm => ({
   dni: d.persona.dni || '',
@@ -94,6 +125,8 @@ export default function ApoderadosPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [data, setData] = useState<ApoderadoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -111,6 +144,7 @@ export default function ApoderadosPage() {
   const [saving, setSaving] = useState(false);
   const [confirmEditApoderado, setConfirmEditApoderado] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const [confirmAlumnoDestino, setConfirmAlumnoDestino] = useState<{ id: number; nombre: string } | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 350);
@@ -163,6 +197,26 @@ export default function ApoderadosPage() {
       setDetalleLoading(false);
     }
   };
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const apoderadoParamId = Number(search.get('apoderado') || 0);
+
+    if (!apoderadoParamId || !token) return;
+
+    void abrirDetalle(apoderadoParamId);
+
+    search.delete('apoderado');
+    const nextSearch = search.toString();
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.search, navigate, token]);
 
   const abrirEdicion = () => {
     if (!detalle) return;
@@ -250,10 +304,11 @@ export default function ApoderadosPage() {
       {/* ── Tabla de apoderados ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         {/* Encabezado de columnas */}
-        <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.6fr_auto] xl:gap-4">
+        <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto] xl:gap-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderado</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Ocupación y contacto</span>
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumnos vinculados</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Estado</span>
           <span className="w-20" />
         </div>
 
@@ -283,7 +338,7 @@ export default function ApoderadosPage() {
               return (
                 <div
                   key={apoderado.id_persona}
-                  className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[2fr_1.4fr_1.6fr_auto]"
+                  className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto]"
                 >
                   {/* Columna apoderado */}
                   <div className="flex min-w-0 items-center gap-3">
@@ -323,25 +378,49 @@ export default function ApoderadosPage() {
                       <p className="mt-0.5 text-xs text-slate-400">Sin correo</p>
                     )}
                   </div>
-
                   {/* Columna alumnos */}
                   <div className="min-w-0">
-                    {primerHijo ? (
-                      <>
-                        <p className="erp-compact-code truncate text-sm font-semibold text-slate-800">
-                          {getCodigo(primerHijo)} · {primerHijo.persona.nombres}{' '}
-                          {primerHijo.persona.apellido_paterno}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
-                          <Users size={10} className="shrink-0" />
-                          {totalHijos === 1
-                            ? '1 alumno vinculado'
-                            : `${totalHijos} alumnos vinculados`}
-                        </p>
-                      </>
+                    {apoderado.estudiantes?.length ? (
+                      <div className="space-y-1.5">
+                        {apoderado.estudiantes.slice(0, 3).map((rel) => {
+                          const estudiante = rel.estudiante;
+                          const nombreAlumno = [
+                            estudiante.persona.nombres,
+                            estudiante.persona.apellido_paterno,
+                            estudiante.persona.apellido_materno,
+                          ].filter(Boolean).join(' ');
+
+                          return (
+                            <div key={estudiante.id_persona} className="min-w-0">
+                              <p className="erp-compact-code truncate text-sm font-semibold text-slate-800">
+                                {getCodigo(estudiante)} · {nombreAlumno}
+                              </p>
+                              <p className="mt-0.5 text-xs text-slate-400">
+                                Parentesco: {rel.parentesco}
+                              </p>
+                            </div>
+                          );
+                        })}
+
+                        {totalHijos > 3 && (
+                          <p className="text-xs font-bold text-slate-400">
+                            +{totalHijos - 3} alumno(s) más vinculados
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-xs text-slate-400">Sin alumnos vinculados</span>
                     )}
+                  </div>
+
+
+                  {/* Estado */}
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${apoderadoEstadoClass(apoderado)}`}
+                    >
+                      {apoderadoEstadoLabel(apoderado)}
+                    </span>
                   </div>
 
                   {/* Acción */}
@@ -481,18 +560,34 @@ export default function ApoderadosPage() {
                       <div className="grid gap-3 md:grid-cols-2">
                         {detalle.estudiantes.map((r) => {
                           const estadoMatricula = r.estudiante.matriculas?.[0]?.estado_matricula;
+                          const matricula = r.estudiante.matriculas?.[0];
+                          const seccion = matricula?.seccion;
+                          const salon = seccion?.grado
+                            ? `${seccion.grado.nombre_grado} "${seccion.letra}" · ${seccion.grado.nivel?.nombre_nivel || ''}`.trim()
+                            : 'Sin sección activa';
+                          const nombreAlumno = [
+                            r.estudiante.persona.nombres,
+                            r.estudiante.persona.apellido_paterno,
+                            r.estudiante.persona.apellido_materno,
+                          ].filter(Boolean).join(' ');
+
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={r.estudiante.id_persona}
-                              className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
+                              onClick={() =>
+                                setConfirmAlumnoDestino({
+                                  id: r.estudiante.id_persona,
+                                  nombre: nombreAlumno,
+                                })
+                              }
+                              className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
                             >
                               <PersonAvatar persona={r.estudiante.persona} size="sm" rounded="xl" />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-2">
-                                  <p className="truncate text-sm font-bold text-slate-800">
-                                    {r.parentesco}:{' '}
-                                    {r.estudiante.persona.nombres}{' '}
-                                    {r.estudiante.persona.apellido_paterno}
+                                  <p className="truncate text-sm font-bold text-slate-900">
+                                    Alumno: {nombreAlumno}
                                   </p>
                                   {estadoMatricula && (
                                     <span
@@ -502,11 +597,20 @@ export default function ApoderadosPage() {
                                     </span>
                                   )}
                                 </div>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  Parentesco registrado: {r.parentesco}
+                                </p>
                                 <p className="mt-0.5 text-xs text-slate-400">
                                   {getCodigo(r.estudiante)} · DNI {r.estudiante.persona.dni}
                                 </p>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  {salon}
+                                </p>
+                                <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
+                                  Ver ficha del alumno
+                                </p>
                               </div>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -527,12 +631,36 @@ export default function ApoderadosPage() {
                         estado: Boolean(credencial.estado),
                       })
                     }
-                    onSaved={(credencial) =>
-                      setDetalleCredencial({
+                    onSaved={(credencial) => {
+                      const nextCredencial = {
                         existe: Boolean(credencial.existe),
                         estado: Boolean(credencial.estado),
-                      })
-                    }
+                      };
+
+                      setDetalleCredencial(nextCredencial);
+
+                      setData((prev) =>
+                        prev.map((item) =>
+                          detalle && item.id_persona === detalle.id_persona
+                            ? {
+                                ...item,
+                                credencial: {
+                                  ...(item as any).credencial,
+                                  existe: nextCredencial.existe,
+                                  estado: nextCredencial.estado,
+                                  label: nextCredencial.existe
+                                    ? nextCredencial.estado
+                                      ? 'Activo'
+                                      : 'Inactivo'
+                                    : 'Sin credencial',
+                                },
+                              } as any
+                            : item,
+                        ),
+                      );
+
+                      void fetchApoderados();
+                    }}
                   />
                 </div>
               ) : null}
@@ -545,7 +673,7 @@ export default function ApoderadosPage() {
       {/* ── Modal de edición usando Portal ── */}
       {editOpen && form && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
             <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
               <div>
                 <h3 className="text-lg font-black text-slate-950">Editar apoderado</h3>
@@ -562,19 +690,42 @@ export default function ApoderadosPage() {
               </button>
             </div>
 
-            <div className="grid max-h-[72vh] gap-4 overflow-y-auto p-6 md:grid-cols-2">
-              <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
-              <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
-              <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
-              <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
-              <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
-              <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
-              <Field label="Ocupación" value={form.ocupacion} onChange={(v) => setForm({ ...form, ocupacion: v })} />
-              <Field label="País" value={form.pais} onChange={(v) => setForm({ ...form, pais: v })} />
-              <Field label="Departamento" value={form.departamento} onChange={(v) => setForm({ ...form, departamento: v })} />
-              <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} />
-              <Field label="Distrito" value={form.distrito} onChange={(v) => setForm({ ...form, distrito: v })} />
-              <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+            <div className="max-h-[72vh] overflow-y-auto p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
+                <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
+                <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
+                <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
+                <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
+                <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
+                <Field label="Ocupación" value={form.ocupacion} onChange={(v) => setForm({ ...form, ocupacion: v })} />
+
+                <div className="md:col-span-2">
+                  <LocationSelects
+                    value={{
+                      pais: form.pais || 'Perú',
+                      departamento: form.departamento,
+                      provincia: form.provincia,
+                      distrito: form.distrito,
+                    }}
+                    onChange={(location) =>
+                      setForm({
+                        ...form,
+                        pais: location.pais || 'Perú',
+                        departamento: location.departamento || '',
+                        provincia: location.provincia || '',
+                        distrito: location.distrito || '',
+                      })
+                    }
+                    wrapperClassName="grid gap-4 md:grid-cols-3"
+                    selectClass={inputClass}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+                </div>
+              </div>
             </div>
 
             {mensaje && (
@@ -619,6 +770,25 @@ export default function ApoderadosPage() {
         onConfirm={() => {
           setConfirmEditApoderado(false);
           void guardarEdicion();
+        }}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmAlumnoDestino)}
+        eyebrow="Alumno vinculado"
+        title="Ver ficha del alumno"
+        description={`Se abrirá la ficha de ${confirmAlumnoDestino?.nombre || 'este alumno'} en la página de Alumnos.`}
+        tone="neutral"
+        confirmLabel="Sí, ver alumno"
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmAlumnoDestino(null)}
+        onConfirm={() => {
+          const targetId = confirmAlumnoDestino?.id;
+          setConfirmAlumnoDestino(null);
+          setDetalleOpen(false);
+
+          if (targetId) {
+            navigate(`/comunidad/alumnos?alumno=${targetId}`);
+          }
         }}
       />
     </div>

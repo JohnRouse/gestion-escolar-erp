@@ -36,7 +36,12 @@ import ModuloPendientePage, { moduloIcons } from './pages/ModuloPendientePage';
 
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  const puedeAccederTutoria =
+    user?.rol !== 'Profesor' ||
+    Boolean(user?.contexto?.tutoria?.es_tutor) ||
+    Boolean(user?.contexto?.tutoria?.secciones?.length);
 
   if (isLoading) {
     return (
@@ -72,7 +77,7 @@ function AppRoutes() {
         <Route path="/horario" element={<Navigate to="/calendario" replace />} />
         <Route path="/notas" element={<NotasPage />} />
         <Route path="/notas/comentarios" element={<Navigate to="/tutoria" replace />} />
-        <Route path="/tutoria" element={<TutoriaPage />} />
+        <Route path="/tutoria" element={puedeAccederTutoria ? <TutoriaPage /> : <Navigate to="/dashboard" replace />} />
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />

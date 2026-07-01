@@ -105,9 +105,11 @@ function labelDia(dia: number) {
 }
 
 export default function CalendarioPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
+
+  const isProfesorHorario = String(user?.rol || '').trim().toLowerCase() === 'profesor';
 
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioId, setAnioId] = useState('');
@@ -129,12 +131,31 @@ export default function CalendarioPage() {
   }, [queryString]);
 
   const secciones = useMemo(() => {
+    if (isProfesorHorario) {
+      return uniqueBy(
+        horarios.map((item) => ({
+          id_asignacion: 0,
+          id_docente: item.id_docente,
+          id_curso: item.id_curso,
+          id_seccion: item.id_seccion,
+          id_anio: Number(anioId || 0),
+          curso: item.curso,
+          area: item.area,
+          seccion: item.seccion,
+          docente: item.docente,
+          colegio: item.colegio,
+        })),
+        (item) => item.id_seccion,
+      );
+    }
+
     return uniqueBy(asignaciones, (item) => item.id_seccion);
-  }, [asignaciones]);
+  }, [anioId, asignaciones, horarios, isProfesorHorario]);
 
   const docentes = useMemo(() => {
+    if (isProfesorHorario) return [];
     return uniqueBy(asignaciones, (item) => item.id_docente);
-  }, [asignaciones]);
+  }, [asignaciones, isProfesorHorario]);
 
   const asignacionesParaFormulario = useMemo(() => {
     return asignaciones.filter((item) => {
@@ -177,6 +198,11 @@ export default function CalendarioPage() {
   const fetchAsignaciones = async () => {
     if (!token) return;
 
+    if (isProfesorHorario) {
+      setAsignaciones([]);
+      return;
+    }
+
     const params = new URLSearchParams(scopeParams);
 
     if (anioId) {
@@ -202,7 +228,7 @@ export default function CalendarioPage() {
     const params = new URLSearchParams(scopeParams);
 
     if (seccionId) params.set('seccion_id', seccionId);
-    if (docenteId) params.set('docente_id', docenteId);
+    if (!isProfesorHorario && docenteId) params.set('docente_id', docenteId);
 
     setLoading(true);
 
@@ -229,12 +255,18 @@ export default function CalendarioPage() {
   useEffect(() => {
     fetchAsignaciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, anioId]);
+  }, [token, queryString, anioId, isProfesorHorario]);
 
   useEffect(() => {
     fetchHorarios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, seccionId, docenteId]);
+  }, [token, queryString, seccionId, docenteId, isProfesorHorario]);
+
+  useEffect(() => {
+    if (isProfesorHorario && docenteId) {
+      setDocenteId('');
+    }
+  }, [docenteId, isProfesorHorario]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -347,7 +379,11 @@ export default function CalendarioPage() {
       <PageHeader
         eyebrow="Calendario académico"
         title="Horario escolar"
-        description="Organiza el horario semanal por sección, curso y docente. El sistema evita cruces de horario por docente o sección."
+        description={
+          isProfesorHorario
+            ? 'Consulta tu horario semanal de clases asignadas.'
+            : 'Organiza el horario semanal por sección, curso y docente. El sistema evita cruces de horario por docente.'
+        }
         icon={CalendarDays}
         meta={[
           { label: 'Colegio actual', value: scopeLabel },
@@ -393,23 +429,25 @@ export default function CalendarioPage() {
           </select>
         </FilterCard>
 
-        <FilterCard label="Docente">
-          <select
-            value={docenteId}
-            onChange={(event) => {
-              setDocenteId(event.target.value);
-              resetForm();
-            }}
-            className={inputClass}
-          >
-            <option value="">Todos los docentes</option>
-            {docentes.map((item) => (
-              <option key={item.id_docente} value={item.id_docente}>
-                {item.docente}
-              </option>
-            ))}
-          </select>
-        </FilterCard>
+        {!isProfesorHorario && (
+          <FilterCard label="Docente">
+            <select
+              value={docenteId}
+              onChange={(event) => {
+                setDocenteId(event.target.value);
+                resetForm();
+              }}
+              className={inputClass}
+            >
+              <option value="">Todos los docentes</option>
+              {docentes.map((item) => (
+                <option key={item.id_docente} value={item.id_docente}>
+                  {item.docente}
+                </option>
+              ))}
+            </select>
+          </FilterCard>
+        )}
 
         <section className="erp-horario-summary-card">
           <p className="erp-horario-card-label">Resumen</p>
@@ -421,109 +459,119 @@ export default function CalendarioPage() {
         </section>
       </section>
 
-      <section className="erp-horario-main-grid">
-        <article className="erp-horario-clean-form-card erp-horario-form-card">
-          <header className="erp-horario-clean-form-header">
-            <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
-            <p>Selecciona una asignación docente y define el día, inicio y fin de la clase.</p>
-          </header>
+      <section className={`erp-horario-main-grid ${isProfesorHorario ? 'erp-horario-main-grid--readonly' : ''}`}>
+        {!isProfesorHorario ? (
+          <article className="erp-horario-clean-form-card erp-horario-form-card">
+            <header className="erp-horario-clean-form-header">
+              <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
+              <p>Selecciona una asignación docente y define el día, inicio y fin de la clase.</p>
+            </header>
 
-          <div className="erp-horario-form-body">
-            <label className="erp-horario-field">
-              <span>Asignación docente</span>
-              <select
-                value={form.id_asignacion}
-                onChange={(event) => setForm({ ...form, id_asignacion: event.target.value })}
-                className={inputClass}
-              >
-                <option value="">Seleccionar asignación</option>
-                {asignacionesParaFormulario.map((item) => (
-                  <option key={item.id_asignacion} value={item.id_asignacion}>
-                    {item.seccion} · {item.curso} · {item.docente}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="erp-horario-time-grid">
+            <div className="erp-horario-form-body">
               <label className="erp-horario-field">
-                <span>Día</span>
+                <span>Asignación docente</span>
                 <select
-                  value={form.dia_semana}
-                  onChange={(event) => setForm({ ...form, dia_semana: event.target.value })}
+                  value={form.id_asignacion}
+                  onChange={(event) => setForm({ ...form, id_asignacion: event.target.value })}
                   className={inputClass}
                 >
-                  {DIAS.map((dia) => (
-                    <option key={dia.value} value={dia.value}>
-                      {dia.label}
+                  <option value="">Seleccionar asignación</option>
+                  {asignacionesParaFormulario.map((item) => (
+                    <option key={item.id_asignacion} value={item.id_asignacion}>
+                      {item.seccion} · {item.curso} · {item.docente}
                     </option>
                   ))}
                 </select>
               </label>
 
-              <label className="erp-horario-field">
-                <span>Inicio</span>
-                <input
-                  type="time"
-                  value={form.hora_inicio}
-                  onChange={(event) => setForm({ ...form, hora_inicio: event.target.value })}
-                  className={inputClass}
-                />
-              </label>
+              <div className="erp-horario-time-grid">
+                <label className="erp-horario-field">
+                  <span>Día</span>
+                  <select
+                    value={form.dia_semana}
+                    onChange={(event) => setForm({ ...form, dia_semana: event.target.value })}
+                    className={inputClass}
+                  >
+                    {DIAS.map((dia) => (
+                      <option key={dia.value} value={dia.value}>
+                        {dia.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="erp-horario-field">
-                <span>Fin</span>
-                <input
-                  type="time"
-                  value={form.hora_fin}
-                  onChange={(event) => setForm({ ...form, hora_fin: event.target.value })}
-                  className={inputClass}
-                />
-              </label>
-            </div>
+                <label className="erp-horario-field">
+                  <span>Inicio</span>
+                  <input
+                    type="time"
+                    value={form.hora_inicio}
+                    onChange={(event) => setForm({ ...form, hora_inicio: event.target.value })}
+                    className={inputClass}
+                  />
+                </label>
 
-            <div className="erp-horario-actions">
-              {editing && (
+                <label className="erp-horario-field">
+                  <span>Fin</span>
+                  <input
+                    type="time"
+                    value={form.hora_fin}
+                    onChange={(event) => setForm({ ...form, hora_fin: event.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+
+              <div className="erp-horario-actions">
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    disabled={saving}
+                    className="erp-horario-secondary-button"
+                  >
+                    <X size={16} />
+                    Cancelar
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={resetForm}
-                  disabled={saving}
-                  className="erp-horario-secondary-button"
+                  onClick={guardarHorario}
+                  disabled={saving || asignacionesParaFormulario.length === 0}
+                  className="erp-horario-primary-button"
                 >
-                  <X size={16} />
-                  Cancelar
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {editing ? 'Guardar cambios' : 'Crear bloque'}
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={guardarHorario}
-                disabled={saving || asignacionesParaFormulario.length === 0}
-                className="erp-horario-primary-button"
-              >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                {editing ? 'Guardar cambios' : 'Crear bloque'}
-              </button>
-            </div>
-
-            {asignacionesParaFormulario.length === 0 && (
-              <div className="erp-horario-empty-note">
-                No hay asignaciones docentes para los filtros seleccionados. Primero crea asignaciones desde el módulo de docentes.
               </div>
-            )}
-          </div>
-        </article>
+
+              {asignacionesParaFormulario.length === 0 && (
+                <div className="erp-horario-empty-note">
+                  No hay asignaciones docentes para los filtros seleccionados. Primero crea asignaciones desde el módulo de docentes.
+                </div>
+              )}
+            </div>
+          </article>
+        ) : null}
 
         <article className="erp-horario-clean-week-card erp-horario-board-card">
           <header className="erp-horario-clean-week-header">
             <div>
               <h2>Horario semanal</h2>
-              <p>Vista por día. Puedes filtrar por sección o docente.</p>
+              <p>
+                {isProfesorHorario
+                  ? 'Consulta tus bloques de clase asignados.'
+                  : 'Vista por día. Puedes filtrar por sección o docente.'}
+              </p>
             </div>
-            {loading && <Loader2 size={18} className="animate-spin text-blue-600" />}
-          </header>
 
-          <div className="erp-horario-accent-line" />
+            {loading && (
+              <span className="erp-horario-loading">
+                <Loader2 size={16} className="animate-spin" />
+                Actualizando
+              </span>
+            )}
+          </header>
 
           <div className="erp-horario-board-scroll">
             <div className="erp-horario-clean-grid erp-horario-board-grid">
@@ -549,14 +597,16 @@ export default function CalendarioPage() {
                                 {item.hora_inicio} - {item.hora_fin}
                               </span>
 
-                              <div className="erp-horario-class-actions">
-                                <button type="button" onClick={() => editarHorario(item)} title="Editar">
-                                  <Edit3 size={13} />
-                                </button>
-                                <button type="button" onClick={() => setDeleteTarget(item)} title="Eliminar">
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
+                              {!isProfesorHorario && (
+                                <div className="erp-horario-class-actions">
+                                  <button type="button" onClick={() => editarHorario(item)} title="Editar">
+                                    <Edit3 size={13} />
+                                  </button>
+                                  <button type="button" onClick={() => setDeleteTarget(item)} title="Eliminar">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
                             <h3>{item.curso}</h3>

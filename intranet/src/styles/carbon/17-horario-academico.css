@@ -691,3 +691,23 @@
   color: #525252 !important;
 }
 
+
+
+/* ==========================================================
+   Horario - modo Profesor solo lectura
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-main-grid--readonly {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.carbon-horario-page .erp-horario-main-grid--readonly .erp-horario-clean-week-card,
+.carbon-horario-page .erp-horario-main-grid--readonly .erp-horario-board-card {
+  grid-column: 1 / -1 !important;
+}
+
+.carbon-horario-page .erp-horario-main-grid--readonly .erp-horario-board-grid,
+.carbon-horario-page .erp-horario-main-grid--readonly .erp-horario-clean-grid {
+  min-width: 1056px !important;
+}
+

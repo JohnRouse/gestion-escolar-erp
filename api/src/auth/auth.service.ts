@@ -16,6 +16,11 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  private isRolPortalExterno(rol?: string | null) {
+    const normalized = String(rol || '').trim().toLowerCase();
+    return ['apoderado', 'padre', 'madre'].includes(normalized);
+  }
+
   private formatSeccion(seccion: any) {
     if (!seccion) return null;
 
@@ -151,6 +156,12 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (this.isRolPortalExterno(user.rol?.nombre_rol)) {
+      throw new UnauthorizedException(
+        'Este acceso es solo para personal interno del colegio. Usa el portal de apoderados cuando esté habilitado.',
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
@@ -196,6 +207,12 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Token inválido o usuario no encontrado');
+    }
+
+    if (this.isRolPortalExterno(user.rol?.nombre_rol)) {
+      throw new UnauthorizedException(
+        'Este acceso es solo para personal interno del colegio.',
+      );
     }
 
     const contexto = await this.getContexto(user.id_usuario);
