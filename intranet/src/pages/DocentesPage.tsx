@@ -14,7 +14,6 @@ import {
   Phone,
   Plus,
   Search,
-  Trash2,
   UserRound,
   X,
 } from 'lucide-react';
@@ -64,6 +63,25 @@ type DocenteItem = {
   colegios?: {
     id_colegio: number;
     nombre: string;
+  }[];
+  credencial?: {
+    existe: boolean;
+    username: string;
+    estado: boolean;
+    label: string;
+  };
+  secciones_count?: number;
+  secciones_resumen?: {
+    id_seccion: number;
+    seccion: string;
+    nivel?: string | null;
+    colegio?: string | null;
+  }[];
+  tutorias_resumen?: {
+    id_seccion: number;
+    seccion: string;
+    nivel?: string | null;
+    colegio?: string | null;
   }[];
   asignaciones_resumen?: {
     id_asignacion: number;
@@ -136,6 +154,27 @@ function initials(docente: DocenteItem) {
   return `${n}${a}`.toUpperCase();
 }
 
+function docenteStatus(docente: DocenteItem) {
+  if (docente.credencial?.estado) return 'activo';
+  return 'inactivo';
+}
+
+function docenteStatusLabel(docente: DocenteItem) {
+  return docenteStatus(docente) === 'activo' ? 'Activo' : 'Inactivo';
+}
+
+function seccionesLabel(count = 0) {
+  return `${count} ${count === 1 ? 'sección' : 'secciones'}`;
+}
+
+function tutorLabel(docente: DocenteItem) {
+  const tutorias = docente.tutorias_resumen || [];
+
+  if (!tutorias.length) return 'Tutoría no asignada';
+
+  return `Tutor de ${tutorias.map((item) => item.seccion).join(', ')}`;
+}
+
 function toForm(docente: DocenteItem): DocenteForm {
   return {
     dni: docente.persona.dni || '',
@@ -168,6 +207,7 @@ export default function DocentesPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 12, totalPages: 1 });
   const [q, setQ] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -189,12 +229,13 @@ export default function DocentesPage() {
     const search = new URLSearchParams(queryString.replace('?', ''));
 
     if (debouncedQ) search.set('q', debouncedQ);
+    if (estadoFiltro !== 'todos') search.set('estado', estadoFiltro);
     search.set('page', String(page));
     search.set('limit', '12');
 
     const value = search.toString();
     return value ? `?${value}` : '';
-  }, [debouncedQ, page, queryString]);
+  }, [debouncedQ, estadoFiltro, page, queryString]);
 
   const areasParams = useMemo(() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
@@ -413,38 +454,54 @@ export default function DocentesPage() {
       />
 
       <section className="rounded-[24px] border border-slate-200 bg-white p-3">
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            value={q}
-            onChange={(event) => {
-              setPage(1);
-              setQ(event.target.value);
-            }}
-            placeholder="Buscar por DNI, docente, correo o especialidad..."
-            className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 pl-11 pr-10 text-sm font-bold text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-          />
-          {q && (
-            <button
-              type="button"
-              onClick={() => {
-                setQ('');
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              value={q}
+              onChange={(event) => {
                 setPage(1);
+                setQ(event.target.value);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-            >
-              <X size={15} />
-            </button>
-          )}
+              placeholder="Buscar por DNI, docente, correo o especialidad..."
+              className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 pl-11 pr-10 text-sm font-bold text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQ('');
+                  setPage(1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={estadoFiltro}
+            onChange={(event) => {
+              setEstadoFiltro(event.target.value);
+              setPage(1);
+            }}
+            className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="todos">Todos los estados</option>
+            <option value="activo">Solo activos</option>
+            <option value="inactivo">Solo inactivos</option>
+          </select>
         </div>
       </section>
 
       <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
-        <div className="grid border-b border-slate-300 bg-slate-100 px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] text-slate-700 xl:grid-cols-[2fr_1.35fr_1.2fr_1fr_auto]">
+        <div className="grid border-b border-slate-300 bg-slate-100 px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] text-slate-700 xl:grid-cols-[2fr_1.25fr_1.1fr_1fr_0.8fr_auto]">
           <span>Docente</span>
           <span>Especialidades</span>
           <span>Colegios</span>
-          <span>Asignaciones</span>
+          <span>Secciones</span>
+          <span>Estado</span>
           <span />
         </div>
 
@@ -469,7 +526,7 @@ export default function DocentesPage() {
             {docentes.map((docente) => (
               <article
                 key={docente.id_persona}
-                className="grid items-center gap-4 border-b border-slate-200 px-5 py-4 last:border-b-0 hover:bg-slate-50 xl:grid-cols-[2fr_1.35fr_1.2fr_1fr_auto]"
+                className="grid items-center gap-4 border-b border-slate-200 px-5 py-4 last:border-b-0 hover:bg-slate-50 xl:grid-cols-[2fr_1.25fr_1.1fr_1fr_0.8fr_auto]"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-black text-blue-700 ring-1 ring-blue-100">
@@ -517,10 +574,31 @@ export default function DocentesPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm font-black text-slate-900">
-                  <BriefcaseBusiness size={16} className="text-slate-500" />
-                  {docente._count?.asignaciones || 0}
-                  <span className="text-xs font-bold text-slate-500">carga(s)</span>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-sm font-black text-slate-900">
+                    <BriefcaseBusiness size={16} className="text-slate-500" />
+                    {seccionesLabel(docente.secciones_count || 0)}
+                  </p>
+                  <p className="mt-1 truncate text-xs font-semibold text-slate-500">
+                    {tutorLabel(docente)}
+                  </p>
+                </div>
+
+                <div>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${
+                      docenteStatus(docente) === 'activo'
+                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                        : 'bg-slate-100 text-slate-600 ring-slate-200'
+                    }`}
+                  >
+                    {docenteStatusLabel(docente)}
+                  </span>
+                  {docente.credencial?.username && (
+                    <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">
+                      {docente.credencial.username}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -531,14 +609,6 @@ export default function DocentesPage() {
                   >
                     <Eye size={14} />
                     Ver
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(docente)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"
-                  >
-                    <Edit3 size={14} />
-                    Editar
                   </button>
                 </div>
               </article>
@@ -799,14 +869,6 @@ export default function DocentesPage() {
                 <Info icon={CalendarDays} label="Fecha de ingreso" value={toDateInput(selected.fecha_ingreso) || '—'} />
               </div>
 
-              <AccessCredentialsCard
-                personaId={selected.id_persona}
-                tipo="docente"
-                token={token}
-                queryString={queryString}
-                className="mt-5"
-              />
-
               <section className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                 <h4 className="text-sm font-black text-slate-950">Especialidades</h4>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -835,17 +897,18 @@ export default function DocentesPage() {
                   )}
                 </div>
               </section>
+
+              <AccessCredentialsCard
+                personaId={selected.id_persona}
+                tipo="docente"
+                token={token}
+                queryString={queryString}
+                className="mt-5"
+              />
+
             </div>
 
-            <footer className="flex justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-sm border border-red-200 bg-red-50 px-4 text-sm font-black text-red-700 hover:bg-red-100"
-              >
-                <Trash2 size={16} />
-                Eliminar
-              </button>
+            <footer className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 
               <div className="flex gap-3">
                 <button

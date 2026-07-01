@@ -1023,6 +1023,7 @@ async deleteGrado(
     @Query('q') q?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('estado') estado?: string,
   ) {
     return this.academicosService.listarDocentesCrudGestion({
       userId: req.user.userId,

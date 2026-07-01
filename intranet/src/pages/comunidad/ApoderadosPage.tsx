@@ -457,14 +457,6 @@ export default function ApoderadosPage() {
                     <Info label="Dirección" value={detalle.persona.direccion || '—'} />
                   </div>
 
-                  <AccessCredentialsCard
-                    personaId={detalle.id_persona}
-                    tipo="apoderado"
-                    token={token}
-                    queryString={queryString}
-                    className="mt-5"
-                  />
-
                   <Section title="Alumnos vinculados">
                     {detalle.estudiantes?.length ? (
                       <div className="grid gap-3 md:grid-cols-2">
@@ -503,6 +495,14 @@ export default function ApoderadosPage() {
                       <p className="text-sm text-slate-400">Sin alumnos vinculados.</p>
                     )}
                   </Section>
+
+                  <AccessCredentialsCard
+                    personaId={detalle.id_persona}
+                    tipo="apoderado"
+                    token={token}
+                    queryString={queryString}
+                    className="mt-5"
+                  />
                 </div>
               ) : null}
             </div>

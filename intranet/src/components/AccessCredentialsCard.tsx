@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { KeyRound, Loader2, Save, ShieldCheck, ShieldOff } from 'lucide-react';
+import {
+  ChevronDown,
+  KeyRound,
+  Loader2,
+  Save,
+  ShieldCheck,
+  ShieldOff,
+} from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
 type TipoCredencial = 'docente' | 'apoderado';
@@ -26,6 +33,7 @@ type AccessCredentialsCardProps = {
   token: string | null;
   queryString?: string;
   className?: string;
+  defaultOpen?: boolean;
 };
 
 export default function AccessCredentialsCard({
@@ -34,9 +42,11 @@ export default function AccessCredentialsCard({
   token,
   queryString = '',
   className = '',
+  defaultOpen = false,
 }: AccessCredentialsCardProps) {
   const { showToast } = useToast();
 
+  const [expanded, setExpanded] = useState(defaultOpen);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -47,11 +57,9 @@ export default function AccessCredentialsCard({
 
   const params = (() => {
     const search = new URLSearchParams(queryString.replace('?', ''));
-
     search.set('tipo', tipo);
 
     const value = search.toString();
-
     return value ? `?${value}` : '';
   })();
 
@@ -140,111 +148,125 @@ export default function AccessCredentialsCard({
     }
   };
 
-  const titulo = tipo === 'docente' ? 'Acceso del docente' : 'Acceso del apoderado';
+  const titulo = tipo === 'docente' ? 'Credenciales del docente' : 'Credenciales del apoderado';
+
+  const estadoBadge = credencial?.existe
+    ? credencial.estado
+      ? {
+          className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+          icon: <ShieldCheck size={12} />,
+          label: 'Activo',
+        }
+      : {
+          className: 'bg-slate-100 text-slate-600 ring-slate-200',
+          icon: <ShieldOff size={12} />,
+          label: 'Inactivo',
+        }
+    : {
+        className: 'bg-amber-50 text-amber-700 ring-amber-200',
+        icon: null,
+        label: 'Sin credencial',
+      };
 
   return (
-    <section className={`rounded-[18px] border border-slate-200 bg-white p-4 ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
+    <section className={`rounded-[18px] border border-slate-200 bg-white ${className}`}>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+      >
+        <span className="flex min-w-0 items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
             <KeyRound size={19} />
           </span>
 
-          <div>
-            <h4 className="text-sm font-black text-slate-950">{titulo}</h4>
-            <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+          <span className="min-w-0">
+            <span className="block text-sm font-black text-slate-950">{titulo}</span>
+            <span className="mt-1 block text-xs font-semibold leading-5 text-slate-600">
               Administra usuario, contraseña temporal y estado de acceso.
-            </p>
-          </div>
-        </div>
-
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${
-            credencial?.existe
-              ? credencial.estado
-                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                : 'bg-slate-100 text-slate-600 ring-slate-200'
-              : 'bg-amber-50 text-amber-700 ring-amber-200'
-          }`}
-        >
-          {credencial?.existe ? (
-            credencial.estado ? (
-              <>
-                <ShieldCheck size={12} />
-                Activo
-              </>
-            ) : (
-              <>
-                <ShieldOff size={12} />
-                Desactivado
-              </>
-            )
-          ) : (
-            'Sin credencial'
-          )}
+            </span>
+          </span>
         </span>
-      </div>
 
-      {loading ? (
-        <div className="mt-4 flex h-20 items-center justify-center rounded-sm bg-slate-50">
-          <Loader2 size={18} className="animate-spin text-blue-600" />
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
-          <label className="space-y-1">
-            <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-              Usuario
-            </span>
-            <input
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder={tipo === 'docente' ? 'docente.dni' : 'apoderado.dni'}
-              className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-              Nueva contraseña
-            </span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder={credencial?.existe ? 'Dejar vacío si no cambia' : 'Contraseña temporal'}
-              className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-              Estado
-            </span>
-            <select
-              value={estado ? 'activo' : 'inactivo'}
-              onChange={(event) => setEstado(event.target.value === 'activo')}
-              className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="activo">Activo</option>
-              <option value="inactivo">Desactivado</option>
-            </select>
-          </label>
-
-          <button
-            type="button"
-            onClick={guardar}
-            disabled={saving}
-            className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 md:mt-[22px]"
+        <span className="flex shrink-0 items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${estadoBadge.className}`}
           >
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            Guardar
-          </button>
+            {estadoBadge.icon}
+            {estadoBadge.label}
+          </span>
+
+          <ChevronDown
+            size={16}
+            className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-slate-200 p-4">
+          {loading ? (
+            <div className="flex h-20 items-center justify-center rounded-sm bg-slate-50">
+              <Loader2 size={18} className="animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
+              <label className="space-y-1">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Usuario
+                </span>
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder={tipo === 'docente' ? 'docente.dni' : 'apoderado.dni'}
+                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Nueva contraseña
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={credencial?.existe ? 'Dejar vacío si no cambia' : 'Contraseña temporal'}
+                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Estado
+                </span>
+                <select
+                  value={estado ? 'activo' : 'inactivo'}
+                  onChange={(event) => setEstado(event.target.value === 'activo')}
+                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Desactivado</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={guardar}
+                disabled={saving}
+                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 md:mt-[22px]"
+              >
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                Guardar
+              </button>
+            </div>
+          )}
+
+          <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+            La contraseña actual no se muestra por seguridad. Para cambiarla, ingresa una nueva contraseña temporal y guarda.
+          </p>
         </div>
       )}
-
-      <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
-        La contraseña actual no se muestra por seguridad. Para cambiarla, ingresa una nueva contraseña temporal y guarda.
-      </p>
     </section>
   );
 }

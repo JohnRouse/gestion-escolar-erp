@@ -5242,7 +5242,12 @@ const existente = await this.prisma.persona.findUnique({
       persona.apellido_materno,
     ].filter(Boolean).join(' ');
 
+    const usuarioProfesor =
+      (persona.usuarios || []).find((usuario: any) => usuario.rol?.nombre_rol === 'Profesor') ||
+      null;
+
     const colegios = new Map<number, string>();
+    const secciones = new Map<number, any>();
 
     for (const esp of docente.especialidades || []) {
       const colegio = esp.area?.colegio;
@@ -5253,8 +5258,22 @@ const existente = await this.prisma.persona.findUnique({
 
     for (const asignacion of docente.asignaciones || []) {
       const colegio = asignacion.colegio;
+
       if (colegio?.id_colegio) {
         colegios.set(colegio.id_colegio, colegio.nombre || colegio.nombre_corto || 'Colegio');
+      }
+
+      if (asignacion.seccion?.id_seccion) {
+        const seccionNombre = asignacion.seccion?.grado
+          ? `${asignacion.seccion.grado.nombre_grado} "${asignacion.seccion.letra}"`
+          : asignacion.seccion?.letra || 'Sección';
+
+        secciones.set(asignacion.seccion.id_seccion, {
+          id_seccion: asignacion.seccion.id_seccion,
+          seccion: seccionNombre,
+          nivel: asignacion.seccion?.grado?.nivel?.nombre_nivel || null,
+          colegio: colegio?.nombre || colegio?.nombre_corto || null,
+        });
       }
     }
 
@@ -5277,6 +5296,16 @@ const existente = await this.prisma.persona.findUnique({
         provincia: persona.provincia,
         distrito: persona.distrito,
       },
+      credencial: {
+        existe: Boolean(usuarioProfesor),
+        username: usuarioProfesor?.username || '',
+        estado: Boolean(usuarioProfesor?.estado),
+        label: usuarioProfesor
+          ? usuarioProfesor.estado
+            ? 'Activo'
+            : 'Inactivo'
+          : 'Inactivo',
+      },
       especialidades: (docente.especialidades || []).map((item: any) => ({
         id_area: item.id_area,
         area: item.area,
@@ -5285,6 +5314,9 @@ const existente = await this.prisma.persona.findUnique({
         id_colegio,
         nombre,
       })),
+      secciones_count: secciones.size,
+      secciones_resumen: Array.from(secciones.values()),
+      tutorias_resumen: [],
       asignaciones_resumen: (docente.asignaciones || []).slice(0, 8).map((item: any) => ({
         id_asignacion: item.id_asignacion,
         curso: item.curso?.nombre_curso || 'Curso',
@@ -5305,7 +5337,15 @@ const existente = await this.prisma.persona.findUnique({
 
   private docenteIncludeCrud() {
     return {
-      persona: true,
+      persona: {
+        include: {
+          usuarios: {
+            include: {
+              rol: true,
+            },
+          },
+        },
+      },
       especialidades: {
         include: {
           area: {
@@ -5316,7 +5356,7 @@ const existente = await this.prisma.persona.findUnique({
         },
       },
       asignaciones: {
-        take: 20,
+        take: 50,
         orderBy: {
           id_asignacion: 'desc' as const,
         },
@@ -5352,6 +5392,7 @@ const existente = await this.prisma.persona.findUnique({
     q?: string;
     page?: number;
     limit?: number;
+    estado?: string;
   }) {
     const contexto = await this.resolveContextoAcademicoUsuario({
       userId: params.userId,
@@ -5415,6 +5456,49 @@ const existente = await this.prisma.persona.findUnique({
             },
           },
         ],
+      });
+    }
+
+
+    const estadoCredencial = String(params.estado || 'todos').trim().toLowerCase();
+
+    if (estadoCredencial === 'activo') {
+      where.AND.push({
+        persona: {
+          is: {
+            usuarios: {
+              some: {
+                estado: true,
+                rol: {
+                  is: {
+                    nombre_rol: 'Profesor',
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (estadoCredencial === 'inactivo') {
+      where.AND.push({
+        NOT: {
+          persona: {
+            is: {
+              usuarios: {
+                some: {
+                  estado: true,
+                  rol: {
+                    is: {
+                      nombre_rol: 'Profesor',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
     }
 

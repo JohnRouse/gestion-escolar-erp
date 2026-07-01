@@ -22,3 +22,18 @@
 .carbon-docentes-page article {
   transition: background-color 140ms ease;
 }
+
+
+/* ==========================================================
+   Credenciales y estado docente
+   ========================================================== */
+
+.carbon-docentes-page .access-credentials-card,
+.carbon-docentes-page .rounded-\[18px\].border.border-slate-200.bg-white {
+  box-shadow: none;
+}
+
+.carbon-docentes-page select {
+  color: #161616;
+}
+
