@@ -586,3 +586,108 @@
   }
 }
 
+
+/* ==========================================================
+   Horario - tarjeta compacta de clase
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-class-card {
+  position: relative !important;
+  display: block !important;
+  border: 1px solid #bfdbfe !important;
+  border-left: 4px solid var(--hc-blue) !important;
+  border-radius: 2px !important;
+  background: #eff6ff !important;
+  color: var(--hc-text) !important;
+  padding: 0.75rem !important;
+  min-height: auto !important;
+}
+
+.carbon-horario-page .erp-horario-class-card + .erp-horario-class-card {
+  margin-top: 0.65rem !important;
+}
+
+.carbon-horario-page .erp-horario-class-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.carbon-horario-page .erp-horario-class-time {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  color: #0f62fe !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+.carbon-horario-page .erp-horario-class-time svg {
+  width: 13px !important;
+  height: 13px !important;
+  color: #0f62fe !important;
+}
+
+.carbon-horario-page .erp-horario-class-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.2rem !important;
+}
+
+.carbon-horario-page .erp-horario-class-actions button {
+  display: inline-flex !important;
+  width: 26px !important;
+  height: 26px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: #525252 !important;
+  padding: 0 !important;
+}
+
+.carbon-horario-page .erp-horario-class-actions button:hover {
+  border-color: #c6c6c6 !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+}
+
+.carbon-horario-page .erp-horario-class-card h3 {
+  margin: 0 !important;
+  color: #161616 !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+}
+
+.carbon-horario-page .erp-horario-class-meta {
+  display: grid !important;
+  gap: 0.38rem !important;
+  margin-top: 0.65rem !important;
+}
+
+.carbon-horario-page .erp-horario-class-meta p {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  gap: 0.4rem !important;
+  margin: 0 !important;
+  color: #374151 !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  line-height: 1.25 !important;
+}
+
+.carbon-horario-page .erp-horario-class-meta svg {
+  width: 13px !important;
+  height: 13px !important;
+  flex: 0 0 auto !important;
+  margin-top: 1px !important;
+  color: #525252 !important;
+}
+

@@ -89,6 +89,17 @@ function uniqueBy<T>(items: T[], getKey: (item: T) => string | number) {
   return Array.from(map.values());
 }
 
+function normalizeScheduleLabel(value?: string | null) {
+  return String(value || '').trim().toLocaleLowerCase('es-PE');
+}
+
+function shouldShowHorarioArea(item: Horario) {
+  return Boolean(
+    item.area &&
+      normalizeScheduleLabel(item.area) !== normalizeScheduleLabel(item.curso),
+  );
+}
+
 function labelDia(dia: number) {
   return DIAS.find((item) => item.value === dia)?.label || `Día ${dia}`;
 }
@@ -559,10 +570,12 @@ export default function CalendarioPage() {
                                 <UserRound size={13} />
                                 {item.docente}
                               </p>
-                              <p>
-                                <BookOpen size={13} />
-                                {item.area || 'Área no definida'}
-                              </p>
+                              {shouldShowHorarioArea(item) && (
+                                <p>
+                                  <BookOpen size={13} />
+                                  {item.area}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))

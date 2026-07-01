@@ -4749,7 +4749,14 @@ const existente = await this.prisma.persona.findUnique({
     idDocente: number;
     excluirHorarioId?: number;
   }) {
-    const conflicto = await this.prisma.horario.findFirst({
+    /*
+      Regla principal:
+      - Un docente no puede tener dos bloques que se crucen en el mismo día.
+      - Otra sección u otro docente sí pueden usar la misma franja horaria.
+      - No se valida cruce por sección porque el horario se gestiona como agenda
+        multi-docente / multi-sección.
+    */
+    const conflictoDocente = await this.prisma.horario.findFirst({
       where: {
         id_horario: params.excluirHorarioId
           ? {
@@ -4757,36 +4764,23 @@ const existente = await this.prisma.persona.findUnique({
             }
           : undefined,
         dia_semana: params.diaSemana,
+        id_docente: params.idDocente,
         hora_inicio: {
           lt: params.horaFin,
         },
         hora_fin: {
           gt: params.horaInicio,
         },
-        OR: [
-          {
-            id_seccion: params.idSeccion,
-          },
-          {
-            id_docente: params.idDocente,
-          },
-        ],
       },
       include: this.horarioIncludeGestion(),
     });
 
-    if (!conflicto) return;
+    if (!conflictoDocente) return;
 
-    const conflictoMapeado = this.mapHorarioGestion(conflicto);
-
-    if (conflicto.id_seccion === params.idSeccion) {
-      throw new BadRequestException(
-        `La sección ya tiene ${conflictoMapeado.curso} de ${conflicto.hora_inicio} a ${conflicto.hora_fin}.`,
-      );
-    }
+    const conflictoMapeado = this.mapHorarioGestion(conflictoDocente);
 
     throw new BadRequestException(
-      `El docente ya tiene clase con ${conflictoMapeado.seccion} de ${conflicto.hora_inicio} a ${conflicto.hora_fin}.`,
+      `El docente ya tiene ${conflictoMapeado.curso} con ${conflictoMapeado.seccion} de ${conflictoDocente.hora_inicio} a ${conflictoDocente.hora_fin}.`,
     );
   }
 
