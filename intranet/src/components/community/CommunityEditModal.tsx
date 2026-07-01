@@ -4,6 +4,7 @@ import { Loader2, X } from 'lucide-react';
 
 type CommunityEditModalProps = {
   open: boolean;
+  eyebrow?: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -18,6 +19,7 @@ type CommunityEditModalProps = {
 
 export default function CommunityEditModal({
   open,
+  eyebrow,
   title,
   description,
   children,
@@ -36,11 +38,20 @@ export default function CommunityEditModal({
       <section
         className={`my-auto w-full ${maxWidthClassName} overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter`}
       >
-        <header className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
+        <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
           <div>
-            <h3 className="text-lg font-black text-slate-950">{title}</h3>
+            {eyebrow && (
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">
+                {eyebrow}
+              </p>
+            )}
+            <h3 className="mt-1 text-xl font-black text-slate-950">
+              {title}
+            </h3>
             {description && (
-              <p className="mt-0.5 text-xs text-slate-400">{description}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                {description}
+              </p>
             )}
           </div>
 
@@ -48,9 +59,9 @@ export default function CommunityEditModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 disabled:opacity-50"
+            className="rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-50"
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </header>
 

@@ -798,8 +798,9 @@ export default function AlumnosPage() {
       {/* ── Modal de edición ── */}
       <CommunityEditModal
         open={editOpen && Boolean(form)}
-        title="Editar alumno"
-        description="Actualiza los datos generales del alumno."
+        eyebrow="Editar alumno"
+        title={detalle ? fullName(detalle.persona) : 'Editar alumno'}
+        description="Completa los datos generales del alumno."
         message={mensaje}
         saving={saving}
         onClose={() => setEditOpen(false)}

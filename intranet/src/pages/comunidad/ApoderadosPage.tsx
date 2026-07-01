@@ -571,8 +571,9 @@ export default function ApoderadosPage() {
       {/* ── Modal de edición ── */}
       <CommunityEditModal
         open={editOpen && Boolean(form)}
-        title="Editar apoderado"
-        description="Actualiza los datos generales del apoderado."
+        eyebrow="Editar apoderado"
+        title={detalle ? fullName(detalle.persona) : 'Editar apoderado'}
+        description="Completa los datos generales del apoderado."
         message={mensaje}
         saving={saving}
         onClose={() => setEditOpen(false)}
