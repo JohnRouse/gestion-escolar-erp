@@ -92,3 +92,28 @@ export function CommunityPagination({
     </div>
   );
 }
+
+
+export function CommunityTableHeader({
+  columns,
+  gridClassName,
+  actionSpacerClassName = 'w-20',
+}: {
+  columns: string[];
+  gridClassName: string;
+  actionSpacerClassName?: string;
+}) {
+  return (
+    <div className={`carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid ${gridClassName} xl:gap-4`}>
+      {columns.map((column) => (
+        <span
+          key={column}
+          className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400"
+        >
+          {column}
+        </span>
+      ))}
+      <span className={actionSpacerClassName} />
+    </div>
+  );
+}

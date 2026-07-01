@@ -27,12 +27,13 @@ import {
   CommunityEmptyState,
   CommunityInlineLoading,
   CommunityPagination,
+  CommunityTableHeader,
   CommunityTableLoading,
 } from '../../components/community/CommunityTableState';
 import {
   LinkedGuardianCards,
-  LinkedGuardiansCompact,
 } from '../../components/community/CommunityLinkedPeople';
+import { StudentTableRow } from '../../components/community/CommunityTableRows';
 import {
   CommunityField as Field,
   CommunityInfo as Info,
@@ -501,13 +502,10 @@ export default function AlumnosPage() {
 
       {/* ── Tabla de alumnos ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
-        {/* Encabezado de columnas */}
-        <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[2fr_1.4fr_1.4fr_auto] xl:gap-4">
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumno</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Matrícula</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderados vinculados</span>
-          <span className="w-20" />
-        </div>
+        <CommunityTableHeader
+          columns={['Alumno', 'Matrícula', 'Apoderados vinculados']}
+          gridClassName="xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
+        />
 
         {loading && data.length === 0 ? (
           <CommunityTableLoading />
@@ -519,84 +517,16 @@ export default function AlumnosPage() {
           />
         ) : (
           <div className={`divide-y divide-slate-100/80 ${loading ? "erp-table-refreshing" : ""}`}>
-            {data.map((alumno) => {
-              const ultimaMatricula = alumno.matriculas?.[0];
-              const apoderadosList = alumno.apoderados || [];
-              const nombre = fullName(alumno.persona);
-              const estadoMatricula = ultimaMatricula?.estado_matricula;
-
-              return (
-                <div
-                  key={alumno.id_persona}
-                  className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
-                >
-                  {/* Columna alumno */}
-                  <div className="flex min-w-0 items-center gap-3">
-                    {alumno.avatar_url ? (
-                      <img
-                        src={assetUrl(alumno.avatar_url)}
-                        alt={nombre}
-                        className="h-11 w-11 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
-                      />
-                    ) : (
-                      <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">
-                        {nombre}
-                      </p>
-                      <p className="erp-compact-meta mt-0.5 truncate text-xs text-slate-400">
-                        <span className="erp-compact-code font-semibold text-slate-500">{getCodigo(alumno)}</span>
-                        {' · '}DNI {alumno.persona.dni}
-                        {alumno.persona.distrito
-                          ? ` · ${alumno.persona.distrito}`
-                          : ''}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Columna matrícula */}
-                  <div className="min-w-0">
-                    {ultimaMatricula ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-slate-800">
-                            {ultimaMatricula.seccion?.grado?.nombre_grado || 'Grado'}{' '}
-                            &quot;{ultimaMatricula.seccion?.letra || '-'}&quot;
-                          </p>
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${getEstadoBadge(estadoMatricula)}`}
-                          >
-                            {estadoMatricula || '—'}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-slate-400">
-                          {ultimaMatricula?.colegio?.nombre || '—'}
-                        </p>
-                      </>
-                    ) : (
-                      <span className="text-xs text-slate-400">Sin matrícula visible</span>
-                    )}
-                  </div>
-                  {/* Columna apoderados */}
-                  <div className="min-w-0">
-                    <LinkedGuardiansCompact items={apoderadosList} />
-                  </div>
-
-                  {/* Acción */}
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => abrirDetalle(alumno.id_persona)}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 "
-                    >
-                      <Eye size={13} />
-                      Ver
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {data.map((alumno) => (
+              <StudentTableRow
+                key={alumno.id_persona}
+                alumno={alumno}
+                onOpen={abrirDetalle}
+                getCodigo={getCodigo}
+                getEstadoBadge={getEstadoBadge}
+                assetUrl={assetUrl}
+              />
+            ))}
           </div>
         )}
 

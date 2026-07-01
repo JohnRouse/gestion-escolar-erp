@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Briefcase,
   Edit3,
-  Eye,
-  Mail,
-  Phone,
   Search,
   ShieldCheck,
   X,
@@ -25,12 +21,13 @@ import {
   CommunityEmptyState,
   CommunityInlineLoading,
   CommunityPagination,
+  CommunityTableHeader,
   CommunityTableLoading,
 } from '../../components/community/CommunityTableState';
 import {
   LinkedStudentCards,
-  LinkedStudentsCompact,
 } from '../../components/community/CommunityLinkedPeople';
+import { GuardianTableRow } from '../../components/community/CommunityTableRows';
 import {
   CommunityField as Field,
   CommunityInfo as Info,
@@ -312,14 +309,10 @@ export default function ApoderadosPage() {
 
       {/* ── Tabla de apoderados ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
-        {/* Encabezado de columnas */}
-        <div className="carbon-list-header hidden border-b border-slate-200 bg-slate-50 px-5 py-3 xl:grid xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto] xl:gap-4">
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Apoderado</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Ocupación y contacto</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Alumnos vinculados</span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Estado</span>
-          <span className="w-20" />
-        </div>
+        <CommunityTableHeader
+          columns={['Apoderado', 'Ocupación y contacto', 'Alumnos vinculados', 'Estado']}
+          gridClassName="xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto]"
+        />
 
         {loading && data.length === 0 ? (
           <CommunityTableLoading />
@@ -331,80 +324,15 @@ export default function ApoderadosPage() {
           />
         ) : (
           <div className={`divide-y divide-slate-100/80 ${loading ? "erp-table-refreshing" : ""}`}>
-            {data.map((apoderado) => {
-              const nombre = fullName(apoderado.persona);
-
-              return (
-                <div
-                  key={apoderado.id_persona}
-                  className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto]"
-                >
-                  {/* Columna apoderado */}
-                  <div className="flex min-w-0 items-center gap-3">
-                    <PersonAvatar persona={apoderado.persona} size="md" rounded="2xl" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">{nombre}</p>
-                      <p className="erp-compact-meta mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-400">
-                        <span className="erp-compact-code font-semibold text-slate-500">DNI {apoderado.persona.dni}</span>
-                        {apoderado.persona.telefono && (
-                          <>
-                            <span className="text-slate-300">·</span>
-                            <Phone size={10} className="shrink-0" />
-                            {apoderado.persona.telefono}
-                          </>
-                        )}
-                        {!apoderado.persona.telefono && (
-                          <><span className="text-slate-300">·</span> Sin teléfono</>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Columna ocupación y contacto */}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Briefcase size={12} className="shrink-0 text-slate-400" />
-                      <p className="truncate text-sm font-semibold text-slate-700">
-                        {apoderado.ocupacion || 'Sin ocupación'}
-                      </p>
-                    </div>
-                    {apoderado.persona.correo ? (
-                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-                        <Mail size={10} className="shrink-0" />
-                        {apoderado.persona.correo}
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-xs text-slate-400">Sin correo</p>
-                    )}
-                  </div>
-                  {/* Columna alumnos */}
-                  <div className="min-w-0">
-                    <LinkedStudentsCompact items={apoderado.estudiantes || []} />
-                  </div>
-
-                  {/* Estado */}
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${apoderadoEstadoClass(apoderado)}`}
-                    >
-                      {apoderadoEstadoLabel(apoderado)}
-                    </span>
-                  </div>
-
-                  {/* Acción */}
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => abrirDetalle(apoderado.id_persona)}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600 "
-                    >
-                      <Eye size={13} />
-                      Ver
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {data.map((apoderado) => (
+              <GuardianTableRow
+                key={apoderado.id_persona}
+                apoderado={apoderado}
+                onOpen={abrirDetalle}
+                estadoClass={apoderadoEstadoClass}
+                estadoLabel={apoderadoEstadoLabel}
+              />
+            ))}
           </div>
         )}
 
