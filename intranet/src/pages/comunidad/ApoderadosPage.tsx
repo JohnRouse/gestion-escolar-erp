@@ -24,6 +24,7 @@ import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import AccessCredentialsCard from '../../components/AccessCredentialsCard';
 import LocationSelects from '../../components/LocationSelects';
+import CommunityEditModal from '../../components/community/CommunityEditModal';
 import {
   CommunityField as Field,
   CommunityInfo as Info,
@@ -675,92 +676,54 @@ export default function ApoderadosPage() {
         document.body
       )}
 
-      {/* ── Modal de edición usando Portal ── */}
-      {editOpen && form && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
-              <div>
-                <h3 className="text-lg font-black text-slate-950">Editar apoderado</h3>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Actualiza los datos generales del apoderado.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
-              >
-                <X size={15} />
-              </button>
+      {/* ── Modal de edición ── */}
+      <CommunityEditModal
+        open={editOpen && Boolean(form)}
+        title="Editar apoderado"
+        description="Actualiza los datos generales del apoderado."
+        message={mensaje}
+        saving={saving}
+        onClose={() => setEditOpen(false)}
+        onSubmit={() => setConfirmEditApoderado(true)}
+      >
+        {form && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
+            <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
+            <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
+            <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
+            <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
+            <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
+            <Field label="Ocupación" value={form.ocupacion} onChange={(v) => setForm({ ...form, ocupacion: v })} />
+
+            <div className="md:col-span-2">
+              <LocationSelects
+                value={{
+                  pais: form.pais || 'Perú',
+                  departamento: form.departamento,
+                  provincia: form.provincia,
+                  distrito: form.distrito,
+                }}
+                onChange={(location) =>
+                  setForm({
+                    ...form,
+                    pais: location.pais || 'Perú',
+                    departamento: location.departamento || '',
+                    provincia: location.provincia || '',
+                    distrito: location.distrito || '',
+                  })
+                }
+                wrapperClassName="grid gap-4 md:grid-cols-3"
+                selectClass={inputClass}
+              />
             </div>
 
-            <div className="max-h-[72vh] overflow-y-auto p-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
-                <Field label="Nombres" value={form.nombres} onChange={(v) => setForm({ ...form, nombres: v })} />
-                <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v) => setForm({ ...form, apellido_paterno: v })} />
-                <Field label="Apellido materno" value={form.apellido_materno} onChange={(v) => setForm({ ...form, apellido_materno: v })} />
-                <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} />
-                <Field label="Correo" value={form.correo} onChange={(v) => setForm({ ...form, correo: v })} />
-                <Field label="Ocupación" value={form.ocupacion} onChange={(v) => setForm({ ...form, ocupacion: v })} />
-
-                <div className="md:col-span-2">
-                  <LocationSelects
-                    value={{
-                      pais: form.pais || 'Perú',
-                      departamento: form.departamento,
-                      provincia: form.provincia,
-                      distrito: form.distrito,
-                    }}
-                    onChange={(location) =>
-                      setForm({
-                        ...form,
-                        pais: location.pais || 'Perú',
-                        departamento: location.departamento || '',
-                        provincia: location.provincia || '',
-                        distrito: location.distrito || '',
-                      })
-                    }
-                    wrapperClassName="grid gap-4 md:grid-cols-3"
-                    selectClass={inputClass}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
-                </div>
-              </div>
-            </div>
-
-            {mensaje && (
-              <div className="mx-6 mb-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-100">
-                {mensaje}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 border-t border-slate-100 p-5 bg-slate-50/50">
-              <button
-                type="button"
-                onClick={() => setEditOpen(false)}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmEditApoderado(true)}
-                disabled={saving}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 text-sm font-bold text-white transition hover:bg-accent-600 disabled:opacity-50"
-              >
-                {saving && <Loader2 size={14} className="animate-spin" />}
-                Guardar cambios
-              </button>
+            <div className="md:col-span-2">
+              <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </CommunityEditModal>
 
       <ConfirmDialog
         open={confirmEditApoderado}
