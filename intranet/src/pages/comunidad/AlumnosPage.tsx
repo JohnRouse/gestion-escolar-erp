@@ -25,6 +25,7 @@ import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
+import CommunityDetailModal from '../../components/community/CommunityDetailModal';
 import {
   LinkedGuardianCards,
   LinkedGuardiansCompact,
@@ -643,155 +644,131 @@ export default function AlumnosPage() {
         </div>
       </div>
 
-      {/* ── Modal de detalle usando Portal ── */}
-      {detalleOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
-            {/* Header del modal */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
-              <div className="flex items-center gap-4">
-                {detalle && (
-                  detalle.avatar_url ? (
-                    <button
-                      type="button"
-                      onClick={() => setAvatarViewOpen(true)}
-                      className="group relative h-14 w-14 shrink-0 rounded-2xl outline-none transition focus:ring-4 focus:ring-accent-100"
-                    >
-                      <img
-                        src={assetUrl(detalle.avatar_url)}
-                        alt={fullName(detalle.persona)}
-                        className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200 transition group-hover:opacity-80 group-hover:ring-accent-300"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/30 group-hover:opacity-100">
-                        <Eye size={18} className="text-white" />
-                      </div>
-                    </button>
-                  ) : (
-                    <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
-                  )
-                )}
-                <div>
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-1 text-[11px] font-bold text-accent-600 ring-1 ring-accent-100">
-                    <GraduationCap size={11} />
-                    Ficha del alumno
-                  </div>
-                  <h3 className="mt-1.5 text-lg font-black text-slate-950">
-                    {detalle
-                      ? `${getCodigo(detalle)} · ${fullName(detalle.persona)}`
-                      : 'Cargando…'}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    Datos personales, apoderados y matrículas.
-                  </p>
+      {/* ── Modal de detalle ── */}
+      <CommunityDetailModal
+        open={detalleOpen}
+        loading={detalleLoading}
+        eyebrow={
+          <>
+            <GraduationCap size={11} />
+            Ficha del alumno
+          </>
+        }
+        title={detalle ? `${getCodigo(detalle)} · ${fullName(detalle.persona)}` : 'Cargando…'}
+        description="Datos personales, apoderados y matrículas."
+        leadingSlot={
+          detalle ? (
+            detalle.avatar_url ? (
+              <button
+                type="button"
+                onClick={() => setAvatarViewOpen(true)}
+                className="group relative h-14 w-14 shrink-0 rounded-2xl outline-none transition focus:ring-4 focus:ring-accent-100"
+              >
+                <img
+                  src={assetUrl(detalle.avatar_url)}
+                  alt={fullName(detalle.persona)}
+                  className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200 transition group-hover:opacity-80 group-hover:ring-accent-300"
+                />
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/30 group-hover:opacity-100">
+                  <Eye size={18} className="text-white" />
                 </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                {detalle && (
-                  <>
-                    <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
-                      {uploadingAvatar ? (
-                        <Loader2 size={13} className="animate-spin" />
-                      ) : detalle.avatar_url ? (
-                        <Camera size={13} />
-                      ) : (
-                        <UploadCloud size={13} />
-                      )}
-                      {uploadingAvatar ? 'Subiendo...' : detalle.avatar_url ? 'Cambiar foto' : 'Subir foto'}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png"
-                        className="hidden"
-                        disabled={uploadingAvatar}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = '';
-                          prepararFotoAlumno(file);
-                        }}
-                      />
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={abrirEdicion}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
-                    >
-                      <Edit3 size={13} />
-                      Editar
-                    </button>
-                  </>
+              </button>
+            ) : (
+              <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
+            )
+          ) : null
+        }
+        actions={
+          detalle ? (
+            <>
+              <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
+                {uploadingAvatar ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : detalle.avatar_url ? (
+                  <Camera size={13} />
+                ) : (
+                  <UploadCloud size={13} />
                 )}
-                <button
-                  type="button"
-                  onClick={() => setDetalleOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
-                >
-                  <X size={15} />
-                </button>
-              </div>
+                {uploadingAvatar ? 'Subiendo...' : detalle.avatar_url ? 'Cambiar foto' : 'Subir foto'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    prepararFotoAlumno(file);
+                  }}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={abrirEdicion}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
+              >
+                <Edit3 size={13} />
+                Editar
+              </button>
+            </>
+          ) : null
+        }
+        onClose={() => setDetalleOpen(false)}
+      >
+        {detalle ? (
+          <div className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Info label="DNI" value={detalle.persona.dni} />
+              <Info label="Nacimiento" value={fecha(detalle.persona.fecha_nacimiento)} />
+              <Info label="Teléfono" value={detalle.persona.telefono || '—'} />
+              <Info label="Correo" value={detalle.persona.correo || '—'} />
+              <Info label="Departamento" value={detalle.persona.departamento || '—'} />
+              <Info label="Provincia" value={detalle.persona.provincia || '—'} />
+              <Info label="Distrito" value={detalle.persona.distrito || '—'} />
+              <Info label="Dirección" value={detalle.persona.direccion || '—'} />
             </div>
 
-            <div className="max-h-[72vh] overflow-y-auto p-6">
-              {detalleLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center">
-                  <Loader2 size={22} className="animate-spin text-accent-500" />
-                </div>
-              ) : detalle ? (
-                <div className="space-y-5">
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <Info label="DNI" value={detalle.persona.dni} />
-                    <Info label="Nacimiento" value={fecha(detalle.persona.fecha_nacimiento)} />
-                    <Info label="Teléfono" value={detalle.persona.telefono || '—'} />
-                    <Info label="Correo" value={detalle.persona.correo || '—'} />
-                    <Info label="Departamento" value={detalle.persona.departamento || '—'} />
-                    <Info label="Provincia" value={detalle.persona.provincia || '—'} />
-                    <Info label="Distrito" value={detalle.persona.distrito || '—'} />
-                    <Info label="Dirección" value={detalle.persona.direccion || '—'} />
-                  </div>
+            <Section title="Apoderados vinculados">
+              <LinkedGuardianCards
+                items={detalle.apoderados || []}
+                onSelect={(target) => setConfirmApoderadoDestino(target)}
+              />
+            </Section>
 
-                  <Section title="Apoderados vinculados">
-                    <LinkedGuardianCards
-                      items={detalle.apoderados || []}
-                      onSelect={(target) => setConfirmApoderadoDestino(target)}
-                    />
-                  </Section>
-
-                  <Section title="Matrículas">
-                    {detalle.matriculas?.length ? (
-                      <div className="space-y-2">
-                        {detalle.matriculas.map((m) => (
-                          <div
-                            key={m.id_matricula}
-                            className="flex items-center justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
-                          >
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">
-                                {m.colegio?.nombre || 'Colegio'} ·{' '}
-                                {m.seccion?.grado?.nombre_grado || 'Grado'} &quot;
-                                {m.seccion?.letra || '-'}&quot;
-                              </p>
-                              <p className="mt-0.5 text-xs text-slate-400">
-                                {m.anio?.nombre_anio || 'Año'} · {fecha(m.fecha_matricula)}
-                              </p>
-                            </div>
-                            <span
-                              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(m.estado_matricula)}`}
-                            >
-                              {m.estado_matricula}
-                            </span>
-                          </div>
-                        ))}
+            <Section title="Matrículas">
+              {detalle.matriculas?.length ? (
+                <div className="space-y-2">
+                  {detalle.matriculas.map((m) => (
+                    <div
+                      key={m.id_matricula}
+                      className="flex items-center justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          {m.colegio?.nombre || 'Colegio'} ·{' '}
+                          {m.seccion?.grado?.nombre_grado || 'Grado'} &quot;
+                          {m.seccion?.letra || '-'}&quot;
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {m.anio?.nombre_anio || 'Año'} · {fecha(m.fecha_matricula)}
+                        </p>
                       </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">Sin matrículas visibles.</p>
-                    )}
-                  </Section>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(m.estado_matricula)}`}
+                      >
+                        {m.estado_matricula}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ) : null}
-            </div>
+              ) : (
+                <p className="text-sm text-slate-400">Sin matrículas visibles.</p>
+              )}
+            </Section>
           </div>
-        </div>,
-        document.body
-      )}
+        ) : null}
+      </CommunityDetailModal>
 
       {/* ── Modal de visualización de foto (Visor) ── */}
       {avatarViewOpen && detalle?.avatar_url && createPortal(

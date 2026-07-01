@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -24,6 +23,7 @@ import PersonAvatar from '../../components/PersonAvatar';
 import AccessCredentialsCard from '../../components/AccessCredentialsCard';
 import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
+import CommunityDetailModal from '../../components/community/CommunityDetailModal';
 import {
   LinkedStudentCards,
   LinkedStudentsCompact,
@@ -452,142 +452,121 @@ export default function ApoderadosPage() {
         </div>
       </div>
 
-      {/* ── Modal de detalle usando Portal ── */}
-      {detalleOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter my-auto">
-            {/* Header del modal */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
-              <div className="flex items-center gap-4">
-                {detalle && (
-                  <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
-                )}
-                <div>
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-1 text-[11px] font-bold text-accent-600 ring-1 ring-accent-100">
-                    <ShieldCheck size={11} />
-                    Ficha del apoderado
-                  </div>
-                  <h3 className="mt-1.5 text-lg font-black text-slate-950">
-                    {detalle ? fullName(detalle.persona) : 'Cargando…'}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    Datos personales y alumnos vinculados.
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                {detalle && (
-                  <span
-                    className={`inline-flex h-9 items-center rounded-full px-3 text-[11px] font-black ring-1 ${
-                      detalleCredencial?.existe
-                        ? detalleCredencial.estado
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                          : 'bg-slate-100 text-slate-600 ring-slate-200'
-                        : 'bg-amber-50 text-amber-700 ring-amber-200'
-                    }`}
-                  >
-                    {detalleCredencial?.existe
-                      ? detalleCredencial.estado
-                        ? 'Activo'
-                        : 'Inactivo'
-                      : 'Sin credencial'}
-                  </span>
-                )}
-                {detalle && (
-                  <button
-                    type="button"
-                    onClick={abrirEdicion}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
-                  >
-                    <Edit3 size={13} />
-                    Editar
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setDetalleOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
-                >
-                  <X size={15} />
-                </button>
-              </div>
+      {/* ── Modal de detalle ── */}
+      <CommunityDetailModal
+        open={detalleOpen}
+        loading={detalleLoading}
+        eyebrow={
+          <>
+            <ShieldCheck size={11} />
+            Ficha del apoderado
+          </>
+        }
+        title={detalle ? fullName(detalle.persona) : 'Cargando…'}
+        description="Datos personales y alumnos vinculados."
+        leadingSlot={
+          detalle ? (
+            <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
+          ) : null
+        }
+        actions={
+          detalle ? (
+            <>
+              <span
+                className={`inline-flex h-9 items-center rounded-full px-3 text-[11px] font-black ring-1 ${
+                  detalleCredencial?.existe
+                    ? detalleCredencial.estado
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                      : 'bg-slate-100 text-slate-600 ring-slate-200'
+                    : 'bg-amber-50 text-amber-700 ring-amber-200'
+                }`}
+              >
+                {detalleCredencial?.existe
+                  ? detalleCredencial.estado
+                    ? 'Activo'
+                    : 'Inactivo'
+                  : 'Sin credencial'}
+              </span>
+
+              <button
+                type="button"
+                onClick={abrirEdicion}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-accent-300 bg-accent-50 px-3 text-xs font-bold text-accent-600 transition hover:bg-accent-100"
+              >
+                <Edit3 size={13} />
+                Editar
+              </button>
+            </>
+          ) : null
+        }
+        onClose={() => setDetalleOpen(false)}
+      >
+        {detalle ? (
+          <div className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Info label="DNI" value={detalle.persona.dni} />
+              <Info label="Teléfono" value={detalle.persona.telefono || '—'} />
+              <Info label="Correo" value={detalle.persona.correo || '—'} />
+              <Info label="Ocupación" value={detalle.ocupacion || '—'} />
+              <Info label="Departamento" value={detalle.persona.departamento || '—'} />
+              <Info label="Provincia" value={detalle.persona.provincia || '—'} />
+              <Info label="Distrito" value={detalle.persona.distrito || '—'} />
+              <Info label="Dirección" value={detalle.persona.direccion || '—'} />
             </div>
 
-            <div className="max-h-[72vh] overflow-y-auto p-6">
-              {detalleLoading ? (
-                <div className="flex min-h-[260px] items-center justify-center">
-                  <Loader2 size={22} className="animate-spin text-accent-500" />
-                </div>
-              ) : detalle ? (
-                <div className="space-y-5">
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <Info label="DNI" value={detalle.persona.dni} />
-                    <Info label="Teléfono" value={detalle.persona.telefono || '—'} />
-                    <Info label="Correo" value={detalle.persona.correo || '—'} />
-                    <Info label="Ocupación" value={detalle.ocupacion || '—'} />
-                    <Info label="Departamento" value={detalle.persona.departamento || '—'} />
-                    <Info label="Provincia" value={detalle.persona.provincia || '—'} />
-                    <Info label="Distrito" value={detalle.persona.distrito || '—'} />
-                    <Info label="Dirección" value={detalle.persona.direccion || '—'} />
-                  </div>
+            <Section title="Alumnos vinculados">
+              <LinkedStudentCards
+                items={detalle.estudiantes || []}
+                onSelect={(target) => setConfirmAlumnoDestino(target)}
+              />
+            </Section>
 
-                  <Section title="Alumnos vinculados">
-                    <LinkedStudentCards
-                      items={detalle.estudiantes || []}
-                      onSelect={(target) => setConfirmAlumnoDestino(target)}
-                    />
-                  </Section>
+            <AccessCredentialsCard
+              personaId={detalle.id_persona}
+              tipo="apoderado"
+              token={token}
+              queryString={queryString}
+              className="mt-5"
+              onLoaded={(credencial) =>
+                setDetalleCredencial({
+                  existe: Boolean(credencial.existe),
+                  estado: Boolean(credencial.estado),
+                })
+              }
+              onSaved={(credencial) => {
+                const nextCredencial = {
+                  existe: Boolean(credencial.existe),
+                  estado: Boolean(credencial.estado),
+                };
 
-                  <AccessCredentialsCard
-                    personaId={detalle.id_persona}
-                    tipo="apoderado"
-                    token={token}
-                    queryString={queryString}
-                    className="mt-5"
-                    onLoaded={(credencial) =>
-                      setDetalleCredencial({
-                        existe: Boolean(credencial.existe),
-                        estado: Boolean(credencial.estado),
-                      })
-                    }
-                    onSaved={(credencial) => {
-                      const nextCredencial = {
-                        existe: Boolean(credencial.existe),
-                        estado: Boolean(credencial.estado),
-                      };
+                setDetalleCredencial(nextCredencial);
 
-                      setDetalleCredencial(nextCredencial);
+                setData((prev) =>
+                  prev.map((item) =>
+                    detalle && item.id_persona === detalle.id_persona
+                      ? {
+                          ...item,
+                          credencial: {
+                            ...(item as any).credencial,
+                            existe: nextCredencial.existe,
+                            estado: nextCredencial.estado,
+                            label: nextCredencial.existe
+                              ? nextCredencial.estado
+                                ? 'Activo'
+                                : 'Inactivo'
+                              : 'Sin credencial',
+                          },
+                        } as any
+                      : item,
+                  ),
+                );
 
-                      setData((prev) =>
-                        prev.map((item) =>
-                          detalle && item.id_persona === detalle.id_persona
-                            ? {
-                                ...item,
-                                credencial: {
-                                  ...(item as any).credencial,
-                                  existe: nextCredencial.existe,
-                                  estado: nextCredencial.estado,
-                                  label: nextCredencial.existe
-                                    ? nextCredencial.estado
-                                      ? 'Activo'
-                                      : 'Inactivo'
-                                    : 'Sin credencial',
-                                },
-                              } as any
-                            : item,
-                        ),
-                      );
-
-                      void fetchApoderados();
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
+                void fetchApoderados();
+              }}
+            />
           </div>
-        </div>,
-        document.body
-      )}
+        ) : null}
+      </CommunityDetailModal>
 
       {/* ── Modal de edición ── */}
       <CommunityEditModal
