@@ -13,7 +13,6 @@ import {
   Phone,
   Search,
   ShieldCheck,
-  Users,
   X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -25,6 +24,10 @@ import PersonAvatar from '../../components/PersonAvatar';
 import AccessCredentialsCard from '../../components/AccessCredentialsCard';
 import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
+import {
+  LinkedStudentCards,
+  LinkedStudentsCompact,
+} from '../../components/community/CommunityLinkedPeople';
 import {
   CommunityField as Field,
   CommunityInfo as Info,
@@ -338,8 +341,6 @@ export default function ApoderadosPage() {
           <div className={`divide-y divide-slate-100/80 ${loading ? "erp-table-refreshing" : ""}`}>
             {data.map((apoderado) => {
               const nombre = fullName(apoderado.persona);
-              const primerHijo = apoderado.estudiantes?.[0]?.estudiante;
-              const totalHijos = apoderado.estudiantes?.length || 0;
 
               return (
                 <div
@@ -386,39 +387,8 @@ export default function ApoderadosPage() {
                   </div>
                   {/* Columna alumnos */}
                   <div className="min-w-0">
-                    {apoderado.estudiantes?.length ? (
-                      <div className="space-y-1.5">
-                        {apoderado.estudiantes.slice(0, 3).map((rel) => {
-                          const estudiante = rel.estudiante;
-                          const nombreAlumno = [
-                            estudiante.persona.nombres,
-                            estudiante.persona.apellido_paterno,
-                            estudiante.persona.apellido_materno,
-                          ].filter(Boolean).join(' ');
-
-                          return (
-                            <div key={estudiante.id_persona} className="min-w-0">
-                              <p className="erp-compact-code truncate text-sm font-semibold text-slate-800">
-                                {getCodigo(estudiante)} · {nombreAlumno}
-                              </p>
-                              <p className="mt-0.5 text-xs text-slate-400">
-                                Parentesco: {rel.parentesco}
-                              </p>
-                            </div>
-                          );
-                        })}
-
-                        {totalHijos > 3 && (
-                          <p className="text-xs font-bold text-slate-400">
-                            +{totalHijos - 3} alumno(s) más vinculados
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">Sin alumnos vinculados</span>
-                    )}
+                    <LinkedStudentsCompact items={apoderado.estudiantes || []} />
                   </div>
-
 
                   {/* Estado */}
                   <div>
@@ -562,67 +532,10 @@ export default function ApoderadosPage() {
                   </div>
 
                   <Section title="Alumnos vinculados">
-                    {detalle.estudiantes?.length ? (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {detalle.estudiantes.map((r) => {
-                          const estadoMatricula = r.estudiante.matriculas?.[0]?.estado_matricula;
-                          const matricula = r.estudiante.matriculas?.[0];
-                          const seccion = matricula?.seccion;
-                          const salon = seccion?.grado
-                            ? `${seccion.grado.nombre_grado} "${seccion.letra}" · ${seccion.grado.nivel?.nombre_nivel || ''}`.trim()
-                            : 'Sin sección activa';
-                          const nombreAlumno = [
-                            r.estudiante.persona.nombres,
-                            r.estudiante.persona.apellido_paterno,
-                            r.estudiante.persona.apellido_materno,
-                          ].filter(Boolean).join(' ');
-
-                          return (
-                            <button
-                              type="button"
-                              key={r.estudiante.id_persona}
-                              onClick={() =>
-                                setConfirmAlumnoDestino({
-                                  id: r.estudiante.id_persona,
-                                  nombre: nombreAlumno,
-                                })
-                              }
-                              className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
-                            >
-                              <PersonAvatar persona={r.estudiante.persona} size="sm" rounded="xl" />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="truncate text-sm font-bold text-slate-900">
-                                    Alumno: {nombreAlumno}
-                                  </p>
-                                  {estadoMatricula && (
-                                    <span
-                                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${getEstadoBadge(estadoMatricula)}`}
-                                    >
-                                      {estadoMatricula}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">
-                                  Parentesco registrado: {r.parentesco}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                  {getCodigo(r.estudiante)} · DNI {r.estudiante.persona.dni}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                  {salon}
-                                </p>
-                                <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
-                                  Ver ficha del alumno
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">Sin alumnos vinculados.</p>
-                    )}
+                    <LinkedStudentCards
+                      items={detalle.estudiantes || []}
+                      onSelect={(target) => setConfirmAlumnoDestino(target)}
+                    />
                   </Section>
 
                   <AccessCredentialsCard
