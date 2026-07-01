@@ -1,9 +1,14 @@
 /* ==========================================================
-   17 - Horario académico
+   17 - Horario académico / Calendario escolar
+   Diseño Carbon UI profesional
    ========================================================== */
 
 .carbon-horario-page {
   color: #161616;
+}
+
+.carbon-horario-page * {
+  box-sizing: border-box;
 }
 
 .carbon-horario-page button {
@@ -18,216 +23,430 @@
 .carbon-horario-page select {
   min-height: 44px;
   color: #161616 !important;
+  font-weight: 700;
 }
-
-.carbon-horario-page select:disabled,
-.carbon-horario-page input:disabled {
-  cursor: not-allowed;
-  background: #e5e7eb !important;
-  color: #6b7280 !important;
-}
-
-
-/* ==========================================================
-   Corrección visual calendario / horario
-   ========================================================== */
 
 .carbon-horario-page select {
   appearance: auto !important;
   background-image: none !important;
 }
 
-.carbon-horario-page .erp-horario-summary-panel {
-  background: #ffffff !important;
-  color: #161616 !important;
-  border-color: #d0d7de !important;
+.carbon-horario-page input:disabled,
+.carbon-horario-page select:disabled {
+  cursor: not-allowed;
+  background: #e5e7eb !important;
+  color: #6b7280 !important;
 }
 
-.carbon-horario-page .erp-horario-summary-panel > p {
-  color: #525252 !important;
+/* Filtros superiores */
+
+.erp-horario-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr) 380px;
+  gap: 1rem;
+  align-items: stretch;
 }
 
-.carbon-horario-page .erp-horario-summary-tile {
-  background: #f4f4f4 !important;
-  border-color: #d0d7de !important;
+.erp-horario-filter-card,
+.erp-horario-summary-card {
+  border: 1px solid #d0d7de;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1rem;
 }
 
-.carbon-horario-page .erp-horario-summary-tile p:first-child {
-  color: #161616 !important;
+.erp-horario-card-label {
+  margin: 0 0 0.75rem;
+  color: #393939;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.carbon-horario-page .erp-horario-summary-tile p:last-child {
-  color: #525252 !important;
+.erp-horario-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
-.carbon-horario-page .erp-horario-form-card > header,
-.carbon-horario-page .erp-horario-week-card > header {
-  background: #ffffff !important;
-  color: #161616 !important;
-  border-bottom: 1px solid #d0d7de !important;
+.erp-horario-summary-tile {
+  min-height: 60px;
+  border: 1px solid #c6c6c6;
+  border-radius: 2px;
+  background: #f4f4f4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2rem;
 }
 
-.carbon-horario-page .erp-horario-form-card > header h2,
-.carbon-horario-page .erp-horario-week-card > header h2 {
-  color: #161616 !important;
+.erp-horario-summary-tile p {
+  margin: 0;
+  color: #161616;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.carbon-horario-page .erp-horario-form-card > header p,
-.carbon-horario-page .erp-horario-week-card > header p {
-  color: #525252 !important;
+.erp-horario-summary-tile span {
+  color: #525252;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.carbon-horario-page .erp-horario-week-card {
+/* Layout principal */
+
+.erp-horario-main-grid {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.erp-horario-form-card,
+.erp-horario-board-card {
+  overflow: hidden;
+  border: 1px solid #d0d7de;
+  background: #ffffff;
+  border-radius: 24px;
+}
+
+.erp-horario-form-card {
+  min-height: 520px;
+}
+
+.erp-horario-form-header,
+.erp-horario-board-header {
+  background: #ffffff;
+  border-bottom: 1px solid #d0d7de;
+  padding: 1.25rem 1.35rem;
+}
+
+.erp-horario-form-header h2,
+.erp-horario-board-header h2 {
+  margin: 0;
+  color: #161616;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.erp-horario-form-header p:last-child,
+.erp-horario-board-header p:last-child {
+  margin: 0.45rem 0 0;
+  color: #525252;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.erp-horario-form-body {
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.erp-horario-field {
+  display: block;
+}
+
+.erp-horario-field > span {
+  display: block;
+  margin: 0 0 0.55rem;
+  color: #374151;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.erp-horario-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1.05rem;
+}
+
+.erp-horario-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+}
+
+.erp-horario-primary-button,
+.erp-horario-secondary-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 2px;
+  padding: 0 1rem;
+  font-size: 0.84rem;
+  font-weight: 900;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.erp-horario-primary-button {
+  flex: 1;
+  border: 1px solid #0f62fe;
+  background: #0f62fe;
+  color: #ffffff;
+}
+
+.erp-horario-primary-button:hover {
+  background: #0353e9;
+}
+
+.erp-horario-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.erp-horario-secondary-button {
+  border: 1px solid #c6c6c6;
+  background: #ffffff;
+  color: #393939;
+}
+
+.erp-horario-secondary-button:hover {
+  background: #f4f4f4;
+}
+
+.erp-horario-empty-note {
+  margin-top: 1rem;
+  border-left: 4px solid #f1c21b;
+  background: #fcf4d6;
+  padding: 0.8rem 0.9rem;
+  color: #4f3b00;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+/* Tablero semanal */
+
+.erp-horario-board-card {
   min-width: 0;
 }
 
-.carbon-horario-page .erp-horario-form-card,
-.carbon-horario-page .erp-horario-week-card {
-  box-shadow: none !important;
+.erp-horario-board-header {
+  display: flex;
+  min-height: 96px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-
-/* ==========================================================
-   Ajustes finos UI - Horario escolar
-   ========================================================== */
-
-/* 1) Quitar el botón/flotante '+' del bloque Crear bloque horario */
-.carbon-horario-page .erp-horario-form-card > header [class*="absolute"],
-.carbon-horario-page .erp-horario-form-card > header .rounded-full,
-.carbon-horario-page .erp-horario-form-card > header .bg-slate-100:has(svg) {
-  display: none !important;
+.erp-horario-board-header h2 {
+  font-size: 1.45rem;
 }
 
-/* Ajustar cabecera del bloque izquierdo */
-.carbon-horario-page .erp-horario-form-card > header {
-  padding: 1rem 1.5rem 0.25rem 1.5rem !important;
-  min-height: auto !important;
-  background: #ffffff !important;
-  border-bottom: 1px solid #d0d7de !important;
+.erp-horario-accent-line {
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe 0%, #1192e8 50%, #08bdba 100%);
 }
 
-.carbon-horario-page .erp-horario-form-card > header h2 {
-  margin: 0 !important;
-  color: #161616 !important;
-  font-size: 1.55rem !important;
-  font-weight: 800 !important;
-  line-height: 1.1 !important;
+.erp-horario-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #0f62fe;
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.carbon-horario-page .erp-horario-form-card > header p {
-  margin-top: 0.35rem !important;
-  color: #525252 !important;
-  font-size: 0.98rem !important;
-  line-height: 1.45 !important;
+.erp-horario-board-scroll {
+  overflow-x: auto;
+  background: #ffffff;
 }
 
-/* 2) Reordenar cabecera del horario semanal:
-      - texto arriba
-      - línea azul debajo
-*/
-.carbon-horario-page .erp-horario-week-card > header {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 0 !important;
-  background: #ffffff !important;
-  padding: 0 !important;
-  border-bottom: 1px solid #d0d7de !important;
+.erp-horario-board-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(185px, 1fr));
+  min-width: 1110px;
+  align-items: stretch;
 }
 
-.carbon-horario-page .erp-horario-week-card > header > :first-child {
-  order: 2 !important;
-  height: 3px !important;
-  min-height: 3px !important;
-  margin: 0 !important;
+.erp-horario-day-column {
+  min-height: 500px;
+  border-right: 1px solid #dde1e6;
+  background: #ffffff;
 }
 
-.carbon-horario-page .erp-horario-week-card > header > :last-child {
-  order: 1 !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 1rem !important;
-  padding: 1rem 1.25rem 0.85rem 1.25rem !important;
+.erp-horario-day-column:last-child {
+  border-right: none;
 }
 
-.carbon-horario-page .erp-horario-week-card > header h2 {
-  margin: 0 !important;
-  color: #161616 !important;
-  font-size: 1.7rem !important;
-  font-weight: 800 !important;
-  line-height: 1.1 !important;
+.erp-horario-day-header {
+  min-height: 76px;
+  border-bottom: 1px solid #dde1e6;
+  background: #ffffff;
+  padding: 1rem 1rem 0.9rem;
 }
 
-.carbon-horario-page .erp-horario-week-card > header p {
-  margin: 0 !important;
-  color: #525252 !important;
-  font-size: 0.98rem !important;
-  line-height: 1.45 !important;
-  text-align: right !important;
-  max-width: 360px !important;
+.erp-horario-day-header p {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-/* 3) Alinear mejor columnas del horario */
-.carbon-horario-page .erp-horario-week-card .grid-cols-6 {
-  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-  gap: 0 !important;
+.erp-horario-day-header span {
+  display: block;
+  margin-top: 0.55rem;
+  color: #161616;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
-.carbon-horario-page .erp-horario-week-card .grid-cols-6 > * {
-  min-width: 0 !important;
+.erp-horario-day-body {
+  min-height: 424px;
+  padding: 0.85rem;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 58px,
+      rgba(15, 98, 254, 0.08) 59px,
+      rgba(15, 98, 254, 0.08) 60px
+    );
 }
 
-/* Primera fila de días */
-.carbon-horario-page .erp-horario-week-card > .grid-cols-6:first-of-type {
-  padding: 0 0.75rem !important;
-  align-items: stretch !important;
+.erp-horario-empty-day {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #c6c6c6;
+  border-radius: 2px;
+  background: #f4f4f4;
+  color: #525252;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
-.carbon-horario-page .erp-horario-week-card > .grid-cols-6:first-of-type > div {
-  padding: 0.85rem 0.75rem !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-  border-right: 1px solid #e5e7eb !important;
+.erp-horario-class-card {
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #0f62fe;
+  border-radius: 2px;
+  background: #eff6ff;
+  padding: 0.75rem;
 }
 
-.carbon-horario-page .erp-horario-week-card > .grid-cols-6:first-of-type > div:last-child {
-  border-right: none !important;
+.erp-horario-class-card + .erp-horario-class-card {
+  margin-top: 0.65rem;
 }
 
-/* Fila de "Sin clases" */
-.carbon-horario-page .erp-horario-week-card > .grid-cols-6:nth-of-type(2) {
-  padding: 0 0.75rem 0.75rem 0.75rem !important;
+.erp-horario-class-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
 }
 
-.carbon-horario-page .erp-horario-week-card > .grid-cols-6:nth-of-type(2) > div {
-  min-height: 3rem !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+.erp-horario-class-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #0f62fe;
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
-/* Zona scroll / cuerpo */
-.carbon-horario-page .erp-horario-week-card {
-  overflow: hidden !important;
+.erp-horario-class-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 
-.carbon-horario-page .erp-horario-week-card .overflow-x-auto,
-.carbon-horario-page .erp-horario-week-card .overflow-auto {
-  padding: 0 0.75rem 0.75rem 0.75rem !important;
+.erp-horario-class-actions button {
+  display: inline-flex;
+  height: 26px;
+  width: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: #525252;
 }
 
-/* 4) Responsive */
-@media (max-width: 1100px) {
-  .carbon-horario-page .erp-horario-week-card > header > :last-child {
-    flex-direction: column !important;
-    align-items: flex-start !important;
+.erp-horario-class-actions button:hover {
+  border-color: #c6c6c6;
+  background: #ffffff;
+  color: #161616;
+}
+
+.erp-horario-class-card h3 {
+  margin: 0.55rem 0 0;
+  color: #161616;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.erp-horario-class-meta {
+  display: grid;
+  gap: 0.38rem;
+  margin-top: 0.7rem;
+}
+
+.erp-horario-class-meta p {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: #374151;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.erp-horario-class-meta svg {
+  flex: 0 0 auto;
+}
+
+/* Responsive */
+
+@media (max-width: 1280px) {
+  .erp-horario-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .carbon-horario-page .erp-horario-week-card > header p {
-    text-align: left !important;
-    max-width: none !important;
+  .erp-horario-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-horario-form-card {
+    min-height: auto;
   }
 }
 
+@media (max-width: 760px) {
+  .erp-horario-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-horario-time-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-horario-board-header {
+    flex-direction: column;
+    min-height: auto;
+  }
+}

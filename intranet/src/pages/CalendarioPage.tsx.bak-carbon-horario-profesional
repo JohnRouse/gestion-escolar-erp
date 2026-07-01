@@ -6,6 +6,7 @@ import {
   Clock3,
   Edit3,
   Loader2,
+  Plus,
   Save,
   School,
   Trash2,
@@ -79,18 +80,14 @@ const emptyForm: HorarioForm = {
 const inputClass =
   'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
 
-function uniqueBy<T>(items: T[], getKey: (item: T) => string | number) {
-  const map = new Map<string | number, T>();
-
-  for (const item of items) {
-    map.set(getKey(item), item);
-  }
-
-  return Array.from(map.values());
-}
-
 function labelDia(dia: number) {
   return DIAS.find((item) => item.value === dia)?.label || `Día ${dia}`;
+}
+
+function uniqueBy<T>(items: T[], getKey: (item: T) => string | number) {
+  const map = new Map<string | number, T>();
+  for (const item of items) map.set(getKey(item), item);
+  return Array.from(map.values());
 }
 
 export default function CalendarioPage() {
@@ -102,30 +99,30 @@ export default function CalendarioPage() {
   const [anioId, setAnioId] = useState('');
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [horarios, setHorarios] = useState<Horario[]>([]);
-
   const [seccionId, setSeccionId] = useState('');
   const [docenteId, setDocenteId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<HorarioForm>(emptyForm);
   const [editing, setEditing] = useState<Horario | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Horario | null>(null);
 
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const scopeParams = useMemo(() => {
+  const baseParams = useMemo(() => {
     return new URLSearchParams(queryString.replace('?', ''));
   }, [queryString]);
 
-  const secciones = useMemo(() => {
-    return uniqueBy(asignaciones, (item) => item.id_seccion);
-  }, [asignaciones]);
+  const secciones = useMemo(
+    () => uniqueBy(asignaciones, (item) => item.id_seccion),
+    [asignaciones],
+  );
 
-  const docentes = useMemo(() => {
-    return uniqueBy(asignaciones, (item) => item.id_docente);
-  }, [asignaciones]);
+  const docentes = useMemo(
+    () => uniqueBy(asignaciones, (item) => item.id_docente),
+    [asignaciones],
+  );
 
-  const asignacionesParaFormulario = useMemo(() => {
+  const asignacionesFiltradas = useMemo(() => {
     return asignaciones.filter((item) => {
       if (seccionId && item.id_seccion !== Number(seccionId)) return false;
       if (docenteId && item.id_docente !== Number(docenteId)) return false;
@@ -134,19 +131,21 @@ export default function CalendarioPage() {
   }, [asignaciones, docenteId, seccionId]);
 
   const resumen = useMemo(() => {
+    const docentesUnicos = new Set(horarios.map((item) => item.id_docente));
+    const seccionesUnicas = new Set(horarios.map((item) => item.id_seccion));
+
     return {
       bloques: horarios.length,
-      secciones: new Set(horarios.map((item) => item.id_seccion)).size,
-      docentes: new Set(horarios.map((item) => item.id_docente)).size,
+      docentes: docentesUnicos.size,
+      secciones: seccionesUnicas.size,
     };
   }, [horarios]);
 
   const fetchAnios = async () => {
     if (!token) return;
 
-    const params = new URLSearchParams(scopeParams);
-
     try {
+      const params = new URLSearchParams(baseParams);
       const res = await axios.get(`/api/academicos/anios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -166,11 +165,9 @@ export default function CalendarioPage() {
   const fetchAsignaciones = async () => {
     if (!token) return;
 
-    const params = new URLSearchParams(scopeParams);
+    const params = new URLSearchParams(baseParams);
 
-    if (anioId) {
-      params.set('anio_id', anioId);
-    }
+    if (anioId) params.set('anio_id', anioId);
 
     try {
       const res = await axios.get(`/api/academicos/asignaciones-docentes?${params.toString()}`, {
@@ -188,7 +185,7 @@ export default function CalendarioPage() {
   const fetchHorarios = async () => {
     if (!token) return;
 
-    const params = new URLSearchParams(scopeParams);
+    const params = new URLSearchParams(baseParams);
 
     if (seccionId) params.set('seccion_id', seccionId);
     if (docenteId) params.set('docente_id', docenteId);
@@ -212,18 +209,15 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     fetchAnios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString]);
+  }, [token, baseParams.toString()]);
 
   useEffect(() => {
     fetchAsignaciones();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, anioId]);
+  }, [token, baseParams.toString(), anioId, seccionId, docenteId]);
 
   useEffect(() => {
     fetchHorarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, seccionId, docenteId]);
+  }, [token, baseParams.toString(), seccionId, docenteId]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -242,16 +236,15 @@ export default function CalendarioPage() {
       return;
     }
 
+    setSaving(true);
+
+    const params = new URLSearchParams(baseParams);
     const payload = {
       id_asignacion: Number(form.id_asignacion),
       dia_semana: Number(form.dia_semana),
       hora_inicio: form.hora_inicio,
       hora_fin: form.hora_fin,
     };
-
-    const params = new URLSearchParams(scopeParams);
-
-    setSaving(true);
 
     try {
       if (editing) {
@@ -300,9 +293,9 @@ export default function CalendarioPage() {
   const eliminarHorario = async () => {
     if (!token || !deleteTarget) return;
 
-    const params = new URLSearchParams(scopeParams);
-
     setSaving(true);
+
+    const params = new URLSearchParams(baseParams);
 
     try {
       await axios.delete(`/api/academicos/horarios/${deleteTarget.id_horario}?${params.toString()}`, {
@@ -345,34 +338,25 @@ export default function CalendarioPage() {
         ]}
       />
 
-      <section className="erp-horario-filters">
-        <FilterCard label="Año lectivo">
-          <select
-            value={anioId}
-            onChange={(event) => {
-              setAnioId(event.target.value);
-              resetForm();
-            }}
-            className={inputClass}
-          >
-            <option value="">Todos los años</option>
-            {anios.map((anio) => (
-              <option key={anio.id_anio} value={anio.id_anio}>
-                {anio.nombre_anio}
-              </option>
-            ))}
-          </select>
-        </FilterCard>
+      <section className="grid gap-4 lg:grid-cols-4">
+        <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">Año lectivo</p>
+          <div className="relative mt-2">
+            <select value={anioId} onChange={(event) => setAnioId(event.target.value)} className={inputClass}>
+              <option value="">Todos los años</option>
+              {anios.map((anio) => (
+                <option key={anio.id_anio} value={anio.id_anio}>
+                  {anio.nombre_anio}
+                </option>
+              ))}
+            </select>
 
-        <FilterCard label="Sección">
-          <select
-            value={seccionId}
-            onChange={(event) => {
-              setSeccionId(event.target.value);
-              resetForm();
-            }}
-            className={inputClass}
-          >
+          </div>
+        </div>
+
+        <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">Sección</p>
+          <select value={seccionId} onChange={(event) => setSeccionId(event.target.value)} className={`${inputClass} mt-2`}>
             <option value="">Todas las secciones</option>
             {secciones.map((item) => (
               <option key={item.id_seccion} value={item.id_seccion}>
@@ -380,17 +364,11 @@ export default function CalendarioPage() {
               </option>
             ))}
           </select>
-        </FilterCard>
+        </div>
 
-        <FilterCard label="Docente">
-          <select
-            value={docenteId}
-            onChange={(event) => {
-              setDocenteId(event.target.value);
-              resetForm();
-            }}
-            className={inputClass}
-          >
+        <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">Docente</p>
+          <select value={docenteId} onChange={(event) => setDocenteId(event.target.value)} className={`${inputClass} mt-2`}>
             <option value="">Todos los docentes</option>
             {docentes.map((item) => (
               <option key={item.id_docente} value={item.id_docente}>
@@ -398,36 +376,48 @@ export default function CalendarioPage() {
               </option>
             ))}
           </select>
-        </FilterCard>
+        </div>
 
-        <section className="erp-horario-summary-card">
-          <p className="erp-horario-card-label">Resumen</p>
-          <div className="erp-horario-summary-grid">
+        <div className="erp-horario-summary-panel rounded-[20px] border border-slate-200 bg-white p-4 text-slate-950">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">Resumen</p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <Summary label="Bloques" value={resumen.bloques} />
             <Summary label="Secciones" value={resumen.secciones} />
             <Summary label="Docentes" value={resumen.docentes} />
           </div>
-        </section>
+        </div>
       </section>
 
-      <section className="erp-horario-main-grid">
-        <article className="erp-horario-form-card">
-          <header className="erp-horario-form-header">
-            <p className="erp-horario-card-label">{editing ? 'Edición de horario' : 'Nuevo bloque'}</p>
-            <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
-            <p>Selecciona una asignación docente y define el día, inicio y fin de la clase.</p>
+      <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <article className="erp-horario-form-card overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+          <header className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                {editing ? <Edit3 size={19} /> : <Plus size={19} />}
+              </span>
+              <div>
+                <h2 className="text-base font-black text-slate-950">
+                  {editing ? 'Editar bloque horario' : 'Crear bloque horario'}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  Selecciona una asignación docente y define día y hora.
+                </p>
+              </div>
+            </div>
           </header>
 
-          <div className="erp-horario-form-body">
-            <label className="erp-horario-field">
-              <span>Asignación docente</span>
+          <div className="space-y-4 p-5">
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                Asignación docente
+              </span>
               <select
                 value={form.id_asignacion}
                 onChange={(event) => setForm({ ...form, id_asignacion: event.target.value })}
                 className={inputClass}
               >
                 <option value="">Seleccionar asignación</option>
-                {asignacionesParaFormulario.map((item) => (
+                {asignacionesFiltradas.map((item) => (
                   <option key={item.id_asignacion} value={item.id_asignacion}>
                     {item.seccion} · {item.curso} · {item.docente}
                   </option>
@@ -435,9 +425,11 @@ export default function CalendarioPage() {
               </select>
             </label>
 
-            <div className="erp-horario-time-grid">
-              <label className="erp-horario-field">
-                <span>Día</span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label>
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Día
+                </span>
                 <select
                   value={form.dia_semana}
                   onChange={(event) => setForm({ ...form, dia_semana: event.target.value })}
@@ -451,8 +443,10 @@ export default function CalendarioPage() {
                 </select>
               </label>
 
-              <label className="erp-horario-field">
-                <span>Inicio</span>
+              <label>
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Inicio
+                </span>
                 <input
                   type="time"
                   value={form.hora_inicio}
@@ -461,8 +455,10 @@ export default function CalendarioPage() {
                 />
               </label>
 
-              <label className="erp-horario-field">
-                <span>Fin</span>
+              <label>
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  Fin
+                </span>
                 <input
                   type="time"
                   value={form.hora_fin}
@@ -472,13 +468,13 @@ export default function CalendarioPage() {
               </label>
             </div>
 
-            <div className="erp-horario-actions">
+            <div className="flex gap-3">
               {editing && (
                 <button
                   type="button"
                   onClick={resetForm}
                   disabled={saving}
-                  className="erp-horario-secondary-button"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                 >
                   <X size={16} />
                   Cancelar
@@ -488,98 +484,109 @@ export default function CalendarioPage() {
               <button
                 type="button"
                 onClick={guardarHorario}
-                disabled={saving || asignacionesParaFormulario.length === 0}
-                className="erp-horario-primary-button"
+                disabled={saving}
+                className="inline-flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 {editing ? 'Guardar cambios' : 'Crear bloque'}
               </button>
             </div>
 
-            {asignacionesParaFormulario.length === 0 && (
-              <div className="erp-horario-empty-note">
+            {asignacionesFiltradas.length === 0 && (
+              <div className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
                 No hay asignaciones docentes para los filtros seleccionados. Primero crea asignaciones desde el módulo de docentes.
               </div>
             )}
           </div>
         </article>
 
-        <article className="erp-horario-board-card">
-          <header className="erp-horario-board-header">
+        <article className="erp-horario-week-card overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+          <header className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
             <div>
-              <p className="erp-horario-card-label">Vista semanal</p>
-              <h2>Horario semanal</h2>
-              <p>Vista por día. Puedes filtrar por sección o docente.</p>
+              <h2 className="text-base font-black text-slate-950">Horario semanal</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                Vista por día. Puedes filtrar por sección o docente.
+              </p>
             </div>
-
-            {loading && (
-              <span className="erp-horario-loading">
-                <Loader2 size={16} className="animate-spin" />
-                Actualizando
-              </span>
-            )}
+            {loading && <Loader2 size={20} className="animate-spin text-blue-600" />}
           </header>
 
-          <div className="erp-horario-accent-line" />
+          <div className="grid min-h-[520px] gap-0 overflow-x-auto xl:grid-cols-6">
+            {DIAS.map((dia) => {
+              const items = horariosPorDia(dia.value);
 
-          <div className="erp-horario-board-scroll">
-            <div className="erp-horario-board-grid">
-              {DIAS.map((dia) => {
-                const items = horariosPorDia(dia.value);
+              return (
+                <div key={dia.value} className="min-w-[220px] border-r border-slate-200 last:border-r-0">
+                  <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-600">
+                      {dia.label}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      {items.length} bloque(s)
+                    </p>
+                  </div>
 
-                return (
-                  <section key={dia.value} className="erp-horario-day-column">
-                    <header className="erp-horario-day-header">
-                      <p>{dia.label}</p>
-                      <span>{items.length} bloque(s)</span>
-                    </header>
-
-                    <div className="erp-horario-day-body">
-                      {items.length === 0 ? (
-                        <div className="erp-horario-empty-day">Sin clases</div>
-                      ) : (
-                        items.map((item) => (
-                          <div key={item.id_horario} className="erp-horario-class-card">
-                            <div className="erp-horario-class-top">
-                              <span className="erp-horario-class-time">
-                                <Clock3 size={13} />
+                  <div className="space-y-3 p-3">
+                    {items.length === 0 ? (
+                      <div className="rounded-sm border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs font-bold text-slate-500">
+                        Sin clases
+                      </div>
+                    ) : (
+                      items.map((item) => (
+                        <div
+                          key={item.id_horario}
+                          className="rounded-[16px] border border-blue-100 bg-blue-50/70 p-3 ring-1 ring-blue-50"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-black text-blue-700">
                                 {item.hora_inicio} - {item.hora_fin}
-                              </span>
-
-                              <div className="erp-horario-class-actions">
-                                <button type="button" onClick={() => editarHorario(item)} title="Editar">
-                                  <Edit3 size={13} />
-                                </button>
-                                <button type="button" onClick={() => setDeleteTarget(item)} title="Eliminar">
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
+                              </p>
+                              <h3 className="mt-1 text-sm font-black text-slate-950">
+                                {item.curso}
+                              </h3>
                             </div>
-
-                            <h3>{item.curso}</h3>
-
-                            <div className="erp-horario-class-meta">
-                              <p>
-                                <School size={13} />
-                                {item.seccion}
-                              </p>
-                              <p>
-                                <UserRound size={13} />
-                                {item.docente}
-                              </p>
-                              <p>
-                                <BookOpen size={13} />
-                                {item.area || 'Área no definida'}
-                              </p>
+                            <div className="flex shrink-0 gap-1">
+                              <button
+                                type="button"
+                                onClick={() => editarHorario(item)}
+                                className="rounded-sm p-1.5 text-slate-500 hover:bg-white hover:text-blue-700"
+                                title="Editar"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(item)}
+                                className="rounded-sm p-1.5 text-slate-500 hover:bg-white hover:text-red-700"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
+
+                          <div className="mt-3 space-y-1.5 text-xs font-bold text-slate-600">
+                            <p className="flex items-center gap-1.5">
+                              <School size={13} />
+                              {item.seccion}
+                            </p>
+                            <p className="flex items-center gap-1.5">
+                              <UserRound size={13} />
+                              {item.docente}
+                            </p>
+                            <p className="flex items-center gap-1.5">
+                              <BookOpen size={13} />
+                              {item.area || 'Área no definida'}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </article>
       </section>
@@ -602,26 +609,11 @@ export default function CalendarioPage() {
   );
 }
 
-function FilterCard({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="erp-horario-filter-card">
-      <p className="erp-horario-card-label">{label}</p>
-      {children}
-    </section>
-  );
-}
-
 function Summary({ label, value }: { label: string; value: number }) {
   return (
-    <div className="erp-horario-summary-tile">
-      <p>{value}</p>
-      <span>{label}</span>
+    <div className="erp-horario-summary-tile rounded-sm border border-slate-200 bg-slate-50 p-2 text-center">
+      <p className="text-lg font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">{label}</p>
     </div>
   );
 }
