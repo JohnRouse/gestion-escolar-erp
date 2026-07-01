@@ -24,9 +24,7 @@ import {
   CommunityTableHeader,
   CommunityTableLoading,
 } from '../../components/community/CommunityTableState';
-import {
-  LinkedStudentCards,
-} from '../../components/community/CommunityLinkedPeople';
+import { LinkedStudentCards } from '../../components/community/CommunityLinkedPeople';
 import { GuardianTableRow } from '../../components/community/CommunityTableRows';
 import {
   CommunityField as Field,
@@ -111,7 +109,6 @@ const apoderadoEstadoClass = (apoderado: ApoderadoItem) => {
 
   return 'bg-amber-50 text-amber-700 ring-amber-200';
 };
-
 
 const toForm = (d: ApoderadoItem): ApoderadoForm => ({
   dni: d.persona.dni || '',

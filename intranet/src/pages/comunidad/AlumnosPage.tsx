@@ -30,9 +30,7 @@ import {
   CommunityTableHeader,
   CommunityTableLoading,
 } from '../../components/community/CommunityTableState';
-import {
-  LinkedGuardianCards,
-} from '../../components/community/CommunityLinkedPeople';
+import { LinkedGuardianCards } from '../../components/community/CommunityLinkedPeople';
 import { StudentTableRow } from '../../components/community/CommunityTableRows';
 import {
   CommunityField as Field,
