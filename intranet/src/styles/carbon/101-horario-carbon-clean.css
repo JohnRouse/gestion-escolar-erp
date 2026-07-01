@@ -1,0 +1,412 @@
+/* ==========================================================
+   101 - Horario Carbon Clean
+   Limpieza definitiva de calendario / horario escolar.
+   ========================================================== */
+
+.carbon-horario-page {
+  --hc-text: #161616;
+  --hc-muted: #525252;
+  --hc-border: #d0d7de;
+  --hc-border-soft: #e5e7eb;
+  --hc-bg: #ffffff;
+  --hc-surface: #f4f4f4;
+  --hc-input: #f1f5f9;
+  --hc-blue: #0f62fe;
+  --hc-blue-hover: #0353e9;
+  color: var(--hc-text) !important;
+}
+
+.carbon-horario-page *,
+.carbon-horario-page *::before,
+.carbon-horario-page *::after {
+  box-sizing: border-box !important;
+}
+
+.carbon-horario-page button {
+  box-shadow: none !important;
+}
+
+.carbon-horario-page button:hover {
+  transform: none !important;
+}
+
+.carbon-horario-page input,
+.carbon-horario-page select {
+  min-height: 44px !important;
+  background: var(--hc-input) !important;
+  color: var(--hc-text) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+.carbon-horario-page select {
+  appearance: auto !important;
+  background-image: none !important;
+}
+
+/* ==========================================================
+   Filtros superiores
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-clean-filters,
+.carbon-horario-page .erp-horario-filters {
+  display: grid !important;
+  grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr) minmax(240px, 1fr) 360px !important;
+  gap: 1rem !important;
+  align-items: stretch !important;
+}
+
+.carbon-horario-page .erp-horario-clean-filters > div,
+.carbon-horario-page .erp-horario-filters > div,
+.carbon-horario-page .erp-horario-summary-panel,
+.carbon-horario-page .erp-horario-summary-card {
+  min-height: 108px !important;
+  border: 1px solid var(--hc-border) !important;
+  border-radius: 18px !important;
+  background: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  padding: 1rem !important;
+  box-shadow: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-filters p,
+.carbon-horario-page .erp-horario-filters p,
+.carbon-horario-page .erp-horario-summary-panel > p,
+.carbon-horario-page .erp-horario-summary-card > p {
+  margin: 0 0 0.75rem !important;
+  color: #374151 !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-horario-page .erp-horario-summary-panel .grid,
+.carbon-horario-page .erp-horario-summary-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.55rem !important;
+}
+
+.carbon-horario-page .erp-horario-summary-tile {
+  min-height: 56px !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 2px !important;
+  background: var(--hc-surface) !important;
+  color: var(--hc-text) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.carbon-horario-page .erp-horario-summary-tile p,
+.carbon-horario-page .erp-horario-summary-tile p:first-child {
+  margin: 0 !important;
+  color: var(--hc-text) !important;
+  font-size: 1.28rem !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+}
+
+.carbon-horario-page .erp-horario-summary-tile span,
+.carbon-horario-page .erp-horario-summary-tile p:last-child {
+  margin: 0.25rem 0 0 !important;
+  color: var(--hc-muted) !important;
+  font-size: 0.6rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+}
+
+/* ==========================================================
+   Layout principal
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-clean-workspace,
+.carbon-horario-page .erp-horario-workspace {
+  display: grid !important;
+  grid-template-columns: 370px minmax(0, 1fr) !important;
+  gap: 1.25rem !important;
+  align-items: start !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-card,
+.carbon-horario-page .erp-horario-form-card,
+.carbon-horario-page .erp-horario-clean-week-card,
+.carbon-horario-page .erp-horario-week-card,
+.carbon-horario-page .erp-horario-board-card {
+  overflow: hidden !important;
+  border: 1px solid var(--hc-border) !important;
+  border-radius: 18px !important;
+  background: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  box-shadow: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-card,
+.carbon-horario-page .erp-horario-form-card {
+  min-height: 500px !important;
+}
+
+/* ==========================================================
+   Cabeceras limpias
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-clean-form-header,
+.carbon-horario-page .erp-horario-clean-week-header,
+.carbon-horario-page .erp-horario-form-header,
+.carbon-horario-page .erp-horario-week-header,
+.carbon-horario-page .erp-horario-board-header,
+.carbon-horario-page .erp-horario-week-card > header,
+.carbon-horario-page .erp-horario-board-card > header {
+  position: relative !important;
+  display: block !important;
+  min-height: auto !important;
+  padding: 1.15rem 1.25rem 1rem !important;
+  background: #ffffff !important;
+  color: var(--hc-text) !important;
+  border-top: 3px solid var(--hc-blue) !important;
+  border-bottom: 1px solid var(--hc-border) !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header::before,
+.carbon-horario-page .erp-horario-clean-week-header::before,
+.carbon-horario-page .erp-horario-form-header::before,
+.carbon-horario-page .erp-horario-week-header::before,
+.carbon-horario-page .erp-horario-board-header::before,
+.carbon-horario-page .erp-horario-week-card > header::before,
+.carbon-horario-page .erp-horario-board-card > header::before {
+  content: "" !important;
+  position: absolute !important;
+  top: -3px !important;
+  right: 0 !important;
+  width: 35% !important;
+  height: 3px !important;
+  background: #08bdba !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header::after,
+.carbon-horario-page .erp-horario-clean-week-header::after,
+.carbon-horario-page .erp-horario-form-header::after,
+.carbon-horario-page .erp-horario-week-header::after,
+.carbon-horario-page .erp-horario-board-header::after {
+  display: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header .erp-horario-card-label,
+.carbon-horario-page .erp-horario-clean-week-header .erp-horario-card-label,
+.carbon-horario-page .erp-horario-form-header .erp-horario-card-label,
+.carbon-horario-page .erp-horario-week-header .erp-horario-card-label,
+.carbon-horario-page .erp-horario-board-header .erp-horario-card-label {
+  display: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header span,
+.carbon-horario-page .erp-horario-form-header span.flex,
+.carbon-horario-page .erp-horario-form-header svg {
+  display: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header h2,
+.carbon-horario-page .erp-horario-clean-week-header h2,
+.carbon-horario-page .erp-horario-form-header h2,
+.carbon-horario-page .erp-horario-week-header h2,
+.carbon-horario-page .erp-horario-board-header h2,
+.carbon-horario-page .erp-horario-week-card > header h2,
+.carbon-horario-page .erp-horario-board-card > header h2 {
+  margin: 0 !important;
+  color: var(--hc-text) !important;
+  font-size: 1.2rem !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.carbon-horario-page .erp-horario-clean-form-header p,
+.carbon-horario-page .erp-horario-clean-week-header p,
+.carbon-horario-page .erp-horario-form-header p,
+.carbon-horario-page .erp-horario-week-header p,
+.carbon-horario-page .erp-horario-board-header p,
+.carbon-horario-page .erp-horario-week-card > header p,
+.carbon-horario-page .erp-horario-board-card > header p {
+  margin: 0.42rem 0 0 !important;
+  max-width: 660px !important;
+  color: var(--hc-muted) !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+  line-height: 1.42 !important;
+}
+
+/* Fuerza cualquier franja negra heredada a blanco */
+.carbon-horario-page .erp-horario-clean-week-card header,
+.carbon-horario-page .erp-horario-week-card header,
+.carbon-horario-page .erp-horario-board-card header,
+.carbon-horario-page .erp-horario-clean-form-card header,
+.carbon-horario-page .erp-horario-form-card header,
+.carbon-horario-page .erp-horario-clean-week-card header *,
+.carbon-horario-page .erp-horario-week-card header *,
+.carbon-horario-page .erp-horario-board-card header *,
+.carbon-horario-page .erp-horario-clean-form-card header *,
+.carbon-horario-page .erp-horario-form-card header * {
+  background-color: transparent !important;
+}
+
+/* ==========================================================
+   Formulario
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-form-card > div,
+.carbon-horario-page .erp-horario-form-body {
+  padding: 1.2rem 1.25rem !important;
+}
+
+.carbon-horario-page .erp-horario-form-card label span,
+.carbon-horario-page .erp-horario-field > span {
+  color: #374151 !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-horario-page .erp-horario-form-card button,
+.carbon-horario-page .erp-horario-primary-button,
+.carbon-horario-page .erp-horario-secondary-button {
+  min-height: 44px !important;
+  border-radius: 2px !important;
+  font-size: 0.84rem !important;
+  font-weight: 900 !important;
+}
+
+.carbon-horario-page .erp-horario-form-card button.bg-blue-600,
+.carbon-horario-page .erp-horario-primary-button {
+  background: var(--hc-blue) !important;
+  border-color: var(--hc-blue) !important;
+  color: #ffffff !important;
+}
+
+/* ==========================================================
+   Grilla semanal
+   ========================================================== */
+
+.carbon-horario-page .erp-horario-clean-grid,
+.carbon-horario-page .erp-horario-week-grid,
+.carbon-horario-page .erp-horario-board-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(176px, 1fr)) !important;
+  min-width: 1056px !important;
+  min-height: 520px !important;
+  overflow-x: auto !important;
+  background: #ffffff !important;
+  color: var(--hc-text) !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day,
+.carbon-horario-page .erp-horario-day-column,
+.carbon-horario-page .erp-horario-week-grid > div {
+  min-width: 0 !important;
+  min-height: 520px !important;
+  border-right: 1px solid var(--hc-border-soft) !important;
+  background: #ffffff !important;
+  color: var(--hc-text) !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day:last-child,
+.carbon-horario-page .erp-horario-day-column:last-child,
+.carbon-horario-page .erp-horario-week-grid > div:last-child {
+  border-right: none !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day-header,
+.carbon-horario-page .erp-horario-day-header,
+.carbon-horario-page .erp-horario-week-grid > div > div:first-child {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  min-height: 72px !important;
+  padding: 0.95rem 1rem 0.8rem !important;
+  border-bottom: 1px solid var(--hc-border-soft) !important;
+  background: #ffffff !important;
+  color: var(--hc-text) !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day-header p:first-child,
+.carbon-horario-page .erp-horario-day-header p:first-child,
+.carbon-horario-page .erp-horario-week-grid > div > div:first-child p:first-child {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 0.7rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day-header p:last-child,
+.carbon-horario-page .erp-horario-day-header p:last-child,
+.carbon-horario-page .erp-horario-week-grid > div > div:first-child p:last-child {
+  margin: 0.45rem 0 0 !important;
+  color: var(--hc-text) !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+}
+
+.carbon-horario-page .erp-horario-clean-day-body,
+.carbon-horario-page .erp-horario-day-body,
+.carbon-horario-page .erp-horario-week-grid > div > div:last-child {
+  min-height: 448px !important;
+  padding: 0.85rem !important;
+  background: #ffffff !important;
+}
+
+.carbon-horario-page .erp-horario-clean-empty,
+.carbon-horario-page .erp-horario-empty-day {
+  display: flex !important;
+  min-height: 52px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px dashed #c6c6c6 !important;
+  border-radius: 2px !important;
+  background: var(--hc-surface) !important;
+  color: var(--hc-muted) !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+}
+
+.carbon-horario-page .erp-horario-class-card {
+  border: 1px solid #bfdbfe !important;
+  border-left: 4px solid var(--hc-blue) !important;
+  border-radius: 2px !important;
+  background: #eff6ff !important;
+  color: var(--hc-text) !important;
+  padding: 0.75rem !important;
+}
+
+/* ==========================================================
+   Responsive
+   ========================================================== */
+
+@media (max-width: 1280px) {
+  .carbon-horario-page .erp-horario-clean-filters,
+  .carbon-horario-page .erp-horario-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .carbon-horario-page .erp-horario-clean-workspace,
+  .carbon-horario-page .erp-horario-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  .carbon-horario-page .erp-horario-clean-form-card,
+  .carbon-horario-page .erp-horario-form-card {
+    min-height: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .carbon-horario-page .erp-horario-clean-filters,
+  .carbon-horario-page .erp-horario-filters {
+    grid-template-columns: 1fr !important;
+  }
+}

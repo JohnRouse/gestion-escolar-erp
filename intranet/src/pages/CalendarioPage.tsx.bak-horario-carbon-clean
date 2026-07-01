@@ -411,8 +411,9 @@ export default function CalendarioPage() {
       </section>
 
       <section className="erp-horario-main-grid">
-        <article className="erp-horario-clean-form-card erp-horario-form-card">
-          <header className="erp-horario-clean-form-header">
+        <article className="erp-horario-form-card">
+          <header className="erp-horario-form-header">
+            <p className="erp-horario-card-label">{editing ? 'Edición de horario' : 'Nuevo bloque'}</p>
             <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
             <p>Selecciona una asignación docente y define el día, inicio y fin de la clase.</p>
           </header>
@@ -503,19 +504,26 @@ export default function CalendarioPage() {
           </div>
         </article>
 
-        <article className="erp-horario-clean-week-card erp-horario-board-card">
-          <header className="erp-horario-clean-week-header">
+        <article className="erp-horario-board-card">
+          <header className="erp-horario-board-header">
             <div>
+              <p className="erp-horario-card-label">Vista semanal</p>
               <h2>Horario semanal</h2>
               <p>Vista por día. Puedes filtrar por sección o docente.</p>
             </div>
-            {loading && <Loader2 size={18} className="animate-spin text-blue-600" />}
+
+            {loading && (
+              <span className="erp-horario-loading">
+                <Loader2 size={16} className="animate-spin" />
+                Actualizando
+              </span>
+            )}
           </header>
 
           <div className="erp-horario-accent-line" />
 
           <div className="erp-horario-board-scroll">
-            <div className="erp-horario-clean-grid erp-horario-board-grid">
+            <div className="erp-horario-board-grid">
               {DIAS.map((dia) => {
                 const items = horariosPorDia(dia.value);
 
