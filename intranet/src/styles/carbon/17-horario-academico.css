@@ -1,0 +1,28 @@
+/* ==========================================================
+   17 - Horario académico
+   ========================================================== */
+
+.carbon-horario-page {
+  color: #161616;
+}
+
+.carbon-horario-page button {
+  box-shadow: none !important;
+}
+
+.carbon-horario-page button:hover {
+  transform: none !important;
+}
+
+.carbon-horario-page input,
+.carbon-horario-page select {
+  min-height: 44px;
+  color: #161616 !important;
+}
+
+.carbon-horario-page select:disabled,
+.carbon-horario-page input:disabled {
+  cursor: not-allowed;
+  background: #e5e7eb !important;
+  color: #6b7280 !important;
+}

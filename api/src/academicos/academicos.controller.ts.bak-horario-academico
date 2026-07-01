@@ -1296,106 +1296,6 @@ async deleteGrado(
     });
   }
 
-
-  // ── HORARIO ACADÉMICO ─────────────────────────────────
-  @Get('horarios')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director', 'Profesor')
-  async listarHorariosGestion(
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-    @Query('seccion_id') seccionId?: string,
-    @Query('docente_id') docenteId?: string,
-    @Query('curso_id') cursoId?: string,
-  ) {
-    return this.academicosService.listarHorariosGestion({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      seccionId: seccionId ? Number(seccionId) : undefined,
-      docenteId: docenteId ? Number(docenteId) : undefined,
-      cursoId: cursoId ? Number(cursoId) : undefined,
-    });
-  }
-
-  @Post('horarios')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async crearHorarioGestion(
-    @Request() req,
-    @Body()
-    body: {
-      id_asignacion?: number;
-      id_seccion?: number;
-      id_curso?: number;
-      id_docente?: number;
-      id_anio?: number;
-      dia_semana: number;
-      hora_inicio: string;
-      hora_fin: string;
-    },
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.crearHorarioGestion({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      body,
-    });
-  }
-
-  @Put('horarios/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async actualizarHorarioGestion(
-    @Param('id') id: string,
-    @Request() req,
-    @Body()
-    body: {
-      id_asignacion?: number;
-      id_seccion?: number;
-      id_curso?: number;
-      id_docente?: number;
-      id_anio?: number;
-      dia_semana?: number;
-      hora_inicio?: string;
-      hora_fin?: string;
-    },
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.actualizarHorarioGestion({
-      idHorario: Number(id),
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      body,
-    });
-  }
-
-  @Delete('horarios/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
-  async eliminarHorarioGestion(
-    @Param('id') id: string,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.eliminarHorarioGestion({
-      idHorario: Number(id),
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
-  }
-
   @Get('docente/asignaciones')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director', 'Profesor')
@@ -1723,7 +1623,6 @@ async deleteGrado(
       where: { id_area: Number(id) },
     });
   }
-
 
   @Get('docente/asignaciones')
   @UseGuards(AuthGuard('jwt'))

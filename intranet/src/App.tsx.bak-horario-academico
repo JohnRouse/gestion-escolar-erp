@@ -6,7 +6,6 @@ import DashboardPage from './pages/DashboardPage';
 import MatriculaPage from './pages/MatriculaPage';
 import TesoreriaPage from './pages/TesoreriaPage';
 import AsistenciaPage from './pages/AsistenciaPage';
-import CalendarioPage from './pages/CalendarioPage';
 import NotasPage from './pages/NotasPage';
 import TutoriaPage from './pages/TutoriaPage';
 import CircularesPage from './pages/CircularesPage';
@@ -68,8 +67,36 @@ function AppRoutes() {
         <Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
         <Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
         <Route path="/asistencia" element={<AsistenciaPage />} />
-        <Route path="/calendario" element={<CalendarioPage />} />
-        <Route path="/horario" element={<Navigate to="/calendario" replace />} />
+        <Route
+          path="/calendario"
+          element={
+            <ModuloPendientePage
+              modulo="Calendario institucional"
+              descripcion="Agenda eventos, actividades, feriados, reuniones y fechas importantes por institución o grupo educativo."
+              icon={moduloIcons.calendario}
+              acciones={[
+                'Registrar eventos por institución',
+                'Filtrar actividades por rol y sede',
+                'Mostrar eventos en dashboard y portal de padres',
+              ]}
+            />
+          }
+        />
+        <Route
+          path="/horario"
+          element={
+            <ModuloPendientePage
+              modulo="Horario académico"
+              descripcion="Organiza horarios por sección, curso, docente, aula y periodo académico."
+              icon={moduloIcons.horario}
+              acciones={[
+                'Crear bloques horarios por sección',
+                'Asignar docente, curso y aula',
+                'Evitar cruces de horario',
+              ]}
+            />
+          }
+        />
         <Route path="/notas" element={<NotasPage />} />
         <Route path="/notas/comentarios" element={<Navigate to="/tutoria" replace />} />
         <Route path="/tutoria" element={<TutoriaPage />} />
