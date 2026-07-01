@@ -24,6 +24,12 @@ import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import AccessCredentialsCard from '../../components/AccessCredentialsCard';
 import LocationSelects from '../../components/LocationSelects';
+import {
+  CommunityField as Field,
+  CommunityInfo as Info,
+  CommunitySection as Section,
+  communityInputClass,
+} from '../../components/community/CommunityUI';
 
 type Meta = { total: number; page: number; limit: number; totalPages: number };
 
@@ -59,8 +65,7 @@ type ApoderadoForm = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const inputClass =
-  'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
+const inputClass = communityInputClass;
 
 const fullName = (p: ApoderadoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -792,48 +797,5 @@ export default function ApoderadosPage() {
         }}
       />
     </div>
-  );
-}
-
-// ── Sub-componentes ────────────────────────────────────────────────────────
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 transition hover:ring-slate-200">
-      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">{label}</p>
-      <p className="mt-1.5 text-sm font-bold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-100">
-      <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">{title}</h4>
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label>
-      <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={inputClass}
-      />
-    </label>
   );
 }
