@@ -105,6 +105,7 @@ export default function ApoderadosPage() {
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalle, setDetalle] = useState<ApoderadoItem | null>(null);
+  const [detalleCredencial, setDetalleCredencial] = useState<{ existe: boolean; estado: boolean } | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<ApoderadoForm | null>(null);
   const [saving, setSaving] = useState(false);
@@ -147,6 +148,7 @@ export default function ApoderadosPage() {
     if (!token) return;
     setDetalleOpen(true);
     setDetalleLoading(true);
+    setDetalleCredencial(null);
     setMensaje(null);
     try {
       const res = await axios.get(
@@ -420,6 +422,23 @@ export default function ApoderadosPage() {
               </div>
               <div className="flex shrink-0 gap-2">
                 {detalle && (
+                  <span
+                    className={`inline-flex h-9 items-center rounded-full px-3 text-[11px] font-black ring-1 ${
+                      detalleCredencial?.existe
+                        ? detalleCredencial.estado
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                          : 'bg-slate-100 text-slate-600 ring-slate-200'
+                        : 'bg-amber-50 text-amber-700 ring-amber-200'
+                    }`}
+                  >
+                    {detalleCredencial?.existe
+                      ? detalleCredencial.estado
+                        ? 'Activo'
+                        : 'Inactivo'
+                      : 'Sin credencial'}
+                  </span>
+                )}
+                {detalle && (
                   <button
                     type="button"
                     onClick={abrirEdicion}
@@ -502,6 +521,18 @@ export default function ApoderadosPage() {
                     token={token}
                     queryString={queryString}
                     className="mt-5"
+                    onLoaded={(credencial) =>
+                      setDetalleCredencial({
+                        existe: Boolean(credencial.existe),
+                        estado: Boolean(credencial.estado),
+                      })
+                    }
+                    onSaved={(credencial) =>
+                      setDetalleCredencial({
+                        existe: Boolean(credencial.existe),
+                        estado: Boolean(credencial.estado),
+                      })
+                    }
                   />
                 </div>
               ) : null}

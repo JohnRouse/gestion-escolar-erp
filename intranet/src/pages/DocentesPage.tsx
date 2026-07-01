@@ -321,6 +321,36 @@ export default function DocentesPage() {
     }
   };
 
+  const syncSelectedDocenteCredential = (credencial: {
+    existe: boolean;
+    username: string;
+    estado: boolean;
+  }) => {
+    setSelected((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        credencial: {
+          existe: Boolean(credencial.existe),
+          username: credencial.username || '',
+          estado: Boolean(credencial.estado),
+          label: credencial.estado ? 'Activo' : 'Inactivo',
+        },
+      };
+    });
+  };
+
+  const handleDocenteCredentialSaved = async (credencial: {
+    existe: boolean;
+    username: string;
+    estado: boolean;
+  }) => {
+    syncSelectedDocenteCredential(credencial);
+    await fetchDocentes();
+  };
+
+
   const toggleArea = (idArea: number) => {
     setForm((current) => {
       const exists = current.especialidades.includes(idArea);
@@ -594,11 +624,6 @@ export default function DocentesPage() {
                   >
                     {docenteStatusLabel(docente)}
                   </span>
-                  {docente.credencial?.username && (
-                    <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">
-                      {docente.credencial.username}
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -853,13 +878,27 @@ export default function DocentesPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setDetalleOpen(false)}
-                className="rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetalleOpen(false);
+                    openEdit(selected);
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"
+                >
+                  <Edit3 size={14} />
+                  Editar docente
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDetalleOpen(false)}
+                  className="rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </header>
 
             <div className="max-h-[72vh] overflow-y-auto p-6">
@@ -904,26 +943,11 @@ export default function DocentesPage() {
                 token={token}
                 queryString={queryString}
                 className="mt-5"
+                onLoaded={syncSelectedDocenteCredential}
+                onSaved={handleDocenteCredentialSaved}
               />
 
             </div>
-
-            <footer className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDetalleOpen(false);
-                    openEdit(selected);
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700"
-                >
-                  <Edit3 size={16} />
-                  Editar docente
-                </button>
-              </div>
-            </footer>
           </section>
         </div>,
         document.body

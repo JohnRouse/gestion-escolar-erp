@@ -34,6 +34,8 @@ type AccessCredentialsCardProps = {
   queryString?: string;
   className?: string;
   defaultOpen?: boolean;
+  onLoaded?: (credencial: Credencial) => void;
+  onSaved?: (credencial: Credencial) => void;
 };
 
 export default function AccessCredentialsCard({
@@ -43,6 +45,8 @@ export default function AccessCredentialsCard({
   queryString = '',
   className = '',
   defaultOpen = false,
+  onLoaded,
+  onSaved,
 }: AccessCredentialsCardProps) {
   const { showToast } = useToast();
 
@@ -79,6 +83,7 @@ export default function AccessCredentialsCard({
       setUsername(data.username || '');
       setEstado(Boolean(data.estado));
       setPassword('');
+      onLoaded?.(data);
     } catch (error: any) {
       const message = error.response?.data?.message || 'No se pudo cargar la credencial.';
       showToast({ type: 'error', title: 'Error de credencial', message });
@@ -134,6 +139,7 @@ export default function AccessCredentialsCard({
       setUsername(next.username || username.trim());
       setEstado(Boolean(next.estado));
       setPassword('');
+      onSaved?.(next);
 
       showToast({
         type: 'success',
