@@ -13,7 +13,6 @@ import {
   Users,
   X,
   GraduationCap,
-  Phone,
   SlidersHorizontal,
   Camera,
   UploadCloud,
@@ -26,6 +25,10 @@ import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
+import {
+  LinkedGuardianCards,
+  LinkedGuardiansCompact,
+} from '../../components/community/CommunityLinkedPeople';
 import {
   CommunityField as Field,
   CommunityInfo as Info,
@@ -584,40 +587,8 @@ export default function AlumnosPage() {
                   </div>
                   {/* Columna apoderados */}
                   <div className="min-w-0">
-                    {apoderadosList.length ? (
-                      <div className="space-y-1.5">
-                        {apoderadosList.slice(0, 3).map((rel) => {
-                          const personaApoderado = rel.apoderado.persona;
-                          const nombreApoderado = [
-                            personaApoderado.nombres,
-                            personaApoderado.apellido_paterno,
-                            personaApoderado.apellido_materno,
-                          ].filter(Boolean).join(' ');
-
-                          return (
-                            <div key={rel.apoderado.id_persona} className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-700">
-                                {rel.parentesco}: {nombreApoderado}
-                              </p>
-                              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-                                <Phone size={11} className="shrink-0" />
-                                {personaApoderado.telefono || 'Sin teléfono'}
-                              </p>
-                            </div>
-                          );
-                        })}
-
-                        {apoderadosList.length > 3 && (
-                          <p className="text-xs font-bold text-slate-400">
-                            +{apoderadosList.length - 3} apoderado(s) más
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">Sin apoderados vinculados</span>
-                    )}
+                    <LinkedGuardiansCompact items={apoderadosList} />
                   </div>
-
 
                   {/* Acción */}
                   <div className="flex justify-end">
@@ -778,55 +749,10 @@ export default function AlumnosPage() {
                   </div>
 
                   <Section title="Apoderados vinculados">
-                    {detalle.apoderados?.length ? (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {detalle.apoderados.map((r) => {
-                          const personaApoderado = r.apoderado.persona;
-                          const nombreApoderado = [
-                            personaApoderado.nombres,
-                            personaApoderado.apellido_paterno,
-                            personaApoderado.apellido_materno,
-                          ].filter(Boolean).join(' ');
-
-                          return (
-                            <button
-                              type="button"
-                              key={r.apoderado.id_persona}
-                              onClick={() =>
-                                setConfirmApoderadoDestino({
-                                  id: r.apoderado.id_persona,
-                                  nombre: nombreApoderado,
-                                })
-                              }
-                              className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
-                            >
-                              <PersonAvatar persona={personaApoderado} size="sm" rounded="xl" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-bold text-slate-900">
-                                  Apoderado: {nombreApoderado}
-                                </p>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">
-                                  Parentesco registrado: {r.parentesco}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                  DNI: {personaApoderado.dni} · {personaApoderado.telefono || 'Sin teléfono'}
-                                </p>
-                                {personaApoderado.correo && (
-                                  <p className="mt-0.5 truncate text-xs text-slate-400">
-                                    {personaApoderado.correo}
-                                  </p>
-                                )}
-                                <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
-                                  Ver ficha del apoderado
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">Sin apoderados vinculados.</p>
-                    )}
+                    <LinkedGuardianCards
+                      items={detalle.apoderados || []}
+                      onSelect={(target) => setConfirmApoderadoDestino(target)}
+                    />
                   </Section>
 
                   <Section title="Matrículas">
