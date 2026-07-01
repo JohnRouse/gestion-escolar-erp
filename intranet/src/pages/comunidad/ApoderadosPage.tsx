@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
+import AccessCredentialsCard from '../../components/AccessCredentialsCard';
 
 type Meta = { total: number; page: number; limit: number; totalPages: number };
 
@@ -455,6 +456,14 @@ export default function ApoderadosPage() {
                     <Info label="Distrito" value={detalle.persona.distrito || '—'} />
                     <Info label="Dirección" value={detalle.persona.direccion || '—'} />
                   </div>
+
+                  <AccessCredentialsCard
+                    personaId={detalle.id_persona}
+                    tipo="apoderado"
+                    token={token}
+                    queryString={queryString}
+                    className="mt-5"
+                  />
 
                   <Section title="Alumnos vinculados">
                     {detalle.estudiantes?.length ? (

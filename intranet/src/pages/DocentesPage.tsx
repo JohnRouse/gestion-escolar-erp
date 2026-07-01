@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import { useToast } from '../contexts/ToastContext';
 import LocationSelects from '../components/LocationSelects';
+import AccessCredentialsCard from '../components/AccessCredentialsCard';
 
 type Meta = {
   total: number;
@@ -94,6 +95,10 @@ type DocenteForm = {
   distrito: string;
   fecha_ingreso: string;
   especialidades: number[];
+  crear_credencial: boolean;
+  username: string;
+  password: string;
+  credencial_activa: boolean;
 };
 
 const emptyForm: DocenteForm = {
@@ -111,6 +116,10 @@ const emptyForm: DocenteForm = {
   distrito: '',
   fecha_ingreso: '',
   especialidades: [],
+  crear_credencial: false,
+  username: '',
+  password: '',
+  credencial_activa: true,
 };
 
 const inputClass =
@@ -143,6 +152,10 @@ function toForm(docente: DocenteItem): DocenteForm {
     distrito: docente.persona.distrito || '',
     fecha_ingreso: toDateInput(docente.fecha_ingreso),
     especialidades: (docente.especialidades || []).map((item) => item.id_area),
+    crear_credencial: false,
+    username: '',
+    password: '',
+    credencial_activa: true,
   };
 }
 
@@ -674,6 +687,60 @@ export default function DocentesPage() {
                     ))
                   )}
                 </div>
+                {!editing && (
+                  <div className="mt-4 border-t border-slate-200 pt-4">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={form.crear_credencial}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            crear_credencial: event.target.checked,
+                            username: event.target.checked && !form.username ? form.dni : form.username,
+                          })
+                        }
+                        className="mt-1 h-4 w-4"
+                      />
+                      <span>
+                        Crear credencial de acceso
+                        <small className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
+                          El docente podrá ingresar con rol Profesor. La contraseña se guarda protegida.
+                        </small>
+                      </span>
+                    </label>
+
+                    {form.crear_credencial && (
+                      <div className="mt-3 grid gap-3">
+                        <Field
+                          label="Usuario"
+                          value={form.username}
+                          onChange={(value) => setForm({ ...form, username: value })}
+                        />
+                        <Field
+                          label="Contraseña temporal"
+                          type="password"
+                          value={form.password}
+                          onChange={(value) => setForm({ ...form, password: value })}
+                        />
+                        <label className="space-y-1">
+                          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                            Estado
+                          </span>
+                          <select
+                            value={form.credencial_activa ? 'activo' : 'inactivo'}
+                            onChange={(event) => setForm({ ...form, credencial_activa: event.target.value === 'activo' })}
+                            className={inputClass}
+                          >
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Desactivado</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </aside>
             </div>
 
@@ -731,6 +798,14 @@ export default function DocentesPage() {
                 <Info icon={Mail} label="Correo" value={selected.persona.correo || '—'} />
                 <Info icon={CalendarDays} label="Fecha de ingreso" value={toDateInput(selected.fecha_ingreso) || '—'} />
               </div>
+
+              <AccessCredentialsCard
+                personaId={selected.id_persona}
+                tipo="docente"
+                token={token}
+                queryString={queryString}
+                className="mt-5"
+              />
 
               <section className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                 <h4 className="text-sm font-black text-slate-950">Especialidades</h4>

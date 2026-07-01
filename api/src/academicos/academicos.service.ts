@@ -5558,6 +5558,22 @@ const existente = await this.prisma.persona.findUnique({
       return persona.id_persona;
     });
 
+    if (body.crear_credencial && body.username && body.password) {
+      await this.guardarCredencialPersonaGestion({
+        idPersona: docenteId,
+        tipo: 'docente',
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId: params.colegioId,
+        body: {
+          username: body.username,
+          password: body.password,
+          estado: body.credencial_activa !== false,
+        },
+      });
+    }
+
     return this.getDetalleDocenteCrudGestion({
       idDocente: docenteId,
       userId: params.userId,
@@ -5717,6 +5733,364 @@ const existente = await this.prisma.persona.findUnique({
     return {
       message: 'Docente eliminado correctamente.',
       id_docente: params.idDocente,
+    };
+  }
+
+
+
+  // ── CREDENCIALES DE ACCESO: DOCENTES / APODERADOS ──────
+
+  private credencialUsuarioSelect() {
+    return {
+      id_usuario: true,
+      username: true,
+      estado: true,
+      ultima_conexion: true,
+      id_persona: true,
+      rol: {
+        select: {
+          nombre_rol: true,
+        },
+      },
+      colegios: {
+        select: {
+          id_colegio: true,
+          estado: true,
+          rol_colegio: true,
+          colegio: {
+            select: {
+              id_colegio: true,
+              nombre: true,
+              nombre_corto: true,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  private mapCredencialUsuario(usuario: any) {
+    if (!usuario) {
+      return {
+        existe: false,
+        id_usuario: null,
+        username: '',
+        estado: false,
+        rol: null,
+        ultima_conexion: null,
+        colegios: [],
+      };
+    }
+
+    return {
+      existe: true,
+      id_usuario: usuario.id_usuario,
+      username: usuario.username,
+      estado: Boolean(usuario.estado),
+      rol: usuario.rol?.nombre_rol || null,
+      ultima_conexion: usuario.ultima_conexion || null,
+      colegios: (usuario.colegios || []).map((item: any) => ({
+        id_colegio: item.id_colegio,
+        estado: item.estado,
+        rol_colegio: item.rol_colegio,
+        nombre: item.colegio?.nombre || item.colegio?.nombre_corto || 'Colegio',
+      })),
+    };
+  }
+
+  private tipoCredencialToRol(tipo?: string | null) {
+    const normalized = String(tipo || '').trim().toLowerCase();
+
+    if (normalized === 'docente' || normalized === 'profesor') return 'Profesor';
+    if (normalized === 'apoderado' || normalized === 'padre') return 'Apoderado';
+
+    throw new BadRequestException('Tipo de credencial no válido. Usa docente o apoderado.');
+  }
+
+  private async getScopeParaCredencial(params: ScopeParams) {
+    const scope = await this.resolveScope(params);
+
+    if (!scope.colegioIds.length) {
+      throw new BadRequestException('No tienes colegios disponibles para gestionar accesos.');
+    }
+
+    return scope;
+  }
+
+  private async resolverColegiosCredencialPersona(params: ScopeParams & {
+    idPersona: number;
+    tipo: string;
+  }) {
+    const scope = await this.getScopeParaCredencial(params);
+    const rolDestino = this.tipoCredencialToRol(params.tipo);
+
+    let colegiosObjetivo: number[] = [];
+
+    if (rolDestino === 'Profesor') {
+      const docente = await this.prisma.docente.findUnique({
+        where: { id_persona: params.idPersona },
+        include: {
+          especialidades: {
+            include: {
+              area: true,
+            },
+          },
+          asignaciones: true,
+        },
+      });
+
+      if (!docente) throw new NotFoundException('Docente no encontrado.');
+
+      const colegiosDocente = new Set<number>();
+
+      for (const esp of docente.especialidades || []) {
+        if (esp.area?.id_colegio) colegiosDocente.add(esp.area.id_colegio);
+      }
+
+      for (const asignacion of docente.asignaciones || []) {
+        if (asignacion.id_colegio) colegiosDocente.add(asignacion.id_colegio);
+      }
+
+      colegiosObjetivo = Array.from(colegiosDocente).filter((id) => scope.colegioIds.includes(id));
+    }
+
+    if (rolDestino === 'Apoderado') {
+      const apoderado = await this.prisma.apoderado.findUnique({
+        where: { id_persona: params.idPersona },
+        include: {
+          estudiantes: {
+            include: {
+              estudiante: {
+                include: {
+                  matriculas: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!apoderado) throw new NotFoundException('Apoderado no encontrado.');
+
+      const colegiosApoderado = new Set<number>();
+
+      for (const rel of apoderado.estudiantes || []) {
+        for (const matricula of rel.estudiante?.matriculas || []) {
+          if (matricula.id_colegio) colegiosApoderado.add(matricula.id_colegio);
+        }
+      }
+
+      colegiosObjetivo = Array.from(colegiosApoderado).filter((id) => scope.colegioIds.includes(id));
+    }
+
+    if (!colegiosObjetivo.length) {
+      if (scope.tipo === 'colegio' && scope.colegioIds[0]) {
+        colegiosObjetivo = [scope.colegioIds[0]];
+      } else {
+        throw new BadRequestException('La persona no está vinculada a ningún colegio dentro de tu contexto actual.');
+      }
+    }
+
+    const colegios = await this.prisma.colegio.findMany({
+      where: {
+        id_colegio: {
+          in: colegiosObjetivo,
+        },
+      },
+      select: {
+        id_colegio: true,
+        id_tenant: true,
+        nombre: true,
+      },
+    });
+
+    return {
+      scope,
+      rolDestino,
+      colegios,
+    };
+  }
+
+  async getCredencialPersonaGestion(params: ScopeParams & {
+    idPersona: number;
+    tipo: string;
+  }) {
+    const { rolDestino } = await this.resolverColegiosCredencialPersona(params);
+
+    const usuario = await this.prisma.usuario.findFirst({
+      where: {
+        id_persona: params.idPersona,
+        rol: {
+          nombre_rol: rolDestino,
+        },
+      },
+      select: this.credencialUsuarioSelect(),
+    });
+
+    return this.mapCredencialUsuario(usuario);
+  }
+
+  async guardarCredencialPersonaGestion(params: ScopeParams & {
+    idPersona: number;
+    tipo: string;
+    body: {
+      username?: string;
+      password?: string;
+      estado?: boolean;
+    };
+  }) {
+    const { rolDestino, colegios } = await this.resolverColegiosCredencialPersona(params);
+    const body = params.body || {};
+
+    const username = String(body.username || '').trim();
+    const password = String(body.password || '').trim();
+    const estado = body.estado === undefined ? true : Boolean(body.estado);
+
+    const rol = await this.prisma.rol.findUnique({
+      where: {
+        nombre_rol: rolDestino,
+      },
+    });
+
+    if (!rol) {
+      throw new BadRequestException(`No existe el rol ${rolDestino}. Crea ese rol primero.`);
+    }
+
+    const existente = await this.prisma.usuario.findFirst({
+      where: {
+        id_persona: params.idPersona,
+        id_rol: rol.id_rol,
+      },
+      select: {
+        id_usuario: true,
+        username: true,
+      },
+    });
+
+    if (!existente && (!username || !password)) {
+      throw new BadRequestException('Para crear una credencial nueva debes ingresar usuario y contraseña temporal.');
+    }
+
+    if (username) {
+      const usernameOcupado = await this.prisma.usuario.findFirst({
+        where: {
+          username,
+          id_usuario: existente
+            ? {
+                not: existente.id_usuario,
+              }
+            : undefined,
+        },
+        select: {
+          id_usuario: true,
+        },
+      });
+
+      if (usernameOcupado) {
+        throw new BadRequestException('El nombre de usuario ya está registrado. Usa otro usuario.');
+      }
+    }
+
+    const usuario = await this.prisma.$transaction(async (tx) => {
+      let idUsuario = existente?.id_usuario;
+
+      if (existente) {
+        const data: any = {
+          estado,
+        };
+
+        if (username) data.username = username;
+        if (password) data.password_hash = await bcrypt.hash(password, 10);
+
+        const actualizado = await tx.usuario.update({
+          where: {
+            id_usuario: existente.id_usuario,
+          },
+          data,
+          select: {
+            id_usuario: true,
+          },
+        });
+
+        idUsuario = actualizado.id_usuario;
+      } else {
+        const creado = await tx.usuario.create({
+          data: {
+            username,
+            password_hash: await bcrypt.hash(password, 10),
+            id_persona: params.idPersona,
+            id_rol: rol.id_rol,
+            estado,
+          },
+          select: {
+            id_usuario: true,
+          },
+        });
+
+        idUsuario = creado.id_usuario;
+      }
+
+      const tenants = Array.from(new Set(colegios.map((colegio) => colegio.id_tenant)));
+
+      for (const idTenant of tenants) {
+        await tx.usuarioTenant.upsert({
+          where: {
+            id_usuario_id_tenant: {
+              id_usuario: idUsuario!,
+              id_tenant: idTenant,
+            },
+          },
+          update: {
+            estado: estado ? 'Activo' : 'Inactivo',
+            rol_tenant: rolDestino,
+          },
+          create: {
+            id_usuario: idUsuario!,
+            id_tenant: idTenant,
+            rol_tenant: rolDestino,
+            estado: estado ? 'Activo' : 'Inactivo',
+          },
+        });
+      }
+
+      for (let index = 0; index < colegios.length; index += 1) {
+        const colegio = colegios[index];
+
+        await tx.usuarioColegio.upsert({
+          where: {
+            id_usuario_id_colegio: {
+              id_usuario: idUsuario!,
+              id_colegio: colegio.id_colegio,
+            },
+          },
+          update: {
+            rol_colegio: rolDestino,
+            estado: estado ? 'Activo' : 'Inactivo',
+            es_principal: index === 0,
+          },
+          create: {
+            id_usuario: idUsuario!,
+            id_colegio: colegio.id_colegio,
+            rol_colegio: rolDestino,
+            estado: estado ? 'Activo' : 'Inactivo',
+            es_principal: index === 0,
+          },
+        });
+      }
+
+      return tx.usuario.findUnique({
+        where: {
+          id_usuario: idUsuario!,
+        },
+        select: this.credencialUsuarioSelect(),
+      });
+    });
+
+    return {
+      message: existente
+        ? 'Credencial actualizada correctamente.'
+        : 'Credencial creada correctamente.',
+      credencial: this.mapCredencialUsuario(usuario),
     };
   }
 

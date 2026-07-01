@@ -708,6 +708,55 @@ async deleteGrado(
     });
   }
 
+
+  // ── CREDENCIALES DE ACCESO ─────────────────────────────
+  @Get('personas/:id/credencial')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  async getCredencialPersona(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('tipo') tipo: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.getCredencialPersonaGestion({
+      idPersona: Number(id),
+      tipo,
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
+  }
+
+  @Put('personas/:id/credencial')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  async guardarCredencialPersona(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      tipo: string;
+      username?: string;
+      password?: string;
+      estado?: boolean;
+    },
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.guardarCredencialPersonaGestion({
+      idPersona: Number(id),
+      tipo: body.tipo,
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      body,
+    });
+  }
+
   // ── MATRÍCULAS ───────────────────────────────────────
   @Post('matriculas')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
