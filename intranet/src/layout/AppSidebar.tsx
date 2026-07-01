@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ElementType } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import { canAccessTutoria } from '../config/accessRules';
 import {
   ChevronDown,
   PanelLeft,
@@ -137,18 +138,12 @@ export default function AppSidebar() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const categorias = useMemo(() => {
-    const esProfesor = user?.rol === 'Profesor';
-    const tieneTutoria =
-      Boolean(user?.contexto?.tutoria?.es_tutor) ||
-      Boolean(user?.contexto?.tutoria?.secciones?.length);
-
     const filterByRole = (items: NavItem[]) =>
       items
         .filter((item) => !item.roles || item.roles.includes(user?.rol || ''))
         .filter((item) => {
           if (item.path !== '/tutoria') return true;
-          if (!esProfesor) return true;
-          return tieneTutoria;
+          return canAccessTutoria(user);
         });
 
     return [
@@ -163,7 +158,7 @@ export default function AppSidebar() {
       { titulo: 'Reportes', items: filterByRole(menuReportes) },
       { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
     ].filter((cat) => cat.items.length > 0);
-  }, [user?.rol, user?.contexto?.tutoria?.es_tutor, user?.contexto?.tutoria?.secciones]);
+  }, [user]);
 
   const isRouteActive = (path?: string) => {
     if (!path) return false;

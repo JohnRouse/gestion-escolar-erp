@@ -13,6 +13,7 @@ import CircularesPage from './pages/CircularesPage';
 import ConfiguracionPage from './pages/configuracion/ConfiguracionPage';
 import DocentesPage from './pages/DocentesPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedModuleRoute from './components/ProtectedModuleRoute';
 import AppLayout from './layout/AppLayout';
 import PerfilPage from './pages/PerfilPage';
 import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage';
@@ -36,12 +37,7 @@ import ModuloPendientePage, { moduloIcons } from './pages/ModuloPendientePage';
 
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  const puedeAccederTutoria =
-    user?.rol !== 'Profesor' ||
-    Boolean(user?.contexto?.tutoria?.es_tutor) ||
-    Boolean(user?.contexto?.tutoria?.secciones?.length);
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -72,12 +68,12 @@ function AppRoutes() {
         <Route path="/tesoreria" element={<TesoreriaPage />} />
         <Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
         <Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
-        <Route path="/asistencia" element={<AsistenciaPage />} />
-        <Route path="/calendario" element={<CalendarioPage />} />
-        <Route path="/horario" element={<Navigate to="/calendario" replace />} />
-        <Route path="/notas" element={<NotasPage />} />
-        <Route path="/notas/comentarios" element={<Navigate to="/tutoria" replace />} />
-        <Route path="/tutoria" element={puedeAccederTutoria ? <TutoriaPage /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/asistencia" element={<ProtectedModuleRoute module="asistencia"><AsistenciaPage /></ProtectedModuleRoute>} />
+        <Route path="/calendario" element={<ProtectedModuleRoute module="calendario"><CalendarioPage /></ProtectedModuleRoute>} />
+        <Route path="/horario" element={<ProtectedModuleRoute module="horario"><Navigate to="/calendario" replace /></ProtectedModuleRoute>} />
+        <Route path="/notas" element={<ProtectedModuleRoute module="notas"><NotasPage /></ProtectedModuleRoute>} />
+        <Route path="/notas/comentarios" element={<ProtectedModuleRoute module="tutoria"><Navigate to="/tutoria" replace /></ProtectedModuleRoute>} />
+        <Route path="/tutoria" element={<ProtectedModuleRoute module="tutoria"><TutoriaPage /></ProtectedModuleRoute>} />
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
