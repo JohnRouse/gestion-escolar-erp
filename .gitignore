@@ -34,3 +34,8 @@ docs/flows/*.png
 docs/mockups/*.png
 # Uploads locales / comprobantes
 api/uploads/
+# Backups locales generados por scripts de refactor
+*.bak
+*.bak-*
+*.bak_*
+REFACTOR_AUDIT.md
