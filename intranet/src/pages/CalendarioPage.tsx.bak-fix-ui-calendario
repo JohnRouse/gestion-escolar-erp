@@ -3,6 +3,7 @@ import axios from 'axios';
 import {
   BookOpen,
   CalendarDays,
+  ChevronDown,
   Clock3,
   Edit3,
   Loader2,
@@ -168,6 +169,8 @@ export default function CalendarioPage() {
     const params = new URLSearchParams(baseParams);
 
     if (anioId) params.set('anio_id', anioId);
+    if (seccionId) params.set('seccion_id', seccionId);
+    if (docenteId) params.set('docente_id', docenteId);
 
     try {
       const res = await axios.get(`/api/academicos/asignaciones-docentes?${params.toString()}`, {
@@ -350,7 +353,7 @@ export default function CalendarioPage() {
                 </option>
               ))}
             </select>
-
+            <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" />
           </div>
         </div>
 
@@ -378,8 +381,8 @@ export default function CalendarioPage() {
           </select>
         </div>
 
-        <div className="erp-horario-summary-panel rounded-[20px] border border-slate-200 bg-white p-4 text-slate-950">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">Resumen</p>
+        <div className="rounded-[20px] border border-slate-200 bg-slate-950 p-4 text-white">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">Resumen</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <Summary label="Bloques" value={resumen.bloques} />
             <Summary label="Secciones" value={resumen.secciones} />
@@ -389,7 +392,7 @@ export default function CalendarioPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <article className="erp-horario-form-card overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+        <article className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
           <header className="border-b border-slate-200 bg-slate-50 px-5 py-4">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
@@ -500,7 +503,7 @@ export default function CalendarioPage() {
           </div>
         </article>
 
-        <article className="erp-horario-week-card overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+        <article className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
           <header className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
             <div>
               <h2 className="text-base font-black text-slate-950">Horario semanal</h2>
@@ -611,9 +614,9 @@ export default function CalendarioPage() {
 
 function Summary({ label, value }: { label: string; value: number }) {
   return (
-    <div className="erp-horario-summary-tile rounded-sm border border-slate-200 bg-slate-50 p-2 text-center">
-      <p className="text-lg font-black text-slate-950">{value}</p>
-      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">{label}</p>
+    <div className="rounded-sm bg-white/10 p-2 text-center">
+      <p className="text-lg font-black text-white">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-300">{label}</p>
     </div>
   );
 }
