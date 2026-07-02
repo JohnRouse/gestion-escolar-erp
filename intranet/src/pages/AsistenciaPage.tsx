@@ -377,27 +377,57 @@ export default function AsistenciaPage() {
     );
   };
 
-  const confirmarJustificacion = () => {
-    if (!justificacionDraft) return;
+  const confirmarJustificacion = async () => {
+    if (!justificacionDraft || !token || !headers || !seccionId) return;
 
     const motivo = justificacionDraft.motivo.trim();
+    const observacion = justificacionDraft.observacion.trim();
 
     if (!motivo) return;
 
-    setAlumnos((prev) =>
-      prev.map((item) =>
-        item.id_matricula === justificacionDraft.id_matricula
-          ? {
-              ...item,
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await axios.post(
+        buildUrl('/api/academicos/asistencia', queryParams),
+        {
+          id_seccion: seccionId,
+          fecha,
+          asistencias: [
+            {
+              id_matricula: justificacionDraft.id_matricula,
               estado: 'Justificado',
               justificacion_motivo: motivo,
-              justificacion_observacion: justificacionDraft.observacion.trim(),
-            }
-          : item,
-      ),
-    );
+              justificacion_observacion: observacion,
+            },
+          ],
+        },
+        { headers },
+      );
 
-    setJustificacionDraft(null);
+      setAlumnos((prev) =>
+        prev.map((item) =>
+          item.id_matricula === justificacionDraft.id_matricula
+            ? {
+                ...item,
+                estado: 'Justificado',
+                justificacion_motivo: motivo,
+                justificacion_observacion: observacion,
+                requiere_justificacion: false,
+              }
+            : item,
+        ),
+      );
+
+      setJustificacionDraft(null);
+      setMessage('Justificación guardada correctamente.');
+    } catch {
+      setError('No se pudo guardar la justificación. Intenta nuevamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const guardar = async () => {
@@ -798,9 +828,10 @@ export default function AsistenciaPage() {
               <button
                 type="button"
                 onClick={confirmarJustificacion}
-                className="h-10 rounded-sm bg-slate-950 px-4 text-xs font-black text-white hover:bg-slate-800"
+                disabled={saving}
+                className="h-10 rounded-sm bg-slate-950 px-4 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                Guardar justificación
+                {saving ? 'Guardando...' : 'Guardar justificación'}
               </button>
             </div>
           </div>
