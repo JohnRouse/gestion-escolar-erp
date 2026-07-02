@@ -3,9 +3,10 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import { TutoriaService } from './tutoria.service';
+import { TutoriaAccessGuard } from './tutoria-access.guard';
 
 @Controller('tutoria')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard, TutoriaAccessGuard)
 export class TutoriaController {
   constructor(private readonly tutoriaService: TutoriaService) {}
 

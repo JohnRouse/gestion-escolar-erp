@@ -1119,7 +1119,8 @@ async deleteGrado(
 
   // ── ASISTENCIA ───────────────────────────────────────
   @Get('asistencia')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Profesor', 'Director')
   async getAsistencia(
     @Query('seccion_id') seccionId: string,
     @Query('fecha') fecha: string,
