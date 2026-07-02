@@ -19,14 +19,12 @@ import { AcademicosService } from './academicos.service';
 import { CreateAlumnoDto } from './dto/create-alumno.dto';
 import { CreateApoderadoDto } from './dto/create-apoderado.dto';
 import { CreateMatriculaDto } from './dto/create-matricula.dto';
-import { SaveAsistenciaDto } from './dto/save-asistencia.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from '../storage/storage.service';
 import { memoryStorage } from 'multer';
-
 
 const alumnoAvatarFileFilter = (_req: any, file: any, callback: any) => {
   const allowed = ['image/jpeg', 'image/png'];
@@ -708,7 +706,6 @@ async deleteGrado(
     });
   }
 
-
   // ── CREDENCIALES DE ACCESO ─────────────────────────────
   @Get('personas/:id/credencial')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -1117,43 +1114,6 @@ async deleteGrado(
     return this.academicosService.getTotalDocentes();
   }
 
-  // ── ASISTENCIA ───────────────────────────────────────
-  @Get('asistencia')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Profesor', 'Director')
-  async getAsistencia(
-    @Query('seccion_id') seccionId: string,
-    @Query('fecha') fecha: string,
-  ) {
-    return this.academicosService.getAsistencia(Number(seccionId), fecha);
-  }
-
-  @Post('asistencia')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Profesor', 'Director')
-  async saveAsistencia(@Body() dto: SaveAsistenciaDto) {
-    return this.academicosService.saveAsistencia(
-      dto.id_seccion,
-      dto.fecha,
-      dto.asistencias,
-    );
-  }
-
-  @Get('padres/asistencia')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Apoderado', 'Admin')
-  async getAsistenciaAlumno(
-    @Query('alumno_id') alumnoId: string,
-    @Query('desde') desde: string,
-    @Query('hasta') hasta: string,
-  ) {
-    return this.academicosService.getAsistenciaAlumno(
-      Number(alumnoId),
-      desde,
-      hasta,
-    );
-  }
-
   // ── PERIODOS Y UNIDADES ACADÉMICAS ─────────────────────────────
   @Get('periodos-unidades')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -1346,7 +1306,6 @@ async deleteGrado(
       colegioId: colegioId ? Number(colegioId) : undefined,
     });
   }
-
 
   // ── HORARIO ACADÉMICO ─────────────────────────────────
   @Get('horarios')
@@ -1774,7 +1733,6 @@ async deleteGrado(
       where: { id_area: Number(id) },
     });
   }
-
 
   @Get('docente/asignaciones')
   @UseGuards(AuthGuard('jwt'))
