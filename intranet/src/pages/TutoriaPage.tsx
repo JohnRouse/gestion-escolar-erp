@@ -47,9 +47,31 @@ type AlumnoLista = {
 type Criterio = { id_criterio: number; descripcion: string; tipo: string; valor: Literal };
 type Evaluacion = { id_evaluacion_det: number; descripcion: string; grupo: string; nota: number };
 type Curso = { id_asignacion: number; curso: string; area: string; docente: string; promedio: number | null; evaluaciones: Evaluacion[] };
+type AsistenciaResumen = {
+  periodo: {
+    id_bimestre: number;
+    label: string;
+    desde: string | null;
+    hasta: string | null;
+  };
+  dias_registrados: number;
+  presentes: number;
+  tardanzas: number;
+  ausentes: number;
+  justificados: number;
+  pendientes_justificacion: number;
+  porcentaje_asistencia: number | null;
+  porcentaje_puntualidad: number | null;
+  estado: string;
+  ultima: {
+    fecha: string;
+    estado: string;
+  } | null;
+};
 type Detalle = {
   alumno: { id_matricula: number; codigo: string; nombre: string; avatar_url?: string | null; colegio: string; salon: string; anio: string };
   estadistica: { promedio_general: number | null; puntaje: number; cursos_desaprobados: number; orden_merito: number | null; total_alumnos: number; tercio: string };
+  asistencia?: AsistenciaResumen;
   cursos: Curso[];
   conducta: Criterio[];
   participacion_familiar: Criterio[];
@@ -586,6 +608,83 @@ export default function TutoriaPage() {
                       )}
                     </div>
                   </div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Promedio', nota(detalle.estadistica.promedio_general)], ['Desaprobados', detalle.estadistica.cursos_desaprobados], ['Mérito', detalle.estadistica.orden_merito || '—'], ['Tercio', detalle.estadistica.tercio || '—']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-slate-900">{value}</p></div>)}</div></div></div>
+
+              {detalle.asistencia && (
+                <section className="rounded-[24px] border border-slate-100">
+                  <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-slate-950">Asistencia del bimestre</h3>
+                      <p className="text-sm text-slate-500">
+                        Resumen acumulado hasta el cierre del periodo seleccionado.
+                      </p>
+                    </div>
+                    <span className={`inline-flex w-fit rounded-full px-3 py-1 text-[11px] font-black ring-1 ${
+                      detalle.asistencia.estado === 'Adecuada'
+                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+                        : detalle.asistencia.estado === 'En observación'
+                          ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                          : detalle.asistencia.estado === 'Riesgo'
+                            ? 'bg-rose-50 text-rose-700 ring-rose-100'
+                            : 'bg-slate-50 text-slate-500 ring-slate-100'
+                    }`}>
+                      {detalle.asistencia.estado}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 p-4">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                      {[
+                        ['Registros', detalle.asistencia.dias_registrados],
+                        ['Presentes', detalle.asistencia.presentes],
+                        ['Tardanzas', detalle.asistencia.tardanzas],
+                        ['Ausentes', detalle.asistencia.ausentes],
+                        ['Justificadas', detalle.asistencia.justificados],
+                        ['Pendientes', detalle.asistencia.pendientes_justificacion],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            {label}
+                          </p>
+                          <p className="mt-1 text-lg font-black text-slate-900">
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            Asistencia efectiva
+                          </p>
+                          <p className="mt-1 text-2xl font-black text-slate-950">
+                            {detalle.asistencia.porcentaje_asistencia === null
+                              ? '—'
+                              : `${detalle.asistencia.porcentaje_asistencia}%`}
+                          </p>
+                        </div>
+                        <p className="max-w-xs text-right text-xs font-semibold text-slate-500">
+                          Incluye presente, tardanza y justificado sobre los días registrados.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${detalle.asistencia.porcentaje_asistencia || 0}%` }}
+                        />
+                      </div>
+
+                      {detalle.asistencia.pendientes_justificacion > 0 && (
+                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+                          Hay {detalle.asistencia.pendientes_justificacion} justificación(es) pendiente(s) de regularizar en Asistencia.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <section className="rounded-[24px] border border-slate-100"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-base font-black text-slate-950">Notas consolidadas</h3><p className="text-sm text-slate-500">Solo lectura. El tutor no puede modificar notas desde esta pantalla.</p></div><Eye size={18} className="text-slate-400" /></div><div className="space-y-3 p-4">{detalle.cursos.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm font-semibold text-slate-400">Sin evaluaciones para este periodo.</div> : detalle.cursos.map((curso) => <div key={curso.id_asignacion} className="overflow-hidden rounded-2xl border border-slate-100"><button type="button" onClick={() => setCursoAbierto((actual) => actual === curso.id_asignacion ? null : curso.id_asignacion)} className="flex w-full items-center justify-between gap-3 bg-white px-4 py-3 text-left transition-colors duration-200 hover:bg-slate-50"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{curso.curso}</p><p className="text-xs font-semibold text-slate-400">{curso.area} · {curso.docente || 'Docente no asignado'}</p></div><div className="flex items-center gap-3"><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(curso.promedio)}`}>{nota(curso.promedio)}</span><ChevronDown size={18} className={`text-slate-400 transition-transform duration-200 ${cursoAbierto === curso.id_asignacion ? 'rotate-180' : ''}`} /></div></button>{cursoAbierto === curso.id_asignacion && <div className="grid gap-2 border-t border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-2 xl:grid-cols-3">{curso.evaluaciones.length === 0 ? <div className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-400 ring-1 ring-slate-100">Sin evaluaciones cargadas.</div> : curso.evaluaciones.map((ev) => <div key={ev.id_evaluacion_det} className="rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black uppercase text-slate-800">{ev.descripcion}</p><span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ring-1 ${grupoClass(ev.grupo)}`}>{ev.grupo}</span></div><span className={`rounded-xl px-3 py-1 text-sm font-black ring-1 ${notaClass(ev.nota)}`}>{nota(ev.nota)}</span></div></div>)}</div>}</div>)}</div></section>
 

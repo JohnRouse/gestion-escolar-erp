@@ -761,6 +761,78 @@ export class TutoriaService {
     return { orden_merito: orden, total_alumnos: total, tercio };
   }
 
+  private async resumenAsistenciaBimestre(idMatricula: number, bimestre: any) {
+    const rows = await this.prisma.asistencia.findMany({
+      where: {
+        id_matricula: idMatricula,
+        fecha: {
+          gte: bimestre.fecha_inicio,
+          lte: bimestre.fecha_fin,
+        },
+      },
+      orderBy: {
+        fecha: 'asc',
+      },
+    });
+
+    const count = (estado: string) =>
+      rows.filter((item) => item.estado === estado).length;
+
+    const presentes = count('Presente');
+    const tardanzas = count('Tardanza');
+    const ausentes = count('Ausente');
+    const justificados = count('Justificado');
+    const pendientesJustificacion = rows.filter(
+      (item: any) =>
+        item.estado === 'Justificado' &&
+        !String(item.justificacion_motivo || '').trim(),
+    ).length;
+
+    const total = rows.length;
+    const asistenciaValida = presentes + tardanzas + justificados;
+    const porcentajeAsistencia = total > 0
+      ? Math.round((asistenciaValida / total) * 100)
+      : null;
+
+    const porcentajePuntualidad = total > 0
+      ? Math.round((presentes / total) * 100)
+      : null;
+
+    let estado = 'Sin registros';
+
+    if (porcentajeAsistencia !== null) {
+      if (porcentajeAsistencia >= 90) estado = 'Adecuada';
+      else if (porcentajeAsistencia >= 75) estado = 'En observación';
+      else estado = 'Riesgo';
+    }
+
+    const ultima = rows.length > 0 ? rows[rows.length - 1] : null;
+
+    return {
+      periodo: {
+        id_bimestre: bimestre.id_bimestre,
+        label: bimestre.nombre || `Periodo ${bimestre.numero}`,
+        desde: bimestre.fecha_inicio,
+        hasta: bimestre.fecha_fin,
+      },
+      dias_registrados: total,
+      presentes,
+      tardanzas,
+      ausentes,
+      justificados,
+      pendientes_justificacion: pendientesJustificacion,
+      porcentaje_asistencia: porcentajeAsistencia,
+      porcentaje_puntualidad: porcentajePuntualidad,
+      estado,
+      ultima: ultima
+        ? {
+            fecha: ultima.fecha,
+            estado: ultima.estado,
+          }
+        : null,
+    };
+  }
+
   async getResumenAlumno(user: JwtUser, idMatricula: number, idBimestre: number) {
     const matricula = await this.assertMatriculaAccess(user, idMatricula);
     const bimestre = await this.prisma.bimestre.findUnique({ where: { id_bimestre: idBimestre }, include: { unidades: true } });
@@ -797,6 +869,7 @@ export class TutoriaService {
 
     const resumen = await this.promedioMatricula(idMatricula, idBimestre);
     const merito = await this.merito(matricula.id_seccion, matricula.id_anio, idBimestre, idMatricula);
+    const asistencia = await this.resumenAsistenciaBimestre(idMatricula, bimestre);
     const criterios = await this.asegurarCriterios(matricula.id_colegio, matricula.id_tenant);
     const calificaciones = await this.prisma.calificacionTutoria.findMany({ where: { id_matricula: idMatricula, id_bimestre: idBimestre } });
     const calMap = new Map(calificaciones.map((c) => [c.id_criterio, c.valor || '']));
@@ -864,6 +937,7 @@ export class TutoriaService {
         salon: this.formatSeccion(matricula.seccion),
       },
       estadistica: { promedio_general: resumen.promedio, puntaje: resumen.puntaje, cursos_desaprobados: resumen.cursosDesaprobados, ...merito },
+      asistencia,
       cursos,
       conducta,
       participacion_familiar: participacionFamiliar,
