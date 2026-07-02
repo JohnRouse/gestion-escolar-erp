@@ -232,6 +232,9 @@ export class AsistenciaService {
         alumno: this.formatAlumno(m),
         codigo: m.estudiante?.codigo_estudiante || null,
         estado: m.asistencias.length > 0 ? m.asistencias[0].estado : 'Presente',
+        justificacion_motivo: m.asistencias[0]?.justificacion_motivo || '',
+        justificacion_observacion: m.asistencias[0]?.justificacion_observacion || '',
+        fecha_justificacion: m.asistencias[0]?.fecha_justificacion || null,
       }));
   }
 
@@ -239,7 +242,12 @@ export class AsistenciaService {
     user: JwtUser,
     seccionId: number,
     fecha: string,
-    asistencias: { id_matricula: number; estado: string }[],
+    asistencias: {
+      id_matricula: number;
+      estado: string;
+      justificacion_motivo?: string;
+      justificacion_observacion?: string;
+    }[],
     query: ScopeQuery,
   ) {
     await this.assertCanAccessSeccion(user, seccionId, query);
@@ -272,10 +280,33 @@ export class AsistenciaService {
         throw new BadRequestException('Estado de asistencia inválido.');
       }
 
+      const motivo = String(a.justificacion_motivo || '').trim();
+      const observacion = String(a.justificacion_observacion || '').trim();
+
+      if (a.estado === 'Justificado' && !motivo) {
+        throw new BadRequestException('Debes registrar un motivo para justificar la asistencia.');
+      }
+
+      const justificacion =
+        a.estado === 'Justificado'
+          ? {
+              justificacion_motivo: motivo,
+              justificacion_observacion: observacion || null,
+              justificado_por: user.userId,
+              fecha_justificacion: new Date(),
+            }
+          : {
+              justificacion_motivo: null,
+              justificacion_observacion: null,
+              justificado_por: null,
+              fecha_justificacion: null,
+            };
+
       return {
         id_matricula: a.id_matricula,
         fecha: fechaAsistencia,
         estado: a.estado,
+        ...justificacion,
       };
     });
 
@@ -287,7 +318,13 @@ export class AsistenciaService {
             fecha: item.fecha,
           },
         },
-        update: { estado: item.estado },
+        update: {
+          estado: item.estado,
+          justificacion_motivo: item.justificacion_motivo,
+          justificacion_observacion: item.justificacion_observacion,
+          justificado_por: item.justificado_por,
+          fecha_justificacion: item.fecha_justificacion,
+        },
         create: item,
       });
     }

@@ -19,6 +19,15 @@ type AlumnoAsistencia = {
   alumno: string;
   codigo?: string | null;
   estado: EstadoAsistencia;
+  justificacion_motivo?: string;
+  justificacion_observacion?: string;
+};
+
+type JustificacionDraft = {
+  id_matricula: number;
+  alumno: string;
+  motivo: string;
+  observacion: string;
 };
 
 type SeccionOption = {
@@ -28,6 +37,14 @@ type SeccionOption = {
 };
 
 const todayISO = () => new Date().toISOString().split('T')[0];
+
+const motivosJustificacion = [
+  'Enfermedad',
+  'Cita médica',
+  'Permiso familiar',
+  'Trámite documentario',
+  'Otro',
+];
 
 function buildUrl(
   path: string,
@@ -75,6 +92,7 @@ export default function AsistenciaMobilePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [justificacionDraft, setJustificacionDraft] = useState<JustificacionDraft | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -156,22 +174,65 @@ export default function AsistenciaMobilePage() {
   const goPrev = () => setCurrentIndex((value) => Math.max(0, value - 1));
   const goNext = () => setCurrentIndex((value) => Math.min(alumnos.length - 1, value + 1));
 
+  const avanzarDespuesDeMarcar = () => {
+    if (currentIndex < alumnos.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
   const marcarEstado = (estado: EstadoAsistencia) => {
     if (!currentAlumno) return;
 
     setMessage(null);
 
+    if (estado === 'Justificado') {
+      setJustificacionDraft({
+        id_matricula: currentAlumno.id_matricula,
+        alumno: currentAlumno.alumno,
+        motivo: currentAlumno.justificacion_motivo || motivosJustificacion[0],
+        observacion: currentAlumno.justificacion_observacion || '',
+      });
+      return;
+    }
+
     setAlumnos((prev) =>
       prev.map((alumno) =>
         alumno.id_matricula === currentAlumno.id_matricula
-          ? { ...alumno, estado }
+          ? {
+              ...alumno,
+              estado,
+              justificacion_motivo: '',
+              justificacion_observacion: '',
+            }
           : alumno,
       ),
     );
 
-    if (currentIndex < alumnos.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
+    avanzarDespuesDeMarcar();
+  };
+
+  const confirmarJustificacion = () => {
+    if (!justificacionDraft) return;
+
+    const motivo = justificacionDraft.motivo.trim();
+
+    if (!motivo) return;
+
+    setAlumnos((prev) =>
+      prev.map((alumno) =>
+        alumno.id_matricula === justificacionDraft.id_matricula
+          ? {
+              ...alumno,
+              estado: 'Justificado',
+              justificacion_motivo: motivo,
+              justificacion_observacion: justificacionDraft.observacion.trim(),
+            }
+          : alumno,
+      ),
+    );
+
+    setJustificacionDraft(null);
+    avanzarDespuesDeMarcar();
   };
 
   const guardar = async () => {
@@ -189,6 +250,8 @@ export default function AsistenciaMobilePage() {
           asistencias: alumnos.map((alumno) => ({
             id_matricula: alumno.id_matricula,
             estado: alumno.estado,
+            justificacion_motivo: alumno.justificacion_motivo || '',
+            justificacion_observacion: alumno.justificacion_observacion || '',
           })),
         },
         { headers },
@@ -377,6 +440,69 @@ export default function AsistenciaMobilePage() {
               </button>
             </section>
           </>
+        )}
+
+        {justificacionDraft && (
+          <div className="fixed inset-0 z-[10000] flex items-end bg-slate-950/45 px-3 pb-3">
+            <div className="w-full rounded-[24px] border border-slate-200 bg-white shadow-2xl">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                  Justificación
+                </p>
+                <h3 className="mt-1 text-base font-black text-slate-950">
+                  {justificacionDraft.alumno}
+                </h3>
+              </div>
+
+              <div className="space-y-3 px-4 py-4">
+                <select
+                  value={justificacionDraft.motivo}
+                  onChange={(event) =>
+                    setJustificacionDraft((current) =>
+                      current ? { ...current, motivo: event.target.value } : current,
+                    )
+                  }
+                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none"
+                >
+                  {motivosJustificacion.map((motivo) => (
+                    <option key={motivo} value={motivo}>
+                      {motivo}
+                    </option>
+                  ))}
+                </select>
+
+                <textarea
+                  value={justificacionDraft.observacion}
+                  onChange={(event) =>
+                    setJustificacionDraft((current) =>
+                      current ? { ...current, observacion: event.target.value } : current,
+                    )
+                  }
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Observación opcional"
+                  className="w-full resize-none rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-200 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setJustificacionDraft(null)}
+                  className="h-11 rounded-sm border border-slate-300 bg-white text-xs font-black text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarJustificacion}
+                  className="h-11 rounded-sm bg-slate-950 text-xs font-black text-white"
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {message && (

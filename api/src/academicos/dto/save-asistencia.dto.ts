@@ -5,6 +5,8 @@ import {
   IsArray,
   ValidateNested,
   IsIn,
+  IsOptional,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -15,6 +17,16 @@ export class AsistenciaItemDto {
   @IsString()
   @IsIn(['Presente', 'Ausente', 'Tardanza', 'Justificado'])
   estado: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  justificacion_motivo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  justificacion_observacion?: string;
 }
 
 export class SaveAsistenciaDto {

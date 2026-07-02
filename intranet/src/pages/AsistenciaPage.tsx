@@ -26,6 +26,15 @@ type AlumnoAsistencia = {
   alumno: string;
   codigo?: string | null;
   estado: EstadoAsistencia;
+  justificacion_motivo?: string;
+  justificacion_observacion?: string;
+};
+
+type JustificacionDraft = {
+  id_matricula: number;
+  alumno: string;
+  motivo: string;
+  observacion: string;
 };
 
 type SeccionOption = {
@@ -39,6 +48,14 @@ type SeccionOption = {
 };
 
 const estados: EstadoAsistencia[] = ['Presente', 'Tardanza', 'Ausente', 'Justificado'];
+
+const motivosJustificacion = [
+  'Enfermedad',
+  'Cita médica',
+  'Permiso familiar',
+  'Trámite documentario',
+  'Otro',
+];
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
@@ -136,6 +153,7 @@ export default function AsistenciaPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justificacionDraft, setJustificacionDraft] = useState<JustificacionDraft | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -314,14 +332,61 @@ export default function AsistenciaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionId, fecha, token, scopeKey]);
 
+  const abrirJustificacion = (alumno: AlumnoAsistencia) => {
+    setMessage(null);
+    setJustificacionDraft({
+      id_matricula: alumno.id_matricula,
+      alumno: alumno.alumno,
+      motivo: alumno.justificacion_motivo || motivosJustificacion[0],
+      observacion: alumno.justificacion_observacion || '',
+    });
+  };
+
   const setEstadoAlumno = (idMatricula: number, estado: EstadoAsistencia) => {
     setMessage(null);
 
+    const alumno = alumnos.find((item) => item.id_matricula === idMatricula);
+
+    if (estado === 'Justificado' && alumno) {
+      abrirJustificacion(alumno);
+      return;
+    }
+
     setAlumnos((prev) =>
-      prev.map((alumno) =>
-        alumno.id_matricula === idMatricula ? { ...alumno, estado } : alumno,
+      prev.map((item) =>
+        item.id_matricula === idMatricula
+          ? {
+              ...item,
+              estado,
+              justificacion_motivo: '',
+              justificacion_observacion: '',
+            }
+          : item,
       ),
     );
+  };
+
+  const confirmarJustificacion = () => {
+    if (!justificacionDraft) return;
+
+    const motivo = justificacionDraft.motivo.trim();
+
+    if (!motivo) return;
+
+    setAlumnos((prev) =>
+      prev.map((item) =>
+        item.id_matricula === justificacionDraft.id_matricula
+          ? {
+              ...item,
+              estado: 'Justificado',
+              justificacion_motivo: motivo,
+              justificacion_observacion: justificacionDraft.observacion.trim(),
+            }
+          : item,
+      ),
+    );
+
+    setJustificacionDraft(null);
   };
 
   const guardar = async () => {
@@ -340,6 +405,8 @@ export default function AsistenciaPage() {
           asistencias: alumnos.map((alumno) => ({
             id_matricula: alumno.id_matricula,
             estado: alumno.estado,
+            justificacion_motivo: alumno.justificacion_motivo || '',
+            justificacion_observacion: alumno.justificacion_observacion || '',
           })),
         },
         { headers },
@@ -613,6 +680,79 @@ export default function AsistenciaPage() {
           )}
         </div>
       </section>
+
+      {justificacionDraft && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                Justificación de asistencia
+              </p>
+              <h3 className="mt-1 text-lg font-black text-slate-950">
+                {justificacionDraft.alumno}
+              </h3>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Motivo
+                </span>
+                <select
+                  value={justificacionDraft.motivo}
+                  onChange={(event) =>
+                    setJustificacionDraft((current) =>
+                      current ? { ...current, motivo: event.target.value } : current,
+                    )
+                  }
+                  className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                >
+                  {motivosJustificacion.map((motivo) => (
+                    <option key={motivo} value={motivo}>
+                      {motivo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Observación opcional
+                </span>
+                <textarea
+                  value={justificacionDraft.observacion}
+                  onChange={(event) =>
+                    setJustificacionDraft((current) =>
+                      current ? { ...current, observacion: event.target.value } : current,
+                    )
+                  }
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Ejemplo: Presentó permiso del apoderado, cita médica, etc."
+                  className="w-full resize-none rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setJustificacionDraft(null)}
+                className="h-10 rounded-sm border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 hover:border-slate-900"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarJustificacion}
+                className="h-10 rounded-sm bg-slate-950 px-4 text-xs font-black text-white hover:bg-slate-800"
+              >
+                Guardar justificación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MobileAttendanceFab href={mobileHref} visible={hasSeccion} />
     </div>

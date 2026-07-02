@@ -63,21 +63,22 @@ model Usuario {
   persona Persona @relation(fields: [id_persona], references: [id_persona])
   rol     Rol     @relation(fields: [id_rol], references: [id_rol])
 
-  tenants                     UsuarioTenant[]
-  colegios                    UsuarioColegio[]
-  pagos_cajero                PagoTransaccion[]
-  matriculas_registradas      Matricula[]             @relation("UsuarioMatriculasRegistradas")
-  matriculas_revisadas        Matricula[]             @relation("UsuarioMatriculasRevisadas")
-  circulares                  Circular[]
-  notificaciones              Notificacion[]
-  tokensFCM                   TokenFCM[]
-  pagos_recibidos_registrados PagoRecibido[]          @relation("PagoRecibidoRegistro")
-  pagos_recibidos_validados   PagoRecibido[]          @relation("PagoRecibidoValidacion")
-  pagos_recibidos_historial   PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
-  gestiones_cobranza          CobranzaGestion[]       @relation("CobranzaGestionUsuario")
-  comentarios_bimestrales_registrados ComentarioBimestral[] @relation("UsuarioComentariosBimestrales")
-  calificaciones_tutoria              CalificacionTutoria[] @relation("UsuarioCalificacionesTutoria")
+  tenants                             UsuarioTenant[]
+  colegios                            UsuarioColegio[]
+  pagos_cajero                        PagoTransaccion[]
+  matriculas_registradas              Matricula[]             @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas                Matricula[]             @relation("UsuarioMatriculasRevisadas")
+  circulares                          Circular[]
+  notificaciones                      Notificacion[]
+  tokensFCM                           TokenFCM[]
+  pagos_recibidos_registrados         PagoRecibido[]          @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados           PagoRecibido[]          @relation("PagoRecibidoValidacion")
+  pagos_recibidos_historial           PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
+  gestiones_cobranza                  CobranzaGestion[]       @relation("CobranzaGestionUsuario")
+  comentarios_bimestrales_registrados ComentarioBimestral[]   @relation("UsuarioComentariosBimestrales")
+  calificaciones_tutoria              CalificacionTutoria[]   @relation("UsuarioCalificacionesTutoria")
 }
+
 model Tenant {
   id_tenant  Int      @id @default(autoincrement())
   nombre     String   @db.VarChar(150)
@@ -110,21 +111,22 @@ model Tenant {
   campanas_descuento CampanaDescuento[]
   ordenes_pago       OrdenPago[]
   pagos_recibidos    PagoRecibido[]
-  criterios_tutoria CriterioTutoria[]
+  criterios_tutoria  CriterioTutoria[]
 }
+
 model Colegio {
-  id_colegio      Int      @id @default(autoincrement())
-  id_tenant       Int
-  nombre          String   @db.VarChar(150)
-  nombre_corto    String?  @db.VarChar(50)
-  codigo          String?  @db.VarChar(30)
-  direccion       String?  @db.VarChar(255)
-  telefono        String?  @db.VarChar(30)
-  logo_url        String?  @db.VarChar(500)
-  color_principal String?  @db.VarChar(20)
-  cabecera_libreta_texto String? @db.VarChar(150)
-  estado          String   @default("Activo") @db.VarChar(20)
-  created_at      DateTime @default(now())
+  id_colegio             Int      @id @default(autoincrement())
+  id_tenant              Int
+  nombre                 String   @db.VarChar(150)
+  nombre_corto           String?  @db.VarChar(50)
+  codigo                 String?  @db.VarChar(30)
+  direccion              String?  @db.VarChar(255)
+  telefono               String?  @db.VarChar(30)
+  logo_url               String?  @db.VarChar(500)
+  color_principal        String?  @db.VarChar(20)
+  cabecera_libreta_texto String?  @db.VarChar(150)
+  estado                 String   @default("Activo") @db.VarChar(20)
+  created_at             DateTime @default(now())
 
   tenant Tenant @relation(fields: [id_tenant], references: [id_tenant])
 
@@ -153,11 +155,12 @@ model Colegio {
   ordenes_pago        OrdenPago[]
   pagos_recibidos     PagoRecibido[]
   datos_cobro         DatosCobroColegio?
+  criterios_tutoria   CriterioTutoria[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
-  criterios_tutoria   CriterioTutoria[]
 }
+
 model UsuarioTenant {
   id_usuario Int
   id_tenant  Int
@@ -226,7 +229,7 @@ model Grado {
   nombre_grado String @db.VarChar(50)
   id_nivel     Int
 
-  nivel     Nivel     @relation(fields: [id_nivel], references: [id_nivel])
+  nivel     Nivel          @relation(fields: [id_nivel], references: [id_nivel])
   secciones Seccion[]
   colegios  ColegioGrado[]
 }
@@ -350,10 +353,11 @@ model Bimestre {
 
   unidades               Unidad[]
   comentariosBimestrales ComentarioBimestral[]
+  calificaciones_tutoria CalificacionTutoria[]
 
   @@index([id_anio])
-  calificaciones_tutoria CalificacionTutoria[]
 }
+
 model Unidad {
   id_unidad      Int      @id @default(autoincrement())
   numero         Int      @db.TinyInt
@@ -365,7 +369,7 @@ model Unidad {
 
   bimestre Bimestre @relation(fields: [id_bimestre], references: [id_bimestre])
 
-  evaluaciones   EvaluacionDetalle[]
+  evaluaciones    EvaluacionDetalle[]
   registros_notas RegistroNotasUnidad[]
 
   @@index([id_bimestre])
@@ -483,6 +487,7 @@ model Matricula {
   comentariosBimestrales ComentarioBimestral[]
   ordenes_pago           OrdenPago[]
   pagos_recibidos        PagoRecibido[]
+  calificaciones_tutoria CalificacionTutoria[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -496,8 +501,8 @@ model Matricula {
   @@index([id_matricula_origen])
   @@index([id_colegio_origen, id_anio_origen])
   @@index([tipo_proceso_matricula])
-  calificaciones_tutoria CalificacionTutoria[]
 }
+
 // ======================================================
 // DOCENTES, EVALUACIONES Y NOTAS
 // ======================================================
@@ -518,7 +523,7 @@ model AsignacionDocente {
   seccion Seccion     @relation(fields: [id_seccion], references: [id_seccion])
   anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
 
-  evaluaciones   EvaluacionDetalle[]
+  evaluaciones    EvaluacionDetalle[]
   registros_notas RegistroNotasUnidad[]
 
   @@index([id_docente, id_anio])
@@ -597,17 +602,17 @@ model NotaAlumno {
 }
 
 model RegistroNotasUnidad {
-  id_registro_notas Int      @id @default(autoincrement())
+  id_registro_notas Int       @id @default(autoincrement())
   id_asignacion     Int
   id_unidad         Int
-  cerrado           Boolean  @default(false)
+  cerrado           Boolean   @default(false)
   cerrado_por       Int?
   fecha_cierre      DateTime?
   reabierto_por     Int?
   fecha_reapertura  DateTime?
-  motivo_reapertura String?  @db.VarChar(500)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  motivo_reapertura String?   @db.VarChar(500)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
 
   asignacion AsignacionDocente @relation(fields: [id_asignacion], references: [id_asignacion], onDelete: Cascade)
   unidad     Unidad            @relation(fields: [id_unidad], references: [id_unidad], onDelete: Cascade)
@@ -622,15 +627,20 @@ model RegistroNotasUnidad {
 // ======================================================
 
 model Asistencia {
-  id_asistencia Int      @id @default(autoincrement())
-  id_matricula  Int
-  fecha         DateTime @db.Date
-  estado        String   @db.VarChar(20)
+  id_asistencia             Int       @id @default(autoincrement())
+  id_matricula              Int
+  fecha                     DateTime  @db.Date
+  estado                    String    @db.VarChar(20)
+  justificacion_motivo      String?   @db.VarChar(120)
+  justificacion_observacion String?   @db.VarChar(500)
+  justificado_por           Int?
+  fecha_justificacion       DateTime?
 
   matricula Matricula @relation(fields: [id_matricula], references: [id_matricula])
 
   @@unique([id_matricula, fecha])
   @@index([fecha])
+  @@index([estado])
 }
 
 // ======================================================
@@ -934,17 +944,17 @@ model PagoRecibidoHistorial {
 // ======================================================
 
 model CobranzaGestion {
-  id_gestion       Int      @id @default(autoincrement())
+  id_gestion       Int       @id @default(autoincrement())
   id_cronograma    Int
   id_usuario       Int?
-  canal            String   @default("WhatsApp") @db.VarChar(30)
-  estado_contacto  String   @default("Mensaje enviado") @db.VarChar(40)
-  telefono         String?  @db.VarChar(30)
-  mensaje          String?  @db.Text
-  observacion      String?  @db.VarChar(600)
+  canal            String    @default("WhatsApp") @db.VarChar(30)
+  estado_contacto  String    @default("Mensaje enviado") @db.VarChar(40)
+  telefono         String?   @db.VarChar(30)
+  mensaje          String?   @db.Text
+  observacion      String?   @db.VarChar(600)
   fecha_programada DateTime?
-  fecha_gestion    DateTime @default(now())
-  created_at       DateTime @default(now())
+  fecha_gestion    DateTime  @default(now())
+  created_at       DateTime  @default(now())
 
   cronograma CronogramaPagos @relation(fields: [id_cronograma], references: [id_cronograma])
   usuario    Usuario?        @relation("CobranzaGestionUsuario", fields: [id_usuario], references: [id_usuario])
@@ -1307,12 +1317,12 @@ model PlantillaEvaluacion {
 }
 
 model PlantillaEvaluacionDetalle {
-  id_detalle        Int    @id @default(autoincrement())
-  id_plantilla      Int
-  id_tipo_eval      Int
-  descripcion       String @db.VarChar(200)
-  grupo_evaluacion  String @default("Trabajo en clase") @db.VarChar(50)
-  orden             Int    @default(1)
+  id_detalle       Int    @id @default(autoincrement())
+  id_plantilla     Int
+  id_tipo_eval     Int
+  descripcion      String @db.VarChar(200)
+  grupo_evaluacion String @default("Trabajo en clase") @db.VarChar(50)
+  orden            Int    @default(1)
 
   plantilla PlantillaEvaluacion @relation(fields: [id_plantilla], references: [id_plantilla])
   tipo      TipoEvaluacion      @relation(fields: [id_tipo_eval], references: [id_tipo_eval])
