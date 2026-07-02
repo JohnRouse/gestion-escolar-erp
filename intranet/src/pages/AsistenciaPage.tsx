@@ -28,6 +28,7 @@ type AlumnoAsistencia = {
   estado: EstadoAsistencia;
   justificacion_motivo?: string;
   justificacion_observacion?: string;
+  requiere_justificacion?: boolean;
 };
 
 type JustificacionDraft = {
@@ -207,6 +208,16 @@ export default function AsistenciaPage() {
     const porcentaje = total > 0 ? Math.round((counts.Presente / total) * 100) : 0;
     return { total, counts, porcentaje };
   }, [alumnos]);
+
+  const justificacionesPendientes = useMemo(
+    () =>
+      alumnos.filter(
+        (alumno) =>
+          alumno.estado === 'Justificado' &&
+          !String(alumno.justificacion_motivo || '').trim(),
+      ),
+    [alumnos],
+  );
 
   const emptyTitle =
     secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos para mostrar';
@@ -430,6 +441,7 @@ export default function AsistenciaPage() {
         meta={[
           { label: 'Colegio actual', value: activeColegio?.nombre || scopeLabel },
           { label: 'Alumnos', value: String(resumen.total) },
+          { label: 'Pendientes', value: String(justificacionesPendientes.length) },
         ]}
       />
 
@@ -612,6 +624,34 @@ export default function AsistenciaPage() {
             </div>
           )}
 
+          {justificacionesPendientes.length > 0 && (
+            <div className="mb-4 rounded-sm border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex gap-3">
+                  <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-amber-100 text-amber-800">
+                    <AlertTriangle size={17} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-black text-amber-900">
+                      Hay {justificacionesPendientes.length} justificación(es) pendiente(s) de regularizar.
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-amber-800">
+                      Regulariza el motivo desde esta pantalla. La marca de asistencia ya fue registrada desde el modo móvil.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => abrirJustificacion(justificacionesPendientes[0])}
+                  className="inline-flex h-10 items-center justify-center rounded-sm bg-amber-600 px-4 text-xs font-black text-white hover:bg-amber-700"
+                >
+                  Regularizar ahora
+                </button>
+              </div>
+            </div>
+          )}
+
           {loadingSecciones || loadingAsistencia ? (
             <div className="flex min-h-[220px] items-center justify-center rounded-sm border border-dashed border-slate-300 bg-slate-50">
               <div className="text-center">
@@ -653,6 +693,24 @@ export default function AsistenciaPage() {
                       <p className="mt-0.5 text-xs font-semibold text-slate-400">
                         {alumno.codigo ? `Código: ${alumno.codigo}` : `Matrícula #${alumno.id_matricula}`}
                       </p>
+                      {alumno.estado === 'Justificado' && !alumno.justificacion_motivo && (
+                        <button
+                          type="button"
+                          onClick={() => abrirJustificacion(alumno)}
+                          className="mt-2 inline-flex rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-800 hover:bg-amber-100"
+                        >
+                          Pendiente de regularizar
+                        </button>
+                      )}
+                      {alumno.estado === 'Justificado' && !alumno.justificacion_motivo && (
+                        <button
+                          type="button"
+                          onClick={() => abrirJustificacion(alumno)}
+                          className="mt-2 inline-flex rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-800 hover:bg-amber-100"
+                        >
+                          Pendiente de regularizar
+                        </button>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
@@ -668,7 +726,11 @@ export default function AsistenciaPage() {
                               active ? estadoButtonSelected[estado] : estadoButtonIdle[estado]
                             }`}
                           >
-                            {estado}
+                            {estado === 'Justificado' &&
+                            active &&
+                            !alumno.justificacion_motivo
+                              ? 'Regularizar'
+                              : estado}
                           </button>
                         );
                       })}

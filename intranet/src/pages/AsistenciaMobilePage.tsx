@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Save,
   WifiOff,
   XCircle,
 } from 'lucide-react';
@@ -262,35 +261,7 @@ export default function AsistenciaMobilePage() {
     void guardarUno(idMatricula, estado);
   };
 
-  const guardarTodo = async () => {
-    if (!token || !headers || !seccionId || alumnos.length === 0) return;
 
-    setSyncing(true);
-    setMessage(null);
-    setOfflineMessage(null);
-
-    try {
-      await axios.post(
-        buildUrl('/api/academicos/asistencia', queryParams),
-        {
-          id_seccion: seccionId,
-          fecha,
-          asistencias: alumnos.map((alumno) => ({
-            id_matricula: alumno.id_matricula,
-            estado: alumno.estado,
-          })),
-        },
-        { headers },
-      );
-
-      setAlumnos((prev) => prev.map((alumno) => ({ ...alumno, registrado: true })));
-      setMessage('Asistencia sincronizada.');
-    } catch {
-      setOfflineMessage('No se pudo sincronizar la asistencia completa.');
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   return (
     <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-50 text-slate-950">
@@ -312,15 +283,19 @@ export default function AsistenciaMobilePage() {
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={guardarTodo}
-            disabled={syncing || alumnos.length === 0}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-slate-950 px-3 text-[11px] font-black text-white disabled:bg-slate-300"
-          >
-            {syncing ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Sync
-          </button>
+          <div className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-slate-100 px-3 text-[11px] font-black text-slate-700">
+            {syncing ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Guardando
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} />
+                Auto
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mt-2 grid grid-cols-[1fr_128px] gap-2">
