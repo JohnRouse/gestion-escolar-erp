@@ -201,18 +201,18 @@ export default function AsistenciaMobilePage() {
   };
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-100 text-slate-950">
-      <header className="shrink-0 border-b border-slate-200 bg-white px-3 py-2 shadow-sm">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-50 text-slate-950">
+      <header className="shrink-0 border-b border-slate-200 bg-white px-3 py-2">
         <div className="flex h-11 items-center gap-2">
           <Link
             to="/asistencia"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-700"
           >
             <ChevronLeft size={20} />
           </Link>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-blue-700">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
               Asistencia móvil
             </p>
             <h1 className="truncate text-sm font-black">
@@ -224,7 +224,7 @@ export default function AsistenciaMobilePage() {
             type="button"
             onClick={guardar}
             disabled={saving || alumnos.length === 0}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-3 text-[11px] font-black text-white disabled:bg-slate-300"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-slate-950 px-3 text-[11px] font-black text-white disabled:bg-slate-300"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Guardar
@@ -233,7 +233,7 @@ export default function AsistenciaMobilePage() {
 
         <div className="mt-2 grid grid-cols-[1fr_128px] gap-2">
           <select
-            className="h-10 min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black outline-none"
+            className="h-10 min-w-0 rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-xs font-black text-slate-950 outline-none focus:border-blue-500 focus:bg-white"
             value={seccionId}
             onChange={(event) => setSeccionId(Number(event.target.value))}
           >
@@ -250,7 +250,7 @@ export default function AsistenciaMobilePage() {
 
           <input
             type="date"
-            className="h-10 rounded-xl border border-slate-200 bg-white px-2 text-xs font-black outline-none"
+            className="h-10 rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-2 text-xs font-black text-slate-950 outline-none focus:border-blue-500 focus:bg-white"
             value={fecha}
             onChange={(event) => setFecha(event.target.value)}
           />
@@ -293,7 +293,7 @@ export default function AsistenciaMobilePage() {
           </div>
         ) : (
           <>
-            <section className="relative shrink-0 rounded-2xl bg-white px-4 py-4 text-center shadow-sm">
+            <section className="relative shrink-0 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
               <button
                 type="button"
                 onClick={goPrev}
@@ -316,15 +316,15 @@ export default function AsistenciaMobilePage() {
                 Alumno actual
               </p>
 
-              <h2 className="mx-auto mt-3 max-w-[250px] text-[clamp(1.45rem,7vw,2rem)] font-black leading-tight text-slate-950">
+              <h2 className="mx-auto mt-2 max-w-[250px] text-[clamp(1.35rem,6.5vw,1.85rem)] font-black leading-tight text-slate-950">
                 {currentAlumno.alumno}
               </h2>
 
-              <p className="mt-3 text-xs font-black text-slate-400">
+              <p className="mt-2 text-xs font-black text-slate-400">
                 {currentAlumno.codigo ? `Código: ${currentAlumno.codigo}` : `Matrícula #${currentAlumno.id_matricula}`}
               </p>
 
-              <div className="mx-auto mt-3 flex max-w-[280px] gap-1 overflow-x-auto pb-1">
+              <div className="mx-auto mt-2 flex max-w-[280px] gap-1 overflow-x-auto pb-1">
                 {alumnos.map((alumno, index) => (
                   <button
                     key={alumno.id_matricula}
@@ -345,7 +345,7 @@ export default function AsistenciaMobilePage() {
               <button
                 type="button"
                 onClick={() => marcarEstado('Presente')}
-                className="h-[17dvh] min-h-[70px] max-h-[98px] rounded-2xl border-2 border-emerald-700 bg-emerald-500 text-[clamp(1.35rem,7vw,2rem)] font-black text-white shadow-sm active:scale-[0.99]"
+                className="h-[17dvh] min-h-[70px] max-h-[98px] rounded-[18px] border-2 border-emerald-700 bg-emerald-600 text-[clamp(1.35rem,7vw,2rem)] font-black text-white shadow-sm active:scale-[0.99]"
               >
                 Presente
               </button>
@@ -354,7 +354,7 @@ export default function AsistenciaMobilePage() {
                 <button
                   type="button"
                   onClick={() => marcarEstado('Tardanza')}
-                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-2xl border-2 border-amber-700 bg-amber-400 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
+                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-[18px] border-2 border-amber-700 bg-amber-400 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
                 >
                   Tarde
                 </button>
@@ -362,7 +362,7 @@ export default function AsistenciaMobilePage() {
                 <button
                   type="button"
                   onClick={() => marcarEstado('Ausente')}
-                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-2xl border-2 border-rose-800 bg-rose-600 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-white shadow-sm active:scale-[0.99]"
+                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-[18px] border-2 border-rose-800 bg-rose-700 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-white shadow-sm active:scale-[0.99]"
                 >
                   Ausente
                 </button>
@@ -371,7 +371,7 @@ export default function AsistenciaMobilePage() {
               <button
                 type="button"
                 onClick={() => marcarEstado('Justificado')}
-                className="h-[10dvh] min-h-[48px] max-h-[64px] rounded-2xl border-2 border-slate-600 bg-slate-300 text-[clamp(1rem,5vw,1.35rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
+                className="h-[10dvh] min-h-[48px] max-h-[64px] rounded-[18px] border-2 border-slate-500 bg-slate-200 text-[clamp(1rem,5vw,1.35rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
               >
                 Justificar
               </button>

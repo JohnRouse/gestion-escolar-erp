@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
+import PageHeader from '../components/PageHeader';
 
 type EstadoAsistencia = 'Presente' | 'Ausente' | 'Tardanza' | 'Justificado';
 
@@ -111,7 +112,7 @@ function MobileAttendanceFab({
   return createPortal(
     <Link
       to={href}
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-[9999] inline-flex h-14 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-black text-white shadow-2xl shadow-blue-300 md:hidden"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-[9999] inline-flex h-14 -translate-x-1/2 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-black text-white shadow-2xl shadow-blue-300 md:hidden"
     >
       <Smartphone size={18} />
       Tomar asistencia
@@ -354,108 +355,100 @@ export default function AsistenciaPage() {
 
   return (
     <div className="space-y-5 pb-24 md:pb-0">
-      <section className="rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div className="bg-white px-6 py-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">
-                <CalendarDays size={13} />
-                Control diario
-              </div>
+      <PageHeader
+        eyebrow="Control diario"
+        title="Registro de asistencia"
+        description={`Marca asistencia solo para las secciones disponibles en ${activeColegio?.nombre || scopeLabel}.`}
+        icon={CalendarDays}
+        meta={[
+          { label: 'Colegio actual', value: activeColegio?.nombre || scopeLabel },
+          { label: 'Alumnos', value: String(resumen.total) },
+        ]}
+      />
 
-              <h2 className="mt-3 text-2xl font-black text-slate-950">
-                Registro de asistencia
-              </h2>
+      <section className="rounded-[24px] border border-slate-200 bg-white p-3">
+        <div className="grid gap-3 md:grid-cols-4">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              Nivel
+            </span>
+            <select
+              className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+              value={nivel}
+              disabled={loadingSecciones || niveles.length === 0}
+              onChange={(event) => handleNivelChange(event.target.value)}
+            >
+              {niveles.length === 0 ? (
+                <option value="">Sin nivel</option>
+              ) : (
+                niveles.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
 
-              <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">
-                Marca asistencia solo para las secciones disponibles en {activeColegio?.nombre || scopeLabel}.
-              </p>
-            </div>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              Grado
+            </span>
+            <select
+              className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+              value={grado}
+              disabled={loadingSecciones || grados.length === 0}
+              onChange={(event) => handleGradoChange(event.target.value)}
+            >
+              {grados.length === 0 ? (
+                <option value="">Sin grado</option>
+              ) : (
+                grados.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
 
-            <div className="grid gap-3 md:grid-cols-4 xl:min-w-[760px]">
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Nivel
-                </span>
-                <select
-                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
-                  value={nivel}
-                  disabled={loadingSecciones || niveles.length === 0}
-                  onChange={(event) => handleNivelChange(event.target.value)}
-                >
-                  {niveles.length === 0 ? (
-                    <option value="">Sin nivel</option>
-                  ) : (
-                    niveles.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              Sección
+            </span>
+            <select
+              className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+              value={seccionId}
+              disabled={loadingSecciones || seccionesFiltradas.length === 0}
+              onChange={(event) => setSeccionId(Number(event.target.value))}
+            >
+              {seccionesFiltradas.length === 0 ? (
+                <option value="">Sin sección</option>
+              ) : (
+                seccionesFiltradas.map((item) => (
+                  <option key={item.id_seccion} value={item.id_seccion}>
+                    {shortSeccionLabel(item)}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
 
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Grado
-                </span>
-                <select
-                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
-                  value={grado}
-                  disabled={loadingSecciones || grados.length === 0}
-                  onChange={(event) => handleGradoChange(event.target.value)}
-                >
-                  {grados.length === 0 ? (
-                    <option value="">Sin grado</option>
-                  ) : (
-                    grados.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Sección
-                </span>
-                <select
-                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
-                  value={seccionId}
-                  disabled={loadingSecciones || seccionesFiltradas.length === 0}
-                  onChange={(event) => setSeccionId(Number(event.target.value))}
-                >
-                  {seccionesFiltradas.length === 0 ? (
-                    <option value="">Sin sección</option>
-                  ) : (
-                    seccionesFiltradas.map((item) => (
-                      <option key={item.id_seccion} value={item.id_seccion}>
-                        {shortSeccionLabel(item)}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Fecha
-                </span>
-                <input
-                  type="date"
-                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900"
-                  value={fecha}
-                  onChange={(event) => setFecha(event.target.value)}
-                />
-              </label>
-            </div>
-          </div>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              Fecha
+            </span>
+            <input
+              type="date"
+              className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              value={fecha}
+              onChange={(event) => setFecha(event.target.value)}
+            />
+          </label>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
         <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-6 py-4 md:grid-cols-4">
           <div className="rounded-sm border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
