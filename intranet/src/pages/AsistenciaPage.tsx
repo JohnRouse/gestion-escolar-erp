@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertTriangle,
@@ -96,6 +97,27 @@ function uniqueClean(values: Array<string | null | undefined>) {
 function shortSeccionLabel(section: SeccionOption) {
   if (section.letra) return `Sección "${section.letra}"`;
   return section.label;
+}
+
+function MobileAttendanceFab({
+  href,
+  visible,
+}: {
+  href: string;
+  visible: boolean;
+}) {
+  if (!visible || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <Link
+      to={href}
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-[9999] inline-flex h-14 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-black text-white shadow-2xl shadow-blue-300 md:hidden"
+    >
+      <Smartphone size={18} />
+      Tomar asistencia
+    </Link>,
+    document.body,
+  );
 }
 
 export default function AsistenciaPage() {
@@ -331,9 +353,9 @@ export default function AsistenciaPage() {
   };
 
   return (
-    <div className="animate-fade-in space-y-5">
-      <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-white px-6 py-6">
+    <div className="space-y-5 pb-24 md:pb-0">
+      <section className="rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+        <div className="bg-white px-6 py-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">
@@ -431,7 +453,9 @@ export default function AsistenciaPage() {
             </div>
           </div>
         </div>
+      </section>
 
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
         <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-6 py-4 md:grid-cols-4">
           <div className="rounded-sm border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
@@ -597,15 +621,7 @@ export default function AsistenciaPage() {
         </div>
       </section>
 
-      {hasSeccion && (
-        <Link
-          to={mobileHref}
-          className="fixed bottom-5 right-5 z-[60] inline-flex h-14 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-black text-white shadow-2xl shadow-blue-300 md:hidden"
-        >
-          <Smartphone size={18} />
-          Tomar asistencia
-        </Link>
-      )}
+      <MobileAttendanceFab href={mobileHref} visible={hasSeccion} />
     </div>
   );
 }
