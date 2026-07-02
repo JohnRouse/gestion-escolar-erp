@@ -10,13 +10,11 @@ import {
   RefreshCw,
   Save,
   Smartphone,
-  UserCheck,
   UsersRound,
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
-import Breadcrumb from '../components/Breadcrumb';
 
 type EstadoAsistencia = 'Presente' | 'Ausente' | 'Tardanza' | 'Justificado';
 
@@ -32,24 +30,35 @@ type SeccionOption = {
   id_seccion: number;
   label: string;
   colegio?: string | null;
+  id_colegio?: number | null;
+  grado?: string | null;
+  nivel?: string | null;
+  letra?: string | null;
 };
 
 const estados: EstadoAsistencia[] = ['Presente', 'Tardanza', 'Ausente', 'Justificado'];
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
-const estadoClasses: Record<EstadoAsistencia, string> = {
-  Presente: 'border-emerald-200 bg-emerald-50 text-emerald-700 ring-emerald-100',
-  Tardanza: 'border-amber-200 bg-amber-50 text-amber-700 ring-amber-100',
-  Ausente: 'border-rose-200 bg-rose-50 text-rose-700 ring-rose-100',
-  Justificado: 'border-blue-200 bg-blue-50 text-blue-700 ring-blue-100',
+const estadoSummaryClasses: Record<EstadoAsistencia, string> = {
+  Presente: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  Tardanza: 'border-amber-300 bg-amber-50 text-amber-800',
+  Ausente: 'border-rose-300 bg-rose-50 text-rose-800',
+  Justificado: 'border-blue-300 bg-blue-50 text-blue-800',
 };
 
-const estadoDotClasses: Record<EstadoAsistencia, string> = {
-  Presente: 'bg-emerald-500',
-  Tardanza: 'bg-amber-500',
-  Ausente: 'bg-rose-500',
-  Justificado: 'bg-blue-500',
+const estadoButtonSelected: Record<EstadoAsistencia, string> = {
+  Presente: 'border-emerald-700 bg-emerald-700 text-white',
+  Tardanza: 'border-amber-600 bg-amber-500 text-slate-950',
+  Ausente: 'border-rose-700 bg-rose-700 text-white',
+  Justificado: 'border-blue-700 bg-blue-700 text-white',
+};
+
+const estadoButtonIdle: Record<EstadoAsistencia, string> = {
+  Presente: 'border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-50',
+  Tardanza: 'border-amber-300 bg-white text-amber-800 hover:bg-amber-50',
+  Ausente: 'border-rose-300 bg-white text-rose-800 hover:bg-rose-50',
+  Justificado: 'border-blue-300 bg-white text-blue-800 hover:bg-blue-50',
 };
 
 const estadoIcons: Record<EstadoAsistencia, typeof CheckCircle2> = {
@@ -59,7 +68,11 @@ const estadoIcons: Record<EstadoAsistencia, typeof CheckCircle2> = {
   Justificado: AlertTriangle,
 };
 
-function buildUrl(path: string, queryParams: Record<string, string | number>, extra: Record<string, string | number> = {}) {
+function buildUrl(
+  path: string,
+  queryParams: Record<string, string | number>,
+  extra: Record<string, string | number> = {},
+) {
   const params = new URLSearchParams();
 
   Object.entries(queryParams).forEach(([key, value]) => {
@@ -74,11 +87,24 @@ function buildUrl(path: string, queryParams: Record<string, string | number>, ex
   return query ? `${path}?${query}` : path;
 }
 
+function uniqueClean(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.map((value) => String(value || '').trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function shortSeccionLabel(section: SeccionOption) {
+  if (section.letra) return `Sección "${section.letra}"`;
+  return section.label;
+}
+
 export default function AsistenciaPage() {
   const { token } = useAuth();
   const { queryParams, activeColegio, scopeLabel } = useSchool();
 
   const [secciones, setSecciones] = useState<SeccionOption[]>([]);
+  const [nivel, setNivel] = useState('');
+  const [grado, setGrado] = useState('');
   const [seccionId, setSeccionId] = useState<number | ''>('');
   const [fecha, setFecha] = useState(todayISO());
   const [alumnos, setAlumnos] = useState<AlumnoAsistencia[]>([]);
@@ -88,13 +114,47 @@ export default function AsistenciaPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
+
   const headers = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   );
 
+  const niveles = useMemo(
+    () => uniqueClean(secciones.map((item) => item.nivel)),
+    [secciones],
+  );
+
+  const grados = useMemo(
+    () =>
+      uniqueClean(
+        secciones
+          .filter((item) => !nivel || item.nivel === nivel)
+          .map((item) => item.grado),
+      ),
+    [secciones, nivel],
+  );
+
+  const seccionesFiltradas = useMemo(
+    () =>
+      secciones.filter((item) => {
+        if (nivel && item.nivel !== nivel) return false;
+        if (grado && item.grado !== grado) return false;
+        return true;
+      }),
+    [secciones, nivel, grado],
+  );
+
+  const selectedSeccion = secciones.find((item) => item.id_seccion === seccionId);
+  const hasSeccion = Boolean(seccionId);
+  const mobileHref = hasSeccion
+    ? `/asistencia/mobile?seccion_id=${seccionId}&fecha=${fecha}`
+    : '/asistencia';
+
   const resumen = useMemo(() => {
     const total = alumnos.length;
+
     const counts = estados.reduce(
       (acc, estado) => {
         acc[estado] = alumnos.filter((alumno) => alumno.estado === estado).length;
@@ -104,14 +164,8 @@ export default function AsistenciaPage() {
     );
 
     const porcentaje = total > 0 ? Math.round((counts.Presente / total) * 100) : 0;
-
     return { total, counts, porcentaje };
   }, [alumnos]);
-
-  const selectedSeccion = secciones.find((item) => item.id_seccion === seccionId);
-
-  const hasSeccion = Boolean(seccionId);
-  const mobileHref = hasSeccion ? `/asistencia/mobile?seccion_id=${seccionId}&fecha=${fecha}` : '/asistencia';
 
   const emptyTitle =
     secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos para mostrar';
@@ -120,6 +174,55 @@ export default function AsistenciaPage() {
     secciones.length === 0
       ? `No hay secciones configuradas o asignadas para ${activeColegio?.nombre || scopeLabel}.`
       : 'Verifica la sección seleccionada o la matrícula activa de los estudiantes.';
+
+  const seleccionarPrimerFiltro = (items: SeccionOption[]) => {
+    const first = items[0];
+
+    if (!first) {
+      setNivel('');
+      setGrado('');
+      setSeccionId('');
+      setAlumnos([]);
+      return;
+    }
+
+    setNivel(first.nivel || '');
+    setGrado(first.grado || '');
+    setSeccionId(first.id_seccion);
+  };
+
+  const handleNivelChange = (value: string) => {
+    setNivel(value);
+
+    const gradosFiltrados = uniqueClean(
+      secciones
+        .filter((item) => !value || item.nivel === value)
+        .map((item) => item.grado),
+    );
+
+    const nextGrado = gradosFiltrados[0] || '';
+    setGrado(nextGrado);
+
+    const first = secciones.find((item) => {
+      if (value && item.nivel !== value) return false;
+      if (nextGrado && item.grado !== nextGrado) return false;
+      return true;
+    });
+
+    setSeccionId(first?.id_seccion || '');
+  };
+
+  const handleGradoChange = (value: string) => {
+    setGrado(value);
+
+    const first = secciones.find((item) => {
+      if (nivel && item.nivel !== nivel) return false;
+      if (value && item.grado !== value) return false;
+      return true;
+    });
+
+    setSeccionId(first?.id_seccion || '');
+  };
 
   const cargarSecciones = async () => {
     if (!token || !headers) return;
@@ -136,22 +239,11 @@ export default function AsistenciaPage() {
 
       const items: SeccionOption[] = Array.isArray(res.data) ? res.data : [];
       setSecciones(items);
-
-      if (items.length > 0) {
-        setSeccionId((current) =>
-          current && items.some((item) => item.id_seccion === current)
-            ? current
-            : items[0].id_seccion,
-        );
-      } else {
-        setSeccionId('');
-        setAlumnos([]);
-      }
+      seleccionarPrimerFiltro(items);
     } catch {
       setError('No se pudieron cargar las secciones disponibles.');
       setSecciones([]);
-      setSeccionId('');
-      setAlumnos([]);
+      seleccionarPrimerFiltro([]);
     } finally {
       setLoadingSecciones(false);
     }
@@ -192,15 +284,16 @@ export default function AsistenciaPage() {
   useEffect(() => {
     cargarSecciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, JSON.stringify(queryParams)]);
+  }, [token, scopeKey]);
 
   useEffect(() => {
     cargarAsistencia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seccionId, fecha, token, JSON.stringify(queryParams)]);
+  }, [seccionId, fecha, token, scopeKey]);
 
   const setEstadoAlumno = (idMatricula: number, estado: EstadoAsistencia) => {
     setMessage(null);
+
     setAlumnos((prev) =>
       prev.map((alumno) =>
         alumno.id_matricula === idMatricula ? { ...alumno, estado } : alumno,
@@ -238,15 +331,13 @@ export default function AsistenciaPage() {
   };
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <Breadcrumb />
-
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-blue-50 px-6 py-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="animate-fade-in space-y-5">
+      <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-white px-6 py-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700 ring-1 ring-blue-100">
-                <UserCheck size={13} />
+              <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600">
+                <CalendarDays size={13} />
                 Control diario
               </div>
 
@@ -254,28 +345,28 @@ export default function AsistenciaPage() {
                 Registro de asistencia
               </h2>
 
-              <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+              <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">
                 Marca asistencia solo para las secciones disponibles en {activeColegio?.nombre || scopeLabel}.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[430px]">
+            <div className="grid gap-3 md:grid-cols-4 xl:min-w-[760px]">
               <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
-                  Sección
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Nivel
                 </span>
                 <select
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
-                  value={seccionId}
-                  disabled={loadingSecciones || secciones.length === 0}
-                  onChange={(event) => setSeccionId(Number(event.target.value))}
+                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                  value={nivel}
+                  disabled={loadingSecciones || niveles.length === 0}
+                  onChange={(event) => handleNivelChange(event.target.value)}
                 >
-                  {secciones.length === 0 ? (
-                    <option value="">Sin secciones disponibles</option>
+                  {niveles.length === 0 ? (
+                    <option value="">Sin nivel</option>
                   ) : (
-                    secciones.map((item) => (
-                      <option key={item.id_seccion} value={item.id_seccion}>
-                        {item.label}
+                    niveles.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
                       </option>
                     ))
                   )}
@@ -283,12 +374,56 @@ export default function AsistenciaPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Grado
+                </span>
+                <select
+                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                  value={grado}
+                  disabled={loadingSecciones || grados.length === 0}
+                  onChange={(event) => handleGradoChange(event.target.value)}
+                >
+                  {grados.length === 0 ? (
+                    <option value="">Sin grado</option>
+                  ) : (
+                    grados.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Sección
+                </span>
+                <select
+                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                  value={seccionId}
+                  disabled={loadingSecciones || seccionesFiltradas.length === 0}
+                  onChange={(event) => setSeccionId(Number(event.target.value))}
+                >
+                  {seccionesFiltradas.length === 0 ? (
+                    <option value="">Sin sección</option>
+                  ) : (
+                    seccionesFiltradas.map((item) => (
+                      <option key={item.id_seccion} value={item.id_seccion}>
+                        {shortSeccionLabel(item)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
                   Fecha
                 </span>
                 <input
                   type="date"
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  className="h-12 w-full rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-900"
                   value={fecha}
                   onChange={(event) => setFecha(event.target.value)}
                 />
@@ -297,9 +432,9 @@ export default function AsistenciaPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 border-b border-slate-200 bg-white px-6 py-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+        <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-6 py-4 md:grid-cols-4">
+          <div className="rounded-sm border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
               Total
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -312,8 +447,11 @@ export default function AsistenciaPage() {
             const Icon = estadoIcons[estado];
 
             return (
-              <div key={estado} className={`rounded-2xl border p-4 ring-1 ${estadoClasses[estado]}`}>
-                <p className="text-[11px] font-black uppercase tracking-[0.12em] opacity-70">
+              <div
+                key={estado}
+                className={`rounded-sm border bg-white p-4 ${estadoSummaryClasses[estado]}`}
+              >
+                <p className="text-[11px] font-black uppercase tracking-[0.14em]">
                   {estado}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
@@ -339,26 +477,21 @@ export default function AsistenciaPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {hasSeccion ? (
+              {hasSeccion && (
                 <Link
                   to={mobileHref}
-                  className="inline-flex h-10 items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-100"
+                  className="hidden h-10 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950 md:inline-flex"
                 >
                   <Smartphone size={14} />
                   Modo móvil
                 </Link>
-              ) : (
-                <span className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-xs font-black text-slate-300 shadow-sm">
-                  <Smartphone size={14} />
-                  Modo móvil
-                </span>
               )}
 
               <button
                 type="button"
                 onClick={cargarAsistencia}
                 disabled={loadingAsistencia || !seccionId}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw size={14} className={loadingAsistencia ? 'animate-spin' : ''} />
                 Actualizar
@@ -368,7 +501,7 @@ export default function AsistenciaPage() {
                 type="button"
                 onClick={guardar}
                 disabled={saving || alumnos.length === 0}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-blue-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex h-10 items-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Guardar asistencia
@@ -376,47 +509,45 @@ export default function AsistenciaPage() {
             </div>
           </div>
 
-          <div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className="h-full rounded-full bg-slate-950 transition-all"
               style={{ width: `${resumen.porcentaje}%` }}
             />
           </div>
 
           {message && (
-            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+            <div className="mb-4 rounded-sm border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
               {message}
             </div>
           )}
 
           {error && (
-            <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+            <div className="mb-4 rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800">
               {error}
             </div>
           )}
 
           {loadingSecciones || loadingAsistencia ? (
-            <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50">
+            <div className="flex min-h-[220px] items-center justify-center rounded-sm border border-dashed border-slate-300 bg-slate-50">
               <div className="text-center">
-                <Loader2 className="mx-auto animate-spin text-blue-600" size={28} />
+                <Loader2 className="mx-auto animate-spin text-slate-700" size={28} />
                 <p className="mt-3 text-sm font-bold text-slate-500">Cargando asistencia...</p>
               </div>
             </div>
           ) : alumnos.length === 0 ? (
-            <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+            <div className="flex min-h-[220px] items-center justify-center rounded-sm border border-dashed border-slate-300 bg-slate-50 px-6 text-center">
               <div>
                 <UsersRound className="mx-auto text-slate-300" size={36} />
-                <p className="mt-3 text-sm font-black text-slate-700">
-                  {emptyTitle}
-                </p>
+                <p className="mt-3 text-sm font-black text-slate-700">{emptyTitle}</p>
                 <p className="mt-1 max-w-md text-xs font-semibold text-slate-400">
                   {emptyDescription}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-3xl border border-slate-200">
-              <div className="hidden grid-cols-[1.6fr_2fr] border-b border-slate-200 bg-slate-50 px-5 py-3 md:grid">
+            <div className="overflow-hidden rounded-sm border border-slate-200 bg-white">
+              <div className="carbon-list-header hidden grid-cols-[1.3fr_2fr] border-b border-slate-200 bg-slate-50 px-5 py-3 md:grid">
                 <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
                   Alumno
                 </span>
@@ -429,7 +560,7 @@ export default function AsistenciaPage() {
                 {alumnos.map((alumno) => (
                   <div
                     key={alumno.id_matricula}
-                    className="grid gap-4 px-5 py-4 transition hover:bg-slate-50 md:grid-cols-[1.6fr_2fr] md:items-center"
+                    className="carbon-list-row grid gap-4 px-5 py-4 transition hover:bg-slate-50 md:grid-cols-[1.3fr_2fr] md:items-center"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-900">
@@ -440,22 +571,23 @@ export default function AsistenciaPage() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-                      {estados.map((estado) => (
-                        <button
-                          key={estado}
-                          type="button"
-                          onClick={() => setEstadoAlumno(alumno.id_matricula, estado)}
-                          className={`inline-flex h-10 items-center justify-center gap-2 rounded-2xl border px-3 text-xs font-black transition ring-1 ${
-                            alumno.estado === estado
-                              ? estadoClasses[estado]
-                              : 'border-slate-200 bg-white text-slate-500 ring-transparent hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className={`h-2 w-2 rounded-full ${estadoDotClasses[estado]}`} />
-                          {estado}
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                      {estados.map((estado) => {
+                        const active = alumno.estado === estado;
+
+                        return (
+                          <button
+                            key={estado}
+                            type="button"
+                            onClick={() => setEstadoAlumno(alumno.id_matricula, estado)}
+                            className={`inline-flex h-10 items-center justify-center rounded-sm border px-3 text-xs font-black transition ${
+                              active ? estadoButtonSelected[estado] : estadoButtonIdle[estado]
+                            }`}
+                          >
+                            {estado}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -464,6 +596,16 @@ export default function AsistenciaPage() {
           )}
         </div>
       </section>
+
+      {hasSeccion && (
+        <Link
+          to={mobileHref}
+          className="fixed bottom-5 right-5 z-[60] inline-flex h-14 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-black text-white shadow-2xl shadow-blue-300 md:hidden"
+        >
+          <Smartphone size={18} />
+          Tomar asistencia
+        </Link>
+      )}
     </div>
   );
 }
