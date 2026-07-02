@@ -52,7 +52,18 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/pago/:referencia" element={<PagoPublicoPage />} />
-      <Route path="/consulta-pagos" element={<ConsultaPagosPublicaPage />} />
+      <Route path="/consulta-pagos" element={<ConsultaPagosPublicaPage />} />\n      <Route
+        path="/asistencia/mobile"
+        element={
+          <ProtectedRoute>
+            <SchoolProvider>
+              <ProtectedModuleRoute module="asistencia">
+                <AsistenciaMobilePage />
+              </ProtectedModuleRoute>
+            </SchoolProvider>
+          </ProtectedRoute>
+        }
+      />
       <Route
         element={
           <ProtectedRoute>
@@ -69,7 +80,7 @@ function AppRoutes() {
         <Route path="/tesoreria" element={<TesoreriaPage />} />
         <Route path="/tesoreria/configuracion" element={<TesoreriaConfiguracionPage />} />
         <Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
-        <Route path="/asistencia" element={<ProtectedModuleRoute module="asistencia"><AsistenciaPage /></ProtectedModuleRoute>} />\n        <Route path="/asistencia/mobile" element={<ProtectedModuleRoute module="asistencia"><AsistenciaMobilePage /></ProtectedModuleRoute>} />
+        <Route path="/asistencia" element={<ProtectedModuleRoute module="asistencia"><AsistenciaPage /></ProtectedModuleRoute>} />
         <Route path="/calendario" element={<ProtectedModuleRoute module="calendario"><CalendarioPage /></ProtectedModuleRoute>} />
         <Route path="/horario" element={<ProtectedModuleRoute module="horario"><Navigate to="/calendario" replace /></ProtectedModuleRoute>} />
         <Route path="/notas" element={<ProtectedModuleRoute module="notas"><NotasPage /></ProtectedModuleRoute>} />

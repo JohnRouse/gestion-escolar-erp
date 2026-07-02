@@ -284,9 +284,13 @@ export default function AsistenciaMobilePage() {
           <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] bg-white px-6 text-center shadow-sm">
             <div>
               <XCircle className="mx-auto text-slate-300" size={40} />
-              <p className="mt-3 text-base font-black">No hay alumnos</p>
+              <p className="mt-3 text-base font-black">
+                {secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos'}
+              </p>
               <p className="mt-1 text-sm font-semibold text-slate-400">
-                Revisa la sección seleccionada o las matrículas activas.
+                {secciones.length === 0
+                  ? 'No hay secciones asignadas o configuradas para el colegio activo.'
+                  : 'Revisa la sección seleccionada o las matrículas activas.'}
               </p>
             </div>
           </div>

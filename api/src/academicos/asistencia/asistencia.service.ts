@@ -148,7 +148,7 @@ export class AsistenciaService {
     }
 
     const docenteIds = (usuario.persona?.docentes || [])
-      .map((docente: any) => docente.id_docente)
+      .map((docente: any) => docente.id_persona)
       .filter(Boolean);
 
     if (!docenteIds.length) {

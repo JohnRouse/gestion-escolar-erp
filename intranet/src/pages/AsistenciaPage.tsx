@@ -110,7 +110,16 @@ export default function AsistenciaPage() {
 
   const selectedSeccion = secciones.find((item) => item.id_seccion === seccionId);
 
-  const mobileHref = `/asistencia/mobile?seccion_id=${seccionId || ''}&fecha=${fecha}`;
+  const hasSeccion = Boolean(seccionId);
+  const mobileHref = hasSeccion ? `/asistencia/mobile?seccion_id=${seccionId}&fecha=${fecha}` : '/asistencia';
+
+  const emptyTitle =
+    secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos para mostrar';
+
+  const emptyDescription =
+    secciones.length === 0
+      ? `No hay secciones configuradas o asignadas para ${activeColegio?.nombre || scopeLabel}.`
+      : 'Verifica la sección seleccionada o la matrícula activa de los estudiantes.';
 
   const cargarSecciones = async () => {
     if (!token || !headers) return;
@@ -149,7 +158,14 @@ export default function AsistenciaPage() {
   };
 
   const cargarAsistencia = async () => {
-    if (!token || !headers || !seccionId || !fecha) return;
+    if (!seccionId) {
+      setAlumnos([]);
+      setError(null);
+      setMessage(null);
+      return;
+    }
+
+    if (!token || !headers || !fecha) return;
 
     setLoadingAsistencia(true);
     setError(null);
@@ -323,13 +339,20 @@ export default function AsistenciaPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Link
-                to={mobileHref}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-100"
-              >
-                <Smartphone size={14} />
-                Modo móvil
-              </Link>
+              {hasSeccion ? (
+                <Link
+                  to={mobileHref}
+                  className="inline-flex h-10 items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-100"
+                >
+                  <Smartphone size={14} />
+                  Modo móvil
+                </Link>
+              ) : (
+                <span className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-xs font-black text-slate-300 shadow-sm">
+                  <Smartphone size={14} />
+                  Modo móvil
+                </span>
+              )}
 
               <button
                 type="button"
@@ -384,10 +407,10 @@ export default function AsistenciaPage() {
               <div>
                 <UsersRound className="mx-auto text-slate-300" size={36} />
                 <p className="mt-3 text-sm font-black text-slate-700">
-                  No hay alumnos para mostrar
+                  {emptyTitle}
                 </p>
                 <p className="mt-1 max-w-md text-xs font-semibold text-slate-400">
-                  Verifica la sección seleccionada o la matrícula activa de los estudiantes.
+                  {emptyDescription}
                 </p>
               </div>
             </div>
