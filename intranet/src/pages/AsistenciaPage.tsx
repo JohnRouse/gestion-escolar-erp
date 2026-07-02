@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   AlertTriangle,
@@ -8,18 +9,22 @@ import {
   Loader2,
   RefreshCw,
   Save,
+  Smartphone,
   UserCheck,
   UsersRound,
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
 import Breadcrumb from '../components/Breadcrumb';
 
 type EstadoAsistencia = 'Presente' | 'Ausente' | 'Tardanza' | 'Justificado';
 
 type AlumnoAsistencia = {
   id_matricula: number;
+  id_estudiante?: number;
   alumno: string;
+  codigo?: string | null;
   estado: EstadoAsistencia;
 };
 
@@ -54,64 +59,24 @@ const estadoIcons: Record<EstadoAsistencia, typeof CheckCircle2> = {
   Justificado: AlertTriangle,
 };
 
-function getNombreSeccion(raw: any): string {
-  const seccion = raw?.seccion || raw;
-  const grado =
-    seccion?.grado?.nombre_grado ||
-    seccion?.grado_nombre ||
-    seccion?.nombre_grado ||
-    seccion?.grado ||
-    'Sección';
+function buildUrl(path: string, queryParams: Record<string, string | number>, extra: Record<string, string | number> = {}) {
+  const params = new URLSearchParams();
 
-  const nivel =
-    seccion?.grado?.nivel?.nombre_nivel ||
-    seccion?.nivel?.nombre_nivel ||
-    seccion?.nivel_nombre ||
-    '';
-
-  const letra = seccion?.letra ? ` "${seccion.letra}"` : '';
-
-  return [grado ? `${grado}${letra}` : null, nivel].filter(Boolean).join(' · ');
-}
-
-function getColegioSeccion(raw: any): string | null {
-  const seccion = raw?.seccion || raw;
-  return seccion?.colegio?.nombre || seccion?.colegio_nombre || null;
-}
-
-function normalizeSeccion(raw: any): SeccionOption | null {
-  const seccion = raw?.seccion || raw;
-  const id = Number(seccion?.id_seccion || raw?.id_seccion);
-
-  if (!Number.isInteger(id) || id <= 0) return null;
-
-  return {
-    id_seccion: id,
-    label: getNombreSeccion(raw),
-    colegio: getColegioSeccion(raw),
-  };
-}
-
-function uniqueSecciones(items: Array<SeccionOption | null>) {
-  const map = new Map<number, SeccionOption>();
-
-  items.forEach((item) => {
-    if (!item) return;
-    if (!map.has(item.id_seccion)) {
-      map.set(item.id_seccion, item);
-    }
+  Object.entries(queryParams).forEach(([key, value]) => {
+    params.set(key, String(value));
   });
 
-  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
-}
+  Object.entries(extra).forEach(([key, value]) => {
+    params.set(key, String(value));
+  });
 
-function getSeccionesFromUser(user: any) {
-  const asignaciones = user?.contexto?.docente?.asignaciones || [];
-  return uniqueSecciones(asignaciones.map(normalizeSeccion));
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 export default function AsistenciaPage() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
+  const { queryParams, activeColegio, scopeLabel } = useSchool();
 
   const [secciones, setSecciones] = useState<SeccionOption[]>([]);
   const [seccionId, setSeccionId] = useState<number | ''>('');
@@ -145,45 +110,39 @@ export default function AsistenciaPage() {
 
   const selectedSeccion = secciones.find((item) => item.id_seccion === seccionId);
 
+  const mobileHref = `/asistencia/mobile?seccion_id=${seccionId || ''}&fecha=${fecha}`;
+
   const cargarSecciones = async () => {
     if (!token || !headers) return;
 
     setLoadingSecciones(true);
     setError(null);
+    setMessage(null);
 
     try {
-      const fromUser = getSeccionesFromUser(user);
+      const res = await axios.get(
+        buildUrl('/api/academicos/asistencia/secciones', queryParams),
+        { headers },
+      );
 
-      let fromApi: SeccionOption[] = [];
+      const items: SeccionOption[] = Array.isArray(res.data) ? res.data : [];
+      setSecciones(items);
 
-      try {
-        const res = await axios.get('/api/academicos/secciones', { headers });
-        const payload = Array.isArray(res.data)
-          ? res.data
-          : res.data?.data || res.data?.items || [];
-
-        fromApi = uniqueSecciones(payload.map(normalizeSeccion));
-      } catch {
-        fromApi = [];
-      }
-
-      const merged = uniqueSecciones([...fromUser, ...fromApi]);
-
-      setSecciones(merged);
-
-      if (merged.length > 0) {
+      if (items.length > 0) {
         setSeccionId((current) =>
-          current && merged.some((item) => item.id_seccion === current)
+          current && items.some((item) => item.id_seccion === current)
             ? current
-            : merged[0].id_seccion,
+            : items[0].id_seccion,
         );
       } else {
         setSeccionId('');
+        setAlumnos([]);
       }
     } catch {
       setError('No se pudieron cargar las secciones disponibles.');
       setSecciones([]);
       setSeccionId('');
+      setAlumnos([]);
     } finally {
       setLoadingSecciones(false);
     }
@@ -198,7 +157,10 @@ export default function AsistenciaPage() {
 
     try {
       const res = await axios.get(
-        `/api/academicos/asistencia?seccion_id=${seccionId}&fecha=${fecha}`,
+        buildUrl('/api/academicos/asistencia', queryParams, {
+          seccion_id: seccionId,
+          fecha,
+        }),
         { headers },
       );
 
@@ -214,12 +176,12 @@ export default function AsistenciaPage() {
   useEffect(() => {
     cargarSecciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user?.id]);
+  }, [token, JSON.stringify(queryParams)]);
 
   useEffect(() => {
     cargarAsistencia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seccionId, fecha, token]);
+  }, [seccionId, fecha, token, JSON.stringify(queryParams)]);
 
   const setEstadoAlumno = (idMatricula: number, estado: EstadoAsistencia) => {
     setMessage(null);
@@ -239,7 +201,7 @@ export default function AsistenciaPage() {
 
     try {
       await axios.post(
-        '/api/academicos/asistencia',
+        buildUrl('/api/academicos/asistencia', queryParams),
         {
           id_seccion: seccionId,
           fecha,
@@ -269,7 +231,7 @@ export default function AsistenciaPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700 ring-1 ring-blue-100">
                 <UserCheck size={13} />
-                Asistencia
+                Control diario
               </div>
 
               <h2 className="mt-3 text-2xl font-black text-slate-950">
@@ -277,7 +239,7 @@ export default function AsistenciaPage() {
               </h2>
 
               <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-                Selecciona una sección y marca el estado de asistencia de cada estudiante.
+                Marca asistencia solo para las secciones disponibles en {activeColegio?.nombre || scopeLabel}.
               </p>
             </div>
 
@@ -361,6 +323,14 @@ export default function AsistenciaPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <Link
+                to={mobileHref}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-100"
+              >
+                <Smartphone size={14} />
+                Modo móvil
+              </Link>
+
               <button
                 type="button"
                 onClick={cargarAsistencia}
@@ -443,7 +413,7 @@ export default function AsistenciaPage() {
                         {alumno.alumno}
                       </p>
                       <p className="mt-0.5 text-xs font-semibold text-slate-400">
-                        Matrícula #{alumno.id_matricula}
+                        {alumno.codigo ? `Código: ${alumno.codigo}` : `Matrícula #${alumno.id_matricula}`}
                       </p>
                     </div>
 
