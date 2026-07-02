@@ -232,9 +232,13 @@ export class AsistenciaService {
         alumno: this.formatAlumno(m),
         codigo: m.estudiante?.codigo_estudiante || null,
         estado: m.asistencias.length > 0 ? m.asistencias[0].estado : 'Presente',
+        registrado: m.asistencias.length > 0,
         justificacion_motivo: m.asistencias[0]?.justificacion_motivo || '',
         justificacion_observacion: m.asistencias[0]?.justificacion_observacion || '',
         fecha_justificacion: m.asistencias[0]?.fecha_justificacion || null,
+        requiere_justificacion:
+          m.asistencias[0]?.estado === 'Justificado' &&
+          !m.asistencias[0]?.justificacion_motivo,
       }));
   }
 
@@ -283,17 +287,13 @@ export class AsistenciaService {
       const motivo = String(a.justificacion_motivo || '').trim();
       const observacion = String(a.justificacion_observacion || '').trim();
 
-      if (a.estado === 'Justificado' && !motivo) {
-        throw new BadRequestException('Debes registrar un motivo para justificar la asistencia.');
-      }
-
       const justificacion =
         a.estado === 'Justificado'
           ? {
-              justificacion_motivo: motivo,
+              justificacion_motivo: motivo || null,
               justificacion_observacion: observacion || null,
-              justificado_por: user.userId,
-              fecha_justificacion: new Date(),
+              justificado_por: motivo ? user.userId : null,
+              fecha_justificacion: motivo ? new Date() : null,
             }
           : {
               justificacion_motivo: null,

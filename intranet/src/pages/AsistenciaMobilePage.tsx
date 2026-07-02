@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Loader2,
   Save,
+  WifiOff,
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,15 +20,10 @@ type AlumnoAsistencia = {
   alumno: string;
   codigo?: string | null;
   estado: EstadoAsistencia;
+  registrado?: boolean;
+  requiere_justificacion?: boolean;
   justificacion_motivo?: string;
   justificacion_observacion?: string;
-};
-
-type JustificacionDraft = {
-  id_matricula: number;
-  alumno: string;
-  motivo: string;
-  observacion: string;
 };
 
 type SeccionOption = {
@@ -37,14 +33,6 @@ type SeccionOption = {
 };
 
 const todayISO = () => new Date().toISOString().split('T')[0];
-
-const motivosJustificacion = [
-  'Enfermedad',
-  'Cita médica',
-  'Permiso familiar',
-  'Trámite documentario',
-  'Otro',
-];
 
 function buildUrl(
   path: string,
@@ -65,9 +53,10 @@ function buildUrl(
   return query ? `${path}?${query}` : path;
 }
 
-function estadoMiniClass(estado: EstadoAsistencia, active: boolean) {
+function estadoMiniClass(estado: EstadoAsistencia, active: boolean, registrado?: boolean) {
   if (active) return 'border-slate-950 bg-slate-950 text-white';
 
+  if (!registrado) return 'border-slate-200 bg-white text-slate-400';
   if (estado === 'Presente') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (estado === 'Tardanza') return 'border-amber-200 bg-amber-50 text-amber-700';
   if (estado === 'Ausente') return 'border-rose-200 bg-rose-50 text-rose-700';
@@ -90,9 +79,9 @@ export default function AsistenciaMobilePage() {
   const [alumnos, setAlumnos] = useState<AlumnoAsistencia[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [justificacionDraft, setJustificacionDraft] = useState<JustificacionDraft | null>(null);
+  const [offlineMessage, setOfflineMessage] = useState<string | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -103,7 +92,9 @@ export default function AsistenciaMobilePage() {
 
   const currentAlumno = alumnos[currentIndex] || null;
   const selectedSeccion = secciones.find((item) => item.id_seccion === seccionId);
-  const avance = alumnos.length > 0 ? Math.round(((currentIndex + 1) / alumnos.length) * 100) : 0;
+  const registrados = alumnos.filter((alumno) => alumno.registrado).length;
+  const pendientes = Math.max(0, alumnos.length - registrados);
+  const avance = alumnos.length > 0 ? Math.round((registrados / alumnos.length) * 100) : 0;
 
   const cargarSecciones = async () => {
     if (!token || !headers) return;
@@ -134,6 +125,27 @@ export default function AsistenciaMobilePage() {
     }
   };
 
+  const ubicarContinuacion = (items: AlumnoAsistencia[]) => {
+    if (items.length === 0) {
+      setCurrentIndex(0);
+      return;
+    }
+
+    const firstPending = items.findIndex((alumno) => !alumno.registrado);
+    const done = items.filter((alumno) => alumno.registrado).length;
+
+    if (firstPending >= 0 && done > 0) {
+      const continuar = window.confirm(
+        `Ya registraste asistencia para ${done} alumno(s). ¿Deseas continuar desde el primer pendiente?`,
+      );
+
+      setCurrentIndex(continuar ? firstPending : 0);
+      return;
+    }
+
+    setCurrentIndex(firstPending >= 0 ? firstPending : 0);
+  };
+
   const cargarAsistencia = async () => {
     if (!seccionId) {
       setAlumnos([]);
@@ -144,6 +156,7 @@ export default function AsistenciaMobilePage() {
 
     setLoading(true);
     setMessage(null);
+    setOfflineMessage(null);
 
     try {
       const res = await axios.get(
@@ -154,8 +167,9 @@ export default function AsistenciaMobilePage() {
         { headers },
       );
 
-      setAlumnos(Array.isArray(res.data) ? res.data : []);
-      setCurrentIndex(0);
+      const items: AlumnoAsistencia[] = Array.isArray(res.data) ? res.data : [];
+      setAlumnos(items);
+      ubicarContinuacion(items);
     } finally {
       setLoading(false);
     }
@@ -174,72 +188,86 @@ export default function AsistenciaMobilePage() {
   const goPrev = () => setCurrentIndex((value) => Math.max(0, value - 1));
   const goNext = () => setCurrentIndex((value) => Math.min(alumnos.length - 1, value + 1));
 
-  const avanzarDespuesDeMarcar = () => {
-    if (currentIndex < alumnos.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+  const guardarUno = async (idMatricula: number, estado: EstadoAsistencia) => {
+    if (!token || !headers || !seccionId) return;
+
+    setSyncing(true);
+    setOfflineMessage(null);
+
+    try {
+      await axios.post(
+        buildUrl('/api/academicos/asistencia', queryParams),
+        {
+          id_seccion: seccionId,
+          fecha,
+          asistencias: [
+            {
+              id_matricula: idMatricula,
+              estado,
+            },
+          ],
+        },
+        { headers },
+      );
+
+      setAlumnos((prev) =>
+        prev.map((alumno) =>
+          alumno.id_matricula === idMatricula
+            ? { ...alumno, estado, registrado: true }
+            : alumno,
+        ),
+      );
+    } catch {
+      setOfflineMessage(
+        'No se pudo guardar esta marca. Revisa la conexión y vuelve a tocar el estado.',
+      );
+
+      setAlumnos((prev) =>
+        prev.map((alumno) =>
+          alumno.id_matricula === idMatricula
+            ? { ...alumno, registrado: false }
+            : alumno,
+        ),
+      );
+    } finally {
+      setSyncing(false);
     }
   };
 
   const marcarEstado = (estado: EstadoAsistencia) => {
     if (!currentAlumno) return;
 
-    setMessage(null);
+    const idMatricula = currentAlumno.id_matricula;
 
-    if (estado === 'Justificado') {
-      setJustificacionDraft({
-        id_matricula: currentAlumno.id_matricula,
-        alumno: currentAlumno.alumno,
-        motivo: currentAlumno.justificacion_motivo || motivosJustificacion[0],
-        observacion: currentAlumno.justificacion_observacion || '',
-      });
-      return;
-    }
+    setMessage(null);
+    setOfflineMessage(null);
 
     setAlumnos((prev) =>
       prev.map((alumno) =>
-        alumno.id_matricula === currentAlumno.id_matricula
+        alumno.id_matricula === idMatricula
           ? {
               ...alumno,
               estado,
-              justificacion_motivo: '',
-              justificacion_observacion: '',
+              registrado: true,
+              requiere_justificacion: estado === 'Justificado',
             }
           : alumno,
       ),
     );
 
-    avanzarDespuesDeMarcar();
+    if (currentIndex < alumnos.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+
+    void guardarUno(idMatricula, estado);
   };
 
-  const confirmarJustificacion = () => {
-    if (!justificacionDraft) return;
-
-    const motivo = justificacionDraft.motivo.trim();
-
-    if (!motivo) return;
-
-    setAlumnos((prev) =>
-      prev.map((alumno) =>
-        alumno.id_matricula === justificacionDraft.id_matricula
-          ? {
-              ...alumno,
-              estado: 'Justificado',
-              justificacion_motivo: motivo,
-              justificacion_observacion: justificacionDraft.observacion.trim(),
-            }
-          : alumno,
-      ),
-    );
-
-    setJustificacionDraft(null);
-    avanzarDespuesDeMarcar();
-  };
-
-  const guardar = async () => {
+  const guardarTodo = async () => {
     if (!token || !headers || !seccionId || alumnos.length === 0) return;
 
-    setSaving(true);
+    setSyncing(true);
     setMessage(null);
+    setOfflineMessage(null);
 
     try {
       await axios.post(
@@ -250,16 +278,17 @@ export default function AsistenciaMobilePage() {
           asistencias: alumnos.map((alumno) => ({
             id_matricula: alumno.id_matricula,
             estado: alumno.estado,
-            justificacion_motivo: alumno.justificacion_motivo || '',
-            justificacion_observacion: alumno.justificacion_observacion || '',
           })),
         },
         { headers },
       );
 
-      setMessage('Asistencia guardada.');
+      setAlumnos((prev) => prev.map((alumno) => ({ ...alumno, registrado: true })));
+      setMessage('Asistencia sincronizada.');
+    } catch {
+      setOfflineMessage('No se pudo sincronizar la asistencia completa.');
     } finally {
-      setSaving(false);
+      setSyncing(false);
     }
   };
 
@@ -285,12 +314,12 @@ export default function AsistenciaMobilePage() {
 
           <button
             type="button"
-            onClick={guardar}
-            disabled={saving || alumnos.length === 0}
+            onClick={guardarTodo}
+            disabled={syncing || alumnos.length === 0}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-slate-950 px-3 text-[11px] font-black text-white disabled:bg-slate-300"
           >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Guardar
+            {syncing ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            Sync
           </button>
         </div>
 
@@ -323,7 +352,7 @@ export default function AsistenciaMobilePage() {
       <main className="mx-auto flex h-[calc(100dvh-101px)] max-w-md flex-col overflow-hidden px-3 py-3">
         <div className="mb-2 flex shrink-0 items-center justify-between text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
           <span>{alumnos.length > 0 ? `${currentIndex + 1} / ${alumnos.length}` : '0 / 0'}</span>
-          <span>{avance}%</span>
+          <span>{registrados}/{alumnos.length} guardados · {pendientes} pendientes</span>
         </div>
 
         <div className="mb-3 h-1.5 shrink-0 overflow-hidden rounded-full bg-white">
@@ -334,14 +363,14 @@ export default function AsistenciaMobilePage() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white shadow-sm">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-[24px] border border-slate-200 bg-white shadow-sm">
             <div className="text-center">
               <Loader2 className="mx-auto animate-spin text-blue-600" size={32} />
               <p className="mt-3 text-sm font-black text-slate-500">Cargando...</p>
             </div>
           </div>
         ) : !currentAlumno ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white px-6 text-center shadow-sm">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-[24px] border border-slate-200 bg-white px-6 text-center shadow-sm">
             <div>
               <XCircle className="mx-auto text-slate-300" size={38} />
               <p className="mt-3 text-base font-black">
@@ -361,7 +390,7 @@ export default function AsistenciaMobilePage() {
                 type="button"
                 onClick={goPrev}
                 disabled={currentIndex === 0}
-                className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30"
+                className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-sm bg-slate-100 text-slate-600 disabled:opacity-30"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -370,7 +399,7 @@ export default function AsistenciaMobilePage() {
                 type="button"
                 onClick={goNext}
                 disabled={currentIndex >= alumnos.length - 1}
-                className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30"
+                className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-sm bg-slate-100 text-slate-600 disabled:opacity-30"
               >
                 <ChevronRight size={20} />
               </button>
@@ -396,6 +425,7 @@ export default function AsistenciaMobilePage() {
                     className={`h-7 min-w-7 rounded-lg border px-2 text-[10px] font-black ${estadoMiniClass(
                       alumno.estado,
                       index === currentIndex,
+                      alumno.registrado,
                     )}`}
                   >
                     {index + 1}
@@ -434,74 +464,18 @@ export default function AsistenciaMobilePage() {
               <button
                 type="button"
                 onClick={() => marcarEstado('Justificado')}
-                className="h-[10dvh] min-h-[48px] max-h-[64px] rounded-[18px] border-2 border-slate-500 bg-slate-200 text-[clamp(1rem,5vw,1.35rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
+                className="h-[10dvh] min-h-[48px] max-h-[64px] rounded-[18px] border-2 border-blue-700 bg-blue-700 text-[clamp(1rem,5vw,1.35rem)] font-black text-white shadow-sm active:scale-[0.99]"
               >
-                Justificar
+                Justificado
               </button>
             </section>
           </>
         )}
 
-        {justificacionDraft && (
-          <div className="fixed inset-0 z-[10000] flex items-end bg-slate-950/45 px-3 pb-3">
-            <div className="w-full rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                  Justificación
-                </p>
-                <h3 className="mt-1 text-base font-black text-slate-950">
-                  {justificacionDraft.alumno}
-                </h3>
-              </div>
-
-              <div className="space-y-3 px-4 py-4">
-                <select
-                  value={justificacionDraft.motivo}
-                  onChange={(event) =>
-                    setJustificacionDraft((current) =>
-                      current ? { ...current, motivo: event.target.value } : current,
-                    )
-                  }
-                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none"
-                >
-                  {motivosJustificacion.map((motivo) => (
-                    <option key={motivo} value={motivo}>
-                      {motivo}
-                    </option>
-                  ))}
-                </select>
-
-                <textarea
-                  value={justificacionDraft.observacion}
-                  onChange={(event) =>
-                    setJustificacionDraft((current) =>
-                      current ? { ...current, observacion: event.target.value } : current,
-                    )
-                  }
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Observación opcional"
-                  className="w-full resize-none rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 border-t border-slate-200 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setJustificacionDraft(null)}
-                  className="h-11 rounded-sm border border-slate-300 bg-white text-xs font-black text-slate-700"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmarJustificacion}
-                  className="h-11 rounded-sm bg-slate-950 text-xs font-black text-white"
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
+        {offlineMessage && (
+          <div className="mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">
+            <WifiOff size={15} />
+            {offlineMessage}
           </div>
         )}
 
