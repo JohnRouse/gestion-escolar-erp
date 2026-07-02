@@ -22,6 +22,24 @@ export class AsistenciaController {
     });
   }
 
+  @Get('asistencia/calendario')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Profesor', 'Director')
+  async getCalendarioAsistencia(
+    @Request() req,
+    @Query('seccion_id') seccionId: string,
+    @Query('mes') mes: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.asistenciaService.getCalendarioAsistencia(
+      req.user,
+      Number(seccionId),
+      mes,
+      { scope, colegioId },
+    );
+  }
+
   @Get('asistencia')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Profesor', 'Director')

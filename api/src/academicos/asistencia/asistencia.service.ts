@@ -201,6 +201,129 @@ export class AsistenciaService {
     return seccion;
   }
 
+  async getCalendarioAsistencia(user: JwtUser, seccionId: number, mes: string, query: ScopeQuery) {
+    await this.assertCanAccessSeccion(user, seccionId, query);
+
+    const cleanMes = String(mes || '').trim();
+
+    if (!/^\d{4}-\d{2}$/.test(cleanMes)) {
+      throw new BadRequestException('Mes inválido. Usa el formato YYYY-MM.');
+    }
+
+    const [yearRaw, monthRaw] = cleanMes.split('-').map(Number);
+    const year = Number(yearRaw);
+    const monthIndex = Number(monthRaw) - 1;
+
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+      throw new BadRequestException('Mes inválido.');
+    }
+
+    const desde = new Date(year, monthIndex, 1);
+    const hasta = new Date(year, monthIndex + 1, 0);
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_seccion: seccionId,
+        estado_matricula: { in: ESTADOS_MATRICULA_ACTIVA },
+      },
+      select: {
+        id_matricula: true,
+      },
+    });
+
+    const matriculaIds = matriculas.map((item) => item.id_matricula);
+    const totalAlumnos = matriculaIds.length;
+
+    const asistencias = matriculaIds.length
+      ? await this.prisma.asistencia.findMany({
+          where: {
+            id_matricula: { in: matriculaIds },
+            fecha: {
+              gte: desde,
+              lte: hasta,
+            },
+          },
+          orderBy: {
+            fecha: 'asc',
+          },
+        })
+      : [];
+
+    const dateKey = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const registrosPorFecha = new Map<string, typeof asistencias>();
+
+    for (const row of asistencias) {
+      const key = dateKey(row.fecha);
+      const current = registrosPorFecha.get(key) || [];
+      current.push(row);
+      registrosPorFecha.set(key, current);
+    }
+
+    const dias: any[] = [];
+
+    for (let day = 1; day <= hasta.getDate(); day += 1) {
+      const currentDate = new Date(year, monthIndex, day);
+      const fecha = dateKey(currentDate);
+      const dayOfWeek = currentDate.getDay();
+      const lectivo = dayOfWeek !== 0 && dayOfWeek !== 6;
+      const registros = registrosPorFecha.get(fecha) || [];
+      const registrados = registros.length;
+      const pendientesJustificacion = registros.filter(
+        (row: any) =>
+          row.estado === 'Justificado' &&
+          !String(row.justificacion_motivo || '').trim(),
+      ).length;
+      const avanceBase = Math.max(0, registrados - pendientesJustificacion);
+      const avance = totalAlumnos > 0 ? Math.round((avanceBase / totalAlumnos) * 100) : 0;
+      const pendientesRegistro = Math.max(0, totalAlumnos - registrados);
+
+      let estado = 'no_lectivo';
+
+      if (lectivo) {
+        if (totalAlumnos === 0) estado = 'sin_alumnos';
+        else if (registrados === 0) estado = 'sin_registro';
+        else if (avance === 100) estado = 'completo';
+        else estado = 'parcial';
+      }
+
+      dias.push({
+        fecha,
+        dia: day,
+        dia_semana: dayOfWeek,
+        lectivo,
+        total_alumnos: totalAlumnos,
+        registrados,
+        pendientes_registro: pendientesRegistro,
+        pendientes_justificacion: pendientesJustificacion,
+        avance,
+        estado,
+      });
+    }
+
+    const lectivos = dias.filter((dia) => dia.lectivo);
+
+    return {
+      mes: cleanMes,
+      total_alumnos: totalAlumnos,
+      resumen: {
+        completos: lectivos.filter((dia) => dia.estado === 'completo').length,
+        parciales: lectivos.filter((dia) => dia.estado === 'parcial').length,
+        sin_registro: lectivos.filter((dia) => dia.estado === 'sin_registro').length,
+        pendientes_justificacion: lectivos.reduce(
+          (sum, dia) => sum + dia.pendientes_justificacion,
+          0,
+        ),
+      },
+      dias,
+    };
+  }
+
   async getAsistencia(user: JwtUser, seccionId: number, fecha: string, query: ScopeQuery) {
     await this.assertCanAccessSeccion(user, seccionId, query);
     const fechaAsistencia = this.validarFecha(fecha);

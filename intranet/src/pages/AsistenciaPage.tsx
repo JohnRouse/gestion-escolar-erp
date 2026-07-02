@@ -50,6 +50,31 @@ type SeccionOption = {
   letra?: string | null;
 };
 
+type CalendarioDia = {
+  fecha: string;
+  dia: number;
+  dia_semana: number;
+  lectivo: boolean;
+  total_alumnos: number;
+  registrados: number;
+  pendientes_registro: number;
+  pendientes_justificacion: number;
+  avance: number;
+  estado: 'completo' | 'parcial' | 'sin_registro' | 'no_lectivo' | 'sin_alumnos';
+};
+
+type CalendarioAsistencia = {
+  mes: string;
+  total_alumnos: number;
+  resumen: {
+    completos: number;
+    parciales: number;
+    sin_registro: number;
+    pendientes_justificacion: number;
+  };
+  dias: CalendarioDia[];
+};
+
 const estados: EstadoAsistencia[] = ['Presente', 'Tardanza', 'Ausente', 'Justificado'];
 
 const motivosJustificacion = [
@@ -153,6 +178,9 @@ export default function AsistenciaPage() {
   const [alumnos, setAlumnos] = useState<AlumnoAsistencia[]>([]);
   const [loadingSecciones, setLoadingSecciones] = useState(false);
   const [loadingAsistencia, setLoadingAsistencia] = useState(false);
+  const [loadingCalendario, setLoadingCalendario] = useState(false);
+  const [calendarioMes, setCalendarioMes] = useState(todayISO().slice(0, 7));
+  const [calendario, setCalendario] = useState<CalendarioAsistencia | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -272,6 +300,18 @@ export default function AsistenciaPage() {
     [resumen],
   );
 
+  const calendarioGrid = useMemo(() => {
+    if (!calendario?.dias?.length) return [];
+
+    const firstDate = new Date(`${calendario.dias[0].fecha}T00:00:00`);
+    const offset = (firstDate.getDay() + 6) % 7;
+
+    return [
+      ...Array.from({ length: offset }, () => null as CalendarioDia | null),
+      ...calendario.dias,
+    ];
+  }, [calendario]);
+
   const emptyTitle =
     secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos para mostrar';
 
@@ -327,6 +367,14 @@ export default function AsistenciaPage() {
     });
 
     setSeccionId(first?.id_seccion || '');
+  };
+
+  const handleFechaChange = (value: string) => {
+    setFecha(value);
+
+    if (value) {
+      setCalendarioMes(value.slice(0, 7));
+    }
   };
 
   const cargarSecciones = async () => {
@@ -386,6 +434,31 @@ export default function AsistenciaPage() {
     }
   };
 
+  const cargarCalendarioAsistencia = async () => {
+    if (!seccionId || !token || !headers || !calendarioMes) {
+      setCalendario(null);
+      return;
+    }
+
+    setLoadingCalendario(true);
+
+    try {
+      const res = await axios.get(
+        buildUrl('/api/academicos/asistencia/calendario', queryParams, {
+          seccion_id: seccionId,
+          mes: calendarioMes,
+        }),
+        { headers },
+      );
+
+      setCalendario(res.data || null);
+    } catch {
+      setCalendario(null);
+    } finally {
+      setLoadingCalendario(false);
+    }
+  };
+
   useEffect(() => {
     cargarSecciones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -395,6 +468,11 @@ export default function AsistenciaPage() {
     cargarAsistencia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionId, fecha, token, scopeKey]);
+
+  useEffect(() => {
+    cargarCalendarioAsistencia();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seccionId, calendarioMes, token, scopeKey]);
 
   const abrirJustificacion = (alumno: AlumnoAsistencia) => {
     setMessage(null);
@@ -476,6 +554,7 @@ export default function AsistenciaPage() {
 
       setJustificacionDraft(null);
       setMessage('Justificación guardada correctamente.');
+      await cargarCalendarioAsistencia();
     } catch {
       setError('No se pudo guardar la justificación. Intenta nuevamente.');
     } finally {
@@ -507,6 +586,7 @@ export default function AsistenciaPage() {
       );
 
       setMessage('Asistencia guardada correctamente.');
+      await cargarCalendarioAsistencia();
     } catch {
       setError('No se pudo guardar la asistencia. Revisa la fecha o intenta nuevamente.');
     } finally {
@@ -607,6 +687,149 @@ export default function AsistenciaPage() {
               onChange={(event) => setFecha(event.target.value)}
             />
           </label>
+        </div>
+      </section>
+
+      <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+              <CalendarDays size={13} />
+              Calendario mensual
+            </div>
+            <h3 className="mt-3 text-lg font-black text-slate-950">
+              Control de asistencia pendiente
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">
+              Revisa rápidamente qué días están completos, parciales o sin registro.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="month"
+              value={calendarioMes}
+              onChange={(event) => setCalendarioMes(event.target.value)}
+              className="h-11 rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              type="button"
+              onClick={cargarCalendarioAsistencia}
+              disabled={loadingCalendario || !seccionId}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loadingCalendario ? 'animate-spin' : ''} />
+              Actualizar calendario
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <div className="rounded-sm border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+              Días completos
+            </p>
+            <p className="mt-1 text-2xl font-black text-emerald-800">
+              {calendario?.resumen.completos ?? 0}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-amber-200 bg-amber-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">
+              Parciales
+            </p>
+            <p className="mt-1 text-2xl font-black text-amber-800">
+              {calendario?.resumen.parciales ?? 0}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-rose-200 bg-rose-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-700">
+              Sin registro
+            </p>
+            <p className="mt-1 text-2xl font-black text-rose-800">
+              {calendario?.resumen.sin_registro ?? 0}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-blue-200 bg-blue-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-700">
+              Justif. pendientes
+            </p>
+            <p className="mt-1 text-2xl font-black text-blue-800">
+              {calendario?.resumen.pendientes_justificacion ?? 0}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-sm border border-slate-200 bg-slate-50 p-3">
+          <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+
+          <div className="mt-2 grid grid-cols-7 gap-2">
+            {calendarioGrid.map((dia, index) => {
+              if (!dia) {
+                return <div key={`empty-${index}`} className="min-h-[74px]" />;
+              }
+
+              const active = dia.fecha === fecha;
+
+              const tone =
+                dia.estado === 'completo'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  : dia.estado === 'parcial'
+                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    : dia.estado === 'sin_registro'
+                      ? 'border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100'
+                      : 'border-slate-200 bg-white text-slate-300';
+
+              return (
+                <button
+                  key={dia.fecha}
+                  type="button"
+                  onClick={() => {
+                    if (dia.lectivo) {
+                      handleFechaChange(dia.fecha);
+                    }
+                  }}
+                  disabled={!dia.lectivo}
+                  className={`min-h-[74px] rounded-sm border p-2 text-left transition ${
+                    active ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                  } ${tone}`}
+                  title={
+                    dia.lectivo
+                      ? `${dia.fecha}: ${dia.avance}% · ${dia.registrados}/${dia.total_alumnos} registrados`
+                      : `${dia.fecha}: no lectivo`
+                  }
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="text-sm font-black">{dia.dia}</span>
+                    {dia.lectivo && (
+                      <span className="text-[11px] font-black">{dia.avance}%</span>
+                    )}
+                  </div>
+
+                  {dia.lectivo ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="truncate text-[10px] font-bold">
+                        {dia.registrados}/{dia.total_alumnos} marcados
+                      </p>
+                      {dia.pendientes_justificacion > 0 && (
+                        <p className="truncate text-[10px] font-black">
+                          Justif.: {dia.pendientes_justificacion}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[10px] font-bold">No lectivo</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
