@@ -702,15 +702,6 @@ export default function AsistenciaPage() {
                           Pendiente de regularizar
                         </button>
                       )}
-                      {alumno.estado === 'Justificado' && !alumno.justificacion_motivo && (
-                        <button
-                          type="button"
-                          onClick={() => abrirJustificacion(alumno)}
-                          className="mt-2 inline-flex rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-800 hover:bg-amber-100"
-                        >
-                          Pendiente de regularizar
-                        </button>
-                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
