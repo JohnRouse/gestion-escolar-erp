@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertTriangle,
+  BarChart3,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -26,6 +27,7 @@ type AlumnoAsistencia = {
   alumno: string;
   codigo?: string | null;
   estado: EstadoAsistencia;
+  registrado?: boolean;
   justificacion_motivo?: string;
   justificacion_observacion?: string;
   requiere_justificacion?: boolean;
@@ -196,17 +198,32 @@ export default function AsistenciaPage() {
 
   const resumen = useMemo(() => {
     const total = alumnos.length;
+    const registrados = alumnos.filter((alumno) => alumno.registrado).length;
+    const pendientesRegistro = Math.max(0, total - registrados);
 
     const counts = estados.reduce(
       (acc, estado) => {
-        acc[estado] = alumnos.filter((alumno) => alumno.estado === estado).length;
+        acc[estado] = alumnos.filter(
+          (alumno) => alumno.registrado && alumno.estado === estado,
+        ).length;
         return acc;
       },
       {} as Record<EstadoAsistencia, number>,
     );
 
-    const porcentaje = total > 0 ? Math.round((counts.Presente / total) * 100) : 0;
-    return { total, counts, porcentaje };
+    const asistenciaValida = counts.Presente + counts.Tardanza + counts.Justificado;
+    const porcentajeRegistro = total > 0 ? Math.round((registrados / total) * 100) : 0;
+    const porcentajeAsistencia =
+      registrados > 0 ? Math.round((asistenciaValida / registrados) * 100) : 0;
+
+    return {
+      total,
+      registrados,
+      pendientesRegistro,
+      counts,
+      porcentaje: porcentajeAsistencia,
+      porcentajeRegistro,
+    };
   }, [alumnos]);
 
   const justificacionesPendientes = useMemo(
@@ -217,6 +234,42 @@ export default function AsistenciaPage() {
           !String(alumno.justificacion_motivo || '').trim(),
       ),
     [alumnos],
+  );
+
+  const indicadorSalon = useMemo(
+    () => [
+      {
+        label: 'Presente',
+        value: resumen.counts.Presente,
+        className: 'bg-emerald-600',
+        chipClassName: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+      },
+      {
+        label: 'Tardanza',
+        value: resumen.counts.Tardanza,
+        className: 'bg-amber-500',
+        chipClassName: 'bg-amber-50 text-amber-700 ring-amber-100',
+      },
+      {
+        label: 'Ausente',
+        value: resumen.counts.Ausente,
+        className: 'bg-rose-600',
+        chipClassName: 'bg-rose-50 text-rose-700 ring-rose-100',
+      },
+      {
+        label: 'Justificado',
+        value: resumen.counts.Justificado,
+        className: 'bg-blue-600',
+        chipClassName: 'bg-blue-50 text-blue-700 ring-blue-100',
+      },
+      {
+        label: 'Pendiente',
+        value: resumen.pendientesRegistro,
+        className: 'bg-slate-300',
+        chipClassName: 'bg-slate-50 text-slate-600 ring-slate-100',
+      },
+    ],
+    [resumen],
   );
 
   const emptyTitle =
@@ -587,6 +640,112 @@ export default function AsistenciaPage() {
               </div>
             );
           })}
+        </div>
+
+        <div className="border-b border-slate-200 bg-white px-6 py-5">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    <BarChart3 size={13} />
+                    Indicador del salón
+                  </div>
+                  <h3 className="mt-3 text-lg font-black text-slate-950">
+                    Avance de asistencia
+                  </h3>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">
+                    Muestra cuántos alumnos ya tienen asistencia registrada para la fecha seleccionada.
+                  </p>
+                </div>
+
+                <div className="rounded-sm border border-slate-200 bg-white px-4 py-3 text-right">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Registro tomado
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-950">
+                    {resumen.registrados} / {resumen.total}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {indicadorSalon.map((item) => {
+                  const percent =
+                    resumen.total > 0 ? Math.round((item.value / resumen.total) * 100) : 0;
+
+                  return (
+                    <div key={item.label}>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${item.chipClassName}`}>
+                          {item.label}
+                        </span>
+                        <span className="text-xs font-black text-slate-500">
+                          {item.value} alumno(s) · {percent}%
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                        <div
+                          className={`h-full rounded-full transition-all ${item.className}`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-sm border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Asistencia efectiva
+                </p>
+                <p className="mt-1 text-3xl font-black text-slate-950">
+                  {resumen.registrados > 0 ? `${resumen.porcentaje}%` : '—'}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  Presente, tardanza y justificado sobre registros tomados.
+                </p>
+              </div>
+
+              <div className="rounded-sm border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Avance de registro
+                </p>
+                <p className="mt-1 text-3xl font-black text-blue-700">
+                  {resumen.total > 0 ? `${resumen.porcentajeRegistro}%` : '—'}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  Porcentaje de alumnos ya marcados.
+                </p>
+              </div>
+
+              <div className={`rounded-sm border p-4 ${
+                resumen.pendientesRegistro > 0
+                  ? 'border-amber-200 bg-amber-50'
+                  : 'border-emerald-200 bg-emerald-50'
+              }`}>
+                <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+                  resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
+                }`}>
+                  Pendientes de marcar
+                </p>
+                <p className={`mt-1 text-3xl font-black ${
+                  resumen.pendientesRegistro > 0 ? 'text-amber-800' : 'text-emerald-800'
+                }`}>
+                  {resumen.pendientesRegistro}
+                </p>
+                <p className={`mt-1 text-xs font-semibold ${
+                  resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
+                }`}>
+                  {resumen.pendientesRegistro > 0
+                    ? 'Aún falta tomar asistencia a algunos alumnos.'
+                    : 'La asistencia del salón está completa.'}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="px-6 py-5">
