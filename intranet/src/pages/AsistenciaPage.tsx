@@ -183,6 +183,7 @@ export default function AsistenciaPage() {
   const [calendarioMes, setCalendarioMes] = useState(todayISO().slice(0, 7));
   const [calendario, setCalendario] = useState<CalendarioAsistencia | null>(null);
   const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+  const [indicadorSalonAbierto, setIndicadorSalonAbierto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -899,115 +900,162 @@ export default function AsistenciaPage() {
         </div>
 
         <div className="border-b border-slate-200 bg-white px-6 py-5">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    <BarChart3 size={13} />
-                    Indicador del salón
-                  </div>
-                  <h3 className="mt-3 text-lg font-black text-slate-950">
-                    Avance de asistencia
-                  </h3>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">
-                    Muestra cuántos alumnos ya tienen asistencia registrada para la fecha seleccionada.
-                  </p>
-                </div>
-
-                <div className="rounded-sm border border-slate-200 bg-white px-4 py-3 text-right">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Registro tomado
-                  </p>
-                  <p className="mt-1 text-xl font-black text-slate-950">
-                    {resumen.registrados} / {resumen.total}
-                  </p>
-                </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                <BarChart3 size={13} />
+                Indicador del salón
               </div>
 
-              <div className="space-y-3">
-                {indicadorSalon.map((item) => {
-                  const percent =
-                    resumen.total > 0 ? Math.round((item.value / resumen.total) * 100) : 0;
+              <h3 className="mt-3 text-lg font-black text-slate-950">
+                Avance de asistencia
+              </h3>
 
-                  return (
-                    <div key={item.label}>
-                      <div className="mb-1 flex items-center justify-between gap-3">
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${item.chipClassName}`}>
-                          {item.label}
-                        </span>
-                        <span className="text-xs font-black text-slate-500">
-                          {item.value} alumno(s) · {percent}%
-                        </span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                        <div
-                          className={`h-full rounded-full transition-all ${item.className}`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                Muestra el avance del día seleccionado.
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100">
+                  Registro: {resumen.registrados}/{resumen.total}
+                </span>
+                <span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-700 ring-1 ring-slate-100">
+                  Avance: {resumen.total > 0 ? `${resumen.porcentajeRegistro}%` : '—'}
+                </span>
+                <span className={`rounded-full px-3 py-1 text-[11px] font-black ring-1 ${
+                  resumen.pendientesRegistro > 0
+                    ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                    : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+                }`}>
+                  Pendientes: {resumen.pendientesRegistro}
+                </span>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-sm border border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  Asistencia efectiva
-                </p>
-                <p className="mt-1 text-3xl font-black text-slate-950">
-                  {resumen.registrados > 0 ? `${resumen.porcentaje}%` : '—'}
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Presente, tardanza y justificado sobre registros tomados.
-                </p>
-              </div>
-
-              <div className="rounded-sm border border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  Avance de registro
-                </p>
-                <p className="mt-1 text-3xl font-black text-blue-700">
-                  {resumen.total > 0 ? `${resumen.porcentajeRegistro}%` : '—'}
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Porcentaje de alumnos ya marcados.
-                </p>
-              </div>
-
-              <div className={`rounded-sm border p-4 ${
-                resumen.pendientesRegistro > 0
-                  ? 'border-amber-200 bg-amber-50'
-                  : 'border-emerald-200 bg-emerald-50'
-              }`}>
-                <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${
-                  resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
-                }`}>
-                  Pendientes de marcar
-                </p>
-                <p className={`mt-1 text-3xl font-black ${
-                  resumen.pendientesRegistro > 0 ? 'text-amber-800' : 'text-emerald-800'
-                }`}>
-                  {resumen.pendientesRegistro}
-                </p>
-                <p className={`mt-1 text-xs font-semibold ${
-                  resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
-                }`}>
-                  {resumen.pendientesRegistro > 0
-                    ? 'Aún falta tomar asistencia a algunos alumnos.'
-                    : 'La asistencia del salón está completa.'}
-                </p>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIndicadorSalonAbierto((value) => !value)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <ChevronDown
+                size={15}
+                className={`transition-transform ${indicadorSalonAbierto ? 'rotate-180' : ''}`}
+              />
+              {indicadorSalonAbierto ? 'Ocultar indicador' : 'Ver indicador'}
+            </button>
           </div>
+
+          {indicadorSalonAbierto && (
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-950">
+                      Distribución de estados
+                    </h4>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      Se calcula solo con alumnos que ya tienen asistencia registrada.
+                    </p>
+                  </div>
+
+                  <div className="rounded-sm border border-slate-200 bg-white px-4 py-3 text-right">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      Registro tomado
+                    </p>
+                    <p className="mt-1 text-xl font-black text-slate-950">
+                      {resumen.registrados} / {resumen.total}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {indicadorSalon.map((item) => {
+                    const percent =
+                      resumen.total > 0 ? Math.round((item.value / resumen.total) * 100) : 0;
+
+                    return (
+                      <div key={item.label}>
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${item.chipClassName}`}>
+                            {item.label}
+                          </span>
+                          <span className="text-xs font-black text-slate-500">
+                            {item.value} alumno(s) · {percent}%
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                          <div
+                            className={`h-full rounded-full transition-all ${item.className}`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <div className="rounded-sm border border-slate-200 bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Asistencia efectiva
+                  </p>
+                  <p className="mt-1 text-3xl font-black text-slate-950">
+                    {resumen.registrados > 0 ? `${resumen.porcentaje}%` : '—'}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Presente, tardanza y justificado sobre registros tomados.
+                  </p>
+                </div>
+
+                <div className="rounded-sm border border-slate-200 bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Avance de registro
+                  </p>
+                  <p className="mt-1 text-3xl font-black text-blue-700">
+                    {resumen.total > 0 ? `${resumen.porcentajeRegistro}%` : '—'}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Porcentaje de alumnos ya marcados.
+                  </p>
+                </div>
+
+                <div className={`rounded-sm border p-4 ${
+                  resumen.pendientesRegistro > 0
+                    ? 'border-amber-200 bg-amber-50'
+                    : 'border-emerald-200 bg-emerald-50'
+                }`}>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${
+                    resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
+                  }`}>
+                    Pendientes de marcar
+                  </p>
+                  <p className={`mt-1 text-3xl font-black ${
+                    resumen.pendientesRegistro > 0 ? 'text-amber-800' : 'text-emerald-800'
+                  }`}>
+                    {resumen.pendientesRegistro}
+                  </p>
+                  <p className={`mt-1 text-xs font-semibold ${
+                    resumen.pendientesRegistro > 0 ? 'text-amber-700' : 'text-emerald-700'
+                  }`}>
+                    {resumen.pendientesRegistro > 0
+                      ? 'Aún falta tomar asistencia a algunos alumnos.'
+                      : 'La asistencia del salón está completa.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="px-6 py-5">
+        <div className="bg-white px-6 py-5">
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-black text-slate-900">
+              <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                <UsersRound size={13} />
+                Toma de asistencia
+              </div>
+              <p className="mt-3 text-sm font-black text-slate-900">
                 {selectedSeccion?.label || 'Selecciona una sección'}
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-slate-400">
@@ -1179,8 +1227,8 @@ export default function AsistenciaPage() {
         </div>
       </section>
 
-      {justificacionDraft && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/45 px-4">
+      {justificacionDraft && createPortal((
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center overflow-y-auto bg-slate-950/45 px-4 py-8">
           <div className="w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
@@ -1251,7 +1299,7 @@ export default function AsistenciaPage() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       <MobileAttendanceFab href={mobileHref} visible={hasSeccion} />
     </div>
