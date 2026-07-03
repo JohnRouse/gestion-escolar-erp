@@ -52,14 +52,19 @@ function buildUrl(
   return query ? `${path}?${query}` : path;
 }
 
+// Estilos basados en la paleta de Carbon Design System
 function estadoMiniClass(estado: EstadoAsistencia, active: boolean, registrado?: boolean) {
-  if (active) return 'border-slate-950 bg-slate-950 text-white';
+  const base = 'h-7 min-w-7 px-2 text-[11px] font-semibold transition-colors focus:outline-none';
+  
+  if (active) return `${base} bg-[#0f62fe] text-white border border-[#0f62fe]`;
 
-  if (!registrado) return 'border-slate-200 bg-white text-slate-400';
-  if (estado === 'Presente') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (estado === 'Tardanza') return 'border-amber-200 bg-amber-50 text-amber-700';
-  if (estado === 'Ausente') return 'border-rose-200 bg-rose-50 text-rose-700';
-  return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (!registrado) return `${base} bg-[#f4f4f4] text-[#525252] border border-transparent hover:bg-[#e0e0e0]`;
+  
+  if (estado === 'Presente') return `${base} bg-[#def7e1] text-[#044317] border border-[#24a148]`;
+  if (estado === 'Tardanza') return `${base} bg-[#fcf4d6] text-[#1c1b1f] border border-[#f1c21b]`;
+  if (estado === 'Ausente') return `${base} bg-[#ffd7d9] text-[#680006] border border-[#da1e28]`;
+  
+  return `${base} bg-[#edf5ff] text-[#002d9c] border border-[#0f62fe]`;
 }
 
 export default function AsistenciaMobilePage() {
@@ -261,97 +266,106 @@ export default function AsistenciaMobilePage() {
     void guardarUno(idMatricula, estado);
   };
 
-
-
   return (
-    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-50 text-slate-950">
-      <header className="shrink-0 border-b border-slate-200 bg-white px-3 py-2">
-        <div className="flex h-11 items-center gap-2">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#f4f4f4] text-[#161616] flex flex-col font-sans">
+      {/* Header tipo Carbon UI */}
+      <header className="shrink-0 border-b border-[#e0e0e0] bg-white px-4 py-3">
+        <div className="flex h-11 items-center gap-3">
           <Link
             to="/asistencia"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-700"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-[#161616] hover:bg-[#e0e0e0] transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-[#0f62fe]"
           >
             <ChevronLeft size={20} />
           </Link>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-[#525252]">
               Asistencia móvil
             </p>
-            <h1 className="truncate text-sm font-black">
+            <h1 className="truncate text-lg font-semibold text-[#161616]">
               {selectedSeccion?.label || 'Selecciona sección'}
             </h1>
           </div>
 
-          <div className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-slate-100 px-3 text-[11px] font-black text-slate-700">
+          <div className="inline-flex h-8 shrink-0 items-center gap-1.5 bg-[#e0e0e0] px-3 text-[12px] font-medium text-[#161616]">
             {syncing ? (
               <>
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin text-[#0f62fe]" />
                 Guardando
               </>
             ) : (
               <>
-                <CheckCircle2 size={14} />
+                <CheckCircle2 size={14} className="text-[#24a148]" />
                 Auto
               </>
             )}
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-[1fr_128px] gap-2">
-          <select
-            className="h-10 min-w-0 rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-xs font-black text-slate-950 outline-none focus:border-blue-500 focus:bg-white"
-            value={seccionId}
-            onChange={(event) => setSeccionId(Number(event.target.value))}
-          >
-            {secciones.length === 0 ? (
-              <option value="">Sin secciones</option>
-            ) : (
-              secciones.map((item) => (
-                <option key={item.id_seccion} value={item.id_seccion}>
-                  {item.label}
-                </option>
-              ))
-            )}
-          </select>
+        {/* Controles tipo Carbon Form */}
+        <div className="mt-4 grid grid-cols-[1fr_140px] gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-[#525252]">Sección</label>
+            <select
+              className="h-10 w-full min-w-0 bg-white border border-[#8d8d8d] px-3 text-sm font-medium text-[#161616] outline-none transition-colors hover:border-[#161616] focus:border-[#0f62fe] focus:ring-1 focus:ring-[#0f62fe]"
+              value={seccionId}
+              onChange={(event) => setSeccionId(Number(event.target.value))}
+            >
+              {secciones.length === 0 ? (
+                <option value="">Sin secciones</option>
+              ) : (
+                secciones.map((item) => (
+                  <option key={item.id_seccion} value={item.id_seccion}>
+                    {item.label}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
 
-          <input
-            type="date"
-            className="h-10 rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-2 text-xs font-black text-slate-950 outline-none focus:border-blue-500 focus:bg-white"
-            value={fecha}
-            onChange={(event) => setFecha(event.target.value)}
-          />
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-[#525252]">Fecha</label>
+            <input
+              type="date"
+              className="h-10 w-full bg-white border border-[#8d8d8d] px-2 text-sm font-medium text-[#161616] outline-none transition-colors hover:border-[#161616] focus:border-[#0f62fe] focus:ring-1 focus:ring-[#0f62fe]"
+              value={fecha}
+              onChange={(event) => setFecha(event.target.value)}
+            />
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto flex h-[calc(100dvh-101px)] max-w-md flex-col overflow-hidden px-3 py-3">
-        <div className="mb-2 flex shrink-0 items-center justify-between text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-          <span>{alumnos.length > 0 ? `${currentIndex + 1} / ${alumnos.length}` : '0 / 0'}</span>
-          <span>{registrados}/{alumnos.length} guardados · {pendientes} pendientes</span>
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden px-4 py-4">
+        {/* Progress Bar Carbon Style */}
+        <div className="mb-4 shrink-0">
+          <div className="flex justify-between items-center mb-2 text-[11px] font-medium text-[#525252]">
+            <span className="font-semibold text-[#161616]">{alumnos.length > 0 ? `${currentIndex + 1} / ${alumnos.length}` : '0 / 0'}</span>
+            <span>{registrados} guardados · {pendientes} pendientes</span>
+          </div>
+          <div className="h-1 w-full overflow-hidden bg-[#e0e0e0]">
+            <div
+              className="h-full bg-[#0f62fe] transition-all duration-300"
+              style={{ width: `${avance}%` }}
+            />
+          </div>
         </div>
 
-        <div className="mb-3 h-1.5 shrink-0 overflow-hidden rounded-full bg-white">
-          <div
-            className="h-full rounded-full bg-blue-600 transition-all"
-            style={{ width: `${avance}%` }}
-          />
-        </div>
-
+        {/* Body Content */}
         {loading ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div className="flex min-h-0 flex-1 items-center justify-center border border-[#e0e0e0] bg-white">
             <div className="text-center">
-              <Loader2 className="mx-auto animate-spin text-blue-600" size={32} />
-              <p className="mt-3 text-sm font-black text-slate-500">Cargando...</p>
+              <Loader2 className="mx-auto animate-spin text-[#0f62fe]" size={32} />
+              <p className="mt-3 text-sm font-medium text-[#525252]">Cargando lista...</p>
             </div>
           </div>
         ) : !currentAlumno ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-[24px] border border-slate-200 bg-white px-6 text-center shadow-sm">
+          <div className="flex min-h-0 flex-1 items-center justify-center border border-[#e0e0e0] bg-white px-6 text-center">
             <div>
-              <XCircle className="mx-auto text-slate-300" size={38} />
-              <p className="mt-3 text-base font-black">
+              <XCircle className="mx-auto text-[#8d8d8d]" size={40} />
+              <p className="mt-4 text-base font-semibold text-[#161616]">
                 {secciones.length === 0 ? 'No hay secciones disponibles' : 'No hay alumnos'}
               </p>
-              <p className="mt-1 text-sm font-semibold text-slate-400">
+              <p className="mt-1 text-sm text-[#525252]">
                 {secciones.length === 0
                   ? 'No hay secciones asignadas o configuradas.'
                   : 'Revisa matrículas activas.'}
@@ -360,48 +374,50 @@ export default function AsistenciaMobilePage() {
           </div>
         ) : (
           <>
-            <section className="relative shrink-0 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
+            {/* Student Card Carbon Style */}
+            <section className="relative shrink-0 border border-[#e0e0e0] bg-white p-6 text-center shadow-sm">
               <button
                 type="button"
                 onClick={goPrev}
                 disabled={currentIndex === 0}
-                className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-sm bg-slate-100 text-slate-600 disabled:opacity-30"
+                className="absolute left-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-transparent text-[#525252] hover:bg-[#e0e0e0] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[#0f62fe]"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={24} />
               </button>
 
               <button
                 type="button"
                 onClick={goNext}
                 disabled={currentIndex >= alumnos.length - 1}
-                className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-sm bg-slate-100 text-slate-600 disabled:opacity-30"
+                className="absolute right-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-transparent text-[#525252] hover:bg-[#e0e0e0] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[#0f62fe]"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={24} />
               </button>
 
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-[#525252]">
                 Alumno actual
               </p>
 
-              <h2 className="mx-auto mt-2 max-w-[250px] text-[clamp(1.35rem,6.5vw,1.85rem)] font-black leading-tight text-slate-950">
+              <h2 className="mx-auto mt-2 max-w-[250px] text-[28px] font-semibold leading-tight text-[#161616]">
                 {currentAlumno.alumno}
               </h2>
 
-              <p className="mt-2 text-xs font-black text-slate-400">
+              <p className="mt-2 text-xs font-medium text-[#525252]">
                 {currentAlumno.codigo ? `Código: ${currentAlumno.codigo}` : `Matrícula #${currentAlumno.id_matricula}`}
               </p>
 
-              <div className="mx-auto mt-2 flex max-w-[280px] gap-1 overflow-x-auto pb-1">
+              {/* Quick Navigation Pills */}
+              <div className="mx-auto mt-4 flex max-w-[280px] gap-1.5 overflow-x-auto pb-1">
                 {alumnos.map((alumno, index) => (
                   <button
                     key={alumno.id_matricula}
                     type="button"
                     onClick={() => setCurrentIndex(index)}
-                    className={`h-7 min-w-7 rounded-lg border px-2 text-[10px] font-black ${estadoMiniClass(
+                    className={estadoMiniClass(
                       alumno.estado,
                       index === currentIndex,
                       alumno.registrado,
-                    )}`}
+                    )}
                   >
                     {index + 1}
                   </button>
@@ -409,20 +425,21 @@ export default function AsistenciaMobilePage() {
               </div>
             </section>
 
-            <section className="mt-2 grid shrink-0 gap-2">
+            {/* Action Buttons Carbon Style */}
+            <section className="mt-4 grid flex-1 shrink-0 gap-3">
               <button
                 type="button"
                 onClick={() => marcarEstado('Presente')}
-                className="h-[17dvh] min-h-[70px] max-h-[98px] rounded-[18px] border-2 border-emerald-700 bg-emerald-600 text-[clamp(1.35rem,7vw,2rem)] font-black text-white shadow-sm active:scale-[0.99]"
+                className="h-full min-h-[70px] max-h-[90px] bg-[#24a148] hover:bg-[#1c8338] text-white text-xl font-semibold shadow-sm transition-colors active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#24a148] focus:ring-offset-2"
               >
                 Presente
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => marcarEstado('Tardanza')}
-                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-[18px] border-2 border-amber-700 bg-amber-400 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-slate-950 shadow-sm active:scale-[0.99]"
+                  className="h-full min-h-[60px] max-h-[80px] bg-[#f1c21b] hover:bg-[#e0b019] text-[#161616] text-lg font-semibold shadow-sm transition-colors active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#f1c21b] focus:ring-offset-2"
                 >
                   Tarde
                 </button>
@@ -430,7 +447,7 @@ export default function AsistenciaMobilePage() {
                 <button
                   type="button"
                   onClick={() => marcarEstado('Ausente')}
-                  className="h-[14dvh] min-h-[58px] max-h-[82px] rounded-[18px] border-2 border-rose-800 bg-rose-700 text-[clamp(1.1rem,6vw,1.55rem)] font-black text-white shadow-sm active:scale-[0.99]"
+                  className="h-full min-h-[60px] max-h-[80px] bg-[#da1e28] hover:bg-[#a51620] text-white text-lg font-semibold shadow-sm transition-colors active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#da1e28] focus:ring-offset-2"
                 >
                   Ausente
                 </button>
@@ -439,7 +456,7 @@ export default function AsistenciaMobilePage() {
               <button
                 type="button"
                 onClick={() => marcarEstado('Justificado')}
-                className="h-[10dvh] min-h-[48px] max-h-[64px] rounded-[18px] border-2 border-blue-700 bg-blue-700 text-[clamp(1rem,5vw,1.35rem)] font-black text-white shadow-sm active:scale-[0.99]"
+                className="h-full min-h-[50px] max-h-[65px] bg-[#0f62fe] hover:bg-[#0043ce] text-white text-base font-semibold shadow-sm transition-colors active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#0f62fe] focus:ring-offset-2"
               >
                 Justificado
               </button>
@@ -447,17 +464,24 @@ export default function AsistenciaMobilePage() {
           </>
         )}
 
+        {/* Inline Notifications Carbon Style */}
         {offlineMessage && (
-          <div className="mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">
-            <WifiOff size={15} />
-            {offlineMessage}
+          <div className="mt-4 flex shrink-0 items-start gap-3 border-l-4 border-[#da1e28] bg-[#fff1f1] px-4 py-3 text-sm text-[#161616]">
+            <WifiOff size={18} className="mt-0.5 text-[#da1e28]" />
+            <div>
+              <p className="font-semibold text-[#da1e28]">Error de conexión</p>
+              <p className="text-[13px] text-[#161616]">{offlineMessage}</p>
+            </div>
           </div>
         )}
 
         {message && (
-          <div className="mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
-            <CheckCircle2 size={15} />
-            {message}
+          <div className="mt-4 flex shrink-0 items-start gap-3 border-l-4 border-[#24a148] bg-[#def7e1] px-4 py-3 text-sm text-[#161616]">
+            <CheckCircle2 size={18} className="mt-0.5 text-[#24a148]" />
+            <div>
+              <p className="font-semibold text-[#24a148]">Éxito</p>
+              <p className="text-[13px] text-[#161616]">{message}</p>
+            </div>
           </div>
         )}
       </main>
