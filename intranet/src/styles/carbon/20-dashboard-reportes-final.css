@@ -470,3 +470,250 @@
   border: 1px solid #d8e0ea !important;
   color: #475569 !important;
 }
+
+/* ==========================================================
+   20.2 - Espaciado global y sidebar contraído
+   Corrige:
+   - Espacio vacío al contraer sidebar
+   - Separación excesiva entre PageHeader y contenido
+   - Separación del título Resumen del grupo académico
+   ========================================================== */
+
+/* ==========================================================
+   1) Contenedor global de rutas
+   ========================================================== */
+
+/* El contenido ya no se centra con mx-auto.
+   Se alinea al inicio del área disponible, evitando el hueco
+   grande cuando el sidebar queda contraído. */
+.carbon-shell .erp-route-shell {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  width: 100% !important;
+}
+
+/* El main mantiene aire, pero no exagera el lado izquierdo. */
+.carbon-shell main {
+  padding-left: 20px !important;
+  padding-right: 24px !important;
+}
+
+@media (min-width: 1024px) {
+  .carbon-shell main {
+    padding-left: 24px !important;
+    padding-right: 32px !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .carbon-shell main {
+    padding-left: 24px !important;
+    padding-right: 36px !important;
+  }
+}
+
+/* ==========================================================
+   2) Dashboard y Reportes: espacio debajo del PageHeader
+   ========================================================== */
+
+/* Tailwind space-y-6 dejaba demasiado espacio entre el header
+   y el primer bloque. Lo bajamos a una separación parecida
+   a Tutoría. */
+.carbon-dashboard > :not([hidden]) ~ :not([hidden]),
+.carbon-reportes-page > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 16px !important;
+}
+
+/* El bloque animado debajo del header no debe sumar más margen. */
+.carbon-dashboard > div[class*="delay-100"],
+.carbon-reportes-page > div[class*="delay-100"] {
+  margin-top: 16px !important;
+}
+
+/* El primer section dentro del bloque animado no debe agregar
+   separación adicional. */
+.carbon-dashboard > div[class*="delay-100"] > section:first-child,
+.carbon-reportes-page > div[class*="delay-100"] > section:first-child {
+  margin-top: 0 !important;
+}
+
+/* En Reportes institucionales, los KPI deben quedar cerca del header,
+   igual que los KPI de Reporte global de asistencia. */
+.carbon-reportes-page > div[class*="delay-100"] > section.grid:first-child {
+  margin-top: 0 !important;
+}
+
+/* ==========================================================
+   3) Dashboard: Resumen del grupo académico
+   ========================================================== */
+
+/* El bloque de resumen es un grupo visual, no una tarjeta.
+   Debe aparecer cerca del header. */
+.carbon-dashboard .dashboard-summary-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  gap: 22px !important;
+}
+
+/* El título se mantiene compacto y legible. */
+.carbon-dashboard .dashboard-section-title {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-left: 2px !important;
+}
+
+.carbon-dashboard .dashboard-section-title h2 {
+  margin: 0 !important;
+  font-size: 17px !important;
+  line-height: 1.25 !important;
+}
+
+.carbon-dashboard .dashboard-section-title p {
+  margin-top: 4px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* Más aire entre el texto "Indicadores consolidados..." y los KPIs. */
+.carbon-dashboard .dashboard-section-title + .dashboard-kpi-grid {
+  margin-top: 4px !important;
+}
+
+/* La primera fila de KPIs no debe parecer desconectada del título. */
+.carbon-dashboard .dashboard-kpi-grid {
+  gap: 16px !important;
+}
+
+/* Segunda fila de KPIs: separación limpia, no excesiva. */
+.carbon-dashboard .dashboard-kpi-grid + div[class*="grid"] {
+  margin-top: 0 !important;
+  gap: 16px !important;
+}
+
+/* ==========================================================
+   4) Próximos eventos: color más sobrio
+   ========================================================== */
+
+.carbon-dashboard .dashboard-event-date {
+  background: #ffffff !important;
+  color: #161616 !important;
+  border: 1px solid #c6c6c6 !important;
+}
+
+.carbon-dashboard .dashboard-event-date span {
+  color: inherit !important;
+}
+
+.carbon-dashboard .dashboard-event-date span:last-child {
+  color: #6f6f6f !important;
+}
+
+/* ==========================================================
+   20.3 - Corrección real de ancho y espacio bajo header
+   Dashboard + Reportes institucionales
+   ========================================================== */
+
+/* ==========================================================
+   1) Ancho global de páginas
+   ========================================================== */
+
+/* Ocupa todo el ancho disponible del main.
+   Evita el espacio vacío grande a la derecha. */
+.carbon-shell .erp-route-shell {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Mantener padding lateral razonable sin centrar el contenido. */
+.carbon-shell main {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+@media (min-width: 1024px) {
+  .carbon-shell main {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+/* ==========================================================
+   2) Evitar doble espacio entre PageHeader y contenido
+   ========================================================== */
+
+/* Estos root tenían display:flex + gap desde CSS anteriores.
+   Además conservaban space-y-* de Tailwind.
+   Eso duplicaba el espacio debajo del header. */
+.carbon-dashboard,
+.carbon-reportes-page {
+  gap: 0 !important;
+  row-gap: 0 !important;
+}
+
+/* Forzar una separación única y controlada debajo del PageHeader. */
+.carbon-dashboard > :not([hidden]) ~ :not([hidden]),
+.carbon-reportes-page > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 14px !important;
+}
+
+/* El bloque animado debajo del header no debe sumar más espacio. */
+.carbon-dashboard > div[class*="delay-100"],
+.carbon-reportes-page > div[class*="delay-100"] {
+  margin-top: 14px !important;
+}
+
+/* El primer bloque interno no debe agregar margen extra. */
+.carbon-dashboard > div[class*="delay-100"] > :first-child,
+.carbon-reportes-page > div[class*="delay-100"] > :first-child {
+  margin-top: 0 !important;
+}
+
+/* ==========================================================
+   3) Reportes institucionales
+   ========================================================== */
+
+/* Los KPI deben quedar más cerca del header, como en asistencia. */
+.carbon-reportes-page > div[class*="delay-100"] > section.grid:first-child {
+  margin-top: 0 !important;
+}
+
+/* Evita que section.grid actúe como tarjeta o agregue aire visual. */
+.carbon-reportes-page section.grid {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ==========================================================
+   4) Dashboard
+   ========================================================== */
+
+/* El resumen debe aparecer cercano al header. */
+.carbon-dashboard .dashboard-summary-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  gap: 18px !important;
+}
+
+/* Texto compacto, pero con aire antes de KPIs. */
+.carbon-dashboard .dashboard-section-title {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.carbon-dashboard .dashboard-section-title + .dashboard-kpi-grid {
+  margin-top: 6px !important;
+}
+
+/* Quitar separación heredada de space-y-8 dentro del bloque principal. */
+.carbon-dashboard > div[class*="delay-100"] > .dashboard-summary-section {
+  margin-top: 0 !important;
+}
+
+/* Las siguientes secciones sí deben respirar. */
+.carbon-dashboard .dashboard-summary-section + section,
+.carbon-dashboard .dashboard-summary-section + div,
+.carbon-dashboard section + section {
+  margin-top: 24px !important;
+}
