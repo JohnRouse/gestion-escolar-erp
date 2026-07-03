@@ -107,9 +107,9 @@ function KpiCard({
 }) {
   const tones: Record<Tone, { dot: string; iconBg: string }> = {
     neutral: { dot: 'bg-neutral-400', iconBg: 'bg-neutral-100 text-neutral-500' },
-    blue: { dot: 'bg-blue-400', iconBg: 'bg-blue-50 text-blue-500' },
-    emerald: { dot: 'bg-emerald-400', iconBg: 'bg-emerald-50 text-emerald-500' },
-    amber: { dot: 'bg-amber-400', iconBg: 'bg-amber-50 text-amber-500' },
+    blue: { dot: 'bg-blue-600', iconBg: 'bg-blue-50 text-blue-500' },
+    emerald: { dot: 'bg-emerald-600', iconBg: 'bg-emerald-50 text-emerald-500' },
+    amber: { dot: 'bg-amber-500', iconBg: 'bg-amber-50 text-amber-500' },
     rose: { dot: 'bg-rose-400', iconBg: 'bg-rose-50 text-rose-500' },
     violet: { dot: 'bg-violet-400', iconBg: 'bg-violet-50 text-violet-500' },
   };
@@ -155,7 +155,7 @@ function SectionCard({
   title: string; description: string; icon: any; children: ReactNode; action?: ReactNode;
 }) {
   return (
-    <section className="carbon-report-section rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <section className="carbon-report-section rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -181,9 +181,9 @@ function ProgressRow({
 }) {
   const barTones: Record<Tone, string> = {
     neutral: 'bg-neutral-400',
-    blue: 'bg-blue-400',
-    emerald: 'bg-emerald-400',
-    amber: 'bg-amber-400',
+    blue: 'bg-blue-600',
+    emerald: 'bg-emerald-600',
+    amber: 'bg-amber-500',
     rose: 'bg-rose-400',
     violet: 'bg-violet-400',
   };
@@ -191,7 +191,7 @@ function ProgressRow({
   const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
   return (
-    <div className="carbon-report-progress-row rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+    <div className="carbon-report-progress-row rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-neutral-800">{label}</p>
@@ -199,7 +199,7 @@ function ProgressRow({
         </div>
         <p className="text-sm font-semibold text-neutral-900 tabular-nums">{formatPercent(safeValue)}</p>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div
           className={cx('h-full rounded-full transition-all duration-700', barTones[tone])}
           style={{ width: `${safeValue}%` }}
@@ -212,7 +212,7 @@ function ProgressRow({
 /* ─── Amount Row ────────────────────────────────────── */
 function AmountRow({ label, value, helper }: { label: string; value: number; helper?: string }) {
   return (
-    <div className="carbon-report-amount-row flex items-center justify-between gap-4 rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+    <div className="carbon-report-amount-row flex items-center justify-between gap-4 rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-neutral-800">{label}</p>
         {helper && <p className="mt-0.5 text-xs text-neutral-400">{helper}</p>}
@@ -456,12 +456,12 @@ export default function ReportesPage() {
                   data.matriculaTendencia.map((item) => {
                     const max = Math.max(...data.matriculaTendencia.map((r) => Number(r.total || 0)), 1);
                     return (
-                      <div key={item.mes} className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+                      <div key={item.mes} className="rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-medium text-neutral-800">{item.mes}</p>
                           <p className="text-sm font-semibold text-neutral-900 tabular-nums">{formatNumber(item.total)}</p>
                         </div>
-                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className="h-full rounded-full bg-blue-600 transition-all duration-700"
                             style={{ width: `${Math.round((item.total / max) * 100)}%` }}
@@ -511,7 +511,7 @@ export default function ReportesPage() {
                 {(data.operativas?.cargaDocentes || []).length ? (
                   <div className="space-y-3">
                     {data.operativas!.cargaDocentes!.slice(0, 8).map((item) => (
-                      <div key={item.id_docente ?? item.docente} className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+                      <div key={item.id_docente ?? item.docente} className="rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -524,13 +524,13 @@ export default function ReportesPage() {
                           </div>
                           <p className="text-sm font-semibold text-neutral-900 tabular-nums">{formatPercent(item.porcentaje)}</p>
                         </div>
-                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className={cx(
                               'h-full rounded-full transition-all duration-700',
-                              Number(item.porcentaje || 0) >= 100 ? 'bg-emerald-400' :
-                              Number(item.porcentaje || 0) >= 70 ? 'bg-blue-400' :
-                              Number(item.porcentaje || 0) > 0 ? 'bg-amber-400' : 'bg-red-400',
+                              Number(item.porcentaje || 0) >= 100 ? 'bg-emerald-600' :
+                              Number(item.porcentaje || 0) >= 70 ? 'bg-blue-600' :
+                              Number(item.porcentaje || 0) > 0 ? 'bg-amber-500' : 'bg-rose-600',
                             )}
                             style={{ width: `${Math.min(100, Math.max(0, Number(item.porcentaje || 0)))}%` }}
                           />
@@ -561,7 +561,7 @@ export default function ReportesPage() {
               {(data.alertas?.alumnosRiesgo || []).length ? (
                 <div className="space-y-3">
                   {data.alertas!.alumnosRiesgo!.map((item) => (
-                    <div key={item.nombre} className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+                    <div key={item.nombre} className="flex items-center justify-between gap-4 rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-neutral-800">{item.nombre}</p>
                         <p className="mt-0.5 text-xs text-neutral-400">Requiere seguimiento académico</p>
@@ -581,7 +581,7 @@ export default function ReportesPage() {
               {(data.alertas?.riesgoDesercion || []).length ? (
                 <div className="space-y-3">
                   {data.alertas!.riesgoDesercion!.map((item) => (
-                    <div key={item.nombre} className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60 transition-all duration-150 hover:ring-neutral-300/60">
+                    <div key={item.nombre} className="rounded-sm border border-slate-200 bg-slate-50 p-4 transition hover:bg-white">
                       <p className="text-sm font-medium text-neutral-800">{item.nombre}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 ring-1 ring-red-200/60">
@@ -601,7 +601,7 @@ export default function ReportesPage() {
           </section>
 
           {/* ── Footer ── */}
-          <section className="carbon-report-section carbon-report-footer rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <section className="carbon-report-section carbon-report-footer rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
