@@ -1,0 +1,231 @@
+/* ==========================================================
+   18 - Cohesión visual Dashboard + Reportes
+   Objetivo: alinear Dashboard y Reportes institucionales con
+   el lenguaje visual del Reporte global de asistencia.
+   ========================================================== */
+
+.carbon-dashboard,
+.carbon-reportes-page {
+  --erp-cohesion-border: #d8e0ea;
+  --erp-cohesion-border-soft: #e5edf5;
+  --erp-cohesion-soft: #f8fafc;
+  --erp-cohesion-blue: #2563eb;
+  --erp-cohesion-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --erp-cohesion-shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* La página debe respirar igual que Asistencia global */
+.carbon-dashboard,
+.carbon-reportes-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Recuperar tarjetas redondeadas: anula el radio pequeño heredado de Carbon */
+.carbon-dashboard [class*="rounded-[24px]"],
+.carbon-dashboard [class*="rounded-[26px]"],
+.carbon-dashboard [class*="rounded-[28px]"],
+.carbon-dashboard [class*="rounded-3xl"],
+.carbon-dashboard [class*="rounded-2xl"],
+.carbon-dashboard [class*="rounded-xl"],
+.carbon-reportes-page [class*="rounded-[24px]"],
+.carbon-reportes-page [class*="rounded-[26px]"],
+.carbon-reportes-page [class*="rounded-[28px]"],
+.carbon-reportes-page [class*="rounded-3xl"],
+.carbon-reportes-page [class*="rounded-2xl"],
+.carbon-reportes-page [class*="rounded-xl"] {
+  border-radius: 24px !important;
+}
+
+/* Pero los elementos pequeños no deben volverse globos */
+.carbon-dashboard button,
+.carbon-dashboard input,
+.carbon-dashboard select,
+.carbon-dashboard textarea,
+.carbon-reportes-page button,
+.carbon-reportes-page input,
+.carbon-reportes-page select,
+.carbon-reportes-page textarea {
+  border-radius: 2px !important;
+}
+
+/* PageHeader y contenedores principales */
+.carbon-dashboard > div:first-child,
+.carbon-reportes-page > div:first-child {
+  overflow: visible;
+}
+
+.carbon-dashboard > div:first-child > *,
+.carbon-reportes-page > div:first-child > * {
+  border-radius: 28px !important;
+  border-color: var(--erp-cohesion-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-cohesion-shadow) !important;
+}
+
+/* Secciones grandes */
+.carbon-dashboard section[class*="bg-white"],
+.carbon-reportes-page .carbon-report-section,
+.carbon-reportes-page section[class*="bg-white"] {
+  border: 1px solid var(--erp-cohesion-border) !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-cohesion-shadow) !important;
+}
+
+/* Quitar la línea azul lateral antigua de los KPI del dashboard */
+.carbon-dashboard-card::before,
+.carbon-dashboard [class*="min-h-[120px]"]::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* KPI principales: mismo lenguaje de asistencia */
+.carbon-dashboard-card,
+.carbon-dashboard [class*="min-h-[120px]"],
+.carbon-reportes-page .carbon-report-kpi {
+  position: relative;
+  min-height: 126px !important;
+  border: 1px solid var(--erp-cohesion-border) !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-cohesion-shadow) !important;
+  overflow: hidden;
+}
+
+.carbon-dashboard-card:hover,
+.carbon-dashboard [class*="min-h-[120px]"]:hover,
+.carbon-reportes-page .carbon-report-kpi:hover {
+  border-color: #c7d3e2 !important;
+  box-shadow: var(--erp-cohesion-shadow-hover) !important;
+  transform: none !important;
+}
+
+/* Íconos de KPI más suaves */
+.carbon-dashboard-card [class*="h-10"][class*="w-10"],
+.carbon-reportes-page .carbon-report-kpi [class*="h-10"][class*="w-10"] {
+  border-radius: 16px !important;
+}
+
+/* Bloques internos: quitar gris pesado */
+.carbon-dashboard .school-summary-card,
+.carbon-dashboard [class*="bg-neutral-50"],
+.carbon-dashboard [class*="bg-slate-50"],
+.carbon-reportes-page .carbon-report-progress-row,
+.carbon-reportes-page .carbon-report-amount-row,
+.carbon-reportes-page [class*="bg-neutral-50"],
+.carbon-reportes-page [class*="bg-slate-50"] {
+  background: var(--erp-cohesion-soft) !important;
+}
+
+/* Tarjetas/listas internas tipo asistencia */
+.carbon-dashboard .school-summary-card,
+.carbon-dashboard section [class*="bg-slate-50"][class*="border"],
+.carbon-dashboard section [class*="bg-neutral-50"][class*="border"],
+.carbon-dashboard section [class*="ring-slate-200"],
+.carbon-dashboard section [class*="ring-neutral-200"],
+.carbon-reportes-page .carbon-report-progress-row,
+.carbon-reportes-page .carbon-report-amount-row,
+.carbon-reportes-page section [class*="bg-slate-50"][class*="border"],
+.carbon-reportes-page section [class*="bg-neutral-50"][class*="border"],
+.carbon-reportes-page section [class*="ring-slate-200"],
+.carbon-reportes-page section [class*="ring-neutral-200"] {
+  border: 1px solid var(--erp-cohesion-border-soft) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  --tw-ring-color: transparent !important;
+}
+
+/* Subtarjetas dentro de Estado por colegio */
+.carbon-dashboard .school-summary-card [class*="bg-white"][class*="p-3"],
+.carbon-dashboard .school-summary-card [class*="ring"] {
+  border: 1px solid var(--erp-cohesion-border-soft) !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  --tw-ring-color: transparent !important;
+}
+
+/* Avance de carga por docente: estilo parecido al reporte global */
+.carbon-dashboard section:has(.carbon-progress-track),
+.carbon-reportes-page section:has(.carbon-report-progress-row) {
+  background: #ffffff !important;
+}
+
+.carbon-dashboard section .space-y-3 > div,
+.carbon-reportes-page section .space-y-3 > div {
+  border-radius: 6px !important;
+}
+
+/* Barras de progreso limpias */
+.carbon-dashboard .carbon-progress-track,
+.carbon-dashboard [class*="overflow-hidden"][class*="bg-slate-100"],
+.carbon-reportes-page [class*="overflow-hidden"][class*="bg-slate-100"] {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #edf2f7 !important;
+}
+
+.carbon-dashboard .carbon-progress-fill,
+.carbon-dashboard .carbon-progress-track > div,
+.carbon-reportes-page [class*="overflow-hidden"][class*="bg-slate-100"] > div {
+  border-radius: 999px !important;
+}
+
+/* Textos más consistentes */
+.carbon-dashboard h2,
+.carbon-dashboard h3,
+.carbon-dashboard h4,
+.carbon-reportes-page h2,
+.carbon-reportes-page h3,
+.carbon-reportes-page h4 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.015em;
+}
+
+.carbon-dashboard p[class*="uppercase"],
+.carbon-dashboard span[class*="uppercase"],
+.carbon-reportes-page p[class*="uppercase"],
+.carbon-reportes-page span[class*="uppercase"] {
+  letter-spacing: 0.14em !important;
+  font-weight: 800 !important;
+  color: #64748b !important;
+}
+
+.carbon-dashboard [class*="text-neutral-400"],
+.carbon-dashboard [class*="text-neutral-500"],
+.carbon-reportes-page [class*="text-neutral-400"],
+.carbon-reportes-page [class*="text-neutral-500"] {
+  color: #64748b !important;
+}
+
+/* Empty panels: menos grises, más limpios */
+.carbon-dashboard .carbon-report-empty,
+.carbon-dashboard [class*="border-dashed"],
+.carbon-reportes-page .carbon-report-empty,
+.carbon-reportes-page [class*="border-dashed"] {
+  border-color: var(--erp-cohesion-border) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+}
+
+/* Footer de reportes */
+.carbon-report-footer {
+  border-radius: 24px !important;
+}
+
+/* Responsive: mantener tarjetas limpias en pantallas medianas */
+@media (max-width: 1024px) {
+  .carbon-dashboard,
+  .carbon-reportes-page {
+    gap: 16px;
+  }
+
+  .carbon-dashboard-card,
+  .carbon-dashboard [class*="min-h-[120px]"],
+  .carbon-reportes-page .carbon-report-kpi {
+    min-height: 112px !important;
+  }
+}

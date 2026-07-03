@@ -420,7 +420,7 @@ export default function AsistenciaReportesPage() {
             />
           </div>
 
-          <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="asistencia-panel rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
@@ -453,7 +453,7 @@ export default function AsistenciaReportesPage() {
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="asistencia-panel rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
                 <School size={18} />
@@ -539,7 +539,7 @@ export default function AsistenciaReportesPage() {
             </div>
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
+          <section className="asistencia-panel grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
             <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
@@ -629,7 +629,7 @@ export default function AsistenciaReportesPage() {
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <section className="asistencia-panel rounded-[24px] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-600">

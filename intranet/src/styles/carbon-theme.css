@@ -2987,3 +2987,400 @@ body {
     font-size: 15px !important;
   }
 }
+
+/* ==========================================================
+   Carbon refinement v20
+   Dashboard + Reportes institucionales + Reporte de asistencia
+   Enfoque: legibilidad, simplicidad, facilidad para docentes
+   ========================================================== */
+
+:root {
+  --carbon-page-bg: #f4f4f4;
+  --carbon-layer: #ffffff;
+  --carbon-layer-soft: #f8f9fb;
+  --carbon-border: #d9dee7;
+  --carbon-border-strong: #b9c3d1;
+  --carbon-text: #161616;
+  --carbon-muted: #525252;
+  --carbon-helper: #6f6f6f;
+  --carbon-blue: #0f62fe;
+  --carbon-blue-soft: #edf5ff;
+}
+
+/* ==========================================================
+   Base común para estas páginas
+   ========================================================== */
+
+.carbon-dashboard-page,
+.carbon-reportes-page,
+.carbon-asistencia-page {
+  color: var(--carbon-text);
+}
+
+.carbon-dashboard-page [class*="rounded-[24px]"],
+.carbon-dashboard-page [class*="rounded-[26px]"],
+.carbon-dashboard-page [class*="rounded-[28px]"],
+.carbon-dashboard-page [class*="rounded-[30px]"],
+.carbon-dashboard-page [class*="rounded-3xl"],
+.carbon-dashboard-page [class*="rounded-2xl"],
+.carbon-dashboard-page [class*="rounded-xl"],
+.carbon-dashboard-page [class*="rounded-full"],
+.carbon-reportes-page [class*="rounded-[24px]"],
+.carbon-reportes-page [class*="rounded-[26px]"],
+.carbon-reportes-page [class*="rounded-[28px]"],
+.carbon-reportes-page [class*="rounded-[30px]"],
+.carbon-reportes-page [class*="rounded-3xl"],
+.carbon-reportes-page [class*="rounded-2xl"],
+.carbon-reportes-page [class*="rounded-xl"],
+.carbon-reportes-page [class*="rounded-full"],
+.carbon-asistencia-page [class*="rounded-[24px]"],
+.carbon-asistencia-page [class*="rounded-[26px]"],
+.carbon-asistencia-page [class*="rounded-[28px]"],
+.carbon-asistencia-page [class*="rounded-[30px]"],
+.carbon-asistencia-page [class*="rounded-3xl"],
+.carbon-asistencia-page [class*="rounded-2xl"],
+.carbon-asistencia-page [class*="rounded-xl"],
+.carbon-asistencia-page [class*="rounded-full"] {
+  border-radius: 6px !important;
+}
+
+.carbon-dashboard-page [class*="shadow"],
+.carbon-reportes-page [class*="shadow"],
+.carbon-asistencia-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+/* ==========================================================
+   Dashboard
+   ========================================================== */
+
+.carbon-dashboard-page .dashboard-summary-panel,
+.carbon-dashboard-page .dashboard-school-panel,
+.carbon-dashboard-page .dashboard-docentes-panel,
+.carbon-dashboard-page .dashboard-events-panel {
+  background: transparent !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-kpi,
+.carbon-dashboard-page .dashboard-school-panel article,
+.carbon-dashboard-page .dashboard-docentes-panel article,
+.carbon-dashboard-page .dashboard-events-panel article,
+.carbon-dashboard-page section,
+.carbon-dashboard-page article {
+  background: var(--carbon-layer) !important;
+  border: 1px solid var(--carbon-border) !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-kpi {
+  min-height: 132px !important;
+  padding: 18px 20px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-kpi p,
+.carbon-dashboard-page .dashboard-summary-kpi span {
+  line-height: 1.35 !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-kpi [class*="text-xs"],
+.carbon-dashboard-page .dashboard-summary-kpi [class*="tracking"] {
+  color: var(--carbon-muted) !important;
+  letter-spacing: 0.12em !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-kpi [class*="text-3xl"],
+.carbon-dashboard-page .dashboard-summary-kpi [class*="text-2xl"] {
+  color: var(--carbon-text) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.carbon-dashboard-page .dashboard-summary-panel [class*="grid"] {
+  gap: 16px !important;
+  background: transparent !important;
+}
+
+.carbon-dashboard-page .dashboard-events-panel [class*="bg-slate-50"],
+.carbon-dashboard-page .dashboard-events-panel [class*="bg-neutral-50"] {
+  background: var(--carbon-layer-soft) !important;
+  border: 1px solid var(--carbon-border) !important;
+}
+
+.carbon-dashboard-page .dashboard-events-panel [class*="text-xs"],
+.carbon-dashboard-page .dashboard-events-panel [class*="text-slate-500"],
+.carbon-dashboard-page .dashboard-events-panel [class*="text-neutral-500"] {
+  color: var(--carbon-muted) !important;
+}
+
+.carbon-dashboard-page .dashboard-payments-section {
+  display: none !important;
+}
+
+/* ==========================================================
+   Reportes institucionales
+   ========================================================== */
+
+.carbon-reportes-page {
+  background: transparent !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card,
+.carbon-reportes-page .reportes-module-panel,
+.carbon-reportes-page section,
+.carbon-reportes-page article {
+  background: var(--carbon-layer) !important;
+  border: 1px solid var(--carbon-border) !important;
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page [class*="gap-px"],
+.carbon-reportes-page [class*="gap-y-px"],
+.carbon-reportes-page [class*="gap-x-px"] {
+  gap: 16px !important;
+  background: transparent !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card {
+  min-height: 124px !important;
+  padding: 18px 20px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.carbon-reportes-page .reportes-kpi-card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  background: var(--carbon-blue);
+}
+
+.carbon-reportes-page .reportes-kpi-card p:first-of-type,
+.carbon-reportes-page .reportes-kpi-card [class*="tracking"] {
+  color: var(--carbon-muted) !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.12em !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card p[class*="text-3xl"],
+.carbon-reportes-page .reportes-kpi-card p[class*="text-2xl"] {
+  color: var(--carbon-text) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card p[class*="text-xs"],
+.carbon-reportes-page .reportes-kpi-card span[class*="text-xs"] {
+  color: var(--carbon-helper) !important;
+  line-height: 1.4 !important;
+}
+
+.carbon-reportes-page .reportes-module-panel {
+  background: var(--carbon-layer) !important;
+}
+
+.carbon-reportes-page .reportes-module-panel [class*="bg-neutral-50"],
+.carbon-reportes-page .reportes-module-panel [class*="bg-slate-50"] {
+  background: var(--carbon-layer-soft) !important;
+  border: 1px solid var(--carbon-border) !important;
+}
+
+.carbon-reportes-page .reportes-module-panel [class*="text-neutral-500"],
+.carbon-reportes-page .reportes-module-panel [class*="text-slate-500"] {
+  color: var(--carbon-muted) !important;
+}
+
+.carbon-reportes-page .reportes-module-panel [class*="bg-[#CCF32F]"] {
+  background: var(--carbon-blue) !important;
+}
+
+.carbon-reportes-page .reportes-module-panel [class*="text-[#CCF32F]"] {
+  color: var(--carbon-blue) !important;
+}
+
+/* ==========================================================
+   Reporte global de asistencia
+   Se usa como referencia visual base
+   ========================================================== */
+
+.carbon-asistencia-page .asistencia-panel,
+.carbon-asistencia-page section,
+.carbon-asistencia-page article {
+  background: var(--carbon-layer) !important;
+  border: 1px solid var(--carbon-border) !important;
+  box-shadow: none !important;
+}
+
+.carbon-asistencia-page [class*="text-neutral-500"],
+.carbon-asistencia-page [class*="text-slate-500"],
+.carbon-asistencia-page [class*="text-xs"] {
+  color: var(--carbon-muted) !important;
+}
+
+.carbon-asistencia-page table {
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.carbon-asistencia-page thead th {
+  background: #f4f4f4 !important;
+  border-bottom: 1px solid var(--carbon-border-strong) !important;
+  color: var(--carbon-muted) !important;
+}
+
+.carbon-asistencia-page tbody td {
+  border-bottom: 1px solid var(--carbon-border) !important;
+}
+
+/* ==========================================================
+   Legibilidad general para docentes
+   ========================================================== */
+
+.carbon-dashboard-page h1,
+.carbon-dashboard-page h2,
+.carbon-dashboard-page h3,
+.carbon-reportes-page h1,
+.carbon-reportes-page h2,
+.carbon-reportes-page h3,
+.carbon-asistencia-page h1,
+.carbon-asistencia-page h2,
+.carbon-asistencia-page h3 {
+  color: var(--carbon-text) !important;
+  letter-spacing: -0.01em !important;
+}
+
+.carbon-dashboard-page [class*="text-sm"],
+.carbon-reportes-page [class*="text-sm"],
+.carbon-asistencia-page [class*="text-sm"] {
+  line-height: 1.45 !important;
+}
+
+.carbon-dashboard-page button,
+.carbon-reportes-page button,
+.carbon-asistencia-page button,
+.carbon-dashboard-page a,
+.carbon-reportes-page a,
+.carbon-asistencia-page a {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard-page button:hover,
+.carbon-reportes-page button:hover,
+.carbon-asistencia-page button:hover,
+.carbon-dashboard-page a:hover,
+.carbon-reportes-page a:hover,
+.carbon-asistencia-page a:hover {
+  transform: none !important;
+}
+
+/* ==========================================================
+   Carbon safe recovery v21
+   Ajustes seguros después del error de JSX.
+   No elimina componentes desde TSX.
+   ========================================================== */
+
+/* Dashboard: mejorar lectura de KPIs sin tocar estructura */
+.carbon-dashboard,
+.carbon-dashboard-page {
+  color: #161616;
+}
+
+.carbon-dashboard [class*="min-h-[120px]"],
+.carbon-dashboard-page [class*="min-h-[120px]"] {
+  border: 1px solid #d9dee7 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  min-height: 128px !important;
+  padding: 18px 20px !important;
+}
+
+.carbon-dashboard [class*="min-h-[120px]"] p,
+.carbon-dashboard-page [class*="min-h-[120px]"] p {
+  line-height: 1.35 !important;
+}
+
+.carbon-dashboard [class*="text-3xl"],
+.carbon-dashboard [class*="text-2xl"],
+.carbon-dashboard-page [class*="text-3xl"],
+.carbon-dashboard-page [class*="text-2xl"] {
+  color: #161616 !important;
+  font-weight: 600 !important;
+}
+
+.carbon-dashboard [class*="text-neutral-500"],
+.carbon-dashboard [class*="text-slate-500"],
+.carbon-dashboard-page [class*="text-neutral-500"],
+.carbon-dashboard-page [class*="text-slate-500"] {
+  color: #525252 !important;
+}
+
+/* Reportes institucionales: separar tarjetas y mejorar contraste */
+.carbon-reportes-page {
+  color: #161616;
+}
+
+.carbon-reportes-page [class*="rounded-2xl"],
+.carbon-reportes-page [class*="rounded-xl"],
+.carbon-reportes-page [class*="rounded-full"] {
+  border-radius: 6px !important;
+}
+
+.carbon-reportes-page [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page section,
+.carbon-reportes-page article,
+.carbon-reportes-page .carbon-report-kpi,
+.carbon-reportes-page .carbon-report-section {
+  background: #ffffff !important;
+  border: 1px solid #d9dee7 !important;
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page [class*="gap-px"],
+.carbon-reportes-page [class*="gap-y-px"],
+.carbon-reportes-page [class*="gap-x-px"] {
+  gap: 16px !important;
+  background: transparent !important;
+}
+
+.carbon-reportes-page .carbon-report-kpi {
+  min-height: 124px !important;
+  padding: 18px 20px !important;
+}
+
+.carbon-reportes-page .carbon-report-kpi p,
+.carbon-reportes-page .carbon-report-kpi span {
+  line-height: 1.35 !important;
+}
+
+.carbon-reportes-page .carbon-report-kpi [class*="text-3xl"],
+.carbon-reportes-page .carbon-report-kpi [class*="text-2xl"] {
+  color: #161616 !important;
+  font-weight: 600 !important;
+}
+
+.carbon-reportes-page [class*="text-neutral-500"],
+.carbon-reportes-page [class*="text-slate-500"],
+.carbon-reportes-page [class*="text-xs"] {
+  color: #525252 !important;
+}
+
+/* Si el footer de corte quedó marcado por parches previos, se oculta por CSS */
+.carbon-reportes-page .carbon-report-footer {
+  display: none !important;
+}
+
+/* Si Estado de pagos quedó marcado por parches previos, se oculta por CSS */
+.carbon-dashboard .dashboard-payments-section,
+.carbon-dashboard-page .dashboard-payments-section {
+  display: none !important;
+}
