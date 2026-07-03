@@ -19,6 +19,7 @@ import AppLayout from './layout/AppLayout';
 import PerfilPage from './pages/PerfilPage';
 import PagosExtraordinariosPage from './pages/tesoreria/PagosExtraordinariosPage';
 import ReportesPage from './pages/ReportesPage';
+import AsistenciaReportesPage from './pages/reportes/AsistenciaReportesPage';
 import { SchoolProvider } from './contexts/SchoolContext';
 import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
@@ -150,7 +151,8 @@ function AppRoutes() {
           }
         />
         <Route path="/perfil" element={<PerfilPage />} />
-        <Route path="/reportes" element={<ReportesPage />} />
+        <Route path="/reportes" element={<ProtectedModuleRoute module="reportes"><ReportesPage /></ProtectedModuleRoute>} />
+        <Route path="/reportes/asistencia" element={<ProtectedModuleRoute module="reportes"><AsistenciaReportesPage /></ProtectedModuleRoute>} />
         <Route path="/tesoreria/pagos-extraordinarios" element={<PagosExtraordinariosPage />} />
         <Route path="/tesoreria/validar-pagos" element={<ValidarPagosPage />} />
         <Route path="/tesoreria/pagos-recibidos" element={<PagosRecibidosPage />} />

@@ -42,6 +42,26 @@ export class AsistenciaController {
     );
   }
 
+  @Get('asistencia/reporte-global')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  async getReporteGlobalAsistencia(
+    @Request() req,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('seccion_id') seccionId?: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.asistenciaService.getReporteGlobalAsistencia(req.user, {
+      desde,
+      hasta,
+      seccionId,
+      scope,
+      colegioId,
+    });
+  }
+
   @Get('asistencia')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Profesor', 'Director')

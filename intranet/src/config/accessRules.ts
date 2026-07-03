@@ -3,7 +3,8 @@ export type ModuleAccessKey =
   | 'calendario'
   | 'horario'
   | 'notas'
-  | 'tutoria';
+  | 'tutoria'
+  | 'reportes';
 
 type UserForAccess = {
   rol?: string | null;
@@ -37,6 +38,9 @@ export const MODULE_ACCESS_RULES: Record<ModuleAccessKey, ModuleAccessRule> = {
   tutoria: {
     roles: ['Profesor', 'Admin', 'Director'],
     profesorRequiereTutoria: true,
+  },
+  reportes: {
+    roles: ['Admin', 'Director'],
   },
 };
 

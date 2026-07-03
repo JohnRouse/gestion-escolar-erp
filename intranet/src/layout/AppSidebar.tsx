@@ -120,7 +120,16 @@ const menuFinanzas: NavItem[] = [
 ];
 
 const menuReportes: NavItem[] = [
-  { title: 'Reportes', icon: ChartColumn, path: '/reportes', roles: ['Admin', 'Director'] },
+  {
+    title: 'Reportes',
+    icon: ChartColumn,
+    path: '/reportes',
+    roles: ['Admin', 'Director'],
+    children: [
+      { title: 'Panel general', path: '/reportes' },
+      { title: 'Asistencia', path: '/reportes/asistencia' },
+    ],
+  },
 ];
 
 const menuConfiguracion: NavItem[] = [

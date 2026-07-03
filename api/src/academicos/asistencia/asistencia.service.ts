@@ -325,6 +325,219 @@ export class AsistenciaService {
     };
   }
 
+  async getReporteGlobalAsistencia(
+    user: JwtUser,
+    query: ScopeQuery & {
+      desde?: string;
+      hasta?: string;
+      seccionId?: string;
+    },
+  ) {
+    if (!['Admin', 'Director'].includes(user.rol)) {
+      throw new ForbiddenException('No tienes permiso para consultar reportes globales.');
+    }
+
+    const today = new Date();
+    const defaultDesde = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const parseDate = (value: string | undefined, fallback: Date) => {
+      if (!value) return fallback;
+      const parsed = new Date(`${value}T00:00:00`);
+
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException('Rango de fechas inválido.');
+      }
+
+      return parsed;
+    };
+
+    const desde = parseDate(query.desde, defaultDesde);
+    const hasta = parseDate(query.hasta, today);
+
+    if (desde > hasta) {
+      throw new BadRequestException('La fecha inicial no puede ser mayor a la fecha final.');
+    }
+
+    const { colegioIds } = await this.resolveColegioIds(user, query);
+
+    const seccionWhere: any = {
+      id_colegio: { in: colegioIds },
+    };
+
+    const seccionId = Number(query.seccionId || 0);
+
+    if (Number.isInteger(seccionId) && seccionId > 0) {
+      seccionWhere.id_seccion = seccionId;
+    }
+
+    const secciones = await this.prisma.seccion.findMany({
+      where: seccionWhere,
+      include: {
+        colegio: true,
+        grado: {
+          include: {
+            nivel: true,
+          },
+        },
+        matriculas: {
+          where: {
+            estado_matricula: { in: ESTADOS_MATRICULA_ACTIVA },
+          },
+          include: {
+            estudiante: {
+              include: {
+                persona: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { id_colegio: 'asc' },
+        { id_grado: 'asc' },
+        { letra: 'asc' },
+      ],
+    });
+
+    const matriculaInfo = new Map<number, any>();
+
+    for (const seccion of secciones) {
+      for (const matricula of seccion.matriculas || []) {
+        matriculaInfo.set(matricula.id_matricula, {
+          id_matricula: matricula.id_matricula,
+          alumno: this.formatAlumno(matricula),
+          codigo: matricula.estudiante?.codigo_estudiante || null,
+          seccion: this.formatSeccion(seccion),
+          id_seccion: seccion.id_seccion,
+          colegio: seccion.colegio?.nombre || null,
+          nivel: seccion.grado?.nivel?.nombre_nivel || null,
+          grado: seccion.grado?.nombre_grado || null,
+        });
+      }
+    }
+
+    const matriculaIds = Array.from(matriculaInfo.keys());
+
+    const asistencias = matriculaIds.length
+      ? await this.prisma.asistencia.findMany({
+          where: {
+            id_matricula: { in: matriculaIds },
+            fecha: {
+              gte: desde,
+              lte: hasta,
+            },
+          },
+          orderBy: [
+            { fecha: 'desc' },
+            { id_matricula: 'asc' },
+          ],
+        })
+      : [];
+
+    const countEstado = (estado: string) =>
+      asistencias.filter((item) => item.estado === estado).length;
+
+    const presentes = countEstado('Presente');
+    const tardanzas = countEstado('Tardanza');
+    const ausentes = countEstado('Ausente');
+    const justificados = countEstado('Justificado');
+
+    const pendientesJustificacion = asistencias.filter((item: any) =>
+      item.estado === 'Justificado' &&
+      !String(item.justificacion_motivo || '').trim(),
+    ).length;
+
+    const totalRegistros = asistencias.length;
+    const asistenciaValida = presentes + tardanzas + justificados;
+    const porcentajeAsistencia = totalRegistros > 0
+      ? Math.round((asistenciaValida / totalRegistros) * 100)
+      : 0;
+
+    const porSeccion = secciones.map((seccion) => {
+      const ids = new Set((seccion.matriculas || []).map((m: any) => m.id_matricula));
+      const rows = asistencias.filter((item) => ids.has(item.id_matricula));
+      const total = rows.length;
+      const p = rows.filter((item) => item.estado === 'Presente').length;
+      const t = rows.filter((item) => item.estado === 'Tardanza').length;
+      const a = rows.filter((item) => item.estado === 'Ausente').length;
+      const j = rows.filter((item) => item.estado === 'Justificado').length;
+      const pendientes = rows.filter(
+        (item: any) =>
+          item.estado === 'Justificado' &&
+          !String(item.justificacion_motivo || '').trim(),
+      ).length;
+      const validos = p + t + j;
+
+      return {
+        id_seccion: seccion.id_seccion,
+        seccion: this.formatSeccion(seccion),
+        colegio: seccion.colegio?.nombre || null,
+        nivel: seccion.grado?.nivel?.nombre_nivel || null,
+        grado: seccion.grado?.nombre_grado || null,
+        total_alumnos: seccion.matriculas?.length || 0,
+        registros: total,
+        presentes: p,
+        tardanzas: t,
+        ausentes: a,
+        justificados: j,
+        pendientes_justificacion: pendientes,
+        porcentaje_asistencia: total > 0 ? Math.round((validos / total) * 100) : 0,
+      };
+    });
+
+    const motivosMap = new Map<string, number>();
+
+    for (const item of asistencias as any[]) {
+      if (item.estado !== 'Justificado') continue;
+
+      const motivo = String(item.justificacion_motivo || 'Pendiente de regularizar').trim();
+      motivosMap.set(motivo, (motivosMap.get(motivo) || 0) + 1);
+    }
+
+    const motivos = Array.from(motivosMap.entries())
+      .map(([motivo, total]) => ({ motivo, total }))
+      .sort((a, b) => b.total - a.total);
+
+    const justificaciones = (asistencias as any[])
+      .filter((item) => item.estado === 'Justificado')
+      .map((item) => {
+        const info = matriculaInfo.get(item.id_matricula) || {};
+
+        return {
+          id_asistencia: item.id_asistencia,
+          fecha: item.fecha,
+          alumno: info.alumno || 'Alumno',
+          codigo: info.codigo || null,
+          seccion: info.seccion || null,
+          colegio: info.colegio || null,
+          motivo: item.justificacion_motivo || '',
+          observacion: item.justificacion_observacion || '',
+          pendiente: !String(item.justificacion_motivo || '').trim(),
+          archivo_url: item.justificacion_archivo_url || '',
+          archivo_nombre: item.justificacion_archivo_nombre || '',
+        };
+      });
+
+    return {
+      rango: {
+        desde,
+        hasta,
+      },
+      resumen: {
+        total_registros: totalRegistros,
+        presentes,
+        tardanzas,
+        ausentes,
+        justificados,
+        pendientes_justificacion: pendientesJustificacion,
+        porcentaje_asistencia: porcentajeAsistencia,
+      },
+      por_seccion: porSeccion,
+      motivos,
+      justificaciones,
+    };
+  }
+
   async getAsistencia(user: JwtUser, seccionId: number, fecha: string, query: ScopeQuery) {
     await this.assertCanAccessSeccion(user, seccionId, query);
     const fechaAsistencia = this.validarFecha(fecha);
