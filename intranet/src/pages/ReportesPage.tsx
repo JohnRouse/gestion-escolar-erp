@@ -94,8 +94,9 @@ const formatPercent = (value: number | null | undefined) => {
 };
 
 const formatNota = (value: number | null | undefined) => {
-  const nota = Number(value || 0);
-  if (!Number.isFinite(nota)) return '00';
+  if (value === null || value === undefined) return '—';
+  const nota = Number(value);
+  if (!Number.isFinite(nota)) return '—';
   return String(Math.round(nota)).padStart(2, '0');
 };
 
@@ -117,7 +118,7 @@ function KpiCard({
   const t = tones[tone];
 
   return (
-    <div className="carbon-report-kpi rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-neutral-300/60">
+    <div className="reportes-kpi-card carbon-report-kpi rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-neutral-300/60">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-3">
@@ -367,7 +368,7 @@ export default function ReportesPage() {
               type="button"
               onClick={cargarReportes}
               disabled={loading}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-100 disabled:opacity-50"
+              className="reportes-refresh-button inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-neutral-900 px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-50"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
               Actualizar
@@ -433,7 +434,7 @@ export default function ReportesPage() {
                   <EmptyPanel title="Sin capacidad configurada" description="La información aparecerá cuando existan aulas, secciones y matrículas activas." />
                 )}
               </div>
-              <div className="mt-6">
+              <div className="reportes-asistencia-semanal hidden">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Asistencia últimas semanas</p>
                 {(data.academicas?.asistenciaPorSemana || []).length ? (
                   <div className="space-y-3">
@@ -601,7 +602,7 @@ export default function ReportesPage() {
           </section>
 
           {/* ── Footer ── */}
-          <section className="carbon-report-section carbon-report-footer rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+          <section className="carbon-report-section carbon-report-footer hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">

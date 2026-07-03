@@ -1,0 +1,328 @@
+/* ==========================================================
+   20 - Dashboard + Reportes final
+   Corrección visual prioritaria después de 18 y 19.
+   Referencia: Reporte global de asistencia.
+   ========================================================== */
+
+.carbon-dashboard,
+.carbon-reportes-page {
+  --erp-final-page: #f4f4f4;
+  --erp-final-layer: #ffffff;
+  --erp-final-soft: #f8fafc;
+  --erp-final-border: #d8e0ea;
+  --erp-final-border-strong: #c2cedc;
+  --erp-final-text: #111827;
+  --erp-final-muted: #475569;
+  --erp-final-helper: #64748b;
+  --erp-final-blue: #0f62fe;
+  --erp-final-black: #161616;
+}
+
+/* ==========================================================
+   1) Reglas anti “fondo blanco entre componentes”
+   ========================================================== */
+
+/* Dashboard: el bloque de resumen es layout, no tarjeta. */
+.carbon-dashboard .dashboard-summary-section {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* Reportes: las secciones grid solo ordenan tarjetas.
+   No deben tener fondo blanco ni borde propio. */
+.carbon-reportes-page section.grid {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.carbon-reportes-page section.grid:hover {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Quitar cualquier fondo blanco heredado en envoltorios de layout. */
+.carbon-dashboard .dashboard-kpi-grid,
+.carbon-reportes-page section.grid {
+  background: transparent !important;
+}
+
+/* ==========================================================
+   2) Dashboard: Resumen del grupo académico
+   ========================================================== */
+
+.carbon-dashboard .dashboard-section-title {
+  padding-left: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+.carbon-dashboard .dashboard-section-title h2 {
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  color: var(--erp-final-text) !important;
+}
+
+.carbon-dashboard .dashboard-section-title p {
+  margin-top: 4px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  color: var(--erp-final-muted) !important;
+}
+
+.carbon-dashboard .dashboard-kpi-grid {
+  gap: 16px !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card,
+.carbon-dashboard .carbon-dashboard-card {
+  min-height: 132px !important;
+  border: 1px solid var(--erp-final-border-strong) !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  padding: 20px !important;
+  overflow: hidden !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card::before,
+.carbon-dashboard .carbon-dashboard-card::before {
+  display: none !important;
+  content: none !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card:hover,
+.carbon-dashboard .carbon-dashboard-card:hover {
+  border-color: #aebdcd !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07) !important;
+  transform: none !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card p[class*="uppercase"],
+.carbon-dashboard .carbon-dashboard-card p[class*="uppercase"] {
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.13em !important;
+  color: var(--erp-final-helper) !important;
+  white-space: normal !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card p[class*="text-3xl"],
+.carbon-dashboard .carbon-dashboard-card p[class*="text-3xl"] {
+  margin-top: 12px !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  color: var(--erp-final-text) !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card p[class*="text-xs"],
+.carbon-dashboard .carbon-dashboard-card p[class*="text-xs"] {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: var(--erp-final-muted) !important;
+}
+
+.carbon-dashboard .dashboard-kpi-card [class*="h-10"][class*="w-10"],
+.carbon-dashboard .carbon-dashboard-card [class*="h-10"][class*="w-10"] {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+}
+
+/* ==========================================================
+   3) Dashboard: Próximos eventos
+   ========================================================== */
+
+.carbon-dashboard .dashboard-events-section {
+  border: 1px solid var(--erp-final-border) !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+  padding: 22px !important;
+}
+
+.carbon-dashboard .dashboard-events-section .divide-y {
+  display: grid !important;
+  gap: 10px !important;
+  border: 0 !important;
+}
+
+.carbon-dashboard .dashboard-events-section .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-top: 0 !important;
+}
+
+.carbon-dashboard .dashboard-event-row {
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 1px solid var(--erp-final-border) !important;
+  border-radius: 10px !important;
+  background: var(--erp-final-soft) !important;
+}
+
+.carbon-dashboard .dashboard-event-row:hover {
+  background: #ffffff !important;
+  border-color: var(--erp-final-border-strong) !important;
+}
+
+.carbon-dashboard .dashboard-event-date {
+  border-radius: 8px !important;
+  background: var(--erp-final-blue) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard .dashboard-event-row p {
+  color: var(--erp-final-text) !important;
+}
+
+.carbon-dashboard .dashboard-event-row span {
+  color: var(--erp-final-muted) !important;
+}
+
+/* Estado de pagos queda fuera por JSX, pero reforzamos si aparece cacheado. */
+.carbon-dashboard .dashboard-payments-section {
+  display: none !important;
+}
+
+/* ==========================================================
+   4) Reportes institucionales: KPIs
+   ========================================================== */
+
+.carbon-reportes-page .reportes-kpi-card,
+.carbon-reportes-page .carbon-report-kpi {
+  min-height: 128px !important;
+  border: 1px solid var(--erp-final-border-strong) !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  padding: 20px !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card:hover,
+.carbon-reportes-page .carbon-report-kpi:hover {
+  border-color: #aebdcd !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07) !important;
+  transform: none !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card::before,
+.carbon-reportes-page .carbon-report-kpi::before {
+  width: 3px !important;
+  background: var(--erp-final-blue) !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card p[class*="uppercase"],
+.carbon-reportes-page .carbon-report-kpi p[class*="uppercase"] {
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.13em !important;
+  color: var(--erp-final-helper) !important;
+  white-space: normal !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card p[class*="text-3xl"],
+.carbon-reportes-page .carbon-report-kpi p[class*="text-3xl"] {
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  color: var(--erp-final-text) !important;
+}
+
+.carbon-reportes-page .reportes-kpi-card p[class*="text-xs"],
+.carbon-reportes-page .carbon-report-kpi p[class*="text-xs"] {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: var(--erp-final-muted) !important;
+}
+
+/* ==========================================================
+   5) Reportes institucionales: paneles
+   ========================================================== */
+
+.carbon-reportes-page .carbon-report-section {
+  border: 1px solid var(--erp-final-border) !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+
+.carbon-reportes-page .carbon-report-section h2 {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  color: var(--erp-final-text) !important;
+}
+
+.carbon-reportes-page .carbon-report-section p {
+  line-height: 1.45 !important;
+}
+
+.carbon-reportes-page .carbon-report-progress-row,
+.carbon-reportes-page .carbon-report-amount-row,
+.carbon-reportes-page .carbon-report-stat,
+.carbon-reportes-page .carbon-report-section [class*="bg-slate-50"],
+.carbon-reportes-page .carbon-report-section [class*="bg-neutral-50"] {
+  border: 1px solid var(--erp-final-border) !important;
+  border-radius: 10px !important;
+  background: var(--erp-final-soft) !important;
+  box-shadow: none !important;
+}
+
+.carbon-reportes-page .reportes-asistencia-semanal,
+.carbon-reportes-page .carbon-report-footer {
+  display: none !important;
+}
+
+/* ==========================================================
+   6) Botón actualizar igual a asistencia
+   ========================================================== */
+
+.carbon-reportes-page .reportes-refresh-button {
+  min-width: 116px !important;
+  border: 1px solid #161616 !important;
+  background: #161616 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border-radius: 2px !important;
+}
+
+.carbon-reportes-page .reportes-refresh-button:hover {
+  background: #393939 !important;
+  border-color: #393939 !important;
+}
+
+.carbon-reportes-page .reportes-refresh-button svg {
+  color: #ffffff !important;
+}
+
+/* ==========================================================
+   7) Legibilidad general
+   ========================================================== */
+
+.carbon-dashboard [class*="text-neutral-400"],
+.carbon-dashboard [class*="text-slate-400"],
+.carbon-reportes-page [class*="text-neutral-400"],
+.carbon-reportes-page [class*="text-slate-400"] {
+  color: var(--erp-final-helper) !important;
+}
+
+.carbon-dashboard [class*="text-neutral-500"],
+.carbon-dashboard [class*="text-slate-500"],
+.carbon-reportes-page [class*="text-neutral-500"],
+.carbon-reportes-page [class*="text-slate-500"] {
+  color: var(--erp-final-muted) !important;
+}
+
+.carbon-dashboard button:hover,
+.carbon-reportes-page button:hover,
+.carbon-dashboard a:hover,
+.carbon-reportes-page a:hover {
+  transform: none !important;
+}

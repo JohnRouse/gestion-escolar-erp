@@ -61,15 +61,10 @@ function KpiCard({ label, value, helper, icon: Icon, tone = 'neutral', onClick }
           <Icon size={18} strokeWidth={2} />
         </div>
       </div>
-      {onClick && (
-        <div className="mt-4 flex items-center gap-1 text-xs font-medium text-neutral-400 transition-colors duration-150 group-hover:text-neutral-700">
-          Abrir módulo <ArrowUpRight size={13} />
-        </div>
-      )}
     </>
   );
 
-  const baseClass = "carbon-dashboard-card min-h-[120px] border border-slate-200 bg-white p-5 text-left transition-colors duration-150";
+  const baseClass = "dashboard-kpi-card carbon-dashboard-card min-h-[128px] border border-slate-300 bg-white p-5 text-left transition-colors duration-150";
 
   if (onClick) {
     return (
@@ -190,13 +185,13 @@ export default function DashboardPage() {
         ) : (
           <>
             {institucional && (
-              <section className="space-y-6">
-                <div>
+              <section className="dashboard-summary-section space-y-5">
+                <div className="dashboard-section-title">
                   <h2 className="text-base font-semibold text-neutral-900 tracking-tight">{activeScope.tipo === 'todos' ? 'Resumen del grupo académico' : 'Resumen institucional'}</h2>
                   <p className="text-xs text-neutral-400 mt-0.5">{activeScope.tipo === 'todos' ? 'Indicadores consolidados de los colegios activos.' : 'Indicadores generales del colegio.'}</p>
                 </div>
 
-                <div className={cx('grid gap-4 sm:grid-cols-2', activeScope.tipo === 'todos' ? 'xl:grid-cols-5' : 'xl:grid-cols-4')}>
+                <div className={cx('dashboard-kpi-grid grid gap-4 sm:grid-cols-2', activeScope.tipo === 'todos' ? 'xl:grid-cols-5' : 'xl:grid-cols-4')}>
                   {activeScope.tipo === 'todos' && (<KpiCard label="Colegios" value={formatNumber(institucional.kpis?.colegios)} helper="Instituciones activas" icon={School} tone="violet" />)}
                   <KpiCard label="Matriculados" value={formatNumber(institucional.kpis?.matriculados)} helper="Estudiantes activos" icon={GraduationCap} tone="blue" onClick={() => navigate('/matricula')} />
                   <KpiCard label="Docentes" value={formatNumber(institucional.kpis?.docentes)} helper="Equipo académico" icon={Users} tone="emerald" onClick={() => navigate('/docentes')} />
@@ -371,7 +366,7 @@ export default function DashboardPage() {
             )}
 
             {institucional?.eventosProximos && (
-              <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+              <section className="dashboard-events-section rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
                 <SectionHeader icon={Calendar} title="Próximos eventos" subtitle="Agenda cercana del año escolar." />
                 {institucional.eventosProximos.length === 0 ? (
                   <EmptyPanel title="No hay eventos próximos" description="Cuando se registren actividades, reuniones o evaluaciones, aparecerán aquí." />
@@ -382,8 +377,8 @@ export default function DashboardPage() {
                       const dia = fecha.getDate();
                       const mes = fecha.toLocaleDateString('es-PE', { month: 'short' });
                       return (
-                        <div key={evento.id_evento} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0 transition-colors duration-150 hover:bg-slate-50/50 -mx-2 px-2 rounded">
-                          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded bg-[#CCF32F] text-black shadow-sm">
+                        <div key={evento.id_evento} className="dashboard-event-row flex items-start gap-4 py-3 transition-colors duration-150">
+                          <div className="dashboard-event-date flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded bg-blue-600 text-white shadow-sm">
                             <span className="text-base font-semibold leading-none">{dia}</span>
                             <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide opacity-70">{mes}</span>
                           </div>
@@ -402,7 +397,7 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {institucional && (
+            {false && institucional && (
               <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
                 <SectionHeader icon={Wallet} title="Estado de pagos" subtitle="Seguimiento operativo de tesorería." action={
                   <button type="button" onClick={() => navigate('/tesoreria')} className="inline-flex h-9 items-center justify-center gap-2 rounded bg-neutral-900 px-3.5 text-xs font-medium text-white transition-all duration-150 hover:bg-neutral-800  ">
