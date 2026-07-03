@@ -493,7 +493,7 @@ export default function ReportesPage() {
             <SectionCard
               title="Operativo"
               description="Carga de notas, alertas y comunicados recientes."
-              icon={ClipboardCheck}
+              icon={BarChart3}
               action={
                 unidadOperativa ? (
                   <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-600 ring-1 ring-emerald-200/60">
