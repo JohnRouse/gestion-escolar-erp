@@ -1,0 +1,182 @@
+/* ==========================================================
+   19 - Polish específico Dashboard + Reportes institucionales
+   Corrige inconsistencias visibles frente al reporte de asistencia.
+   ========================================================== */
+
+.carbon-dashboard,
+.carbon-reportes-page {
+  --erp-polish-border: #d8e0ea;
+  --erp-polish-soft-border: #e5edf5;
+  --erp-polish-bg: #ffffff;
+  --erp-polish-soft: #f8fafc;
+  --erp-polish-track: #edf2f7;
+  --erp-polish-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --erp-polish-shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Layout general */
+.carbon-dashboard,
+.carbon-reportes-page {
+  width: 100%;
+}
+
+/* Contenedores principales */
+.carbon-dashboard section,
+.carbon-reportes-page section,
+.carbon-reportes-page .carbon-report-section {
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+/* PageHeader */
+.carbon-dashboard > div:first-child > *,
+.carbon-reportes-page > div:first-child > * {
+  border-radius: 28px !important;
+  border: 1px solid var(--erp-polish-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-polish-shadow) !important;
+}
+
+/* Paneles grandes */
+.carbon-dashboard section,
+.carbon-reportes-page section,
+.carbon-reportes-page .carbon-report-section {
+  border-radius: 24px !important;
+  border-color: var(--erp-polish-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-polish-shadow) !important;
+}
+
+/* KPI sin línea azul lateral antigua */
+.carbon-dashboard-card::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* KPI y tarjetas superiores */
+.carbon-dashboard-card,
+.carbon-reportes-page .carbon-report-kpi {
+  min-height: 126px !important;
+  border-radius: 24px !important;
+  border: 1px solid var(--erp-polish-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-polish-shadow) !important;
+}
+
+.carbon-dashboard-card:hover,
+.carbon-reportes-page .carbon-report-kpi:hover {
+  border-color: #c7d3e2 !important;
+  box-shadow: var(--erp-polish-shadow-hover) !important;
+  transform: none !important;
+}
+
+/* Tarjetas internas de Reportes: quitar fondos pastel sólidos */
+.carbon-reportes-page .carbon-report-stat {
+  position: relative;
+  border-radius: 20px !important;
+  border: 1px solid var(--erp-polish-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-polish-shadow) !important;
+}
+
+/* Filas internas */
+.carbon-dashboard .school-summary-card,
+.carbon-reportes-page .carbon-report-progress-row,
+.carbon-reportes-page .carbon-report-amount-row {
+  border-radius: 6px !important;
+  border: 1px solid var(--erp-polish-soft-border) !important;
+  background: var(--erp-polish-soft) !important;
+  box-shadow: none !important;
+}
+
+/* Subtarjetas dentro de colegios */
+.carbon-dashboard .school-summary-card > div,
+.carbon-dashboard .school-summary-card .grid > div {
+  border-color: var(--erp-polish-soft-border) !important;
+}
+
+/* Rieles de progreso visibles */
+.carbon-dashboard .carbon-progress-track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: var(--erp-polish-track) !important;
+  box-shadow: inset 0 0 0 1px rgba(216, 224, 234, 0.7);
+}
+
+.carbon-dashboard .carbon-progress-fill {
+  border-radius: 999px !important;
+  background: #2563eb !important;
+}
+
+/* ProgressRow de Reportes */
+.carbon-reportes-page .carbon-report-progress-row > div:last-child {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: var(--erp-polish-track) !important;
+}
+
+.carbon-reportes-page .carbon-report-progress-row > div:last-child > div {
+  border-radius: 999px !important;
+}
+
+/* Empty states limpios */
+.carbon-dashboard .carbon-report-empty,
+.carbon-reportes-page .carbon-report-empty {
+  border-radius: 14px !important;
+  border-color: var(--erp-polish-border) !important;
+  background: #ffffff !important;
+}
+
+/* Botones e inputs: mantener estilo Carbon */
+.carbon-dashboard button,
+.carbon-dashboard input,
+.carbon-dashboard select,
+.carbon-reportes-page button,
+.carbon-reportes-page input,
+.carbon-reportes-page select {
+  border-radius: 2px !important;
+}
+
+/* Barra contextual de Reportes institucionales */
+.carbon-reportes-page .reportes-context-bar {
+  border-radius: 24px !important;
+  border: 1px solid var(--erp-polish-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--erp-polish-shadow) !important;
+}
+
+/* Textos */
+.carbon-dashboard h2,
+.carbon-dashboard h3,
+.carbon-dashboard h4,
+.carbon-reportes-page h2,
+.carbon-reportes-page h3,
+.carbon-reportes-page h4 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.015em;
+}
+
+/* Badge de pagos / estados */
+.carbon-dashboard .school-summary-card span,
+.carbon-reportes-page .carbon-report-stat span {
+  box-shadow: none !important;
+}
+
+/* Evitar puntas visuales en tarjetas redondeadas */
+.carbon-dashboard .rounded-2xl,
+.carbon-dashboard .rounded-xl,
+.carbon-reportes-page .rounded-2xl,
+.carbon-reportes-page .rounded-xl {
+  border-radius: 24px !important;
+}
+
+/* Pero elementos pequeños no deben quedar exageradamente redondeados */
+.carbon-dashboard button.rounded-sm,
+.carbon-dashboard input.rounded-sm,
+.carbon-dashboard select.rounded-sm,
+.carbon-reportes-page button.rounded-sm,
+.carbon-reportes-page input.rounded-sm,
+.carbon-reportes-page select.rounded-sm {
+  border-radius: 2px !important;
+}
