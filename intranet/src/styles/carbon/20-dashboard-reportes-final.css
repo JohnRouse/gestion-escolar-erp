@@ -326,3 +326,147 @@
 .carbon-reportes-page a:hover {
   transform: none !important;
 }
+
+/* ==========================================================
+   20.1 - Ajuste fino de espaciado
+   Dashboard + Reportes institucionales
+   ========================================================== */
+
+/* ==========================================================
+   1) Espacio entre PageHeader y contenido
+   ========================================================== */
+
+/* En Reportes institucionales el espacio después del header
+   estaba más grande que en Reporte global de asistencia. */
+.carbon-reportes-page > div[class*="delay-100"] {
+  margin-top: 14px !important;
+}
+
+/* En Dashboard acercamos el contenido al header. */
+.carbon-dashboard > div[class*="delay-100"] {
+  margin-top: 14px !important;
+}
+
+/* Evita que el gap de flex/space-y acumulado vuelva a abrir demasiado. */
+.carbon-reportes-page,
+.carbon-dashboard {
+  gap: 16px !important;
+}
+
+/* El primer bloque real debajo del header no debe agregar espacio extra. */
+.carbon-reportes-page > div[class*="delay-100"] > section:first-child,
+.carbon-dashboard > div[class*="delay-100"] > section:first-child {
+  margin-top: 0 !important;
+}
+
+/* ==========================================================
+   2) Dashboard: Resumen del grupo académico
+   ========================================================== */
+
+/* Acerca el título al header, pero deja aire correcto antes de los KPIs. */
+.carbon-dashboard .dashboard-summary-section {
+  margin-top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+}
+
+.carbon-dashboard .dashboard-section-title {
+  margin-bottom: 2px !important;
+  padding-left: 2px !important;
+}
+
+.carbon-dashboard .dashboard-section-title h2 {
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+}
+
+.carbon-dashboard .dashboard-section-title p {
+  margin-top: 4px !important;
+  max-width: 620px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* Separación limpia entre el texto de resumen y la primera fila de KPIs. */
+.carbon-dashboard .dashboard-kpi-grid {
+  margin-top: 2px !important;
+}
+
+/* Si hay una segunda fila de KPIs, que respire pero no se vea desconectada. */
+.carbon-dashboard .dashboard-kpi-grid + div[class*="grid"] {
+  margin-top: 2px !important;
+}
+
+/* ==========================================================
+   3) Dashboard: Próximos eventos
+   ========================================================== */
+
+.carbon-dashboard .dashboard-events-section {
+  padding: 22px 24px !important;
+}
+
+.carbon-dashboard .dashboard-events-section .divide-y {
+  margin-top: 2px !important;
+}
+
+/* La fila del evento se ve más como una lista Carbon limpia. */
+.carbon-dashboard .dashboard-event-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 14px 16px !important;
+  min-height: 70px !important;
+  border: 1px solid #d8e0ea !important;
+  border-radius: 10px !important;
+  background: #f8fafc !important;
+}
+
+.carbon-dashboard .dashboard-event-row:hover {
+  background: #ffffff !important;
+  border-color: #c2cedc !important;
+}
+
+/* Quitar azul fuerte del calendario.
+   Queda neutro, más serio y más legible para docentes. */
+.carbon-dashboard .dashboard-event-date {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 8px !important;
+  border: 1px solid #c6c6c6 !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-dashboard .dashboard-event-date span:first-child {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #161616 !important;
+}
+
+.carbon-dashboard .dashboard-event-date span:last-child {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: #6f6f6f !important;
+  opacity: 1 !important;
+}
+
+/* Texto del evento con mejor lectura. */
+.carbon-dashboard .dashboard-event-row p {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+}
+
+.carbon-dashboard .dashboard-event-row span {
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.carbon-dashboard .dashboard-event-row [class*="bg-neutral-100"] {
+  background: #eef2f7 !important;
+  border: 1px solid #d8e0ea !important;
+  color: #475569 !important;
+}
