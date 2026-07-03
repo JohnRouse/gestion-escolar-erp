@@ -518,6 +518,107 @@ export class AsistenciaService {
         };
       });
 
+    const asignacionesDocentes = await this.prisma.asignacionDocente.findMany({
+      where: {
+        id_colegio: { in: colegioIds },
+        ...(Number.isInteger(seccionId) && seccionId > 0 ? { id_seccion: seccionId } : {}),
+      },
+      include: {
+        colegio: true,
+        curso: true,
+        docente: {
+          include: {
+            persona: true,
+          },
+        },
+        seccion: {
+          include: {
+            colegio: true,
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { id_docente: 'asc' },
+        { id_seccion: 'asc' },
+      ],
+    });
+
+    const formatPersona = (persona: any) =>
+      [
+        persona?.apellido_paterno,
+        persona?.apellido_materno,
+        persona?.nombres,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim() || 'Docente';
+
+    const docentesMap = new Map<number, any>();
+
+    for (const asignacion of asignacionesDocentes as any[]) {
+      const docenteId = asignacion.id_docente;
+      const current =
+        docentesMap.get(docenteId) || {
+          id_docente: docenteId,
+          docente: formatPersona(asignacion.docente?.persona),
+          colegio: asignacion.colegio?.nombre || asignacion.seccion?.colegio?.nombre || null,
+          seccionesIds: new Set<number>(),
+          secciones: new Set<string>(),
+          cursos: new Set<string>(),
+        };
+
+      current.seccionesIds.add(asignacion.id_seccion);
+      current.secciones.add(this.formatSeccion(asignacion.seccion));
+      if (asignacion.curso?.nombre_curso) {
+        current.cursos.add(asignacion.curso.nombre_curso);
+      }
+
+      docentesMap.set(docenteId, current);
+    }
+
+    const porDocente = Array.from(docentesMap.values())
+      .map((docenteData: any) => {
+        const rows = asistencias.filter((item) => {
+          const info = matriculaInfo.get(item.id_matricula);
+          return docenteData.seccionesIds.has(info?.id_seccion);
+        });
+
+        const total = rows.length;
+        const p = rows.filter((item) => item.estado === 'Presente').length;
+        const t = rows.filter((item) => item.estado === 'Tardanza').length;
+        const a = rows.filter((item) => item.estado === 'Ausente').length;
+        const j = rows.filter((item) => item.estado === 'Justificado').length;
+        const pendientes = rows.filter(
+          (item: any) =>
+            item.estado === 'Justificado' &&
+            !String(item.justificacion_motivo || '').trim(),
+        ).length;
+        const validos = p + t + j;
+
+        return {
+          id_docente: docenteData.id_docente,
+          docente: docenteData.docente,
+          colegio: docenteData.colegio,
+          secciones: Array.from(docenteData.secciones),
+          cursos: Array.from(docenteData.cursos),
+          registros: total,
+          presentes: p,
+          tardanzas: t,
+          ausentes: a,
+          justificados: j,
+          pendientes_justificacion: pendientes,
+          porcentaje_asistencia: total > 0 ? Math.round((validos / total) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.registros - a.registros || a.docente.localeCompare(b.docente, 'es'));
+
+
     return {
       rango: {
         desde,
@@ -534,6 +635,7 @@ export class AsistenciaService {
       },
       por_seccion: porSeccion,
       motivos,
+      por_docente: porDocente,
       justificaciones,
     };
   }

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
@@ -11,7 +10,6 @@ import {
   BookOpenCheck,
   CalendarClock,
   CheckCircle2,
-  ClipboardCheck,
   GraduationCap,
   Loader2,
   ReceiptText,
@@ -377,36 +375,6 @@ export default function ReportesPage() {
           }
         />
       </div>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Link
-          to="/reportes/asistencia"
-          className="group rounded-2xl border border-blue-200 bg-blue-50/70 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700 ring-1 ring-blue-100">
-                <ClipboardCheck size={13} />
-                Nuevo reporte
-              </div>
-              <h2 className="mt-4 text-lg font-black text-slate-950">
-                Asistencia global
-              </h2>
-              <p className="mt-2 text-sm font-semibold text-slate-500">
-                Consulta presentes, tardanzas, faltas, justificaciones, motivos y documentos de sustento.
-              </p>
-            </div>
-
-            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-700 ring-1 ring-blue-100 transition group-hover:scale-105">
-              <BarChart3 size={19} />
-            </span>
-          </div>
-
-          <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-blue-700">
-            Abrir reporte →
-          </p>
-        </Link>
-      </section>
 
       {error && (
         <div className="flex items-start gap-3 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-600 ring-1 ring-red-200/60">

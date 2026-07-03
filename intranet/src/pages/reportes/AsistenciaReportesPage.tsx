@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertTriangle,
   BarChart3,
-  CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   FileText,
   Loader2,
   RefreshCw,
   School,
   UsersRound,
+  X,
   XCircle,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -25,6 +27,28 @@ type SeccionOption = {
   grado?: string | null;
 };
 
+type PorSeccion = {
+  id_seccion: number;
+  seccion: string;
+  colegio?: string | null;
+  nivel?: string | null;
+  grado?: string | null;
+  total_alumnos: number;
+  registros: number;
+  presentes: number;
+  tardanzas: number;
+  ausentes: number;
+  justificados: number;
+  pendientes_justificacion: number;
+  porcentaje_asistencia: number;
+};
+
+type ArchivoPreview = {
+  url: string;
+  nombre?: string;
+  mime?: string;
+};
+
 type ReporteAsistencia = {
   resumen: {
     total_registros: number;
@@ -35,13 +59,13 @@ type ReporteAsistencia = {
     pendientes_justificacion: number;
     porcentaje_asistencia: number;
   };
-  por_seccion: Array<{
-    id_seccion: number;
-    seccion: string;
+  por_seccion: PorSeccion[];
+  por_docente?: Array<{
+    id_docente: number;
+    docente: string;
     colegio?: string | null;
-    nivel?: string | null;
-    grado?: string | null;
-    total_alumnos: number;
+    secciones: string[];
+    cursos: string[];
     registros: number;
     presentes: number;
     tardanzas: number;
@@ -66,6 +90,7 @@ type ReporteAsistencia = {
     pendiente: boolean;
     archivo_url?: string;
     archivo_nombre?: string;
+    archivo_mime?: string;
   }>;
 };
 
@@ -106,6 +131,13 @@ function formatDate(value: string) {
     month: '2-digit',
     year: 'numeric',
   });
+}
+
+function isPdfFile(file?: ArchivoPreview | null) {
+  const url = String(file?.url || '').toLowerCase();
+  const mime = String(file?.mime || '').toLowerCase();
+
+  return mime.includes('pdf') || url.includes('.pdf');
 }
 
 function KpiCard({
@@ -156,6 +188,8 @@ export default function AsistenciaReportesPage() {
   const [seccionId, setSeccionId] = useState('');
   const [secciones, setSecciones] = useState<SeccionOption[]>([]);
   const [data, setData] = useState<ReporteAsistencia | null>(null);
+  const [nivelesAbiertos, setNivelesAbiertos] = useState<Record<string, boolean>>({});
+  const [archivoPreview, setArchivoPreview] = useState<ArchivoPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingSecciones, setLoadingSecciones] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -221,8 +255,53 @@ export default function AsistenciaReportesPage() {
 
   const resumen = data?.resumen;
 
+  const seccionesPorNivel = useMemo(() => {
+    const map = new Map<string, PorSeccion[]>();
+
+    (data?.por_seccion || []).forEach((item) => {
+      const key = item.nivel || 'Sin nivel';
+      const current = map.get(key) || [];
+      current.push(item);
+      map.set(key, current);
+    });
+
+    return Array.from(map.entries()).map(([nivel, items]) => {
+      const registros = items.reduce((sum, item) => sum + item.registros, 0);
+      const validos = items.reduce(
+        (sum, item) => sum + item.presentes + item.tardanzas + item.justificados,
+        0,
+      );
+
+      return {
+        nivel,
+        items,
+        registros,
+        totalAlumnos: items.reduce((sum, item) => sum + item.total_alumnos, 0),
+        porcentaje: registros > 0 ? Math.round((validos / registros) * 100) : 0,
+      };
+    });
+  }, [data]);
+
+  useEffect(() => {
+    if (!seccionesPorNivel.length) return;
+
+    setNivelesAbiertos((current) => {
+      const next: Record<string, boolean> = {};
+
+      seccionesPorNivel.forEach((grupo, index) => {
+        next[grupo.nivel] = current[grupo.nivel] ?? index === 0;
+      });
+
+      return next;
+    });
+  }, [seccionesPorNivel.length]);
+
+  const maxDocentes = Math.max(1, ...(data?.por_docente || []).map((item) => item.registros));
   const maxMotivos = Math.max(1, ...(data?.motivos || []).map((item) => item.total));
-  const maxSecciones = Math.max(1, ...(data?.por_seccion || []).map((item) => item.registros));
+
+  const contextoDocente = activeColegio
+    ? `Docentes de ${activeColegio.nombre}`
+    : 'Docentes de todos los colegios';
 
   return (
     <div className="space-y-5 pb-10">
@@ -374,45 +453,131 @@ export default function AsistenciaReportesPage() {
             </div>
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                <School size={18} />
+              </span>
+              <div>
+                <h2 className="text-base font-black text-slate-950">Resumen por salón</h2>
+                <p className="text-xs font-semibold text-slate-400">
+                  Agrupado por nivel para evitar listas extensas.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {seccionesPorNivel.length === 0 ? (
+                <p className="rounded-sm border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-400">
+                  No hay registros para el rango seleccionado.
+                </p>
+              ) : (
+                seccionesPorNivel.map((grupo) => (
+                  <div key={grupo.nivel} className="overflow-hidden rounded-sm border border-slate-200 bg-slate-50">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNivelesAbiertos((current) => ({
+                          ...current,
+                          [grupo.nivel]: !current[grupo.nivel],
+                        }))
+                      }
+                      className="flex w-full items-center justify-between gap-4 bg-white px-4 py-3 text-left hover:bg-slate-50"
+                    >
+                      <div>
+                        <p className="text-sm font-black text-slate-950">{grupo.nivel}</p>
+                        <p className="text-xs font-semibold text-slate-500">
+                          {grupo.items.length} sección(es) · {grupo.totalAlumnos} alumno(s) · {grupo.registros} registro(s)
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                          {grupo.porcentaje}%
+                        </span>
+                        <ChevronDown
+                          size={17}
+                          className={`text-slate-400 transition-transform ${nivelesAbiertos[grupo.nivel] ? 'rotate-180' : ''}`}
+                        />
+                      </div>
+                    </button>
+
+                    {nivelesAbiertos[grupo.nivel] && (
+                      <div className="grid gap-3 p-4 md:grid-cols-2 2xl:grid-cols-3">
+                        {grupo.items.map((item) => (
+                          <div key={item.id_seccion} className="rounded-sm border border-slate-200 bg-white p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-black text-slate-900">{item.seccion}</p>
+                                <p className="text-xs font-semibold text-slate-400">
+                                  {item.colegio || 'Colegio'} · {item.total_alumnos} alumno(s)
+                                </p>
+                              </div>
+
+                              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                                {item.porcentaje_asistencia}%
+                              </span>
+                            </div>
+
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className="h-full rounded-full bg-blue-600"
+                                style={{ width: `${item.porcentaje_asistencia}%` }}
+                              />
+                            </div>
+
+                            <p className="mt-2 text-xs font-semibold text-slate-500">
+                              {item.registros} registros · {item.ausentes} faltas · {item.tardanzas} tardanzas · {item.justificados} justificadas
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
             <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                  <School size={18} />
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                  <UsersRound size={18} />
                 </span>
                 <div>
-                  <h2 className="text-base font-black text-slate-950">Resumen por salón</h2>
+                  <h2 className="text-base font-black text-slate-950">Carga de asistencia por docente</h2>
                   <p className="text-xs font-semibold text-slate-400">
-                    Comparativo de registros y asistencia efectiva por sección.
+                    {contextoDocente}. Se calcula por las secciones asignadas al docente.
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {(data?.por_seccion || []).length === 0 ? (
+              <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
+                {(data?.por_docente || []).length === 0 ? (
                   <p className="rounded-sm border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-400">
-                    No hay registros para el rango seleccionado.
+                    No hay docentes con secciones asignadas para este contexto.
                   </p>
                 ) : (
-                  data!.por_seccion.map((item) => {
-                    const width = Math.round((item.registros / maxSecciones) * 100);
+                  data!.por_docente!.map((item) => {
+                    const width = Math.round((item.registros / maxDocentes) * 100);
 
                     return (
-                      <div key={item.id_seccion} className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+                      <div key={item.id_docente} className="rounded-sm border border-slate-200 bg-slate-50 p-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="text-sm font-black text-slate-900">{item.seccion}</p>
+                            <p className="text-sm font-black text-slate-900">{item.docente}</p>
                             <p className="text-xs font-semibold text-slate-400">
-                              {item.colegio || 'Colegio'} · {item.total_alumnos} alumno(s)
+                              {item.colegio || 'Colegio'} · {item.secciones.length} sección(es)
                             </p>
                           </div>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
                             {item.porcentaje_asistencia}%
                           </span>
                         </div>
 
                         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                          <div className="h-full rounded-full bg-blue-600" style={{ width: `${width}%` }} />
+                          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${width}%` }} />
                         </div>
 
                         <p className="mt-2 text-xs font-semibold text-slate-500">
@@ -438,7 +603,7 @@ export default function AsistenciaReportesPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
                 {(data?.motivos || []).length === 0 ? (
                   <p className="rounded-sm border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-400">
                     No hay justificaciones registradas.
@@ -468,7 +633,7 @@ export default function AsistenciaReportesPage() {
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-600">
-                  <UsersRound size={18} />
+                  <FileText size={18} />
                 </span>
                 <div>
                   <h2 className="text-base font-black text-slate-950">Detalle de justificaciones</h2>
@@ -526,14 +691,19 @@ export default function AsistenciaReportesPage() {
                         </td>
                         <td className="px-5 py-4">
                           {item.archivo_url ? (
-                            <a
-                              href={item.archivo_url}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setArchivoPreview({
+                                  url: item.archivo_url || '',
+                                  nombre: item.archivo_nombre || 'Documento de sustento',
+                                  mime: item.archivo_mime || '',
+                                })
+                              }
                               className="inline-flex rounded-sm border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:border-slate-900"
                             >
                               Ver sustento
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-xs font-bold text-slate-300">Sin documento</span>
                           )}
@@ -547,6 +717,47 @@ export default function AsistenciaReportesPage() {
           </section>
         </>
       )}
+
+      {archivoPreview && createPortal((
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                  Documento de sustento
+                </p>
+                <h3 className="mt-1 text-base font-black text-slate-950">
+                  {archivoPreview.nombre || 'Archivo adjunto'}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setArchivoPreview(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-700 hover:border-slate-900"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="min-h-[60vh] overflow-auto bg-slate-100 p-4">
+              {isPdfFile(archivoPreview) ? (
+                <iframe
+                  src={archivoPreview.url}
+                  title={archivoPreview.nombre || 'Documento de sustento'}
+                  className="h-[72vh] w-full rounded-sm border border-slate-200 bg-white"
+                />
+              ) : (
+                <img
+                  src={archivoPreview.url}
+                  alt={archivoPreview.nombre || 'Documento de sustento'}
+                  className="mx-auto max-h-[72vh] max-w-full rounded-sm bg-white object-contain shadow-sm"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }

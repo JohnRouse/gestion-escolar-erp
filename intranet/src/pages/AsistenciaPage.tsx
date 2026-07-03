@@ -195,6 +195,7 @@ export default function AsistenciaPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justificacionDraft, setJustificacionDraft] = useState<JustificacionDraft | null>(null);
+  const [archivoPreview, setArchivoPreview] = useState<{ url: string; nombre?: string | null; mime?: string | null } | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -1327,14 +1328,18 @@ export default function AsistenciaPage() {
                 </p>
 
                 {justificacionDraft.archivoActualUrl && (
-                  <a
-                    href={justificacionDraft.archivoActualUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setArchivoPreview({
+                        url: justificacionDraft.archivoActualUrl || '',
+                        nombre: justificacionDraft.archivoActualNombre || 'Documento de sustento',
+                      })
+                    }
                     className="mt-2 inline-flex rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
                   >
                     Ver documento actual{justificacionDraft.archivoActualNombre ? `: ${justificacionDraft.archivoActualNombre}` : ''}
-                  </a>
+                  </button>
                 )}
 
                 {justificacionDraft.archivo && (
@@ -1361,6 +1366,47 @@ export default function AsistenciaPage() {
               >
                 {saving ? 'Guardando...' : 'Guardar justificación'}
               </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {archivoPreview && createPortal((
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                  Documento de sustento
+                </p>
+                <h3 className="mt-1 text-base font-black text-slate-950">
+                  {archivoPreview.nombre || 'Archivo adjunto'}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setArchivoPreview(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-700 hover:border-slate-900"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="min-h-[60vh] overflow-auto bg-slate-100 p-4">
+              {String(archivoPreview.url).toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={archivoPreview.url}
+                  title={archivoPreview.nombre || 'Documento de sustento'}
+                  className="h-[72vh] w-full rounded-sm border border-slate-200 bg-white"
+                />
+              ) : (
+                <img
+                  src={archivoPreview.url}
+                  alt={archivoPreview.nombre || 'Documento de sustento'}
+                  className="mx-auto max-h-[72vh] max-w-full rounded-sm bg-white object-contain shadow-sm"
+                />
+              )}
             </div>
           </div>
         </div>
