@@ -9,6 +9,10 @@ const proxy = {
     changeOrigin: true,
     rewrite: (path: string) => path.replace(/^\/api/, ''),
   },
+  '/uploads': {
+    target: apiTarget,
+    changeOrigin: true,
+  },
 }
 
 export default defineConfig({
