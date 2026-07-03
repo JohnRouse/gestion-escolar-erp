@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarDays,
+  ChevronDown,
   CheckCircle2,
   Clock3,
   Loader2,
@@ -181,6 +182,7 @@ export default function AsistenciaPage() {
   const [loadingCalendario, setLoadingCalendario] = useState(false);
   const [calendarioMes, setCalendarioMes] = useState(todayISO().slice(0, 7));
   const [calendario, setCalendario] = useState<CalendarioAsistencia | null>(null);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -703,6 +705,21 @@ export default function AsistenciaPage() {
             <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">
               Revisa rápidamente qué días están completos, parciales o sin registro.
             </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
+                Completos: {calendario?.resumen.completos ?? 0}
+              </span>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-100">
+                Parciales: {calendario?.resumen.parciales ?? 0}
+              </span>
+              <span className="rounded-full bg-rose-50 px-3 py-1 text-[11px] font-black text-rose-700 ring-1 ring-rose-100">
+                Sin registro: {calendario?.resumen.sin_registro ?? 0}
+              </span>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100">
+                Justif. pendientes: {calendario?.resumen.pendientes_justificacion ?? 0}
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -721,9 +738,23 @@ export default function AsistenciaPage() {
               <RefreshCw size={14} className={loadingCalendario ? 'animate-spin' : ''} />
               Actualizar calendario
             </button>
+
+            <button
+              type="button"
+              onClick={() => setCalendarioAbierto((value) => !value)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <ChevronDown
+                size={15}
+                className={`transition-transform ${calendarioAbierto ? 'rotate-180' : ''}`}
+              />
+              {calendarioAbierto ? 'Ocultar calendario' : 'Ver calendario'}
+            </button>
           </div>
         </div>
 
+        {calendarioAbierto && (
+          <>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <div className="rounded-sm border border-emerald-200 bg-emerald-50 p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
@@ -831,6 +862,8 @@ export default function AsistenciaPage() {
             })}
           </div>
         </div>
+          </>
+        )}
       </section>
 
       <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
