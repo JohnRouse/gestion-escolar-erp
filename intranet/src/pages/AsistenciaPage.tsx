@@ -31,6 +31,10 @@ type AlumnoAsistencia = {
   registrado?: boolean;
   justificacion_motivo?: string;
   justificacion_observacion?: string;
+  justificacion_archivo_url?: string;
+  justificacion_archivo_nombre?: string;
+  justificacion_archivo_mime?: string;
+  justificacion_archivo_size?: number | null;
   requiere_justificacion?: boolean;
 };
 
@@ -39,6 +43,9 @@ type JustificacionDraft = {
   alumno: string;
   motivo: string;
   observacion: string;
+  archivo?: File | null;
+  archivoActualUrl?: string | null;
+  archivoActualNombre?: string | null;
 };
 
 type SeccionOption = {
@@ -484,6 +491,9 @@ export default function AsistenciaPage() {
       alumno: alumno.alumno,
       motivo: alumno.justificacion_motivo || motivosJustificacion[0],
       observacion: alumno.justificacion_observacion || '',
+      archivo: null,
+      archivoActualUrl: alumno.justificacion_archivo_url || '',
+      archivoActualNombre: alumno.justificacion_archivo_nombre || '',
     });
   };
 
@@ -519,27 +529,29 @@ export default function AsistenciaPage() {
 
     if (!motivo) return;
 
+    const formData = new FormData();
+    formData.append('id_seccion', String(seccionId));
+    formData.append('id_matricula', String(justificacionDraft.id_matricula));
+    formData.append('fecha', fecha);
+    formData.append('motivo', motivo);
+    formData.append('observacion', observacion);
+
+    if (justificacionDraft.archivo) {
+      formData.append('archivo', justificacionDraft.archivo);
+    }
+
     setSaving(true);
     setError(null);
     setMessage(null);
 
     try {
-      await axios.post(
-        buildUrl('/api/academicos/asistencia', queryParams),
-        {
-          id_seccion: seccionId,
-          fecha,
-          asistencias: [
-            {
-              id_matricula: justificacionDraft.id_matricula,
-              estado: 'Justificado',
-              justificacion_motivo: motivo,
-              justificacion_observacion: observacion,
-            },
-          ],
-        },
+      const res = await axios.post(
+        buildUrl('/api/academicos/asistencia/justificacion', queryParams),
+        formData,
         { headers },
       );
+
+      const saved = res.data?.asistencia || {};
 
       setAlumnos((prev) =>
         prev.map((item) =>
@@ -547,8 +559,23 @@ export default function AsistenciaPage() {
             ? {
                 ...item,
                 estado: 'Justificado',
+                registrado: true,
                 justificacion_motivo: motivo,
                 justificacion_observacion: observacion,
+                justificacion_archivo_url:
+                  saved.justificacion_archivo_url ||
+                  item.justificacion_archivo_url ||
+                  justificacionDraft.archivoActualUrl ||
+                  '',
+                justificacion_archivo_nombre:
+                  saved.justificacion_archivo_nombre ||
+                  item.justificacion_archivo_nombre ||
+                  justificacionDraft.archivoActualNombre ||
+                  '',
+                justificacion_archivo_mime:
+                  saved.justificacion_archivo_mime || item.justificacion_archivo_mime || '',
+                justificacion_archivo_size:
+                  saved.justificacion_archivo_size || item.justificacion_archivo_size || null,
                 requiere_justificacion: false,
               }
             : item,
@@ -1277,6 +1304,44 @@ export default function AsistenciaPage() {
                   placeholder="Ejemplo: Presentó permiso del apoderado, cita médica, etc."
                   className="w-full resize-none rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Documento de sustento opcional
+                </span>
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    setJustificacionDraft((current) =>
+                      current ? { ...current, archivo: file } : current,
+                    );
+                  }}
+                  className="w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none file:mr-3 file:rounded-sm file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-black file:text-white"
+                />
+
+                <p className="mt-2 text-xs font-semibold text-slate-400">
+                  Formatos permitidos: PDF, JPG, PNG o WEBP. Máximo 5 MB.
+                </p>
+
+                {justificacionDraft.archivoActualUrl && (
+                  <a
+                    href={justificacionDraft.archivoActualUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
+                  >
+                    Ver documento actual{justificacionDraft.archivoActualNombre ? `: ${justificacionDraft.archivoActualNombre}` : ''}
+                  </a>
+                )}
+
+                {justificacionDraft.archivo && (
+                  <p className="mt-2 text-xs font-black text-slate-600">
+                    Nuevo archivo: {justificacionDraft.archivo.name}
+                  </p>
+                )}
               </label>
             </div>
 

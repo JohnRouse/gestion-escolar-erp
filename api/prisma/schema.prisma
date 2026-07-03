@@ -627,14 +627,18 @@ model RegistroNotasUnidad {
 // ======================================================
 
 model Asistencia {
-  id_asistencia             Int       @id @default(autoincrement())
-  id_matricula              Int
-  fecha                     DateTime  @db.Date
-  estado                    String    @db.VarChar(20)
-  justificacion_motivo      String?   @db.VarChar(120)
-  justificacion_observacion String?   @db.VarChar(500)
-  justificado_por           Int?
-  fecha_justificacion       DateTime?
+  id_asistencia                Int       @id @default(autoincrement())
+  id_matricula                 Int
+  fecha                        DateTime  @db.Date
+  estado                       String    @db.VarChar(20)
+  justificacion_motivo         String?   @db.VarChar(120)
+  justificacion_observacion    String?   @db.VarChar(500)
+  justificado_por              Int?
+  fecha_justificacion          DateTime?
+  justificacion_archivo_url    String?   @db.VarChar(500)
+  justificacion_archivo_nombre String?   @db.VarChar(255)
+  justificacion_archivo_mime   String?   @db.VarChar(120)
+  justificacion_archivo_size   Int?
 
   matricula Matricula @relation(fields: [id_matricula], references: [id_matricula])
 

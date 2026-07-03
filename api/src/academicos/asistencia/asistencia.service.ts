@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../../storage/storage.service';
 
 type JwtUser = {
   userId: number;
@@ -17,7 +18,7 @@ const ESTADOS_ASISTENCIA = ['Presente', 'Ausente', 'Tardanza', 'Justificado'];
 
 @Injectable()
 export class AsistenciaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private storageService: StorageService) {}
 
   private validarFecha(fecha: string) {
     const parsed = new Date(`${fecha}T00:00:00`);
@@ -359,10 +360,115 @@ export class AsistenciaService {
         justificacion_motivo: m.asistencias[0]?.justificacion_motivo || '',
         justificacion_observacion: m.asistencias[0]?.justificacion_observacion || '',
         fecha_justificacion: m.asistencias[0]?.fecha_justificacion || null,
+        justificacion_archivo_url: m.asistencias[0]?.justificacion_archivo_url || '',
+        justificacion_archivo_nombre: m.asistencias[0]?.justificacion_archivo_nombre || '',
+        justificacion_archivo_mime: m.asistencias[0]?.justificacion_archivo_mime || '',
+        justificacion_archivo_size: m.asistencias[0]?.justificacion_archivo_size || null,
         requiere_justificacion:
           m.asistencias[0]?.estado === 'Justificado' &&
           !m.asistencias[0]?.justificacion_motivo,
       }));
+  }
+
+  async guardarJustificacion(
+    user: JwtUser,
+    body: any,
+    archivo: any,
+    query: ScopeQuery,
+  ) {
+    const seccionId = Number(body.id_seccion);
+    const idMatricula = Number(body.id_matricula);
+    const fecha = String(body.fecha || '').trim();
+    const motivo = String(body.motivo || body.justificacion_motivo || '').trim();
+    const observacion = String(body.observacion || body.justificacion_observacion || '').trim();
+
+    if (!seccionId || !idMatricula || !fecha) {
+      throw new BadRequestException('Datos incompletos para guardar la justificación.');
+    }
+
+    if (!motivo) {
+      throw new BadRequestException('Debes registrar un motivo de justificación.');
+    }
+
+    await this.assertCanAccessSeccion(user, seccionId, query);
+    const fechaAsistencia = this.validarFecha(fecha);
+
+    if (fechaAsistencia.getDay() === 0 || fechaAsistencia.getDay() === 6) {
+      throw new BadRequestException('No se puede regularizar asistencia en fines de semana.');
+    }
+
+    const matricula = await this.prisma.matricula.findFirst({
+      where: {
+        id_matricula: idMatricula,
+        id_seccion: seccionId,
+        estado_matricula: { in: ESTADOS_MATRICULA_ACTIVA },
+      },
+      select: { id_matricula: true },
+    });
+
+    if (!matricula) {
+      throw new ForbiddenException('La matrícula no pertenece a la sección seleccionada.');
+    }
+
+    let archivoData: any = {};
+
+    if (archivo) {
+      const saved = await this.storageService.saveFile(archivo, {
+        folder: 'asistencia-justificaciones',
+        prefix: 'justificacion',
+        entityId: idMatricula,
+        filenameBase: `asistencia-${idMatricula}-${fecha}-${Date.now()}`,
+        allowedMimeExtensions: {
+          'image/jpeg': '.jpg',
+          'image/png': '.png',
+          'image/webp': '.webp',
+          'application/pdf': '.pdf',
+        },
+      });
+
+      archivoData = {
+        justificacion_archivo_url: saved.url,
+        justificacion_archivo_nombre: archivo.originalname || saved.filename,
+        justificacion_archivo_mime: saved.mime_type,
+        justificacion_archivo_size: saved.size_bytes,
+      };
+    }
+
+    const createData = {
+      id_matricula: idMatricula,
+      fecha: fechaAsistencia,
+      estado: 'Justificado',
+      justificacion_motivo: motivo,
+      justificacion_observacion: observacion || null,
+      justificado_por: user.userId,
+      fecha_justificacion: new Date(),
+      ...archivoData,
+    };
+
+    const updateData = {
+      estado: 'Justificado',
+      justificacion_motivo: motivo,
+      justificacion_observacion: observacion || null,
+      justificado_por: user.userId,
+      fecha_justificacion: new Date(),
+      ...archivoData,
+    };
+
+    const asistencia = await this.prisma.asistencia.upsert({
+      where: {
+        id_matricula_fecha: {
+          id_matricula: idMatricula,
+          fecha: fechaAsistencia,
+        },
+      },
+      update: updateData,
+      create: createData,
+    });
+
+    return {
+      message: 'Justificación guardada correctamente',
+      asistencia,
+    };
   }
 
   async saveAsistencia(

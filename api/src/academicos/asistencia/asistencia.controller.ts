@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query, Request, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Roles, RolesGuard } from '../../auth/roles.guard';
 import { SaveAsistenciaDto } from '../dto/save-asistencia.dto';
 import { AsistenciaService } from './asistencia.service';
@@ -54,6 +56,40 @@ export class AsistenciaController {
       req.user,
       Number(seccionId),
       fecha,
+      { scope, colegioId },
+    );
+  }
+
+  @Post('asistencia/justificacion')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Profesor', 'Director')
+  @UseInterceptors(
+    FileInterceptor('archivo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+        if (!allowed.includes(file.mimetype)) {
+          cb(new BadRequestException('Solo se permiten archivos PDF o imágenes JPG, PNG, WEBP.'), false);
+          return;
+        }
+
+        cb(null, true);
+      },
+    }),
+  )
+  async guardarJustificacion(
+    @Request() req,
+    @Body() body: any,
+    @UploadedFile() archivo: any,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.asistenciaService.guardarJustificacion(
+      req.user,
+      body,
+      archivo,
       { scope, colegioId },
     );
   }
