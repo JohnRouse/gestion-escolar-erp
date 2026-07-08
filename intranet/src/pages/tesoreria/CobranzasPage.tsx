@@ -81,9 +81,21 @@ type AlumnoGrupo = {
   deudas: DeudaRegistro[];
   totalVisible: number;
   totalPendiente: number;
+  totalVencido: number;
+  totalPorVencer: number;
   totalPagado: number;
+  deudasVencidas: number;
+  deudasPorVencer: number;
   proximoVencimiento?: string | null;
-  estadoResumen: 'Pendiente' | 'Parcial' | 'Pagado';
+  estadoResumen: 'Vencido' | 'Por vencer' | 'Parcial' | 'Pagado';
+};
+
+type DeudaEstadoVisual = {
+  label: 'Vencida' | 'Vence hoy' | 'Por vencer' | 'Pagada' | 'Sin fecha';
+  tone: 'rose' | 'amber' | 'sky' | 'emerald' | 'slate';
+  vencida: boolean;
+  porVencer: boolean;
+  pagada: boolean;
 };
 
 const inputClass =
@@ -122,6 +134,84 @@ const fullName = (persona: {
   `${persona.nombres || ''} ${persona.apellido_paterno || ''} ${
     persona.apellido_materno || ''
   }`.trim();
+
+const parseDateOnly = (value?: string | null) => {
+  if (!value) return null;
+
+  const datePart = String(value).split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+
+  if (!year || !month || !day) return null;
+
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return date;
+};
+
+const getDeudaEstadoVisual = (deuda: DeudaRegistro): DeudaEstadoVisual => {
+  if (deuda.estado_pago === 'Pagado') {
+    return {
+      label: 'Pagada',
+      tone: 'emerald',
+      vencida: false,
+      porVencer: false,
+      pagada: true,
+    };
+  }
+
+  const vencimiento = parseDateOnly(deuda.fecha_vencimiento);
+
+  if (!vencimiento) {
+    return {
+      label: 'Sin fecha',
+      tone: 'slate',
+      vencida: false,
+      porVencer: false,
+      pagada: false,
+    };
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  if (vencimiento.getTime() < hoy.getTime()) {
+    return {
+      label: 'Vencida',
+      tone: 'rose',
+      vencida: true,
+      porVencer: false,
+      pagada: false,
+    };
+  }
+
+  if (vencimiento.getTime() === hoy.getTime()) {
+    return {
+      label: 'Vence hoy',
+      tone: 'amber',
+      vencida: true,
+      porVencer: false,
+      pagada: false,
+    };
+  }
+
+  return {
+    label: 'Por vencer',
+    tone: 'sky',
+    vencida: false,
+    porVencer: true,
+    pagada: false,
+  };
+};
+
+const estadoBadgeClass = (tone: DeudaEstadoVisual['tone']) => {
+  if (tone === 'rose') return 'bg-rose-50 text-rose-700 ring-rose-100';
+  if (tone === 'amber') return 'bg-amber-50 text-amber-700 ring-amber-100';
+  if (tone === 'sky') return 'bg-sky-50 text-sky-700 ring-sky-100';
+  if (tone === 'emerald') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+
+  return 'bg-slate-50 text-slate-600 ring-slate-100';
+};
 
 function buildMensaje(deuda: DeudaRegistro) {
   const linkPago =
@@ -212,9 +302,13 @@ export default function CobranzasPage() {
           deudas: [],
           totalVisible: 0,
           totalPendiente: 0,
+          totalVencido: 0,
+          totalPorVencer: 0,
           totalPagado: 0,
+          deudasVencidas: 0,
+          deudasPorVencer: 0,
           proximoVencimiento: null,
-          estadoResumen: 'Pendiente',
+          estadoResumen: 'Por vencer',
         });
       }
 
@@ -223,15 +317,29 @@ export default function CobranzasPage() {
 
     return Array.from(map.values())
       .map((grupo) => {
-        const totalPendiente = grupo.deudas.reduce(
-          (sum, item) => sum + (item.estado_pago === 'Pagado' ? 0 : Number(item.saldo || 0)),
-          0,
-        );
+        let totalPendiente = 0;
+        let totalVencido = 0;
+        let totalPorVencer = 0;
+        let totalPagado = 0;
+        let deudasVencidas = 0;
+        let deudasPorVencer = 0;
 
-        const totalPagado = grupo.deudas.reduce(
-          (sum, item) => sum + Number(item.pagado || 0),
-          0,
-        );
+        grupo.deudas.forEach((item) => {
+          const saldo = item.estado_pago === 'Pagado' ? 0 : Number(item.saldo || 0);
+          const pagado = Number(item.pagado || 0);
+          const visual = getDeudaEstadoVisual(item);
+
+          totalPendiente += saldo;
+          totalPagado += pagado;
+
+          if (visual.vencida) {
+            totalVencido += saldo;
+            deudasVencidas += 1;
+          } else if (visual.porVencer) {
+            totalPorVencer += saldo;
+            deudasPorVencer += 1;
+          }
+        });
 
         const totalVisibleGrupo =
           estado === 'Pagado'
@@ -248,6 +356,7 @@ export default function CobranzasPage() {
               : totalPendiente;
 
         const vencimientos = grupo.deudas
+          .filter((item) => item.estado_pago !== 'Pagado')
           .map((item) => item.fecha_vencimiento)
           .filter((value): value is string => Boolean(value))
           .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -255,13 +364,25 @@ export default function CobranzasPage() {
         const todosPagados = grupo.deudas.every((item) => item.estado_pago === 'Pagado');
         const tieneParcial = grupo.deudas.some((item) => item.estado_pago === 'Parcial');
 
+        const estadoResumen: AlumnoGrupo['estadoResumen'] = todosPagados
+          ? 'Pagado'
+          : totalVencido > 0
+            ? 'Vencido'
+            : tieneParcial
+              ? 'Parcial'
+              : 'Por vencer';
+
         return {
           ...grupo,
           totalVisible: totalVisibleGrupo,
           totalPendiente,
+          totalVencido,
+          totalPorVencer,
           totalPagado,
+          deudasVencidas,
+          deudasPorVencer,
           proximoVencimiento: vencimientos[0] || null,
-          estadoResumen: todosPagados ? 'Pagado' : tieneParcial ? 'Parcial' : 'Pendiente',
+          estadoResumen,
         };
       })
       .sort((a, b) => {
@@ -269,9 +390,28 @@ export default function CobranzasPage() {
           return b.totalPagado - a.totalPagado || fullName(a.alumno).localeCompare(fullName(b.alumno), 'es');
         }
 
-        return b.totalPendiente - a.totalPendiente || fullName(a.alumno).localeCompare(fullName(b.alumno), 'es');
+        return (
+          b.totalVencido - a.totalVencido ||
+          b.totalPendiente - a.totalPendiente ||
+          fullName(a.alumno).localeCompare(fullName(b.alumno), 'es')
+        );
       });
   }, [registros, estado]);
+
+  const totalVencidoVisible = useMemo(
+    () => alumnoGrupos.reduce((sum, grupo) => sum + Number(grupo.totalVencido || 0), 0),
+    [alumnoGrupos],
+  );
+
+  const totalPorVencerVisible = useMemo(
+    () => alumnoGrupos.reduce((sum, grupo) => sum + Number(grupo.totalPorVencer || 0), 0),
+    [alumnoGrupos],
+  );
+
+  const totalPendienteVisible = useMemo(
+    () => alumnoGrupos.reduce((sum, grupo) => sum + Number(grupo.totalPendiente || 0), 0),
+    [alumnoGrupos],
+  );
 
   const toggleAlumno = (key: string) => {
     setExpandedAlumnos((current) => ({
@@ -279,6 +419,7 @@ export default function CobranzasPage() {
       [key]: !current[key],
     }));
   };
+
 
   const alumnoCountLabel =
     estado === 'Pagado'
@@ -470,27 +611,30 @@ export default function CobranzasPage() {
         </div>
       </section>
 
-      <section className="centro-pagos-kpi-grid grid gap-4 md:grid-cols-4">
+      <section className="centro-pagos-kpi-grid grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{alumnoCountLabel}</p>
           <p className="mt-2 text-3xl font-black text-slate-950">{alumnoGrupos.length}</p>
         </div>
 
         <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Monto vencido</p>
+          <p className="mt-2 text-3xl font-black text-rose-700">{formatMoney(totalVencidoVisible)}</p>
+        </div>
+
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Por vencer</p>
+          <p className="mt-2 text-3xl font-black text-sky-700">{formatMoney(totalPorVencerVisible)}</p>
+        </div>
+
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Total pendiente</p>
+          <p className="mt-2 text-3xl font-black text-slate-950">{formatMoney(totalPendienteVisible)}</p>
+        </div>
+
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{registroCountLabel}</p>
           <p className="mt-2 text-3xl font-black text-slate-950">{registros.length}</p>
-        </div>
-
-        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{montoLabel}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{formatMoney(totalVisible)}</p>
-        </div>
-
-        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Vista actual</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">
-            {estado === '' ? 'Por cobrar' : estado}
-          </p>
         </div>
       </section>
 
@@ -569,6 +713,15 @@ export default function CobranzasPage() {
             const abierto = expandedAlumnos[grupo.key] ?? false;
             const pagadoGrupo = grupo.estadoResumen === 'Pagado';
 
+            const resumenTone =
+              grupo.estadoResumen === 'Vencido'
+                ? 'rose'
+                : grupo.estadoResumen === 'Parcial'
+                  ? 'amber'
+                  : grupo.estadoResumen === 'Pagado'
+                    ? 'emerald'
+                    : 'sky';
+
             return (
               <article key={grupo.key} className="centro-pago-alumno-card rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-100/80">
                 <button
@@ -582,13 +735,7 @@ export default function CobranzasPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-black text-slate-950">{alumno}</h3>
-                        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${
-                          pagadoGrupo
-                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-                            : grupo.estadoResumen === 'Parcial'
-                              ? 'bg-amber-50 text-amber-700 ring-amber-100'
-                              : 'bg-rose-50 text-rose-700 ring-rose-100'
-                        }`}>
+                        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoBadgeClass(resumenTone as DeudaEstadoVisual['tone'])}`}>
                           {grupo.estadoResumen}
                         </span>
                       </div>
@@ -603,22 +750,29 @@ export default function CobranzasPage() {
 
                       <p className="mt-2 text-xs font-black text-slate-500">
                         {grupo.deudas.length} {grupo.deudas.length === 1 ? 'concepto registrado' : 'conceptos registrados'}
+                        {grupo.deudasVencidas > 0 ? ` · ${grupo.deudasVencidas} vencido(s)` : ''}
+                        {grupo.deudasPorVencer > 0 ? ` · ${grupo.deudasPorVencer} por vencer` : ''}
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid w-full gap-3 sm:grid-cols-3 xl:w-[560px]">
+                  <div className="grid w-full gap-3 sm:grid-cols-4 xl:w-[720px]">
                     <Mini
-                      label={estado === 'Pagado' ? 'Pagado' : 'Pendiente'}
-                      value={formatMoney(estado === 'Pagado' ? grupo.totalPagado : grupo.totalPendiente)}
-                      tone={estado === 'Pagado' || pagadoGrupo ? 'emerald' : 'rose'}
+                      label="Vencido"
+                      value={formatMoney(grupo.totalVencido)}
+                      tone={grupo.totalVencido > 0 ? 'rose' : 'slate'}
                     />
                     <Mini
-                      label={estado === 'Pagado' ? 'Pagos' : 'Deudas'}
-                      value={String(grupo.deudas.length)}
+                      label="Por vencer"
+                      value={formatMoney(grupo.totalPorVencer)}
+                      tone="sky"
                     />
                     <Mini
-                      label={estado === 'Pagado' ? 'Último / venc.' : 'Próx. vencimiento'}
+                      label="Total pendiente"
+                      value={formatMoney(grupo.totalPendiente)}
+                    />
+                    <Mini
+                      label="Próx. vencimiento"
                       value={formatDate(grupo.proximoVencimiento)}
                     />
                   </div>
@@ -633,6 +787,7 @@ export default function CobranzasPage() {
                   <div className="centro-pago-deudas-list mt-4 space-y-3 border-t border-slate-100 pt-4">
                     {grupo.deudas.map((deuda) => {
                       const pagado = deuda.estado_pago === 'Pagado';
+                      const visual = getDeudaEstadoVisual(deuda);
 
                       return (
                         <div key={deuda.id_cronograma} className="centro-pago-deuda-row rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
@@ -640,15 +795,14 @@ export default function CobranzasPage() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <h4 className="text-sm font-black text-slate-950">{deuda.concepto}</h4>
-                                <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${
-                                  pagado
-                                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-                                    : deuda.estado_pago === 'Parcial'
-                                      ? 'bg-amber-50 text-amber-700 ring-amber-100'
-                                      : 'bg-white text-slate-600 ring-slate-100'
-                                }`}>
-                                  {deuda.estado_pago}
+                                <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoBadgeClass(visual.tone)}`}>
+                                  {visual.label}
                                 </span>
+                                {deuda.estado_pago === 'Parcial' && !pagado && (
+                                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-100">
+                                    Parcial
+                                  </span>
+                                )}
                               </div>
 
                               <p className="mt-1 text-xs font-bold text-slate-500">
@@ -675,10 +829,14 @@ export default function CobranzasPage() {
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-3 xl:w-[520px]">
-                              <Mini label={pagado ? 'Pagado' : 'Saldo'} value={formatMoney(pagado ? deuda.pagado : deuda.saldo)} tone={pagado ? 'emerald' : 'rose'} />
+                              <Mini
+                                label={visual.vencida ? 'Vencido' : pagado ? 'Pagado' : 'Saldo'}
+                                value={formatMoney(pagado ? deuda.pagado : deuda.saldo)}
+                                tone={visual.vencida ? 'rose' : pagado ? 'emerald' : visual.porVencer ? 'sky' : 'slate'}
+                              />
                               <Mini label="Total" value={formatMoney(deuda.monto)} />
                               <Mini
-                                label={pagado ? 'Fecha pago' : 'Vencimiento'}
+                                label={pagado ? 'Fecha pago' : visual.vencida ? 'Venció' : 'Vence'}
                                 value={pagado ? formatDateTime(deuda.ultimo_pago?.fecha_pago) : formatDate(deuda.fecha_vencimiento)}
                               />
                             </div>
@@ -882,13 +1040,25 @@ export default function CobranzasPage() {
   );
 }
 
-function Mini({ label, value, tone = 'slate' }: { label: string; value: string; tone?: 'slate' | 'rose' | 'emerald' }) {
+function Mini({
+  label,
+  value,
+  tone = 'slate',
+}: {
+  label: string;
+  value: string;
+  tone?: 'slate' | 'rose' | 'emerald' | 'amber' | 'sky';
+}) {
   const cls =
     tone === 'rose'
       ? 'bg-rose-50 text-rose-700 ring-rose-100'
       : tone === 'emerald'
         ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-        : 'bg-slate-50 text-slate-700 ring-slate-100';
+        : tone === 'amber'
+          ? 'bg-amber-50 text-amber-700 ring-amber-100'
+          : tone === 'sky'
+            ? 'bg-sky-50 text-sky-700 ring-sky-100'
+            : 'bg-slate-50 text-slate-700 ring-slate-100';
 
   return (
     <div className={`rounded-2xl p-3 ring-1 ${cls}`}>
@@ -897,3 +1067,4 @@ function Mini({ label, value, tone = 'slate' }: { label: string; value: string; 
     </div>
   );
 }
+
