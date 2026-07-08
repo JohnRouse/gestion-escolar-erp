@@ -197,13 +197,20 @@ export default function AgendaCobranzasPage() {
       const map = new Map<number, AgendaItem>();
 
       rawItems.forEach((item) => {
-        const prev = map.get(item.id_cronograma);
+        const key = Number(item.id_cronograma ?? item.id_gestion);
+
+        if (!Number.isInteger(key) || key <= 0) {
+          console.warn('AgendaItem sin ID válido para historial:', item);
+          return;
+        }
+
+        const prev = map.get(key);
 
         const currentTime = item.fecha_gestion ? new Date(item.fecha_gestion).getTime() : 0;
         const prevTime = prev?.fecha_gestion ? new Date(prev.fecha_gestion).getTime() : 0;
 
         if (!prev || currentTime >= prevTime) {
-          map.set(item.id_cronograma, item);
+          map.set(key, item);
         }
       });
 
@@ -259,18 +266,25 @@ export default function AgendaCobranzasPage() {
     setMensajeItem(null);
   };
 
+  const getHistorialId = (item: Partial<AgendaItem>) => {
+    const rawId = item.id_cronograma ?? item.id_gestion ?? null;
+    const id = Number(rawId);
+
+    return Number.isInteger(id) && id > 0 ? id : null;
+  };
+
   const abrirHistorial = async (item: AgendaItem) => {
     if (!token) return;
 
-    const idCronograma = Number(item.id_cronograma);
+    const historialId = getHistorialId(item);
 
-    if (!Number.isInteger(idCronograma) || idCronograma <= 0) {
-      console.error('AgendaItem sin id_cronograma:', item);
+    if (!historialId) {
+      console.error('AgendaItem sin ID válido para historial:', item);
 
       showToast({
         type: 'error',
         title: 'No se puede abrir el historial',
-        message: 'Este registro no tiene un ID de cronograma válido.',
+        message: 'Este registro no tiene un ID válido de cobranza o cronograma.',
       });
 
       return;
@@ -281,8 +295,9 @@ export default function AgendaCobranzasPage() {
     setLoadingHistorial(true);
 
     try {
+      const scopeQuery = queryString || '';
       const res = await axios.get(
-        `/api/tesoreria/cobranzas/${idCronograma}/historial${queryString}`,
+        `/api/tesoreria/cobranzas/${historialId}/historial${scopeQuery}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -297,6 +312,7 @@ export default function AgendaCobranzasPage() {
       setLoadingHistorial(false);
     }
   };
+
 
   return (
     <div className="carbon-tesoreria-page space-y-6">
@@ -374,7 +390,7 @@ export default function AgendaCobranzasPage() {
         {!loading &&
           items.map((item) => (
             <article
-              key={item.id_cronograma}
+              key={getHistorialId(item) || item.id_gestion || item.id_cronograma}
               onClick={() => abrirHistorial(item)}
               className="cursor-pointer rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-md"
             >
