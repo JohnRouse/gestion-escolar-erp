@@ -325,7 +325,7 @@ export default function AgendaCobranzasPage() {
 
 
   return (
-    <div className="carbon-tesoreria-page space-y-6">
+    <div className="carbon-tesoreria-page agenda-cobranzas-page space-y-6">
       <PageHeader
         eyebrow="Tesorería"
         title="Agenda de cobranzas"
@@ -346,7 +346,7 @@ export default function AgendaCobranzasPage() {
         ]}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="agenda-summary-grid grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {[
           ['Deudas en seguimiento', resumen?.total ?? items.length],
           ['Gestiones registradas', totalGestiones],
@@ -355,21 +355,21 @@ export default function AgendaCobranzasPage() {
           ['Próximos', resumen?.proximos ?? 0],
           ['Saldo pendiente', formatMoney(resumen?.total_saldo ?? totalSaldo)],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <div key={label} className="agenda-summary-card rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
             <p className="mt-2 text-2xl font-black text-slate-950">{String(value)}</p>
           </div>
         ))}
       </section>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
+      <section className="agenda-info-box rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
         <p className="text-sm font-black text-slate-900">Vista consolidada por deuda</p>
         <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
           Cada tarjeta representa una deuda pendiente. Si esa deuda tiene varias gestiones, se muestra la última y el botón “Ver historial de gestiones” permite revisar todo el seguimiento.
         </p>
       </section>
 
-      <section className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+      <section className="agenda-filter-panel rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <div className="grid gap-3 md:grid-cols-[1fr_220px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -391,7 +391,7 @@ export default function AgendaCobranzasPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="agenda-list-section space-y-4">
         {loading && (
           <div className="rounded-[28px] bg-white p-8 text-center text-sm font-black text-slate-500 ring-1 ring-slate-100">
             <Loader2 className="mx-auto mb-3 animate-spin" />
@@ -410,7 +410,7 @@ export default function AgendaCobranzasPage() {
             <article
               key={getHistorialId(item) || item.id_gestion || item.id_cronograma}
               onClick={() => abrirHistorial(item)}
-              className="cursor-pointer rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-md"
+              className="agenda-debt-card cursor-pointer rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md"
             >
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
@@ -494,7 +494,7 @@ export default function AgendaCobranzasPage() {
                     event.stopPropagation();
                     abrirEditorMensaje(item, 'copiar');
                   }}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white"
+                  className="agenda-action agenda-action-copy inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white"
                 >
                   <Copy size={16} />
                   {copied[item.id_gestion] ? 'Copiado' : 'Copiar mensaje'}
@@ -506,7 +506,7 @@ export default function AgendaCobranzasPage() {
                     event.stopPropagation();
                     abrirEditorMensaje(item, 'whatsapp');
                   }}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white"
+                  className="agenda-action agenda-action-whatsapp inline-flex h-11 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white"
                 >
                   <MessageCircle size={16} />
                   Abrir WhatsApp
@@ -518,7 +518,7 @@ export default function AgendaCobranzasPage() {
                     event.stopPropagation();
                     abrirHistorial(item);
                   }}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
+                  className="agenda-action agenda-action-history inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
                 >
                   <CalendarClock size={16} />
                   Ver historial de gestiones{item.historial_count ? ` (${item.historial_count})` : ''}
@@ -583,9 +583,9 @@ export default function AgendaCobranzasPage() {
 
       {/* Modal de historial completo */}
       {historialItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
-          <div className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-100">
-            <div className="border-b border-slate-100 p-6">
+        <div className="agenda-history-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="agenda-history-modal max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-100">
+            <div className="agenda-history-header border-b border-slate-100 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -612,7 +612,7 @@ export default function AgendaCobranzasPage() {
               </div>
             </div>
 
-            <div className="max-h-[62vh] overflow-y-auto p-6">
+            <div className="agenda-history-body max-h-[62vh] overflow-y-auto p-6">
               {loadingHistorial && (
                 <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
                   <Loader2 className="mx-auto mb-3 animate-spin" />
@@ -631,7 +631,7 @@ export default function AgendaCobranzasPage() {
                   {historial.map((gestion, index) => (
                     <div
                       key={gestion.id_gestion}
-                      className="relative rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"
+                      className="agenda-history-entry relative rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"
                     >
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
@@ -676,7 +676,7 @@ export default function AgendaCobranzasPage() {
                       )}
 
                       {gestion.mensaje && (
-                        <details className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                        <details className="agenda-history-message mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
                           <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                             Ver mensaje enviado
                           </summary>
