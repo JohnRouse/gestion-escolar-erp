@@ -178,6 +178,16 @@ export default function AgendaCobranzasPage() {
     [items],
   );
 
+  const totalGestiones = useMemo(() => {
+    const totalBackend = Number(resumen?.total_gestiones);
+
+    if (Number.isFinite(totalBackend) && totalBackend >= 0) {
+      return totalBackend;
+    }
+
+    return items.reduce((sum, item) => sum + Number(item.historial_count || 0), 0);
+  }, [items, resumen]);
+
   const fetchAgenda = async () => {
     if (!token) return;
 
@@ -319,7 +329,7 @@ export default function AgendaCobranzasPage() {
       <PageHeader
         eyebrow="Tesorería"
         title="Agenda de cobranzas"
-        description="Revisa seguimientos vencidos, pendientes para hoy y próximos contactos."
+        description="Muestra una tarjeta por deuda en seguimiento; las gestiones anteriores se revisan desde el historial."
         actions={
           <button
             type="button"
@@ -332,23 +342,31 @@ export default function AgendaCobranzasPage() {
         }
         meta={[
           { label: 'Ámbito', value: scopeLabel },
-          { label: 'Vista', value: 'Seguimiento' },
+          { label: 'Vista', value: 'Una tarjeta por deuda' },
         ]}
       />
 
-      <section className="grid gap-4 md:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {[
-          ['Total', resumen?.total ?? items.length],
+          ['Deudas en seguimiento', resumen?.total ?? items.length],
+          ['Gestiones registradas', totalGestiones],
           ['Vencidos', resumen?.vencidos ?? 0],
           ['Hoy', resumen?.hoy ?? 0],
           ['Próximos', resumen?.proximos ?? 0],
-          ['Saldo', formatMoney(resumen?.total_saldo ?? totalSaldo)],
+          ['Saldo pendiente', formatMoney(resumen?.total_saldo ?? totalSaldo)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
             <p className="mt-2 text-2xl font-black text-slate-950">{String(value)}</p>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
+        <p className="text-sm font-black text-slate-900">Vista consolidada por deuda</p>
+        <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+          Cada tarjeta representa una deuda pendiente. Si esa deuda tiene varias gestiones, se muestra la última y el botón “Ver historial de gestiones” permite revisar todo el seguimiento.
+        </p>
       </section>
 
       <section className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
@@ -503,7 +521,7 @@ export default function AgendaCobranzasPage() {
                   className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
                 >
                   <CalendarClock size={16} />
-                  Ver historial{item.historial_count ? ` (${item.historial_count})` : ''}
+                  Ver historial de gestiones{item.historial_count ? ` (${item.historial_count})` : ''}
                 </button>
               </div>
             </article>

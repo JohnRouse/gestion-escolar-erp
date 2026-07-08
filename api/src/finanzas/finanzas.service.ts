@@ -2661,6 +2661,11 @@ export class FinanzasService {
             },
           },
         },
+        _count: {
+          select: {
+            gestiones_cobranza: true,
+          },
+        },
         matricula: {
           include: {
             colegio: true,
@@ -2746,7 +2751,10 @@ export class FinanzasService {
           proximo_seguimiento: fechaProgramadaAgenda,
           estado_agenda: estadoAgenda,
           usuario: ultimaGestion.usuario,
-          historial_count: cronograma.gestiones_cobranza?.length || 0,
+          historial_count:
+            (cronograma as any)._count?.gestiones_cobranza ||
+            cronograma.gestiones_cobranza?.length ||
+            0,
           deuda: {
             referencia_pago: cronograma.referencia_pago,
             concepto: cronograma.concepto?.nombre_concepto || 'Pago escolar',
@@ -2825,6 +2833,7 @@ export class FinanzasService {
       (acc, item) => {
         acc.total_saldo += Number(item.deuda.saldo || 0);
         acc.total += 1;
+        acc.total_gestiones += Number(item.historial_count || 0);
         if (item.estado_agenda === 'Vencido') acc.vencidos += 1;
         if (item.estado_agenda === 'Hoy') acc.hoy += 1;
         if (item.estado_agenda === 'Próximo') acc.proximos += 1;
@@ -2833,6 +2842,7 @@ export class FinanzasService {
       },
       {
         total: 0,
+        total_gestiones: 0,
         total_saldo: 0,
         vencidos: 0,
         hoy: 0,
