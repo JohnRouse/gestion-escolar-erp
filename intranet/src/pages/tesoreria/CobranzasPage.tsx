@@ -3,6 +3,7 @@ import axios from 'axios';
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   Copy,
   History,
   Loader2,
@@ -70,6 +71,19 @@ type DeudaRegistro = {
     fecha_programada?: string | null;
     usuario?: any;
   } | null;
+};
+
+type AlumnoGrupo = {
+  key: string;
+  alumno: DeudaRegistro['alumno'];
+  apoderado: DeudaRegistro['apoderado'];
+  matricula: DeudaRegistro['matricula'];
+  deudas: DeudaRegistro[];
+  totalVisible: number;
+  totalPendiente: number;
+  totalPagado: number;
+  proximoVencimiento?: string | null;
+  estadoResumen: 'Pendiente' | 'Parcial' | 'Pagado';
 };
 
 const inputClass =
@@ -160,6 +174,7 @@ export default function CobranzasPage() {
   const [copiadas, setCopiadas] = useState<Record<number, boolean>>({});
   const [comprobante, setComprobante] = useState<any | null>(null);
   const [loadingComprobante, setLoadingComprobante] = useState<number | null>(null);
+  const [expandedAlumnos, setExpandedAlumnos] = useState<Record<string, boolean>>({});
 
   const [gestionDeuda, setGestionDeuda] = useState<DeudaRegistro | null>(null);
   const [guardandoGestion, setGuardandoGestion] = useState(false);
@@ -181,11 +196,102 @@ export default function CobranzasPage() {
     }, 0);
   }, [registros, estado]);
 
-  const countLabel =
+  const alumnoGrupos = useMemo<AlumnoGrupo[]>(() => {
+    const map = new Map<string, AlumnoGrupo>();
+
+    registros.forEach((deuda) => {
+      const codigoMatricula = deuda.matricula.codigo_matricula || 'sin-matricula';
+      const key = `${deuda.alumno.id_persona}-${codigoMatricula}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          alumno: deuda.alumno,
+          apoderado: deuda.apoderado,
+          matricula: deuda.matricula,
+          deudas: [],
+          totalVisible: 0,
+          totalPendiente: 0,
+          totalPagado: 0,
+          proximoVencimiento: null,
+          estadoResumen: 'Pendiente',
+        });
+      }
+
+      map.get(key)!.deudas.push(deuda);
+    });
+
+    return Array.from(map.values())
+      .map((grupo) => {
+        const totalPendiente = grupo.deudas.reduce(
+          (sum, item) => sum + (item.estado_pago === 'Pagado' ? 0 : Number(item.saldo || 0)),
+          0,
+        );
+
+        const totalPagado = grupo.deudas.reduce(
+          (sum, item) => sum + Number(item.pagado || 0),
+          0,
+        );
+
+        const totalVisibleGrupo =
+          estado === 'Pagado'
+            ? totalPagado
+            : estado === 'Todos'
+              ? grupo.deudas.reduce(
+                  (sum, item) =>
+                    sum +
+                    (item.estado_pago === 'Pagado'
+                      ? Number(item.pagado || 0)
+                      : Number(item.saldo || 0)),
+                  0,
+                )
+              : totalPendiente;
+
+        const vencimientos = grupo.deudas
+          .map((item) => item.fecha_vencimiento)
+          .filter((value): value is string => Boolean(value))
+          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+        const todosPagados = grupo.deudas.every((item) => item.estado_pago === 'Pagado');
+        const tieneParcial = grupo.deudas.some((item) => item.estado_pago === 'Parcial');
+
+        return {
+          ...grupo,
+          totalVisible: totalVisibleGrupo,
+          totalPendiente,
+          totalPagado,
+          proximoVencimiento: vencimientos[0] || null,
+          estadoResumen: todosPagados ? 'Pagado' : tieneParcial ? 'Parcial' : 'Pendiente',
+        };
+      })
+      .sort((a, b) => {
+        if (estado === 'Pagado') {
+          return b.totalPagado - a.totalPagado || fullName(a.alumno).localeCompare(fullName(b.alumno), 'es');
+        }
+
+        return b.totalPendiente - a.totalPendiente || fullName(a.alumno).localeCompare(fullName(b.alumno), 'es');
+      });
+  }, [registros, estado]);
+
+  const toggleAlumno = (key: string) => {
+    setExpandedAlumnos((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
+  const alumnoCountLabel =
     estado === 'Pagado'
-      ? 'Pagos encontrados'
+      ? 'Alumnos con pagos'
       : estado === 'Todos'
-        ? 'Registros encontrados'
+        ? 'Alumnos encontrados'
+        : 'Alumnos por cobrar';
+
+  const registroCountLabel =
+    estado === 'Pagado'
+      ? 'Pagos / conceptos'
+      : estado === 'Todos'
+        ? 'Registros de pago'
         : 'Deudas pendientes';
 
   const montoLabel =
@@ -203,7 +309,7 @@ export default function CobranzasPage() {
       const params = new URLSearchParams(queryString.replace('?', ''));
       if (q.trim()) params.set('q', q.trim());
       if (estado) params.set('estado', estado);
-      params.set('limit', '35');
+      params.set('limit', '150');
 
       const res = await axios.get(`/api/tesoreria/deudas-pendientes?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -341,7 +447,7 @@ export default function CobranzasPage() {
       <PageHeader
         eyebrow="Tesorería"
         title="Centro de pagos"
-        description="Busca pagos, revisa deudas y encuentra rápidamente los últimos pagos registrados."
+        description="Consulta deudas agrupadas por alumno y despliega sus pagos pendientes o recientes cuando necesites revisar el detalle."
         icon={WalletCards}
         meta={[
           { label: 'Contexto activo', value: scopeLabel },
@@ -358,24 +464,29 @@ export default function CobranzasPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <GuideCard icon={Search} title="Buscar cualquier pago" description="Escribe el nombre, DNI, matrícula o código. La búsqueda se actualiza sola." />
+          <GuideCard icon={Search} title="Buscar cualquier pago" description="Escribe nombre, DNI, matrícula o código. Los resultados se agrupan por alumno." />
           <GuideCard icon={History} title="Ver últimos pagados" description="Selecciona “Pagados recientes” para ver los pagos ya aplicados." />
-          <GuideCard icon={MessageCircle} title="Cobrar pendientes" description="En pendientes puedes copiar o abrir WhatsApp con el mensaje listo." />
+          <GuideCard icon={MessageCircle} title="Cobrar pendientes" description="Abre el alumno y usa las acciones de cada deuda pendiente." />
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{countLabel}</p>
+      <section className="centro-pagos-kpi-grid grid gap-4 md:grid-cols-4">
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{alumnoCountLabel}</p>
+          <p className="mt-2 text-3xl font-black text-slate-950">{alumnoGrupos.length}</p>
+        </div>
+
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{registroCountLabel}</p>
           <p className="mt-2 text-3xl font-black text-slate-950">{registros.length}</p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{montoLabel}</p>
           <p className="mt-2 text-3xl font-black text-slate-950">{formatMoney(totalVisible)}</p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
+        <div className="centro-pagos-kpi-card rounded-[28px] bg-white p-5 shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Vista actual</p>
           <p className="mt-2 text-3xl font-black text-slate-950">
             {estado === '' ? 'Por cobrar' : estado}
@@ -442,137 +553,201 @@ export default function CobranzasPage() {
         )}
       </section>
 
-      <section className="space-y-3">
+      <section className="centro-pagos-alumnos space-y-3">
         {registros.length === 0 && !loading ? (
           <div className="rounded-[30px] bg-white p-8 text-center shadow-sm shadow-slate-100/80 ring-1 ring-slate-100">
             <CheckCircle2 className="mx-auto text-emerald-600" size={32} />
             <p className="mt-3 text-sm font-black text-slate-700">No hay registros con esos filtros.</p>
           </div>
         ) : (
-          registros.map((deuda) => {
-            const alumno = fullName(deuda.alumno);
-            const apoderado = deuda.apoderado ? fullName(deuda.apoderado) : 'Sin apoderado';
-            const aula = `${deuda.matricula.seccion?.grado?.nombre_grado || 'Grado'} "${
-              deuda.matricula.seccion?.letra || '-'
+          alumnoGrupos.map((grupo) => {
+            const alumno = fullName(grupo.alumno);
+            const apoderado = grupo.apoderado ? fullName(grupo.apoderado) : 'Sin apoderado';
+            const aula = `${grupo.matricula.seccion?.grado?.nombre_grado || 'Grado'} "${
+              grupo.matricula.seccion?.letra || '-'
             }"`;
-            const pagado = deuda.estado_pago === 'Pagado';
+            const abierto = expandedAlumnos[grupo.key] ?? false;
+            const pagadoGrupo = grupo.estadoResumen === 'Pagado';
 
             return (
-              <article key={deuda.id_cronograma} className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-100/80">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="flex items-start gap-3">
-                    <PersonAvatar persona={deuda.alumno} size="lg" rounded="2xl" />
-                    <div>
+              <article key={grupo.key} className="centro-pago-alumno-card rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm shadow-slate-100/80">
+                <button
+                  type="button"
+                  onClick={() => toggleAlumno(grupo.key)}
+                  className="centro-pago-alumno-toggle flex w-full flex-col gap-4 text-left xl:flex-row xl:items-center xl:justify-between"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <PersonAvatar persona={grupo.alumno} size="lg" rounded="2xl" />
+
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-black text-slate-950">{alumno}</h3>
                         <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${
-                          pagado
+                          pagadoGrupo
                             ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-                            : deuda.estado_pago === 'Parcial'
+                            : grupo.estadoResumen === 'Parcial'
                               ? 'bg-amber-50 text-amber-700 ring-amber-100'
-                              : 'bg-slate-50 text-slate-600 ring-slate-100'
+                              : 'bg-rose-50 text-rose-700 ring-rose-100'
                         }`}>
-                          {deuda.estado_pago}
+                          {grupo.estadoResumen}
                         </span>
                       </div>
 
-                      <p className="mt-1 text-sm font-bold text-slate-500">{deuda.concepto} · {aula}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        Apoderado: {apoderado} · Tel: {deuda.apoderado?.telefono || 'Sin teléfono'}
-                      </p>
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        Código de pago: {deuda.referencia_pago || 'Sin código'} · Matrícula: {deuda.matricula.codigo_matricula || '—'}
+                      <p className="mt-1 text-sm font-bold text-slate-500">
+                        DNI: {grupo.alumno.dni} · {aula} · Matrícula: {grupo.matricula.codigo_matricula || '—'}
                       </p>
 
-                      {pagado && deuda.ultimo_pago && (
-                        <p className="mt-2 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-                          Último pago: {formatMoney(deuda.ultimo_pago.monto_pagado)} · {deuda.ultimo_pago.metodo_pago || 'Método no indicado'} · {formatDateTime(deuda.ultimo_pago.fecha_pago)}
-                          {deuda.ultimo_pago.nro_operacion ? ` · Op: ${deuda.ultimo_pago.nro_operacion}` : ''}
-                        </p>
-                      )}
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        Apoderado: {apoderado} · Tel: {grupo.apoderado?.telefono || 'Sin teléfono'}
+                      </p>
 
-                      {deuda.ultima_gestion && (
-                        <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
-                          <span>Última gestión:</span>
-                          <span>{deuda.ultima_gestion.canal}</span>
-                          <span>·</span>
-                          <span>{deuda.ultima_gestion.estado_contacto}</span>
-                          <span>·</span>
-                          <span>{formatDateTime(deuda.ultima_gestion.fecha_gestion)}</span>
-                        </div>
-                      )}
+                      <p className="mt-2 text-xs font-black text-slate-500">
+                        {grupo.deudas.length} {grupo.deudas.length === 1 ? 'concepto registrado' : 'conceptos registrados'}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3 xl:w-[560px]">
-                    <Mini label={pagado ? 'Pagado' : 'Saldo'} value={formatMoney(pagado ? deuda.pagado : deuda.saldo)} tone={pagado ? 'emerald' : 'rose'} />
-                    <Mini label="Total" value={formatMoney(deuda.monto)} />
+                  <div className="grid w-full gap-3 sm:grid-cols-3 xl:w-[560px]">
                     <Mini
-                      label={pagado ? 'Fecha pago' : 'Vencimiento'}
-                      value={pagado ? formatDateTime(deuda.ultimo_pago?.fecha_pago) : formatDate(deuda.fecha_vencimiento)}
+                      label={estado === 'Pagado' ? 'Pagado' : 'Pendiente'}
+                      value={formatMoney(estado === 'Pagado' ? grupo.totalPagado : grupo.totalPendiente)}
+                      tone={estado === 'Pagado' || pagadoGrupo ? 'emerald' : 'rose'}
+                    />
+                    <Mini
+                      label={estado === 'Pagado' ? 'Pagos' : 'Deudas'}
+                      value={String(grupo.deudas.length)}
+                    />
+                    <Mini
+                      label={estado === 'Pagado' ? 'Último / venc.' : 'Próx. vencimiento'}
+                      value={formatDate(grupo.proximoVencimiento)}
                     />
                   </div>
-                </div>
 
-                {!deuda.referencia_pago && (
-                  <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-700 ring-1 ring-amber-100">
-                    <AlertCircle size={14} className="mr-1 inline" />
-                    Esta deuda todavía no tiene código de pago. Genera referencias faltantes desde backend.
+                  <ChevronDown
+                    size={22}
+                    className={`centro-pago-chevron shrink-0 text-slate-400 transition-transform ${abierto ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {abierto && (
+                  <div className="centro-pago-deudas-list mt-4 space-y-3 border-t border-slate-100 pt-4">
+                    {grupo.deudas.map((deuda) => {
+                      const pagado = deuda.estado_pago === 'Pagado';
+
+                      return (
+                        <div key={deuda.id_cronograma} className="centro-pago-deuda-row rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-sm font-black text-slate-950">{deuda.concepto}</h4>
+                                <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${
+                                  pagado
+                                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+                                    : deuda.estado_pago === 'Parcial'
+                                      ? 'bg-amber-50 text-amber-700 ring-amber-100'
+                                      : 'bg-white text-slate-600 ring-slate-100'
+                                }`}>
+                                  {deuda.estado_pago}
+                                </span>
+                              </div>
+
+                              <p className="mt-1 text-xs font-bold text-slate-500">
+                                Código de pago: {deuda.referencia_pago || 'Sin código'} · Matrícula: {deuda.matricula.codigo_matricula || '—'}
+                              </p>
+
+                              {pagado && deuda.ultimo_pago && (
+                                <p className="mt-2 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                  Último pago: {formatMoney(deuda.ultimo_pago.monto_pagado)} · {deuda.ultimo_pago.metodo_pago || 'Método no indicado'} · {formatDateTime(deuda.ultimo_pago.fecha_pago)}
+                                  {deuda.ultimo_pago.nro_operacion ? ` · Op: ${deuda.ultimo_pago.nro_operacion}` : ''}
+                                </p>
+                              )}
+
+                              {deuda.ultima_gestion && (
+                                <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
+                                  <span>Última gestión:</span>
+                                  <span>{deuda.ultima_gestion.canal}</span>
+                                  <span>·</span>
+                                  <span>{deuda.ultima_gestion.estado_contacto}</span>
+                                  <span>·</span>
+                                  <span>{formatDateTime(deuda.ultima_gestion.fecha_gestion)}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-3 xl:w-[520px]">
+                              <Mini label={pagado ? 'Pagado' : 'Saldo'} value={formatMoney(pagado ? deuda.pagado : deuda.saldo)} tone={pagado ? 'emerald' : 'rose'} />
+                              <Mini label="Total" value={formatMoney(deuda.monto)} />
+                              <Mini
+                                label={pagado ? 'Fecha pago' : 'Vencimiento'}
+                                value={pagado ? formatDateTime(deuda.ultimo_pago?.fecha_pago) : formatDate(deuda.fecha_vencimiento)}
+                              />
+                            </div>
+                          </div>
+
+                          {!deuda.referencia_pago && (
+                            <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-700 ring-1 ring-amber-100">
+                              <AlertCircle size={14} className="mr-1 inline" />
+                              Esta deuda todavía no tiene código de pago. Genera referencias faltantes desde backend.
+                            </div>
+                          )}
+
+                          <div className="centro-pago-deuda-actions mt-4 flex flex-wrap gap-2">
+                            {!pagado ? (
+                              <>
+                                <button type="button" onClick={() => copiarMensaje(deuda)} className="centro-pago-action centro-pago-action-copy inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800">
+                                  <Copy size={16} />
+                                  {copiadas[deuda.id_cronograma] ? 'Copiado' : 'Copiar mensaje'}
+                                </button>
+
+                                <button type="button" onClick={() => abrirWhatsapp(deuda)} className="centro-pago-action centro-pago-action-whatsapp inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700">
+                                  <MessageCircle size={16} />
+                                  Abrir WhatsApp
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setGestionDeuda(deuda);
+                                    setGestionForm({
+                                      canal: 'WhatsApp',
+                                      estado_contacto: 'Mensaje enviado',
+                                      observacion: '',
+                                      fecha_programada: '',
+                                      mensaje: buildMensaje(deuda),
+                                    });
+                                  }}
+                                  className="centro-pago-action centro-pago-action-history inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
+                                >
+                                  <History size={16} />
+                                  Registrar gestión
+                                </button>
+
+                                <a href="/tesoreria/validar-pagos" className="centro-pago-action centro-pago-action-validate inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-sky-50 px-4 text-sm font-black text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100">
+                                  <Send size={16} />
+                                  Validar cuando pague
+                                </a>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => verComprobante(deuda.ultimo_pago?.id_transaccion)}
+                                disabled={!deuda.ultimo_pago?.id_transaccion || loadingComprobante === deuda.ultimo_pago?.id_transaccion}
+                                className="centro-pago-action centro-pago-action-comprobante inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-50"
+                              >
+                                {loadingComprobante === deuda.ultimo_pago?.id_transaccion ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <ReceiptText size={16} />
+                                )}
+                                Ver comprobante
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {!pagado ? (
-                    <>
-                      <button type="button" onClick={() => copiarMensaje(deuda)} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800">
-                        <Copy size={16} />
-                        {copiadas[deuda.id_cronograma] ? 'Copiado' : 'Copiar mensaje'}
-                      </button>
-
-                      <button type="button" onClick={() => abrirWhatsapp(deuda)} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700">
-                        <MessageCircle size={16} />
-                        Abrir WhatsApp
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGestionDeuda(deuda);
-                          setGestionForm({
-                            canal: 'WhatsApp',
-                            estado_contacto: 'Mensaje enviado',
-                            observacion: '',
-                            fecha_programada: '',
-                            mensaje: buildMensaje(deuda),
-                          });
-                        }}
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl bg-indigo-50 px-4 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100"
-                      >
-                        <History size={16} />
-                        Registrar gestión
-                      </button>
-
-                      <a href="/tesoreria/validar-pagos" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-sky-50 px-4 text-sm font-black text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100">
-                        <Send size={16} />
-                        Validar cuando pague
-                      </a>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => verComprobante(deuda.ultimo_pago?.id_transaccion)}
-                      disabled={!deuda.ultimo_pago?.id_transaccion || loadingComprobante === deuda.ultimo_pago?.id_transaccion}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-50"
-                    >
-                      {loadingComprobante === deuda.ultimo_pago?.id_transaccion ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <ReceiptText size={16} />
-                      )}
-                      Ver comprobante
-                    </button>
-                  )}
-                </div>
               </article>
             );
           })

@@ -1,0 +1,174 @@
+/* ==========================================================
+   22 - Centro de pagos agrupado por alumno
+   Pulido visual scoped para Tesorería > Centro de pagos.
+   ========================================================== */
+
+.carbon-cobranzas-page {
+  --centro-border: #d8e0ea;
+  --centro-border-strong: #c2cedc;
+  --centro-soft: #f8fafc;
+  --centro-text: #111827;
+  --centro-muted: #475569;
+  --centro-helper: #64748b;
+  --centro-blue: #0f62fe;
+  --centro-black: #161616;
+  --centro-danger: #b42318;
+}
+
+/* KPIs */
+.carbon-cobranzas-page .centro-pagos-kpi-grid {
+  gap: 16px !important;
+}
+
+.carbon-cobranzas-page .centro-pagos-kpi-card {
+  border: 1px solid var(--centro-border-strong) !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  padding: 18px 20px !important;
+}
+
+.carbon-cobranzas-page .centro-pagos-kpi-card p:first-child {
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  color: var(--centro-helper) !important;
+}
+
+.carbon-cobranzas-page .centro-pagos-kpi-card p:last-child {
+  font-size: 26px !important;
+  line-height: 1.1 !important;
+  color: var(--centro-text) !important;
+}
+
+/* Alumno agrupado */
+.carbon-cobranzas-page .centro-pago-alumno-card {
+  border: 1px solid var(--centro-border) !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  padding: 20px !important;
+}
+
+.carbon-cobranzas-page .centro-pago-alumno-card:hover {
+  border-color: var(--centro-border-strong) !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07) !important;
+}
+
+.carbon-cobranzas-page .centro-pago-alumno-toggle {
+  border-radius: 8px !important;
+  outline: none !important;
+}
+
+.carbon-cobranzas-page .centro-pago-alumno-toggle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.16) !important;
+}
+
+.carbon-cobranzas-page .centro-pago-alumno-card h3 {
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+  color: var(--centro-text) !important;
+}
+
+.carbon-cobranzas-page .centro-pago-chevron {
+  margin-left: 8px !important;
+}
+
+/* Lista interna de deudas */
+.carbon-cobranzas-page .centro-pago-deudas-list {
+  border-top: 1px solid var(--centro-border) !important;
+}
+
+.carbon-cobranzas-page .centro-pago-deuda-row {
+  border: 1px solid var(--centro-border) !important;
+  border-radius: 12px !important;
+  background: var(--centro-soft) !important;
+  box-shadow: none !important;
+}
+
+.carbon-cobranzas-page .centro-pago-deuda-row h4 {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  color: var(--centro-text) !important;
+}
+
+.carbon-cobranzas-page .centro-pago-deuda-row p {
+  line-height: 1.45 !important;
+}
+
+/* Subtarjetas Mini dentro de alumno/deuda */
+.carbon-cobranzas-page .centro-pago-alumno-card [class*="ring-rose-100"] {
+  border: 1px solid #f3b8b8 !important;
+}
+
+.carbon-cobranzas-page .centro-pago-alumno-card [class*="ring-slate-100"] {
+  border: 1px solid var(--centro-border) !important;
+}
+
+/* Acciones */
+.carbon-cobranzas-page .centro-pago-action {
+  height: 40px !important;
+  border-radius: 2px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-copy {
+  border: 1px solid #161616 !important;
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-copy:hover {
+  background: #393939 !important;
+  border-color: #393939 !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-whatsapp {
+  border: 1px solid #198038 !important;
+  background: #198038 !important;
+  color: #ffffff !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-whatsapp:hover {
+  background: #0e6027 !important;
+  border-color: #0e6027 !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-history {
+  border: 1px solid var(--centro-blue) !important;
+  background: var(--centro-blue) !important;
+  color: #ffffff !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-history:hover {
+  background: #0043ce !important;
+  border-color: #0043ce !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-validate {
+  border: 1px solid #bae6fd !important;
+  background: #f0f9ff !important;
+  color: #0369a1 !important;
+}
+
+.carbon-cobranzas-page .centro-pago-action-comprobante {
+  border: 1px solid #a7f3d0 !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .carbon-cobranzas-page .centro-pago-alumno-card {
+    padding: 16px !important;
+  }
+
+  .carbon-cobranzas-page .centro-pago-action {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
