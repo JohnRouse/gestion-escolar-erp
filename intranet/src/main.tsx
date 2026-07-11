@@ -5,6 +5,7 @@ import './styles/carbon-theme.css'
 import './styles/carbon/carbon-refactor.css'
 import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
+import './styles/carbon/99-legibilidad-y-tablas.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
