@@ -10,6 +10,8 @@ export interface ColegioSaas {
   codigo?: string | null;
   logo_url?: string | null;
   color_principal?: string | null;
+  tipo_institucion?: string | null;
+  categoria_institucion?: string | null;
   estado?: string;
   rol_colegio?: string;
   es_principal?: boolean;
@@ -25,6 +27,8 @@ export interface TenantSaas {
   slug: string;
   ruc?: string | null;
   logo_url?: string | null;
+  tipo_institucion?: string | null;
+  categoria_institucion?: string | null;
   plan?: string;
   estado?: string;
 }

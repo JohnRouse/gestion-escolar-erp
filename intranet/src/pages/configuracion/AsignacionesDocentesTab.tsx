@@ -6,7 +6,16 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
-interface DocenteApi { id_persona: number; persona?: { nombres?: string; apellido_paterno?: string; apellido_materno?: string; dni?: string; }; }
+interface DocenteApi {
+  id_persona: number;
+  nombre_completo?: string;
+  persona?: {
+    nombres?: string;
+    apellido_paterno?: string;
+    apellido_materno?: string;
+    dni?: string;
+  };
+}
 interface ColegioBasico {
   id_colegio: number;
   nombre?: string | null;
@@ -58,9 +67,42 @@ const panelClass = 'rounded-[1.5rem] border border-slate-200/70 bg-white/95 shad
 const inputClass = 'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300';
 const labelClass = 'mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
 
+
+function normalizeList<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+
+  if (payload && typeof payload === 'object') {
+    const nestedData = (payload as { data?: unknown }).data;
+
+    if (Array.isArray(nestedData)) {
+      return nestedData as T[];
+    }
+  }
+
+  return [];
+}
+
 const formatearDocente = (docente: DocenteApi) => {
+  const nombreApi = docente.nombre_completo?.trim();
+
+  if (nombreApi) {
+    return nombreApi;
+  }
+
   const persona = docente.persona;
-  return [persona?.nombres, persona?.apellido_paterno, persona?.apellido_materno].filter(Boolean).join(' ') || `Docente #${docente.id_persona}`;
+
+  return (
+    [
+      persona?.nombres,
+      persona?.apellido_paterno,
+      persona?.apellido_materno,
+    ]
+      .filter(Boolean)
+      .join(' ') ||
+    `Docente #${docente.id_persona}`
+  );
 };
 
 export default function AsignacionesDocentesTab() {
@@ -86,6 +128,7 @@ export default function AsignacionesDocentesTab() {
   const [idCurso, setIdCurso] = useState('');
   const [idSeccion, setIdSeccion] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Asignacion | null>(null);
 
   const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
@@ -179,16 +222,35 @@ export default function AsignacionesDocentesTab() {
     setLoading(true);
     setMensaje(null);
     try {
+      const docentesParams = new URLSearchParams(
+        queryString.startsWith('?')
+          ? queryString.slice(1)
+          : queryString,
+      );
+
+      docentesParams.set('limit', '50');
+
       const [docentesRes, cursosRes, seccionesRes, aniosRes] = await Promise.all([
-        axios.get('/api/academicos/docentes', authHeader),
+        axios.get(
+          `/api/academicos/docentes?${docentesParams.toString()}`,
+          authHeader,
+        ),
         axios.get(`/api/academicos/cursos${queryString}`, authHeader),
         axios.get(`/api/academicos/secciones${queryString}`, authHeader),
         axios.get(`/api/academicos/anios${queryString}`, authHeader),
       ]);
-      const listaAnios: Anio[] = aniosRes.data || [];
-      setDocentes(docentesRes.data || []);
-      setCursos(cursosRes.data || []);
-      setSecciones(seccionesRes.data || []);
+      const listaDocentes =
+        normalizeList<DocenteApi>(docentesRes.data);
+      const listaCursos =
+        normalizeList<Curso>(cursosRes.data);
+      const listaSecciones =
+        normalizeList<Seccion>(seccionesRes.data);
+      const listaAnios =
+        normalizeList<Anio>(aniosRes.data);
+
+      setDocentes(listaDocentes);
+      setCursos(listaCursos);
+      setSecciones(listaSecciones);
       setAnios(listaAnios);
 
       const colegioInicial =
@@ -231,7 +293,9 @@ export default function AsignacionesDocentesTab() {
       }
       if (anio) params.set('anio_id', anio);
       const res = await axios.get(`/api/academicos/asignaciones-docentes?${params.toString()}`, authHeader);
-      setAsignaciones(res.data || []);
+      setAsignaciones(
+        normalizeList<Asignacion>(res.data),
+      );
     } catch (error: any) {
       setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudieron cargar las asignaciones docentes.' });
     }
@@ -240,16 +304,34 @@ export default function AsignacionesDocentesTab() {
   useEffect(() => { loadBase(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token, queryString]);
   useEffect(() => { if (idAnio) loadAsignaciones(idAnio); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [idAnio, queryString]);
 
+  const mostrarErrorFormulario = (text: string) => {
+    setFormError(text);
+    setMensaje(null);
+
+    showToast({
+      type: 'error',
+      title: 'Faltan datos',
+      message: text,
+    });
+  };
+
   const crearAsignacion = async () => {
     if (!token) return;
     if (!colegioSeleccionadoId) {
-      setMensaje({ type: 'error', text: 'Selecciona la institución donde se creará la asignación.' });
+      mostrarErrorFormulario(
+        'Selecciona la institución donde se creará la asignación.',
+      );
       return;
     }
+
     if (!idAnio || !idDocente || !idCurso || !idSeccion) {
-      setMensaje({ type: 'error', text: 'Selecciona año, docente, curso y sección.' });
+      mostrarErrorFormulario(
+        'Selecciona año, docente, curso y sección.',
+      );
       return;
     }
+
+    setFormError(null);
     setSaving(true);
     setMensaje(null);
     try {
@@ -387,7 +469,17 @@ export default function AsignacionesDocentesTab() {
           </label>
         </div>
         <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-500">Si una asignación ya tiene evaluaciones, no podrá eliminarse para proteger las notas registradas.</p>
+          {formError ? (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              <AlertCircle size={17} className="mt-0.5 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Si una asignación ya tiene evaluaciones, no podrá eliminarse
+              para proteger las notas registradas.
+            </p>
+          )}
           <button type="button" onClick={crearAsignacion} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.85)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
             {saving ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />}Asignar docente
           </button>

@@ -1,18 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   CalendarDays,
-  CheckCircle2,
   Edit3,
   ListChecks,
   Loader2,
   Plus,
-  Save,
-  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
+import CenteredFormModal from '../../components/CenteredFormModal';
 
 type AnioLectivo = {
   id_anio: number;
@@ -32,6 +34,11 @@ type AnioForm = {
   id_colegio: number | '';
 };
 
+type PageMessage = {
+  type: 'success' | 'error';
+  text: string;
+};
+
 const estados = [
   'Planificación',
   'Matrícula abierta',
@@ -41,17 +48,32 @@ const estados = [
 ];
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100';
+  'h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
 
-const formatDateInput = (value?: string | null) => {
+const formatDateInput = (
+  value?: string | null,
+) => {
   if (!value) return '';
   return value.slice(0, 10);
 };
 
-const formatDate = (value?: string | null) => {
+const formatDate = (
+  value?: string | null,
+) => {
   if (!value) return '—';
 
-  return new Date(value).toLocaleDateString('es-PE', {
+  const datePart = value.slice(0, 10);
+  const [year, month, day] = datePart
+    .split('-')
+    .map(Number);
+
+  if (!year || !month || !day) return '—';
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+  ).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -65,26 +87,30 @@ const estadoBadge = (estado: string) => {
     .replace(/[\u0300-\u036f]/g, '');
 
   if (normalizado.includes('matricula')) {
-    return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
   }
 
-  if (normalizado.includes('curso') || normalizado === 'activo') {
-    return 'bg-sky-50 text-sky-700 ring-sky-100';
+  if (
+    normalizado.includes('curso') ||
+    normalizado === 'activo'
+  ) {
+    return 'bg-blue-50 text-blue-700 ring-blue-200';
   }
 
-  if (normalizado.includes('planificacion')) {
-    return 'bg-amber-50 text-amber-700 ring-amber-100';
+  if (
+    normalizado.includes('planificacion')
+  ) {
+    return 'bg-amber-50 text-amber-800 ring-amber-200';
   }
 
-  if (normalizado.includes('cerrado') || normalizado.includes('archivado')) {
-    return 'bg-slate-100 text-slate-500 ring-slate-200';
-  }
-
-  return 'bg-slate-50 text-slate-500 ring-slate-100';
+  return 'bg-slate-100 text-slate-700 ring-slate-200';
 };
 
-const defaultForm = (colegioId: number | ''): AnioForm => {
-  const nextYear = new Date().getFullYear() + 1;
+const defaultForm = (
+  colegioId: number | '',
+): AnioForm => {
+  const nextYear =
+    new Date().getFullYear() + 1;
 
   return {
     nombre_anio: `Año Escolar ${nextYear}`,
@@ -97,50 +123,93 @@ const defaultForm = (colegioId: number | ''): AnioForm => {
 
 export default function AniosLectivosTab() {
   const { token } = useAuth();
-  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } =
-    useSchool();
-  const [, setSearchParams] = useSearchParams();
+
+  const {
+    tenant,
+    colegios,
+    activeScope,
+    activeColegio,
+    queryString,
+    scopeLabel,
+    institutionSingularLabel,
+  } = useSchool();
+
+  const [, setSearchParams] =
+    useSearchParams();
 
   const colegioDefault =
-    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+    activeScope.tipo === 'colegio' &&
+    activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : colegios[0]?.id_colegio || '';
 
-  const [anios, setAnios] = useState<AnioLectivo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [anios, setAnios] =
+    useState<AnioLectivo[]>([]);
 
-  const [openForm, setOpenForm] = useState(false);
-  const [editing, setEditing] = useState<AnioLectivo | null>(null);
-  const [form, setForm] = useState<AnioForm>(() => defaultForm(colegioDefault));
+  const [loading, setLoading] =
+    useState(false);
 
-  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [saving, setSaving] =
+    useState(false);
 
-  const aniosOrdenados = useMemo(() => {
-    return [...anios].sort((a, b) =>
-      String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)),
+  const [openForm, setOpenForm] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<AnioLectivo | null>(null);
+
+  const [form, setForm] =
+    useState<AnioForm>(() =>
+      defaultForm(colegioDefault),
     );
-  }, [anios]);
+
+  const [mensaje, setMensaje] =
+    useState<PageMessage | null>(null);
+
+  const aniosOrdenados = useMemo(
+    () =>
+      [...anios].sort((a, b) =>
+        String(b.fecha_inicio).localeCompare(
+          String(a.fecha_inicio),
+        ),
+      ),
+    [anios],
+  );
 
   useEffect(() => {
     fetchAnios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, queryString]);
 
   const fetchAnios = async () => {
     if (!token) return;
 
     setLoading(true);
-    setMensaje(null);
 
     try {
-      const res = await axios.get(`/api/academicos/anios${queryString}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `/api/academicos/anios${queryString}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-      setAnios(res.data || []);
+      setAnios(
+        Array.isArray(response.data)
+          ? response.data
+          : [],
+      );
     } catch (error: any) {
       setAnios([]);
-      setMensaje(error.response?.data?.message || 'No se pudieron cargar los años lectivos.');
+
+      setMensaje({
+        type: 'error',
+        text:
+          error.response?.data?.message ||
+          'No se pudieron cargar los años lectivos.',
+      });
     } finally {
       setLoading(false);
     }
@@ -153,20 +222,41 @@ export default function AniosLectivosTab() {
     setOpenForm(true);
   };
 
-  const abrirEditar = (anio: AnioLectivo) => {
+  const abrirEditar = (
+    anio: AnioLectivo,
+  ) => {
     setEditing(anio);
+
     setForm({
       nombre_anio: anio.nombre_anio,
-      fecha_inicio: formatDateInput(anio.fecha_inicio),
-      fecha_fin: formatDateInput(anio.fecha_fin),
-      estado: anio.estado || 'Planificación',
-      id_colegio: anio.id_colegio || colegioDefault,
+      fecha_inicio: formatDateInput(
+        anio.fecha_inicio,
+      ),
+      fecha_fin: formatDateInput(
+        anio.fecha_fin,
+      ),
+      estado:
+        anio.estado || 'Planificación',
+      id_colegio:
+        anio.id_colegio ||
+        colegioDefault,
     });
+
     setMensaje(null);
     setOpenForm(true);
   };
 
-  const abrirPreparacion = (anio: AnioLectivo) => {
+  const cerrarFormulario = () => {
+    if (saving) return;
+
+    setOpenForm(false);
+    setEditing(null);
+    setMensaje(null);
+  };
+
+  const abrirPreparacion = (
+    anio: AnioLectivo,
+  ) => {
     setSearchParams({
       tab: 'preparacion',
       anio_id: String(anio.id_anio),
@@ -174,15 +264,34 @@ export default function AniosLectivosTab() {
   };
 
   const validarForm = () => {
-    if (!form.nombre_anio.trim()) return 'Ingresa el nombre del año lectivo.';
-    if (!form.fecha_inicio) return 'Ingresa la fecha de inicio.';
-    if (!form.fecha_fin) return 'Ingresa la fecha de fin.';
-    if (!form.id_colegio) return 'Selecciona el colegio al que pertenece el año lectivo.';
+    if (!form.nombre_anio.trim()) {
+      return 'Ingresa el nombre del año lectivo.';
+    }
 
-    const inicio = new Date(`${form.fecha_inicio}T00:00:00`);
-    const fin = new Date(`${form.fecha_fin}T00:00:00`);
+    if (!form.fecha_inicio) {
+      return 'Ingresa la fecha de inicio.';
+    }
 
-    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+    if (!form.fecha_fin) {
+      return 'Ingresa la fecha de fin.';
+    }
+
+    if (!form.id_colegio) {
+      return `Selecciona la ${institutionSingularLabel.toLowerCase()} a la que pertenece el año lectivo.`;
+    }
+
+    const inicio = new Date(
+      `${form.fecha_inicio}T00:00:00`,
+    );
+
+    const fin = new Date(
+      `${form.fecha_fin}T00:00:00`,
+    );
+
+    if (
+      Number.isNaN(inicio.getTime()) ||
+      Number.isNaN(fin.getTime())
+    ) {
       return 'Las fechas ingresadas no son válidas.';
     }
 
@@ -196,10 +305,14 @@ export default function AniosLectivosTab() {
   const guardarAnio = async () => {
     if (!token) return;
 
-    const error = validarForm();
+    const validationError =
+      validarForm();
 
-    if (error) {
-      setMensaje(error);
+    if (validationError) {
+      setMensaje({
+        type: 'error',
+        text: validationError,
+      });
       return;
     }
 
@@ -207,270 +320,171 @@ export default function AniosLectivosTab() {
     setMensaje(null);
 
     const payload = {
-      nombre_anio: form.nombre_anio.trim(),
+      nombre_anio:
+        form.nombre_anio.trim(),
       fecha_inicio: form.fecha_inicio,
       fecha_fin: form.fecha_fin,
       estado: form.estado,
-      id_tenant: tenant?.id_tenant || null,
-      id_colegio: Number(form.id_colegio),
+      id_tenant:
+        tenant?.id_tenant || null,
+      id_colegio: Number(
+        form.id_colegio,
+      ),
     };
 
     try {
       if (editing) {
-        await axios.put(`/api/academicos/anios/${editing.id_anio}`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setMensaje('Año lectivo actualizado correctamente.');
+        await axios.put(
+          `/api/academicos/anios/${editing.id_anio}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
       } else {
-        await axios.post('/api/academicos/anios', payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setMensaje('Año lectivo creado correctamente.');
+        await axios.post(
+          '/api/academicos/anios',
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
       }
+
+      const successText = editing
+        ? 'Año lectivo actualizado correctamente.'
+        : 'Año lectivo creado correctamente.';
 
       setOpenForm(false);
       setEditing(null);
+
+      setMensaje({
+        type: 'success',
+        text: successText,
+      });
+
       await fetchAnios();
     } catch (error: any) {
-      setMensaje(error.response?.data?.message || 'No se pudo guardar el año lectivo.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const crearAnioRapido = async (year: number, estado: string) => {
-    if (!token || !colegioDefault) return;
-
-    setSaving(true);
-    setMensaje(null);
-
-    try {
-      await axios.post(
-        '/api/academicos/anios',
-        {
-          nombre_anio: `Año Escolar ${year}`,
-          fecha_inicio: `${year}-03-01`,
-          fecha_fin: `${year}-12-20`,
-          estado,
-          id_tenant: tenant?.id_tenant || null,
-          id_colegio: colegioDefault,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      setMensaje(`Año Escolar ${year} creado correctamente.`);
-      await fetchAnios();
-    } catch (error: any) {
-      setMensaje(error.response?.data?.message || `No se pudo crear el año ${year}.`);
+      setMensaje({
+        type: 'error',
+        text:
+          error.response?.data?.message ||
+          'No se pudo guardar el año lectivo.',
+      });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[26px] bg-slate-50 p-5 ring-1 ring-slate-100">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <p className="text-sm font-black text-slate-900">Años lectivos</p>
-            <p className="mt-1 text-sm font-bold text-slate-400">
-              Contexto actual: {scopeLabel}. Configura el periodo que Matrícula podrá usar.
-            </p>
-          </div>
+    <div className="config-anios-page space-y-5">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-sm font-bold text-slate-950">
+            Años lectivos
+          </p>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => crearAnioRapido(new Date().getFullYear(), 'En curso')}
-              disabled={saving || !colegioDefault}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              <CheckCircle2 size={16} />
-              Crear año actual
-            </button>
-
-            <button
-              type="button"
-              onClick={() => crearAnioRapido(new Date().getFullYear() + 1, 'Planificación')}
-              disabled={saving || !colegioDefault}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              <CalendarDays size={16} />
-              Crear próximo año
-            </button>
-
-            <button
-              type="button"
-              onClick={abrirNuevo}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
-            >
-              <Plus size={16} />
-              Nuevo año
-            </button>
-          </div>
+          <p className="mt-1 text-sm font-normal leading-6 text-slate-600">
+            Contexto actual: {scopeLabel}. Configura
+            el periodo que Matrícula podrá utilizar.
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={abrirNuevo}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800"
+        >
+          <Plus size={16} />
+          Nuevo año
+        </button>
       </div>
 
-      {mensaje && (
-        <div className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-600 ring-1 ring-slate-100">
-          {mensaje}
+      {mensaje && !openForm && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+            mensaje.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {mensaje.text}
         </div>
       )}
 
-      {openForm && (
-        <div className="rounded-[26px] bg-white p-5 ring-1 ring-slate-100">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-black text-slate-900">
-                {editing ? 'Editar año lectivo' : 'Nuevo año lectivo'}
-              </p>
-              <p className="mt-1 text-xs font-bold text-slate-400">
-                Usa estados claros: Planificación, Matrícula abierta, En curso, Cerrado o Archivado.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setOpenForm(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-5">
-            <label className="lg:col-span-2">
-              <Label>Nombre</Label>
-              <input
-                value={form.nombre_anio}
-                onChange={(e) => setForm({ ...form, nombre_anio: e.target.value })}
-                placeholder="Año Escolar 2026"
-                className={inputClass}
-              />
-            </label>
-
-            <label>
-              <Label>Inicio</Label>
-              <input
-                type="date"
-                value={form.fecha_inicio}
-                onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-
-            <label>
-              <Label>Fin</Label>
-              <input
-                type="date"
-                value={form.fecha_fin}
-                onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-
-            <label>
-              <Label>Estado</Label>
-              <select
-                value={form.estado}
-                onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                className={inputClass}
-              >
-                {estados.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {estado}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="lg:col-span-2">
-              <Label>Colegio</Label>
-              <select
-                value={form.id_colegio}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    id_colegio: e.target.value ? Number(e.target.value) : '',
-                  })
-                }
-                className={inputClass}
-              >
-                <option value="">Seleccionar colegio</option>
-                {colegios.map((colegio) => (
-                  <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                    {colegio.nombre_corto || colegio.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="mt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setOpenForm(false)}
-              className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={guardarAnio}
-              disabled={saving}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-black text-white disabled:opacity-50"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              Guardar
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-[26px] bg-white ring-1 ring-slate-100">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         {loading ? (
           <div className="flex min-h-[260px] items-center justify-center">
-            <Loader2 size={24} className="animate-spin text-accent-500" />
+            <Loader2
+              size={24}
+              className="animate-spin text-blue-600"
+            />
           </div>
         ) : aniosOrdenados.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center text-center">
-            <CalendarDays size={32} className="text-slate-300" />
-            <p className="mt-3 text-sm font-black text-slate-600">Sin años lectivos</p>
-            <p className="mt-1 text-sm font-bold text-slate-400">
-              Crea primero el año lectivo para poder matricular correctamente.
+            <CalendarDays
+              size={32}
+              className="text-slate-400"
+            />
+
+            <p className="mt-3 text-sm font-bold text-slate-800">
+              Sin años lectivos
+            </p>
+
+            <p className="mt-1 text-sm text-slate-600">
+              Crea primero un año lectivo para poder
+              matricular correctamente.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-200">
             {aniosOrdenados.map((anio) => {
-              const colegio = colegios.find((item) => item.id_colegio === anio.id_colegio);
+              const colegio = colegios.find(
+                (item) =>
+                  item.id_colegio ===
+                  anio.id_colegio,
+              );
 
               return (
                 <div
                   key={anio.id_anio}
-                  className="grid gap-4 p-5 lg:grid-cols-[1.1fr_1fr_1fr_auto] lg:items-center"
+                  className="grid gap-4 p-5 transition hover:bg-slate-50 lg:grid-cols-[1.1fr_1fr_0.7fr_auto] lg:items-center"
                 >
                   <div>
-                    <p className="text-sm font-black text-slate-900">{anio.nombre_anio}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
-                      {colegio?.nombre || colegio?.nombre_corto || 'Colegio no identificado'}
+                    <p className="text-sm font-bold text-slate-950">
+                      {anio.nombre_anio}
+                    </p>
+
+                    <p className="mt-1 text-xs font-medium text-slate-600">
+                      {colegio?.nombre ||
+                        colegio?.nombre_corto ||
+                        'Institución no identificada'}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-sm font-black text-slate-700">
-                      {formatDate(anio.fecha_inicio)} - {formatDate(anio.fecha_fin)}
+                    <p className="text-sm font-semibold text-slate-800">
+                      {formatDate(
+                        anio.fecha_inicio,
+                      )}{' '}
+                      -{' '}
+                      {formatDate(
+                        anio.fecha_fin,
+                      )}
                     </p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
+
+                    <p className="mt-1 text-xs text-slate-600">
                       ID año: {anio.id_anio}
                     </p>
                   </div>
 
                   <div>
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 ${estadoBadge(
+                      className={`inline-flex rounded-md px-3 py-1 text-xs font-bold ring-1 ${estadoBadge(
                         anio.estado,
                       )}`}
                     >
@@ -481,8 +495,10 @@ export default function AniosLectivosTab() {
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     <button
                       type="button"
-                      onClick={() => abrirPreparacion(anio)}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 text-sm font-black text-blue-700 transition hover:bg-blue-100"
+                      onClick={() =>
+                        abrirPreparacion(anio)
+                      }
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
                     >
                       <ListChecks size={16} />
                       Preparación
@@ -490,8 +506,10 @@ export default function AniosLectivosTab() {
 
                     <button
                       type="button"
-                      onClick={() => abrirEditar(anio)}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                      onClick={() =>
+                        abrirEditar(anio)
+                      }
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
                     >
                       <Edit3 size={16} />
                       Editar
@@ -503,13 +521,157 @@ export default function AniosLectivosTab() {
           </div>
         )}
       </div>
+
+      <CenteredFormModal
+        open={openForm}
+        eyebrow="Año lectivo"
+        title={
+          editing
+            ? 'Editar año lectivo'
+            : 'Nuevo año lectivo'
+        }
+        description="Define el nombre, las fechas, el estado y la institución a la que pertenecerá."
+        message={
+          openForm ? mensaje?.text : null
+        }
+        messageTone={
+          mensaje?.type || 'info'
+        }
+        saving={saving}
+        submitLabel={
+          editing
+            ? 'Guardar cambios'
+            : 'Crear año lectivo'
+        }
+        maxWidthClassName="max-w-3xl"
+        onClose={cerrarFormulario}
+        onSubmit={guardarAnio}
+      >
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="md:col-span-2">
+            <Label>Nombre</Label>
+
+            <input
+              value={form.nombre_anio}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  nombre_anio:
+                    event.target.value,
+                })
+              }
+              placeholder="Año Escolar 2027"
+              className={inputClass}
+              autoFocus
+            />
+          </label>
+
+          <label>
+            <Label>Fecha de inicio</Label>
+
+            <input
+              type="date"
+              value={form.fecha_inicio}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  fecha_inicio:
+                    event.target.value,
+                })
+              }
+              className={inputClass}
+            />
+          </label>
+
+          <label>
+            <Label>Fecha de fin</Label>
+
+            <input
+              type="date"
+              value={form.fecha_fin}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  fecha_fin:
+                    event.target.value,
+                })
+              }
+              className={inputClass}
+            />
+          </label>
+
+          <label>
+            <Label>Estado</Label>
+
+            <select
+              value={form.estado}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  estado: event.target.value,
+                })
+              }
+              className={inputClass}
+            >
+              {estados.map((estado) => (
+                <option
+                  key={estado}
+                  value={estado}
+                >
+                  {estado}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <Label>
+              {institutionSingularLabel}
+            </Label>
+
+            <select
+              value={form.id_colegio}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  id_colegio:
+                    event.target.value
+                      ? Number(
+                          event.target.value,
+                        )
+                      : '',
+                })
+              }
+              className={inputClass}
+            >
+              <option value="">
+                Seleccionar institución
+              </option>
+
+              {colegios.map((colegio) => (
+                <option
+                  key={colegio.id_colegio}
+                  value={colegio.id_colegio}
+                >
+                  {colegio.nombre ||
+                    colegio.nombre_corto}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </CenteredFormModal>
     </div>
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+    <span className="mb-2 block text-xs font-bold uppercase tracking-[0.04em] text-slate-600">
       {children}
     </span>
   );

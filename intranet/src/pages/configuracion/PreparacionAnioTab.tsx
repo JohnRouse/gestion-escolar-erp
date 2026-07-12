@@ -95,26 +95,26 @@ const estadoUi: Record<
   listo: {
     label: 'Listo',
     icon: CheckCircle2,
-    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-    card: 'border-emerald-100 bg-emerald-50/45',
+    badge: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+    card: 'border-slate-200 bg-white',
   },
   parcial: {
     label: 'Parcial',
     icon: Clock3,
-    badge: 'bg-amber-50 text-amber-700 ring-amber-100',
-    card: 'border-amber-100 bg-amber-50/45',
+    badge: 'bg-amber-50 text-amber-800 ring-amber-200',
+    card: 'border-slate-200 bg-white',
   },
   pendiente: {
     label: 'Pendiente',
     icon: AlertTriangle,
-    badge: 'bg-orange-50 text-orange-700 ring-orange-100',
-    card: 'border-orange-100 bg-orange-50/40',
+    badge: 'bg-orange-50 text-orange-800 ring-orange-200',
+    card: 'border-slate-200 bg-white',
   },
   bloqueo: {
     label: 'Bloquea uso',
     icon: XCircle,
-    badge: 'bg-rose-50 text-rose-700 ring-rose-100',
-    card: 'border-rose-100 bg-rose-50/40',
+    badge: 'bg-rose-50 text-rose-800 ring-rose-200',
+    card: 'border-slate-200 bg-white',
   },
   no_aplica: {
     label: 'No aplica aún',
@@ -350,7 +350,7 @@ export default function PreparacionAnioTab() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="config-preparacion-page space-y-5">
       <section className="rounded-[26px] bg-slate-50 p-5 ring-1 ring-slate-100">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -524,7 +524,7 @@ export default function PreparacionAnioTab() {
                     return (
                       <div
                         key={item.clave}
-                        className={`rounded-[22px] border p-4 transition hover:-translate-y-0.5 hover:shadow-sm ${ui.card}`}
+                        className={`preparacion-item preparacion-item--${item.estado} rounded-[18px] border p-4 transition hover:shadow-sm ${ui.card}`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex gap-3">
@@ -534,17 +534,17 @@ export default function PreparacionAnioTab() {
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-sm font-black text-slate-900">{item.titulo}</p>
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 ring-1 ring-slate-100">
+                                <span className="preparacion-obligation-badge rounded-md bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-700 ring-1 ring-slate-300">
                                   {item.obligatorio === false ? 'Opcional' : 'Obligatorio'}
                                 </span>
                               </div>
-                              <p className="mt-1 text-sm font-bold leading-5 text-slate-500">
+                              <p className="mt-1 text-sm font-normal leading-6 text-slate-600">
                                 {item.mensaje}
                               </p>
                             </div>
                           </div>
 
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${ui.badge}`}>
+                          <span className={`preparacion-status-badge shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold ring-1 ${ui.badge}`}>
                             {ui.label}
                           </span>
                         </div>
@@ -608,17 +608,41 @@ function MetricCard({
   value: number;
   tone: 'emerald' | 'amber' | 'rose';
 }) {
-  const tones = {
-    emerald: 'text-emerald-700 bg-emerald-50 ring-emerald-100',
-    amber: 'text-amber-700 bg-amber-50 ring-amber-100',
-    rose: 'text-rose-700 bg-rose-50 ring-rose-100',
-  };
+  const styles = {
+    emerald: {
+      accent: 'bg-emerald-500',
+      label: 'text-emerald-700',
+    },
+    amber: {
+      accent: 'bg-amber-500',
+      label: 'text-amber-700',
+    },
+    rose: {
+      accent: 'bg-rose-500',
+      label: 'text-rose-700',
+    },
+  }[tone];
 
   return (
-    <div className={`rounded-[26px] p-5 ring-1 ${tones[tone]}`}>
-      <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">{label}</p>
-      <p className="mt-3 text-3xl font-black">{value}</p>
-      <p className="mt-1 text-sm font-bold opacity-70">Configuraciones</p>
+    <div className="preparacion-metric rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span
+          className={`h-2.5 w-2.5 rounded-full ${styles.accent}`}
+        />
+        <p
+          className={`text-xs font-bold uppercase tracking-[0.04em] ${styles.label}`}
+        >
+          {label}
+        </p>
+      </div>
+
+      <p className="mt-3 text-3xl font-bold text-slate-950">
+        {value}
+      </p>
+
+      <p className="mt-1 text-sm font-normal text-slate-600">
+        Configuraciones
+      </p>
     </div>
   );
 }

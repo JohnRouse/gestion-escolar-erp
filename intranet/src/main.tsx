@@ -7,6 +7,7 @@ import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
 import './styles/carbon/99-legibilidad-y-tablas.css';
 import './styles/carbon/100-comunidad-login-final.css';
+import './styles/carbon/101-configuracion-ux.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

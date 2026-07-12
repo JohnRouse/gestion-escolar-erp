@@ -26,11 +26,55 @@ interface SchoolContextType {
   queryParams: Record<string, string | number>;
   queryString: string;
   scopeLabel: string;
+  institutionSingularLabel: string;
+  institutionPluralLabel: string;
 }
 
 const SchoolContext = createContext<SchoolContextType | null>(null);
 
 const STORAGE_KEY = 'school_context_intranet';
+
+type InstitutionKind = 'colegio' | 'instituto' | 'academia';
+
+function resolveInstitutionKind(
+  ...values: Array<string | null | undefined>
+): InstitutionKind {
+  const source = values
+    .find((value) => Boolean(value?.trim()))
+    ?.trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (source?.includes('academ')) return 'academia';
+  if (source?.includes('institut')) return 'instituto';
+
+  return 'colegio';
+}
+
+function getInstitutionLabels(kind: InstitutionKind) {
+  if (kind === 'academia') {
+    return {
+      singular: 'Academia',
+      plural: 'Academias',
+      all: 'Todas las academias',
+    };
+  }
+
+  if (kind === 'instituto') {
+    return {
+      singular: 'Instituto',
+      plural: 'Institutos',
+      all: 'Todos los institutos',
+    };
+  }
+
+  return {
+    singular: 'Colegio',
+    plural: 'Colegios',
+    all: 'Todos los colegios',
+  };
+}
 
 function readStoredScope(): SchoolScope | null {
   try {
@@ -211,10 +255,27 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     return value ? `?${value}` : '';
   }, [queryParams]);
 
+  const institutionKind = useMemo(
+    () =>
+      resolveInstitutionKind(
+        tenant?.tipo_institucion,
+        tenant?.categoria_institucion,
+        colegios[0]?.tipo_institucion,
+        colegios[0]?.categoria_institucion,
+      ),
+    [tenant, colegios],
+  );
+
+  const institutionLabels = getInstitutionLabels(institutionKind);
+  const institutionSingularLabel = institutionLabels.singular;
+  const institutionPluralLabel = institutionLabels.plural;
+
   const scopeLabel =
     activeScope.tipo === 'todos'
-      ? 'Todos los colegios'
-      : activeColegio?.nombre || activeColegio?.nombre_corto || 'Colegio';
+      ? institutionLabels.all
+      : activeColegio?.nombre ||
+        activeColegio?.nombre_corto ||
+        institutionSingularLabel;
 
   return (
     <SchoolContext.Provider
@@ -230,6 +291,8 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         queryParams,
         queryString,
         scopeLabel,
+        institutionSingularLabel,
+        institutionPluralLabel,
       }}
     >
       {children}

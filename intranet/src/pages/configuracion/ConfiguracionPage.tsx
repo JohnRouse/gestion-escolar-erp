@@ -55,7 +55,11 @@ const TABS = [
 
 export default function ConfiguracionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeScope, scopeLabel } = useSchool();
+  const {
+    activeScope,
+    scopeLabel,
+    institutionPluralLabel,
+  } = useSchool();
 
   const tabActivo = searchParams.get('tab') || 'anios';
 
@@ -84,7 +88,7 @@ export default function ConfiguracionPage() {
             value: tabActual.label,
           },
           {
-            label: 'Contexto',
+            label: institutionPluralLabel,
             value: scopeLabel,
           },
         ]}

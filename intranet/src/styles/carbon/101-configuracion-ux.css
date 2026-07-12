@@ -1,0 +1,126 @@
+/* ==========================================================
+   101 - Configuración UX
+   Ajustes localizados para cursos y preparación del año.
+   ========================================================== */
+
+.config-cursos-page .config-cursos-hero {
+  background:
+    linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #eef5ff 100%
+    ) !important;
+}
+
+.config-cursos-page .config-primary-action {
+  box-shadow:
+    0 8px 20px -12px rgba(15, 98, 254, 0.65);
+}
+
+.config-cursos-page .config-cursos-kpi {
+  position: relative;
+  overflow: hidden;
+}
+
+.config-cursos-page
+  .config-cursos-kpi::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #0f62fe;
+  content: "";
+}
+
+.config-cursos-page
+  .config-cursos-kpi:nth-child(2)::before {
+  background: #8a3ffc;
+}
+
+.config-cursos-page
+  .config-cursos-kpi:nth-child(3)::before {
+  background: #64748b;
+}
+
+.config-cursos-page .config-area-card {
+  border-color: #cbd5e1 !important;
+  box-shadow:
+    0 6px 18px -16px rgba(15, 23, 42, 0.35) !important;
+}
+
+.config-cursos-page
+  .config-area-card__header {
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    ) !important;
+}
+
+.config-cursos-page .config-course-row {
+  min-height: 54px;
+}
+
+.config-cursos-page
+  .config-icon-action:focus-visible,
+.config-cursos-page
+  .config-primary-action:focus-visible,
+.config-cursos-page
+  .config-secondary-action:focus-visible {
+  outline: 3px solid rgba(15, 98, 254, 0.2);
+  outline-offset: 2px;
+}
+
+/* Preparación: estado por borde, no por fondo completo. */
+
+.config-preparacion-page
+  .preparacion-item {
+  border-left-width: 4px !important;
+  box-shadow:
+    0 3px 12px -12px rgba(15, 23, 42, 0.4);
+}
+
+.config-preparacion-page
+  .preparacion-item--listo {
+  border-left-color: #24a148 !important;
+}
+
+.config-preparacion-page
+  .preparacion-item--parcial {
+  border-left-color: #f1c21b !important;
+}
+
+.config-preparacion-page
+  .preparacion-item--pendiente {
+  border-left-color: #ff832b !important;
+}
+
+.config-preparacion-page
+  .preparacion-item--bloqueo {
+  border-left-color: #da1e28 !important;
+}
+
+.config-preparacion-page
+  .preparacion-item--no_aplica {
+  border-left-color: #8d8d8d !important;
+}
+
+.config-preparacion-page
+  .preparacion-obligation-badge,
+.config-preparacion-page
+  .preparacion-status-badge {
+  white-space: nowrap;
+  letter-spacing: 0.02em !important;
+}
+
+.config-preparacion-page
+  .preparacion-metric {
+  min-height: 132px;
+}
+
+.config-preparacion-page
+  .preparacion-item p,
+.config-preparacion-page
+  .preparacion-item span {
+  text-rendering: optimizeLegibility;
+}
