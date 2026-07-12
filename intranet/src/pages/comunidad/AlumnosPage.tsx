@@ -436,7 +436,7 @@ export default function AlumnosPage() {
       />
 
       {/* ── Barra de búsqueda y filtros ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="community-toolbar flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
         {/* Búsqueda */}
         <div className="relative flex-1">
           <Search
@@ -450,7 +450,7 @@ export default function AlumnosPage() {
               setQ(e.target.value);
             }}
             placeholder="Buscar por código, DNI, alumno, apoderado, distrito…"
-            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+            className="community-search-input h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           />
           {q && (
             <button
@@ -472,7 +472,7 @@ export default function AlumnosPage() {
           <select
             value={estado}
             onChange={(e) => { setPage(1); setEstado(e.target.value); }}
-            className="h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 py-0 pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+            className="community-filter-select h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 py-0 pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           >
             <option value="Todos">Todos los estados</option>
             <option value="Pre-matriculado">Pre-matriculado</option>
@@ -501,8 +501,8 @@ export default function AlumnosPage() {
       {/* ── Tabla de alumnos ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         <CommunityTableHeader
-          columns={['Alumno', 'Matrícula', 'Apoderados vinculados']}
-          gridClassName="xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
+          columns={['Alumno', 'Matrícula']}
+          gridClassName="xl:grid-cols-[minmax(0,1.9fr)_minmax(260px,1.1fr)_auto]"
         />
 
         {loading && data.length === 0 ? (

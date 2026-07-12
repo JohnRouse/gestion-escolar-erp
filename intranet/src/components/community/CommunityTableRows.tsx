@@ -1,10 +1,11 @@
-import { Briefcase, Eye, Mail, Phone } from 'lucide-react';
-import PersonAvatar from '../PersonAvatar';
 import {
-  LinkedGuardiansCompact,
-  LinkedStudentsCompact,
-  communityPersonName,
-} from './CommunityLinkedPeople';
+  Briefcase,
+  Eye,
+  Mail,
+  Phone,
+} from 'lucide-react';
+import PersonAvatar from '../PersonAvatar';
+import { communityPersonName } from './CommunityLinkedPeople';
 
 type PersonaResumen = {
   dni?: string | null;
@@ -50,35 +51,46 @@ export function StudentTableRow({
   assetUrl,
 }: StudentRowProps) {
   const ultimaMatricula = alumno.matriculas?.[0];
-  const apoderadosList = alumno.apoderados || [];
   const nombre = communityPersonName(alumno.persona);
   const estadoMatricula = ultimaMatricula?.estado_matricula;
 
   return (
-    <div
-      className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[2fr_1.4fr_1.4fr_auto]"
-    >
+    <div className="carbon-list-row group grid items-center gap-6 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.9fr)_minmax(260px,1.1fr)_auto]">
       <div className="flex min-w-0 items-center gap-3">
         {alumno.avatar_url ? (
           <img
             src={assetUrl(alumno.avatar_url)}
             alt={nombre}
-            className="h-11 w-11 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
+            className="h-12 w-12 shrink-0 rounded-xl bg-white object-cover ring-1 ring-slate-200"
           />
         ) : (
-          <PersonAvatar persona={alumno.persona} size="md" rounded="2xl" />
+          <PersonAvatar
+            persona={alumno.persona}
+            size="md"
+            rounded="xl"
+          />
         )}
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-slate-900">
+          <p className="community-person-name text-sm font-semibold text-slate-950">
             {nombre}
           </p>
-          <p className="erp-compact-meta mt-0.5 truncate text-xs text-slate-400">
-            <span className="erp-compact-code font-semibold text-slate-500">
+
+          <p className="community-id-line mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-600">
+            <span className="erp-compact-code">
               {getCodigo(alumno)}
             </span>
-            {' · '}DNI {alumno.persona.dni}
-            {alumno.persona.distrito ? ` · ${alumno.persona.distrito}` : ''}
+
+            <span aria-hidden="true">·</span>
+
+            <span>DNI {alumno.persona.dni || '—'}</span>
+
+            {alumno.persona.distrito && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{alumno.persona.distrito}</span>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -86,37 +98,40 @@ export function StudentTableRow({
       <div className="min-w-0">
         {ultimaMatricula ? (
           <>
-            <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-semibold text-slate-800">
-                {ultimaMatricula.seccion?.grado?.nombre_grado || 'Grado'}{' '}
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-slate-900">
+                {ultimaMatricula.seccion?.grado?.nombre_grado ||
+                  'Grado'}{' '}
                 &quot;{ultimaMatricula.seccion?.letra || '-'}&quot;
               </p>
+
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${getEstadoBadge(estadoMatricula)}`}
+                className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ${getEstadoBadge(
+                  estadoMatricula,
+                )}`}
               >
                 {estadoMatricula || '—'}
               </span>
             </div>
-            <p className="mt-0.5 truncate text-xs text-slate-400">
+
+            <p className="mt-1 text-xs text-slate-600">
               {ultimaMatricula?.colegio?.nombre || '—'}
             </p>
           </>
         ) : (
-          <span className="text-xs text-slate-400">Sin matrícula visible</span>
+          <span className="text-xs text-slate-600">
+            Sin matrícula visible
+          </span>
         )}
-      </div>
-
-      <div className="min-w-0">
-        <LinkedGuardiansCompact items={apoderadosList} />
       </div>
 
       <div className="flex justify-end">
         <button
           type="button"
           onClick={() => onOpen(alumno.id_persona)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
         >
-          <Eye size={13} />
+          <Eye size={15} />
           Ver
         </button>
       </div>
@@ -133,28 +148,33 @@ export function GuardianTableRow({
   const nombre = communityPersonName(apoderado.persona);
 
   return (
-    <div
-      className="carbon-list-row group grid items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50 xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto]"
-    >
+    <div className="carbon-list-row group grid items-center gap-6 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1.2fr)_minmax(120px,0.45fr)_auto]">
       <div className="flex min-w-0 items-center gap-3">
-        <PersonAvatar persona={apoderado.persona} size="md" rounded="2xl" />
+        <PersonAvatar
+          persona={apoderado.persona}
+          size="md"
+          rounded="xl"
+        />
+
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-slate-900">{nombre}</p>
-          <p className="erp-compact-meta mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-400">
-            <span className="erp-compact-code font-semibold text-slate-500">
-              DNI {apoderado.persona.dni}
+          <p className="community-person-name text-sm font-semibold text-slate-950">
+            {nombre}
+          </p>
+
+          <p className="community-id-line mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-600">
+            <span className="erp-compact-code">
+              DNI {apoderado.persona.dni || '—'}
             </span>
+
+            <span aria-hidden="true">·</span>
+
             {apoderado.persona.telefono ? (
               <>
-                <span className="text-slate-300">·</span>
-                <Phone size={10} className="shrink-0" />
-                {apoderado.persona.telefono}
+                <Phone size={12} className="shrink-0" />
+                <span>{apoderado.persona.telefono}</span>
               </>
             ) : (
-              <>
-                <span className="text-slate-300">·</span>
-                Sin teléfono
-              </>
+              <span>Sin teléfono</span>
             )}
           </p>
         </div>
@@ -162,28 +182,36 @@ export function GuardianTableRow({
 
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <Briefcase size={12} className="shrink-0 text-slate-400" />
-          <p className="truncate text-sm font-semibold text-slate-700">
+          <Briefcase
+            size={14}
+            className="shrink-0 text-slate-500"
+          />
+
+          <p className="text-sm font-semibold text-slate-900">
             {apoderado.ocupacion || 'Sin ocupación'}
           </p>
         </div>
+
         {apoderado.persona.correo ? (
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-            <Mail size={10} className="shrink-0" />
+          <p className="mt-1 flex items-start gap-1.5 break-all text-xs text-slate-600">
+            <Mail
+              size={12}
+              className="mt-0.5 shrink-0"
+            />
             {apoderado.persona.correo}
           </p>
         ) : (
-          <p className="mt-0.5 text-xs text-slate-400">Sin correo</p>
+          <p className="mt-1 text-xs text-slate-600">
+            Sin correo registrado
+          </p>
         )}
-      </div>
-
-      <div className="min-w-0">
-        <LinkedStudentsCompact items={apoderado.estudiantes || []} />
       </div>
 
       <div>
         <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${estadoClass(apoderado)}`}
+          className={`inline-flex min-h-8 items-center rounded-md px-3 py-1 text-xs font-semibold ring-1 ${estadoClass(
+            apoderado,
+          )}`}
         >
           {estadoLabel(apoderado)}
         </span>
@@ -193,9 +221,9 @@ export function GuardianTableRow({
         <button
           type="button"
           onClick={() => onOpen(apoderado.id_persona)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-accent-300 hover:bg-accent-50 hover:text-accent-600"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
         >
-          <Eye size={13} />
+          <Eye size={15} />
           Ver
         </button>
       </div>

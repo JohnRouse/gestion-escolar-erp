@@ -1,0 +1,207 @@
+/* ==========================================================
+   100 - Comunidad y Login final
+   Prioriza contraste y lectura para usuarios mayores.
+   ========================================================== */
+
+:root {
+  --community-blue: #0f62fe;
+  --community-blue-dark: #0043ce;
+  --community-header: #262626;
+  --community-border: #c5ced8;
+  --community-row-border: #d7dee7;
+  --community-muted: #475569;
+}
+
+/* ==========================================================
+   Cabeceras de tablas
+   ========================================================== */
+
+.carbon-community-page .carbon-list-header {
+  min-height: 50px !important;
+  align-items: center !important;
+  background: var(--community-header) !important;
+  border-bottom: 3px solid var(--community-blue) !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .carbon-list-header span {
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.015em !important;
+  word-spacing: 0 !important;
+}
+
+/* ==========================================================
+   Filas y panel
+   ========================================================== */
+
+.carbon-community-page .carbon-list-panel {
+  overflow: hidden !important;
+  border: 1px solid var(--community-border) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .carbon-list-row {
+  min-height: 86px !important;
+  border-bottom: 1px solid var(--community-row-border) !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page .carbon-list-row:nth-child(even) {
+  background: #f8fafc !important;
+}
+
+.carbon-community-page .carbon-list-row:hover {
+  background: #edf5ff !important;
+}
+
+.carbon-community-page .community-person-name {
+  color: #161616 !important;
+  font-family:
+    "IBM Plex Sans",
+    "Inter",
+    system-ui,
+    sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  font-kerning: normal !important;
+}
+
+.carbon-community-page .community-id-line,
+.carbon-community-page .erp-compact-code {
+  color: var(--community-muted) !important;
+  font-family:
+    "IBM Plex Sans",
+    "Inter",
+    system-ui,
+    sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0 !important;
+  word-spacing: 0 !important;
+  font-kerning: normal !important;
+  font-variant-numeric: proportional-nums !important;
+  font-feature-settings:
+    "kern" 1,
+    "pnum" 1 !important;
+  text-transform: none !important;
+}
+
+.carbon-community-page .carbon-list-row p,
+.carbon-community-page .carbon-list-row span,
+.carbon-community-page .carbon-list-row button {
+  text-rendering: optimizeLegibility !important;
+}
+
+.carbon-community-page .carbon-list-row p[class*="text-xs"] {
+  color: var(--community-muted) !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0 !important;
+}
+
+.carbon-community-page .carbon-list-row button {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+/* ==========================================================
+   Buscadores y filtros
+   ========================================================== */
+
+.carbon-community-page .community-search-input,
+.carbon-community-page .community-filter-select {
+  min-height: 46px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+.carbon-community-page .community-search-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* ==========================================================
+   Relaciones dentro de los modales
+   ========================================================== */
+
+.carbon-community-page
+  [class*="md:grid-cols-2"]
+  > button
+  p,
+.carbon-community-page
+  [class*="md:grid-cols-2"]
+  > button
+  span {
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* ==========================================================
+   Login azul institucional
+   ========================================================== */
+
+.erp-login-page,
+.erp-login-page button,
+.erp-login-page input,
+.erp-login-page label,
+.erp-login-page p,
+.erp-login-page span {
+  font-family:
+    "IBM Plex Sans",
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif !important;
+  letter-spacing: 0 !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+.erp-login-page .erp-login-hero-title {
+  color: #ffffff !important;
+}
+
+.erp-login-page .erp-login-hero-accent {
+  color: #78a9ff !important;
+}
+
+.erp-login-page input:-webkit-autofill,
+.erp-login-page input:-webkit-autofill:hover,
+.erp-login-page input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #161616 !important;
+  -webkit-box-shadow:
+    0 0 0 1000px #ffffff inset !important;
+  transition:
+    background-color 9999s ease-out 0s;
+}
+
+.erp-login-page input:focus {
+  border-color: var(--community-blue) !important;
+  box-shadow:
+    0 0 0 4px rgba(15, 98, 254, 0.12) !important;
+}
+
+.erp-login-page button[type="submit"] {
+  background: var(--community-blue) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.erp-login-page button[type="submit"]:hover {
+  background: var(--community-blue-dark) !important;
+  transform: none !important;
+}

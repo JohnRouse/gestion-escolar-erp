@@ -51,7 +51,7 @@ type ApoderadoItem = {
   estudiantes?: {
     parentesco: string;
     estudiante: {
-      id_persona: number; codigo_estudiante: string;
+      id_persona: number; codigo_estudiante: string; avatar_url?: string | null;
       codigos_colegio?: { id_colegio: number; codigo: string }[];
       persona: { dni: string; nombres: string; apellido_paterno: string; apellido_materno: string };
       matriculas?: any[];
@@ -267,7 +267,7 @@ export default function ApoderadosPage() {
       />
 
       {/* ── Barra de búsqueda ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="community-toolbar flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
         <div className="relative flex-1">
           <Search
             size={15}
@@ -277,7 +277,7 @@ export default function ApoderadosPage() {
             value={q}
             onChange={(e) => { setPage(1); setQ(e.target.value); }}
             placeholder="Buscar por DNI, nombre, teléfono, correo, alumno…"
-            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+            className="community-search-input h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
           />
           {q && (
             <button
@@ -307,8 +307,8 @@ export default function ApoderadosPage() {
       {/* ── Tabla de apoderados ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         <CommunityTableHeader
-          columns={['Apoderado', 'Ocupación y contacto', 'Alumnos vinculados', 'Estado']}
-          gridClassName="xl:grid-cols-[1.8fr_1.25fr_1.45fr_0.8fr_auto]"
+          columns={['Apoderado', 'Ocupación y contacto', 'Estado']}
+          gridClassName="xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1.2fr)_minmax(120px,0.45fr)_auto]"
         />
 
         {loading && data.length === 0 ? (

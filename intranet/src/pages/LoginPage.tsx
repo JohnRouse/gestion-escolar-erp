@@ -1,18 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn, Loader, ShieldCheck, GraduationCap, BookOpen } from 'lucide-react';
+import {
+  BookOpen,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  Loader,
+  LogIn,
+  ShieldCheck,
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const IMAGENES = [
-  'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
-  'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80',
-  'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&q=80',
-  'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&q=80',
+  'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1200&q=85',
+  'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200&q=85',
+  'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=1200&q=85',
+  'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&q=85',
 ];
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,218 +32,249 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
-    const interval = setInterval(() => {
-      setImagenActual((prev) => (prev + 1) % IMAGENES.length);
+
+    const interval = window.setInterval(() => {
+      setImagenActual((current) => (current + 1) % IMAGENES.length);
     }, 6000);
-    return () => clearInterval(interval);
+
+    return () => window.clearInterval(interval);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       await login(username, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Credenciales inválidas');
+    } catch (loginError: any) {
+      setError(
+        loginError.response?.data?.message ||
+          'No se pudo iniciar sesión. Revisa tus credenciales.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* ── Panel izquierdo: Carrusel institucional (65%) ── */}
-      <div className="hidden lg:flex lg:w-[65%] relative overflow-hidden bg-neutral-900">
-        {/* Imágenes con crossfade */}
-        {IMAGENES.map((img, index) => (
+    <div className="erp-login-page flex min-h-screen bg-white">
+      <section className="erp-login-visual relative hidden overflow-hidden bg-slate-950 lg:flex lg:w-[60%]">
+        {IMAGENES.map((image, index) => (
           <div
-            key={index}
+            key={image}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
               index === imagenActual ? 'opacity-100' : 'opacity-0'
             }`}
           >
             <img
-              src={img}
+              src={image}
               alt=""
-              className="w-full h-full object-cover scale-105"
+              className="h-full w-full scale-105 object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/25" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-950/25 via-transparent to-transparent" />
           </div>
         ))}
 
-        {/* Textura noise sutil */}
-        <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none z-[1]"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
-          }}
-        />
-
-        {/* Contenido superpuesto */}
-        <div className="relative z-10 flex flex-col justify-between p-12 pb-16 text-white w-full">
-          {/* Top bar con logo */}
+        <div className="relative z-10 flex w-full flex-col justify-between p-12 pb-14 text-white xl:p-14">
           <div
             className={`flex items-center gap-3 transition-all duration-500 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+              mounted
+                ? 'translate-y-0 opacity-100'
+                : '-translate-y-4 opacity-0'
             }`}
           >
-            <div className="w-10 h-10 rounded-full bg-[#CCF32F] flex items-center justify-center shadow-lg">
-              <GraduationCap size={20} className="text-black" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F62FE] shadow-lg shadow-blue-950/20">
+              <GraduationCap size={22} className="text-white" />
             </div>
-            <span className="text-lg font-medium tracking-tight">SMV</span>
+
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Santa María Victoria
+              </p>
+              <p className="text-xs text-white/70">
+                Gestión educativa institucional
+              </p>
+            </div>
           </div>
 
-          {/* Bottom content */}
           <div>
             <div
-              className={`mb-8 transition-all duration-700 delay-200 ${
-                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              className={`mb-8 transition-all delay-200 duration-700 ${
+                mounted
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-6 opacity-0'
               }`}
             >
-              <h1 className="text-5xl font-semibold tracking-tight mb-4 leading-[1.1]">
-                Santa María<br />
-                <span className="text-[#CCF32F]">Victoria</span>
+              <p className="mb-3 text-sm font-semibold text-blue-200">
+                Plataforma de gestión escolar
+              </p>
+
+              <h1 className="erp-login-hero-title mb-5 text-5xl font-bold leading-[1.06] tracking-tight text-white xl:text-6xl">
+                Santa María
+                <br />
+                <span className="erp-login-hero-accent text-[#78A9FF]">
+                  Victoria
+                </span>
               </h1>
-              <p className="text-base text-white/60 max-w-md leading-relaxed font-light">
-                Sistema integral de gestión educativa para personal autorizado del colegio.
+
+              <p className="max-w-md text-base font-normal leading-7 text-white/85">
+                Sistema integral para gestionar información académica,
+                administrativa y financiera de manera segura.
               </p>
             </div>
 
-            {/* Feature pills */}
             <div
-              className={`flex flex-wrap gap-3 mb-10 transition-all duration-700 delay-300 ${
-                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              className={`mb-9 flex flex-wrap gap-3 transition-all delay-300 duration-700 ${
+                mounted
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-6 opacity-0'
               }`}
             >
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-                <ShieldCheck size={14} className="text-[#CCF32F]" />
-                <span className="text-xs font-medium text-white/80">Acceso seguro</span>
+              <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-black/25 px-4 py-2.5 backdrop-blur-sm">
+                <ShieldCheck size={15} className="text-[#78A9FF]" />
+                <span className="text-xs font-semibold text-white">
+                  Acceso seguro
+                </span>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-                <BookOpen size={14} className="text-[#CCF32F]" />
-                <span className="text-xs font-medium text-white/80">Gestión académica</span>
+
+              <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-black/25 px-4 py-2.5 backdrop-blur-sm">
+                <BookOpen size={15} className="text-[#78A9FF]" />
+                <span className="text-xs font-semibold text-white">
+                  Gestión académica
+                </span>
               </div>
             </div>
 
-            {/* Carousel indicators */}
             <div className="flex gap-2">
               {IMAGENES.map((_, index) => (
                 <button
                   key={index}
+                  type="button"
                   onClick={() => setImagenActual(index)}
-                  className={`h-1 rounded-full transition-all duration-300 ${
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
                     index === imagenActual
-                      ? 'bg-[#CCF32F] w-8'
-                      : 'bg-white/30 w-2 hover:bg-white/50'
+                      ? 'w-9 bg-[#78A9FF]'
+                      : 'w-2.5 bg-white/35 hover:bg-white/60'
                   }`}
-                  aria-label={`Ir a imagen ${index + 1}`}
+                  aria-label={`Mostrar imagen ${index + 1}`}
                 />
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── Panel derecho: Formulario de login (35%) ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white lg:w-[35%] relative overflow-hidden">
-        {/* Decorative blurred accents */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#CCF32F] rounded-full -mr-40 -mt-40 opacity-[0.07] blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-[#CCF32F] rounded-full -ml-30 -mb-30 opacity-[0.05] blur-3xl pointer-events-none" />
+      <section className="erp-login-form-panel relative flex flex-1 items-center justify-center overflow-hidden bg-white px-6 py-12 lg:w-[40%]">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-blue-500/[0.06] blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-sky-500/[0.05] blur-3xl" />
 
-        <div className="w-full max-w-sm relative z-10">
-          {/* Mobile-only logo */}
+        <div className="erp-login-form-card relative z-10 w-full max-w-md">
           <div
-            className={`lg:hidden flex items-center justify-center gap-3 mb-10 transition-all duration-500 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+            className={`mb-9 text-center transition-all delay-100 duration-700 ${
+              mounted
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-6 opacity-0'
             }`}
           >
-            <div className="w-10 h-10 rounded-full bg-[#CCF32F] flex items-center justify-center shadow-lg">
-              <GraduationCap size={20} className="text-black" />
+            <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+              <ShieldCheck size={14} />
+              Acceso institucional
             </div>
-            <span className="text-lg font-semibold tracking-tight text-neutral-900">
-              Santa María Victoria
-            </span>
-          </div>
 
-          {/* Header */}
-          <div
-            className={`text-center mb-10 transition-all duration-700 delay-100 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-          >
-            <h2 className="text-3xl font-semibold text-neutral-900 tracking-tight mb-2">
+            <h2 className="mb-2 text-3xl font-bold tracking-tight text-slate-950">
               Bienvenido
             </h2>
-            <p className="text-sm text-neutral-500 font-light">
+
+            <p className="text-sm font-normal leading-6 text-slate-600">
               Ingresa tus credenciales para acceder al sistema
             </p>
           </div>
 
-          {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className={`space-y-5 transition-all duration-700 delay-200 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            className={`space-y-5 transition-all delay-200 duration-700 ${
+              mounted
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-6 opacity-0'
             }`}
           >
-            {/* Username */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700">
+            <div className="space-y-2">
+              <label
+                htmlFor="login-username"
+                className="block text-sm font-semibold text-slate-800"
+              >
                 Usuario
               </label>
+
               <input
+                id="login-username"
                 type="text"
-                className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-2xl text-sm text-neutral-900 placeholder-neutral-400 transition-all duration-150 focus:border-[#CCF32F] focus:ring-2 focus:ring-[#CCF32F]/20 focus:outline-none hover:border-neutral-300"
-                placeholder="usuario@smv.edu.pe"
+                autoComplete="username"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-500 hover:border-slate-400 focus:border-[#0F62FE] focus:ring-4 focus:ring-blue-100"
+                placeholder="Ingresa tu usuario"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(event) => setUsername(event.target.value)}
                 required
                 disabled={loading}
               />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700">
+            <div className="space-y-2">
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-semibold text-slate-800"
+              >
                 Contraseña
               </label>
+
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
-                  className="w-full px-4 py-3 pr-12 bg-neutral-50 border border-neutral-200 rounded-2xl text-sm text-neutral-900 placeholder-neutral-400 transition-all duration-150 focus:border-[#CCF32F] focus:ring-2 focus:ring-[#CCF32F]/20 focus:outline-none hover:border-neutral-300"
-                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 pr-12 text-sm text-slate-950 outline-none transition placeholder:text-slate-500 hover:border-slate-400 focus:border-[#0F62FE] focus:ring-4 focus:ring-blue-100"
+                  placeholder="Ingresa tu contraseña"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                   disabled={loading}
                 />
+
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors duration-150"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                   disabled={loading}
+                  aria-label={
+                    showPassword
+                      ? 'Ocultar contraseña'
+                      : 'Mostrar contraseña'
+                  }
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Error message */}
             {error && (
-              <div className="bg-red-50 border border-red-200/60 text-red-600 text-sm rounded-2xl px-4 py-3 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Submit button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-[#CCF32F] hover:bg-[#BCE325] disabled:bg-neutral-300 disabled:text-neutral-500 text-black text-sm font-medium rounded-2xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:shadow-none disabled:scale-100"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0F62FE] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#0043CE] focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
             >
               {loading ? (
                 <>
@@ -250,27 +290,29 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Footer */}
           <div
-            className={`mt-10 pt-8 border-t border-neutral-100 transition-all duration-700 delay-300 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            className={`mt-9 border-t border-slate-200 pt-7 transition-all delay-300 duration-700 ${
+              mounted
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-6 opacity-0'
             }`}
           >
-            <p className="text-center text-xs text-neutral-500">
+            <p className="text-center text-xs leading-5 text-slate-600">
               ¿Olvidaste tu contraseña?{' '}
               <a
                 href="#"
-                className="text-neutral-900 hover:text-[#CCF32F] font-medium transition-colors duration-150"
+                className="font-semibold text-blue-700 transition hover:text-blue-900"
               >
                 Contacta al administrador
               </a>
             </p>
-            <p className="text-center text-xs text-neutral-400 mt-3">
-              © 2024 Colegio Santa María Victoria
+
+            <p className="mt-3 text-center text-xs text-slate-500">
+              © 2026 Colegio Santa María Victoria
             </p>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

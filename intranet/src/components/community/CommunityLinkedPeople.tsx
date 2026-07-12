@@ -27,6 +27,7 @@ type LinkedStudent = {
   parentesco: string;
   estudiante: {
     id_persona: number;
+    avatar_url?: string | null;
     codigo_estudiante?: string | null;
     codigos_colegio?: CodigoColegio[];
     persona: BasicPersona;
@@ -40,38 +41,85 @@ export type LinkedPersonTarget = {
 };
 
 const estadoBadge: Record<string, string> = {
-  Activo: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  Reserva: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-  Anulado: 'bg-red-50 text-red-600 ring-1 ring-red-200',
-  'Pre-matriculado': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
-  Inactivo: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
+  Activo:
+    'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  Reserva:
+    'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  Anulado:
+    'bg-red-50 text-red-600 ring-1 ring-red-200',
+  'Pre-matriculado':
+    'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
+  Inactivo:
+    'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
 };
 
 function getEstadoBadge(estado?: string | null) {
-  return estadoBadge[estado || ''] || 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
+  return (
+    estadoBadge[estado || ''] ||
+    'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+  );
 }
 
-export function communityPersonName(persona?: BasicPersona | null) {
-  return [
-    persona?.nombres,
-    persona?.apellido_paterno,
-    persona?.apellido_materno,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim() || 'Sin nombre';
+function communityAssetUrl(url?: string | null) {
+  if (!url) return '';
+
+  if (/^(https?:\/\/|data:image\/|blob:)/i.test(url)) {
+    return url;
+  }
+
+  if (url.startsWith('/api/')) {
+    return url;
+  }
+
+  if (url.startsWith('/uploads/')) {
+    return `/api${url}`;
+  }
+
+  if (url.startsWith('uploads/')) {
+    return `/api/${url}`;
+  }
+
+  return url;
 }
 
-export function communityStudentCode(estudiante?: LinkedStudent['estudiante'] | null) {
-  return estudiante?.codigos_colegio?.[0]?.codigo || estudiante?.codigo_estudiante || 'Sin código';
+export function communityPersonName(
+  persona?: BasicPersona | null,
+) {
+  return (
+    [
+      persona?.nombres,
+      persona?.apellido_paterno,
+      persona?.apellido_materno,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'Sin nombre'
+  );
 }
 
-function relationLimitText(total: number, max: number, label: string) {
+export function communityStudentCode(
+  estudiante?: LinkedStudent['estudiante'] | null,
+) {
+  return (
+    estudiante?.codigos_colegio?.[0]?.codigo ||
+    estudiante?.codigo_estudiante ||
+    'Sin código'
+  );
+}
+
+function relationLimitText(
+  total: number,
+  max: number,
+  label: string,
+) {
   const remaining = total - max;
+
   if (remaining <= 0) return null;
 
-  return `+${remaining} ${label}${remaining === 1 ? '' : 's'} más`;
+  return `+${remaining} ${label}${
+    remaining === 1 ? '' : 's'
+  } más`;
 }
 
 export function LinkedGuardiansCompact({
@@ -82,31 +130,47 @@ export function LinkedGuardiansCompact({
   max?: number;
 }) {
   if (!items.length) {
-    return <span className="text-xs text-slate-400">Sin apoderados vinculados</span>;
+    return (
+      <span className="text-xs text-slate-500">
+        Sin apoderados vinculados
+      </span>
+    );
   }
 
   return (
-    <div className="space-y-1.5">
-      {items.slice(0, max).map((rel) => {
-        const persona = rel.apoderado.persona;
+    <div className="space-y-2">
+      {items.slice(0, max).map((relation) => {
+        const persona = relation.apoderado.persona;
         const nombre = communityPersonName(persona);
 
         return (
-          <div key={rel.apoderado.id_persona} className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-700">
-              {rel.parentesco}: {nombre}
+          <div
+            key={relation.apoderado.id_persona}
+            className="min-w-0"
+          >
+            <p className="truncate text-sm font-semibold text-slate-800">
+              {relation.parentesco}: {nombre}
             </p>
-            <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-              <Phone size={11} className="shrink-0" />
+
+            <p className="mt-1 flex items-center gap-1 text-xs text-slate-600">
+              <Phone size={12} className="shrink-0" />
               {persona.telefono || 'Sin teléfono'}
             </p>
           </div>
         );
       })}
 
-      {relationLimitText(items.length, max, 'apoderado') && (
-        <p className="text-xs font-bold text-slate-400">
-          {relationLimitText(items.length, max, 'apoderado')}
+      {relationLimitText(
+        items.length,
+        max,
+        'apoderado',
+      ) && (
+        <p className="text-xs font-semibold text-slate-600">
+          {relationLimitText(
+            items.length,
+            max,
+            'apoderado',
+          )}
         </p>
       )}
     </div>
@@ -121,29 +185,39 @@ export function LinkedStudentsCompact({
   max?: number;
 }) {
   if (!items.length) {
-    return <span className="text-xs text-slate-400">Sin alumnos vinculados</span>;
+    return (
+      <span className="text-xs text-slate-500">
+        Sin alumnos vinculados
+      </span>
+    );
   }
 
   return (
-    <div className="space-y-1.5">
-      {items.slice(0, max).map((rel) => {
-        const estudiante = rel.estudiante;
-        const nombre = communityPersonName(estudiante.persona);
+    <div className="space-y-2">
+      {items.slice(0, max).map((relation) => {
+        const estudiante = relation.estudiante;
+        const nombre = communityPersonName(
+          estudiante.persona,
+        );
 
         return (
-          <div key={estudiante.id_persona} className="min-w-0">
-            <p className="erp-compact-code truncate text-sm font-semibold text-slate-800">
+          <div
+            key={estudiante.id_persona}
+            className="min-w-0"
+          >
+            <p className="truncate text-sm font-semibold text-slate-800">
               {communityStudentCode(estudiante)} · {nombre}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">
-              Parentesco: {rel.parentesco}
+
+            <p className="mt-1 text-xs text-slate-600">
+              Parentesco: {relation.parentesco}
             </p>
           </div>
         );
       })}
 
       {relationLimitText(items.length, max, 'alumno') && (
-        <p className="text-xs font-bold text-slate-400">
+        <p className="text-xs font-semibold text-slate-600">
           {relationLimitText(items.length, max, 'alumno')}
         </p>
       )}
@@ -159,44 +233,59 @@ export function LinkedGuardianCards({
   onSelect: (target: LinkedPersonTarget) => void;
 }) {
   if (!items.length) {
-    return <p className="text-sm text-slate-400">Sin apoderados vinculados.</p>;
+    return (
+      <p className="text-sm text-slate-600">
+        Sin apoderados vinculados.
+      </p>
+    );
   }
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      {items.map((rel) => {
-        const persona = rel.apoderado.persona;
+      {items.map((relation) => {
+        const persona = relation.apoderado.persona;
         const nombre = communityPersonName(persona);
 
         return (
           <button
             type="button"
-            key={rel.apoderado.id_persona}
+            key={relation.apoderado.id_persona}
             onClick={() =>
               onSelect({
-                id: rel.apoderado.id_persona,
+                id: relation.apoderado.id_persona,
                 nombre,
               })
             }
-            className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
+            className="group flex min-h-[112px] w-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
           >
-            <PersonAvatar persona={persona} size="sm" rounded="xl" />
+            <PersonAvatar
+              persona={persona}
+              size="md"
+              rounded="xl"
+            />
+
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-slate-900">
-                Apoderado: {nombre}
+              <p className="text-sm font-semibold leading-5 text-slate-950">
+                {nombre}
               </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                Parentesco registrado: {rel.parentesco}
+
+              <p className="mt-1 text-xs font-medium text-slate-700">
+                {relation.parentesco}
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                DNI: {persona.dni || '—'} · {persona.telefono || 'Sin teléfono'}
+
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                DNI {persona.dni || '—'}
+                {' · '}
+                {persona.telefono || 'Sin teléfono'}
               </p>
+
               {persona.correo && (
-                <p className="mt-0.5 truncate text-xs text-slate-400">
+                <p className="mt-0.5 break-all text-xs leading-5 text-slate-600">
                   {persona.correo}
                 </p>
               )}
-              <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
+
+              <p className="mt-2 text-xs font-semibold text-blue-700">
                 Ver ficha del apoderado
               </p>
             </div>
@@ -215,19 +304,31 @@ export function LinkedStudentCards({
   onSelect: (target: LinkedPersonTarget) => void;
 }) {
   if (!items.length) {
-    return <p className="text-sm text-slate-400">Sin alumnos vinculados.</p>;
+    return (
+      <p className="text-sm text-slate-600">
+        Sin alumnos vinculados.
+      </p>
+    );
   }
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      {items.map((rel) => {
-        const estudiante = rel.estudiante;
-        const nombre = communityPersonName(estudiante.persona);
+      {items.map((relation) => {
+        const estudiante = relation.estudiante;
+        const nombre = communityPersonName(
+          estudiante.persona,
+        );
         const matricula = estudiante.matriculas?.[0];
-        const estadoMatricula = matricula?.estado_matricula;
+        const estadoMatricula =
+          matricula?.estado_matricula;
         const seccion = matricula?.seccion;
+
         const salon = seccion?.grado
-          ? `${seccion.grado.nombre_grado} "${seccion.letra}" · ${seccion.grado.nivel?.nombre_nivel || ''}`.trim()
+          ? `${seccion.grado.nombre_grado} "${
+              seccion.letra
+            }" · ${
+              seccion.grado.nivel?.nombre_nivel || ''
+            }`.trim()
           : 'Sin sección activa';
 
         return (
@@ -240,32 +341,56 @@ export function LinkedStudentCards({
                 nombre,
               })
             }
-            className="group flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-blue-200 hover:shadow-sm"
+            className="group flex min-h-[128px] w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
           >
-            <PersonAvatar persona={estudiante.persona} size="sm" rounded="xl" />
+            {estudiante.avatar_url ? (
+              <img
+                src={communityAssetUrl(
+                  estudiante.avatar_url,
+                )}
+                alt={nombre}
+                className="h-16 w-16 shrink-0 rounded-xl bg-white object-cover ring-1 ring-slate-200"
+              />
+            ) : (
+              <PersonAvatar
+                persona={estudiante.persona}
+                size="md"
+                rounded="xl"
+              />
+            )}
+
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-bold text-slate-900">
-                  Alumno: {nombre}
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-sm font-semibold leading-5 text-slate-950">
+                  {nombre}
                 </p>
+
                 {estadoMatricula && (
                   <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${getEstadoBadge(estadoMatricula)}`}
+                    className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ${getEstadoBadge(
+                      estadoMatricula,
+                    )}`}
                   >
                     {estadoMatricula}
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                Parentesco registrado: {rel.parentesco}
+
+              <p className="mt-1 text-xs font-medium text-slate-700">
+                {relation.parentesco}
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {communityStudentCode(estudiante)} · DNI {estudiante.persona.dni || '—'}
+
+              <p className="community-id-line mt-1 text-xs leading-5 text-slate-600">
+                {communityStudentCode(estudiante)}
+                {' · '}
+                DNI {estudiante.persona.dni || '—'}
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">
+
+              <p className="mt-0.5 text-xs leading-5 text-slate-600">
                 {salon}
               </p>
-              <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 opacity-0 transition group-hover:opacity-100">
+
+              <p className="mt-2 text-xs font-semibold text-blue-700">
                 Ver ficha del alumno
               </p>
             </div>

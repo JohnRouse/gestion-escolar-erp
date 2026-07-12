@@ -22,20 +22,20 @@ export default function PageHeader({
   meta = [],
 }: PageHeaderProps) {
   return (
-    <section className="overflow-hidden rounded-[32px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 backdrop-blur">
+    <section className="erp-page-header overflow-hidden rounded-[32px] border border-white bg-white/90 p-6 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 backdrop-blur">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
+          <div className="erp-page-header__eyebrow inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
             {Icon && <Icon size={13} className="text-accent-500" />}
             {eyebrow}
           </div>
 
-          <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+          <h1 className="erp-page-header__title mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
             {title}
           </h1>
 
           {description && (
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+            <p className="erp-page-header__description mt-1 max-w-3xl text-sm leading-6 text-slate-500">
               {description}
             </p>
           )}
@@ -46,12 +46,12 @@ export default function PageHeader({
             {meta.map((item) => (
               <div
                 key={item.label}
-                className="rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100"
+                className="erp-page-header__meta-item rounded-3xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100"
               >
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                <p className="erp-page-header__meta-label text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
                   {normalizeCurrentScopeLabel(item.label)}
                 </p>
-                <p className="mt-1 text-sm font-black text-slate-800">
+                <p className="erp-page-header__meta-value mt-1 text-sm font-black text-slate-800">
                   {item.value || '—'}
                 </p>
               </div>

@@ -1,22 +1,21 @@
 /* ==========================================================
-   99 - Legibilidad, tablas y bordes
-   Ajuste global para Carbon UI del ERP escolar
+   99 - Legibilidad final localizada
+   Corrige Comunidad, Login y tarjetas financieras sin
+   sobrescribir colores o sombras de toda la aplicación.
    ========================================================== */
 
 :root {
-  --ge-text-strong: #161616;
-  --ge-text-body: #30363d;
-  --ge-text-subtle: #525252;
-  --ge-border: #d0d7e2;
-  --ge-border-strong: #bcc7d6;
-  --ge-surface: #ffffff;
-  --ge-surface-alt: #f5f7fa;
-  --ge-surface-soft: #f8fafc;
+  --erp-readable-900: #161616;
+  --erp-readable-800: #262626;
+  --erp-readable-700: #374151;
+  --erp-readable-600: #4b5563;
+  --erp-line: #d5dce5;
+  --erp-line-strong: #aeb8c4;
+  --erp-header-bg: #e9eef4;
+  --erp-row-alt: #fafbfd;
+  --erp-focus: #0f62fe;
 }
 
-/* ------------------------------
-   Tipografía base: más legible
-   ------------------------------ */
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -26,215 +25,338 @@ body,
 button,
 input,
 select,
-textarea,
-table,
-th,
-td {
-  font-family: "IBM Plex Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-}
-
-body {
-  color: var(--ge-text-strong) !important;
-  line-height: 1.45 !important;
-  letter-spacing: 0 !important;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  color: var(--ge-text-strong) !important;
-  letter-spacing: -0.01em !important;
-  line-height: 1.2 !important;
-}
-
-/* Textos secundarios más visibles */
-p,
-span,
-label,
-small,
-li,
-div {
-  color: inherit;
-}
-
-.text-slate-500,
-.text-slate-600,
-.text-gray-500,
-.text-gray-600,
-.text-neutral-500,
-.text-neutral-600 {
-  color: var(--ge-text-subtle) !important;
-}
-
-/* Inputs más legibles */
-input,
-select,
 textarea {
-  color: var(--ge-text-strong) !important;
+  font-family:
+    "IBM Plex Sans",
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #6b7280 !important;
+/* Evitar pesos sintéticos 900 de IBM Plex Sans. */
+.carbon-shell .font-black {
+  font-weight: 700 !important;
+}
+
+/* Evitar el aspecto dentado generado por geometricPrecision. */
+.carbon-community-page p,
+.carbon-community-page span,
+.carbon-community-page button,
+.carbon-community-page input,
+.carbon-community-page select,
+.erp-login-page,
+.erp-login-page * {
+  text-rendering: auto !important;
+}
+
+/* Reducir tracking excesivo solamente dentro de la intranet. */
+.carbon-shell [class*="tracking-[0.14em]"],
+.carbon-shell [class*="tracking-[0.15em]"],
+.carbon-shell [class*="tracking-[0.16em]"],
+.carbon-shell [class*="tracking-[0.18em]"] {
+  letter-spacing: 0.045em !important;
+}
+
+/* ==========================================================
+   PageHeader
+   ========================================================== */
+
+.carbon-shell .erp-page-header {
+  border-color: var(--erp-line) !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.carbon-shell .erp-page-header__eyebrow {
+  color: var(--erp-readable-600) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  background: #f6f8fa !important;
+  --tw-ring-color: #dfe5ec !important;
+}
+
+.carbon-shell .erp-page-header__title {
+  color: var(--erp-readable-900) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.carbon-shell .erp-page-header__description {
+  color: var(--erp-readable-600) !important;
+  font-weight: 400 !important;
+}
+
+.carbon-shell .erp-page-header__meta-item {
+  min-width: 112px;
+  border: 1px solid var(--erp-line) !important;
+  border-radius: 10px !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+  --tw-ring-color: transparent !important;
+}
+
+.carbon-shell .erp-page-header__meta-label {
+  color: var(--erp-readable-600) !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.045em !important;
+}
+
+.carbon-shell .erp-page-header__meta-value {
+  color: var(--erp-readable-900) !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================
+   Comunidad escolar: Alumnos y Apoderados
+   ========================================================== */
+
+.carbon-community-page {
+  color: var(--erp-readable-800) !important;
+}
+
+.carbon-community-page .community-toolbar {
+  border: 1px solid var(--erp-line) !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .community-search-input,
+.carbon-community-page .community-filter-select {
+  min-height: 44px;
+  border: 1px solid #c5ced9 !important;
+  border-bottom: 1px solid #c5ced9 !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+  color: var(--erp-readable-900) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .community-search-input::placeholder {
+  color: #667085 !important;
+  font-weight: 400 !important;
   opacity: 1 !important;
 }
 
-/* ------------------------------
-   Menos tracking excesivo
-   ------------------------------ */
-[class*="tracking-["],
-[class*="tracking-wide"],
-[class*="tracking-wider"],
-[class*="tracking-widest"] {
-  letter-spacing: 0.06em !important;
+.carbon-community-page .community-search-input:focus,
+.carbon-community-page .community-filter-select:focus {
+  border-color: var(--erp-focus) !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(15, 98, 254, 0.14) !important;
 }
 
-/* Etiquetas pequeñas en mayúsculas:
-   siguen “Carbon”, pero más legibles */
-thead th,
-th,
-[class*="uppercase"] {
-  letter-spacing: 0.06em;
+.carbon-community-page .carbon-list-panel {
+  border: 1px solid #cbd3dd !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
 }
 
-/* ------------------------------
-   Tarjetas / KPIs:
-   bordes más notorios
-   ------------------------------ */
-main .bg-white.border,
-main .bg-slate-50.border,
-main .bg-gray-50.border,
-main .bg-white.ring-1,
-main .bg-slate-50.ring-1,
-main .bg-gray-50.ring-1 {
-  border-color: var(--ge-border) !important;
-  --tw-ring-color: var(--ge-border) !important;
+.carbon-community-page .carbon-list-header {
+  min-height: 46px;
+  align-items: center;
+  border-bottom: 1px solid var(--erp-line-strong) !important;
+  background: var(--erp-header-bg) !important;
+  box-shadow: inset 0 -1px 0 rgba(100, 116, 139, 0.16);
 }
 
-/* Refuerzo visual para tarjetas redondeadas blancas */
-main .bg-white[class*="rounded-"],
-main .bg-slate-50[class*="rounded-"],
-main .bg-gray-50[class*="rounded-"] {
-  box-shadow: inset 0 0 0 1px var(--ge-border) !important;
-}
-
-/* KPIs y paneles summary más claros */
-main .bg-white[class*="rounded-"] p,
-main .bg-white[class*="rounded-"] span,
-main .bg-white[class*="rounded-"] div {
-  color: inherit;
-}
-
-/* ------------------------------
-   Tablas:
-   cabecera con fondo distinguible
-   y separación clara del cuerpo
-   ------------------------------ */
-table {
-  width: 100%;
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
-  color: var(--ge-text-strong) !important;
-}
-
-table thead th {
-  background: var(--ge-surface-alt) !important;
-  color: #4b5563 !important;
-  font-size: 12px !important;
+.carbon-community-page .carbon-list-header span {
+  color: #344054 !important;
+  font-size: 11.5px !important;
   font-weight: 700 !important;
   line-height: 1.25 !important;
-  text-transform: uppercase;
-  border-top: 1px solid var(--ge-border) !important;
-  border-bottom: 1px solid var(--ge-border-strong) !important;
-  box-shadow: inset 0 -1px 0 var(--ge-border-strong);
+  letter-spacing: 0.045em !important;
 }
 
-table thead th:first-child {
-  border-left: 1px solid var(--ge-border) !important;
-  border-top-left-radius: 14px;
+.carbon-community-page .carbon-list-row {
+  min-height: 86px !important;
+  border-bottom: 1px solid #dde3ea !important;
+  background: #ffffff !important;
 }
 
-table thead th:last-child {
-  border-right: 1px solid var(--ge-border) !important;
-  border-top-right-radius: 14px;
+.carbon-community-page .carbon-list-row:nth-child(even) {
+  background: var(--erp-row-alt) !important;
 }
 
-table tbody td {
-  color: var(--ge-text-strong) !important;
-  line-height: 1.45 !important;
-  vertical-align: top !important;
-  border-top: 1px solid #e7edf4 !important;
+.carbon-community-page .carbon-list-row:hover {
+  background: #f1f5f9 !important;
+}
+
+.carbon-community-page .carbon-list-row p {
+  color: var(--erp-readable-700);
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+}
+
+.carbon-community-page .carbon-list-row p[class*="text-sm"] {
+  font-size: 13.5px !important;
+}
+
+.carbon-community-page .carbon-list-row p[class*="font-bold"],
+.carbon-community-page .carbon-list-row p[class*="font-semibold"] {
+  color: var(--erp-readable-900) !important;
+  font-weight: 600 !important;
+}
+
+.carbon-community-page .carbon-list-row p[class*="text-xs"],
+.carbon-community-page .carbon-list-row span[class*="text-xs"],
+.carbon-community-page .erp-compact-meta {
+  color: var(--erp-readable-600) !important;
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+}
+
+.carbon-community-page .erp-compact-code {
+  color: var(--erp-readable-700) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.015em !important;
+}
+
+.carbon-community-page .carbon-list-row span[class*="rounded-full"] {
+  min-height: 24px;
+  border-radius: 5px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+}
+
+.carbon-community-page .carbon-list-row button {
+  min-height: 36px;
+  border-color: #b8c2ce !important;
+  border-radius: 6px !important;
+  color: var(--erp-readable-900) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.carbon-community-page .carbon-list-row button:hover {
+  border-color: var(--erp-focus) !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.carbon-community-page .carbon-list-panel > div:last-child {
+  border-top-color: var(--erp-line) !important;
+  background: #ffffff !important;
+}
+
+.carbon-community-page .carbon-list-panel > div:last-child p {
+  color: var(--erp-readable-600) !important;
+}
+
+/* ==========================================================
+   Login
+   ========================================================== */
+
+.erp-login-page {
+  min-height: 100vh;
   background: #ffffff;
+  color: var(--erp-readable-900);
 }
 
-table tbody tr:first-child td {
-  border-top: 0 !important;
+.erp-login-page h1,
+.erp-login-page h2,
+.erp-login-page h3 {
+  letter-spacing: -0.025em;
 }
 
-table tbody td:first-child {
-  border-left: 1px solid #e7edf4 !important;
+.erp-login-visual .erp-login-hero-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42);
 }
 
-table tbody td:last-child {
-  border-right: 1px solid #e7edf4 !important;
+.erp-login-visual .erp-login-hero-accent {
+  color: #ccf32f !important;
 }
 
-table tbody tr:last-child td {
-  border-bottom: 1px solid #e7edf4 !important;
+.erp-login-visual p {
+  color: rgba(255, 255, 255, 0.82) !important;
 }
 
-/* Hover suave para lectura */
-table tbody tr:hover td {
-  background: #fbfcfe !important;
+.erp-login-visual [class*="bg-white/10"] span {
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-weight: 500 !important;
 }
 
-/* ------------------------------
-   Badges / chips
-   ------------------------------ */
-.rounded-full,
-[class*="rounded-full"] {
-  letter-spacing: 0.01em !important;
+.erp-login-form-card {
+  max-width: 420px !important;
 }
 
-/* ------------------------------
-   Botones pequeños de acción
-   ------------------------------ */
-button,
-[role="button"] {
-  line-height: 1.2 !important;
+.erp-login-form-panel h2 {
+  color: var(--erp-readable-900) !important;
+  font-weight: 700 !important;
 }
 
-/* ------------------------------
-   Búsquedas y barras superiores
-   ------------------------------ */
-main input,
-main select,
-main textarea {
-  border-color: var(--ge-border) !important;
+.erp-login-form-panel label {
+  color: var(--erp-readable-800) !important;
+  font-weight: 600 !important;
 }
 
-/* ------------------------------
-   Microtextos / metadatos
-   ------------------------------ */
-.text-xs {
-  line-height: 1.45 !important;
+.erp-login-form-panel input {
+  min-height: 48px;
+  border: 1px solid #c8ced7 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: var(--erp-readable-900) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  box-shadow: none !important;
 }
 
-.text-sm {
-  line-height: 1.45 !important;
+.erp-login-form-panel input::placeholder {
+  color: #7b8491 !important;
+  opacity: 1 !important;
 }
 
-/* ------------------------------
-   Estado de cuenta interno:
-   el bloque de cronograma debe leerse
-   como tabla clara y fuerte
-   ------------------------------ */
-main .bg-white table thead th,
-main .bg-slate-50 table thead th {
-  background: #f3f6fa !important;
+.erp-login-form-panel input:focus {
+  border-color: #8daf00 !important;
+  box-shadow: 0 0 0 3px rgba(204, 243, 47, 0.22) !important;
 }
 
-/* ------------------------------
-   Ajustes de contraste para acciones
-   ------------------------------ */
-svg {
-  color: inherit;
+.erp-login-form-panel button[type="submit"] {
+  min-height: 48px;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 6px 16px rgba(128, 153, 18, 0.16) !important;
+}
+
+.erp-login-form-panel button[type="submit"]:hover {
+  transform: none !important;
+}
+
+.erp-login-form-panel p {
+  line-height: 1.45;
+}
+
+@media (min-width: 1024px) {
+  .erp-login-visual {
+    width: 62% !important;
+  }
+
+  .erp-login-form-panel {
+    width: 38% !important;
+  }
+}
+
+/* ==========================================================
+   Tesorería: mantener visibles los bordes de KPI
+   ========================================================== */
+
+.carbon-tesoreria-page [class*="bg-white"][class*="ring-1"] {
+  --tw-ring-color: #cbd3dd !important;
+}
+
+.carbon-tesoreria-page [class*="rounded-[28px]"][class*="bg-white"] {
+  border: 1px solid #d5dce5 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
