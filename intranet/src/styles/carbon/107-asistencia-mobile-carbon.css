@@ -1,0 +1,705 @@
+/* ==========================================================
+   107 - Asistencia móvil Carbon UI
+   ========================================================== */
+
+.attendance-mobile-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background:
+    linear-gradient(
+      180deg,
+      #edf5ff 0,
+      #f4f4f4 260px,
+      #f4f4f4 100%
+    );
+  color: #161616;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.attendance-mobile-header {
+  border-top: 4px solid #0f62fe;
+  border-bottom: 1px solid #c6c6c6;
+  background: #ffffff;
+  box-shadow:
+    0 8px 24px
+    rgba(15, 23, 42, 0.07);
+}
+
+.attendance-mobile-header__inner {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.attendance-mobile-header__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attendance-mobile-back {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #161616;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.attendance-mobile-back:hover {
+  border-color: #0f62fe;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.attendance-mobile-back:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.attendance-mobile-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.attendance-mobile-eyebrow {
+  color: #0f62fe;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.attendance-mobile-heading h1 {
+  margin-top: 2px;
+  color: #161616;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.attendance-mobile-section-name {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #525252;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attendance-mobile-sync {
+  display: inline-flex;
+  min-height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #a7f0ba;
+  border-radius: 999px;
+  background: #defbe6;
+  padding: 0 10px;
+  color: #0e6027;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attendance-mobile-sync[data-saving="true"] {
+  border-color: #a6c8ff;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.attendance-mobile-filters {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) 148px;
+  gap: 10px;
+  margin-top: 16px;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background: #f4f4f4;
+  padding: 12px;
+}
+
+.attendance-mobile-field {
+  min-width: 0;
+}
+
+.attendance-mobile-field > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #525252;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.attendance-mobile-control {
+  width: 100%;
+  height: 44px;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-bottom: 2px solid #8d8d8d;
+  border-radius: 0;
+  background: #ffffff;
+  padding: 0 11px;
+  color: #161616;
+  font-size: 13px;
+  font-weight: 650;
+  outline: none;
+  transition:
+    border-color 120ms ease,
+    outline 120ms ease;
+}
+
+.attendance-mobile-control:hover {
+  border-bottom-color: #525252;
+}
+
+.attendance-mobile-control:focus {
+  border-color: #0f62fe;
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+}
+
+.attendance-mobile-control[type="date"] {
+  color-scheme: light;
+}
+
+.attendance-mobile-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.attendance-mobile-stats > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #e0e0e0;
+  border-left: 3px solid #0f62fe;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 9px 10px;
+}
+
+.attendance-mobile-stats > div:nth-child(2) {
+  border-left-color: #24a148;
+}
+
+.attendance-mobile-stats > div:nth-child(3) {
+  border-left-color: #f1c21b;
+}
+
+.attendance-mobile-stats span {
+  overflow: hidden;
+  color: #6f6f6f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.attendance-mobile-stats strong {
+  color: #161616;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.attendance-mobile-main {
+  display: flex;
+  width: 100%;
+  max-width: 520px;
+  min-height: 0;
+  margin: 0 auto;
+  flex-direction: column;
+  padding: 16px 16px 28px;
+}
+
+.attendance-mobile-progress {
+  border: 1px solid #c6c6c6;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 12px 14px;
+}
+
+.attendance-mobile-progress__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.attendance-mobile-progress__top > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attendance-mobile-progress__top span {
+  color: #6f6f6f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.attendance-mobile-progress__top strong {
+  color: #262626;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.attendance-mobile-progress__percentage {
+  color: #0043ce !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.attendance-mobile-progress__track {
+  height: 6px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e0e0e0;
+}
+
+.attendance-mobile-progress__bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #0f62fe;
+  transition: width 240ms ease;
+}
+
+.attendance-mobile-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 5px;
+  padding: 11px 12px;
+}
+
+.attendance-mobile-notice strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.attendance-mobile-notice p {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.attendance-mobile-notice--error {
+  border-color: #ffb3b8;
+  border-left-color: #da1e28;
+  background: #fff1f1;
+  color: #750e13;
+}
+
+.attendance-mobile-notice--success {
+  border-color: #a7f0ba;
+  border-left-color: #24a148;
+  background: #defbe6;
+  color: #0e6027;
+}
+
+.attendance-mobile-empty {
+  display: flex;
+  min-height: 320px;
+  margin-top: 14px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 28px;
+  color: #6f6f6f;
+  text-align: center;
+}
+
+.attendance-mobile-empty strong {
+  margin-top: 14px;
+  color: #262626;
+  font-size: 16px;
+}
+
+.attendance-mobile-empty p {
+  max-width: 280px;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.attendance-mobile-student {
+  position: relative;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #c6c6c6;
+  border-top: 4px solid #0f62fe;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 14px 48px 16px;
+  text-align: center;
+  box-shadow:
+    0 8px 24px
+    rgba(15, 23, 42, 0.08);
+}
+
+.attendance-mobile-student__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -2px -34px 12px;
+}
+
+.attendance-mobile-student__meta > span:first-child {
+  color: #6f6f6f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.attendance-mobile-student__status {
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  background: #f4f4f4;
+  padding: 4px 7px;
+  color: #525252;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.attendance-mobile-student__status[data-status="Presente"] {
+  border-color: #42be65;
+  background: #defbe6;
+  color: #0e6027;
+}
+
+.attendance-mobile-student__status[data-status="Tardanza"] {
+  border-color: #f1c21b;
+  background: #fcf4d6;
+  color: #684e00;
+}
+
+.attendance-mobile-student__status[data-status="Ausente"] {
+  border-color: #fa4d56;
+  background: #fff1f1;
+  color: #750e13;
+}
+
+.attendance-mobile-student__status[data-status="Justificado"] {
+  border-color: #78a9ff;
+  background: #edf5ff;
+  color: #002d9c;
+}
+
+.attendance-mobile-student__arrow {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  width: 42px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #525252;
+  transform: translateY(-35%);
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.attendance-mobile-student__arrow--left {
+  left: 5px;
+}
+
+.attendance-mobile-student__arrow--right {
+  right: 5px;
+}
+
+.attendance-mobile-student__arrow:hover:not(:disabled) {
+  border-color: #a6c8ff;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.attendance-mobile-student__arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.22;
+}
+
+.attendance-mobile-avatar {
+  display: flex;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a6c8ff;
+  border-radius: 12px;
+  background: #d0e2ff;
+  color: #002d9c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.attendance-mobile-student__label {
+  margin-top: 10px;
+  color: #6f6f6f;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.attendance-mobile-student h2 {
+  max-width: 310px;
+  margin: 5px auto 0;
+  color: #161616;
+  font-size: clamp(23px, 6vw, 29px);
+  font-weight: 720;
+  line-height: 1.16;
+  text-wrap: balance;
+}
+
+.attendance-mobile-student__code {
+  margin-top: 8px;
+  color: #393939;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.attendance-mobile-student__school {
+  margin-top: 3px;
+  color: #6f6f6f;
+  font-size: 11px;
+}
+
+.attendance-mobile-student-list {
+  display: flex;
+  max-width: 300px;
+  margin: 14px auto 0;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 2px 1px 4px;
+  scrollbar-width: thin;
+}
+
+.attendance-mobile-student-list button {
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.attendance-mobile-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.attendance-mobile-actions__middle {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.attendance-mobile-actions button {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  box-shadow:
+    0 5px 14px
+    rgba(15, 23, 42, 0.09);
+  transition:
+    transform 100ms ease,
+    filter 100ms ease,
+    box-shadow 100ms ease;
+}
+
+.attendance-mobile-actions button:hover:not(:disabled) {
+  filter: brightness(0.96);
+  box-shadow:
+    0 8px 18px
+    rgba(15, 23, 42, 0.14);
+}
+
+.attendance-mobile-actions button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.attendance-mobile-actions button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.attendance-mobile-actions button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.attendance-mobile-actions strong {
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.attendance-mobile-actions small {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.3;
+  opacity: 0.85;
+}
+
+.attendance-mobile-actions
+  button[data-state="presente"] {
+  background: #24a148;
+  color: #ffffff;
+}
+
+.attendance-mobile-actions
+  button[data-state="tardanza"] {
+  border-color: #e0b019;
+  background: #f1c21b;
+  color: #161616;
+}
+
+.attendance-mobile-actions
+  button[data-state="ausente"] {
+  background: #da1e28;
+  color: #ffffff;
+}
+
+.attendance-mobile-actions
+  button[data-state="justificado"] {
+  border-color: #0f62fe;
+  background: #edf5ff;
+  color: #002d9c;
+  box-shadow: none;
+}
+
+.attendance-mobile-actions
+  button[data-state="justificado"]:hover:not(:disabled) {
+  background: #d0e2ff;
+}
+
+@media (max-width: 390px) {
+  .attendance-mobile-header__inner,
+  .attendance-mobile-main {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .attendance-mobile-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-mobile-sync span {
+    display: none;
+  }
+
+  .attendance-mobile-sync {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .attendance-mobile-stats > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .attendance-mobile-student {
+    padding-right: 42px;
+    padding-left: 42px;
+  }
+
+  .attendance-mobile-student__meta {
+    margin-right: -28px;
+    margin-left: -28px;
+  }
+
+  .attendance-mobile-actions small {
+    display: none;
+  }
+}
+
+@media (max-height: 720px) {
+  .attendance-mobile-header__inner {
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .attendance-mobile-filters {
+    margin-top: 10px;
+  }
+
+  .attendance-mobile-main {
+    padding-top: 11px;
+  }
+
+  .attendance-mobile-student {
+    margin-top: 10px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .attendance-mobile-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 15px;
+  }
+
+  .attendance-mobile-actions button {
+    min-height: 60px;
+  }
+}

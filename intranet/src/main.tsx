@@ -13,6 +13,7 @@ import './styles/carbon/103-selecciones-sidebar-y-cabeceras.css';
 import './styles/carbon/104-matricula-modales-selecciones.css';
 import './styles/carbon/105-pensiones-carbon-ui.css';
 import './styles/carbon/106-sidebar-hover-ultimos-registros.css';
+import './styles/carbon/107-asistencia-mobile-carbon.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
