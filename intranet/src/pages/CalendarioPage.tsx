@@ -174,20 +174,62 @@ export default function CalendarioPage() {
   }, [asignaciones, isProfesorHorario]);
 
   const asignacionesParaFormulario = useMemo(() => {
+    if (canManageHorario && !seccionId) {
+      return [];
+    }
+
     return asignaciones.filter((item) => {
-      if (seccionId && item.id_seccion !== Number(seccionId)) return false;
-      if (docenteId && item.id_docente !== Number(docenteId)) return false;
+      if (
+        seccionId &&
+        item.id_seccion !== Number(seccionId)
+      ) {
+        return false;
+      }
+
+      if (
+        docenteId &&
+        item.id_docente !== Number(docenteId)
+      ) {
+        return false;
+      }
+
       return true;
     });
-  }, [asignaciones, docenteId, seccionId]);
+  }, [
+    asignaciones,
+    canManageHorario,
+    docenteId,
+    seccionId,
+  ]);
 
-  const resumen = useMemo(() => {
-    return {
-      bloques: horarios.length,
-      secciones: new Set(horarios.map((item) => item.id_seccion)).size,
-      docentes: new Set(horarios.map((item) => item.id_docente)).size,
-    };
-  }, [horarios]);
+  const selectedAnio = anios.find(
+    (item) => String(item.id_anio) === anioId,
+  );
+
+  const selectedSeccion = secciones.find(
+    (item) =>
+      String(item.id_seccion) === seccionId,
+  );
+
+  const selectedDocente = docentes.find(
+    (item) =>
+      String(item.id_docente) === docenteId,
+  );
+
+  const vistaActual = selectedSeccion
+    ? selectedDocente
+      ? `${selectedSeccion.seccion} · ${selectedDocente.docente}`
+      : selectedSeccion.seccion
+    : selectedDocente
+      ? selectedDocente.docente
+      : isProfesorHorario
+        ? 'Mi horario'
+        : 'Vista general';
+
+  const clasesProgramadas =
+    horarios.length === 1
+      ? '1 clase programada'
+      : `${horarios.length} clases programadas`;
 
   const fetchAnios = async () => {
     if (!token) return;
@@ -230,7 +272,26 @@ export default function CalendarioPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setAsignaciones(Array.isArray(res.data) ? res.data : []);
+      const data: Asignacion[] =
+        Array.isArray(res.data)
+          ? res.data
+          : [];
+
+      setAsignaciones(data);
+
+      /*
+       * En la primera carga se muestra una sección
+       * concreta para evitar mezclar todos los
+       * horarios de la institución.
+       *
+       * El usuario todavía puede seleccionar
+       * manualmente la Vista general.
+       */
+      if (!seccionId && data.length > 0) {
+        setSeccionId(
+          String(data[0].id_seccion),
+        );
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || 'No se pudieron cargar las asignaciones docentes.';
       showToast({ type: 'error', title: 'Error al cargar asignaciones', message });
@@ -296,7 +357,7 @@ export default function CalendarioPage() {
       showToast({
         type: 'warning',
         title: 'Asignación requerida',
-        message: 'Selecciona una asignación docente para crear el bloque horario.',
+        message: 'Selecciona una sección y una asignación para programar la clase.',
       });
       return;
     }
@@ -325,8 +386,8 @@ export default function CalendarioPage() {
 
       showToast({
         type: 'success',
-        title: editing ? 'Horario actualizado' : 'Bloque creado',
-        message: editing ? 'El bloque horario fue actualizado.' : 'El bloque horario fue agregado correctamente.',
+        title: editing ? 'Clase actualizada' : 'Clase programada',
+        message: editing ? 'La clase fue actualizada en el horario.' : 'La clase fue agregada al horario correctamente.',
       });
 
       resetForm();
@@ -370,8 +431,8 @@ export default function CalendarioPage() {
 
       showToast({
         type: 'success',
-        title: 'Bloque eliminado',
-        message: 'El bloque horario fue retirado correctamente.',
+        title: 'Clase eliminada',
+        message: 'La clase fue retirada del horario correctamente.',
       });
 
       setDeleteTarget(null);
@@ -404,18 +465,37 @@ export default function CalendarioPage() {
         }
         icon={CalendarDays}
         meta={[
-          { label: 'Colegio actual', value: scopeLabel },
-          { label: 'Bloques', value: String(resumen.bloques) },
-          { label: 'Docentes', value: String(resumen.docentes) },
+          {
+            label: 'Colegio actual',
+            value: scopeLabel,
+          },
+          {
+            label: 'Año lectivo',
+            value:
+              selectedAnio?.nombre_anio ||
+              'Sin seleccionar',
+          },
+          {
+            label: 'Vista',
+            value: vistaActual,
+          },
         ]}
       />
 
-      <section className="erp-horario-filters">
+      <section
+        className={`erp-horario-filters ${
+          isProfesorHorario
+            ? 'erp-horario-filters--teacher'
+            : ''
+        }`}
+      >
         <FilterCard label="Año lectivo">
           <select
             value={anioId}
             onChange={(event) => {
               setAnioId(event.target.value);
+              setSeccionId('');
+              setDocenteId('');
               resetForm();
             }}
             className={inputClass}
@@ -429,7 +509,7 @@ export default function CalendarioPage() {
           </select>
         </FilterCard>
 
-        <FilterCard label="Sección">
+        <FilterCard label="Sección del horario">
           <select
             value={seccionId}
             onChange={(event) => {
@@ -438,7 +518,7 @@ export default function CalendarioPage() {
             }}
             className={inputClass}
           >
-            <option value="">Todas las secciones</option>
+            <option value="">Vista general · todas las secciones</option>
             {secciones.map((item) => (
               <option key={item.id_seccion} value={item.id_seccion}>
                 {item.seccion}
@@ -448,7 +528,7 @@ export default function CalendarioPage() {
         </FilterCard>
 
         {!isProfesorHorario && (
-          <FilterCard label="Docente">
+          <FilterCard label="Docente (opcional)">
             <select
               value={docenteId}
               onChange={(event) => {
@@ -467,22 +547,14 @@ export default function CalendarioPage() {
           </FilterCard>
         )}
 
-        <section className="erp-horario-summary-card">
-          <p className="erp-horario-card-label">Resumen</p>
-          <div className="erp-horario-summary-grid">
-            <Summary label="Bloques" value={resumen.bloques} />
-            <Summary label="Secciones" value={resumen.secciones} />
-            <Summary label="Docentes" value={resumen.docentes} />
-          </div>
-        </section>
       </section>
 
       <section className={`erp-horario-main-grid ${!canManageHorario ? 'erp-horario-main-grid--readonly' : ''}`}>
         {canManageHorario ? (
           <article className="erp-horario-clean-form-card erp-horario-form-card">
             <header className="erp-horario-clean-form-header">
-              <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
-              <p>Selecciona una asignación docente y define el día, inicio y fin de la clase.</p>
+              <h2>{editing ? 'Editar clase' : 'Programar clase'}</h2>
+              <p>Selecciona una sección en los filtros superiores y luego elige el curso y docente.</p>
             </header>
 
             <div className="erp-horario-form-body">
@@ -493,7 +565,11 @@ export default function CalendarioPage() {
                   onChange={(event) => setForm({ ...form, id_asignacion: event.target.value })}
                   className={inputClass}
                 >
-                  <option value="">Seleccionar asignación</option>
+                  <option value="">
+                      {seccionId
+                        ? 'Selecciona curso y docente'
+                        : 'Primero selecciona una sección'}
+                    </option>
                   {asignacionesParaFormulario.map((item) => (
                     <option key={item.id_asignacion} value={item.id_asignacion}>
                       {item.seccion} · {item.curso} · {item.docente}
@@ -559,13 +635,15 @@ export default function CalendarioPage() {
                   className="erp-horario-primary-button"
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {editing ? 'Guardar cambios' : 'Crear bloque'}
+                  {editing ? 'Guardar cambios' : 'Programar clase'}
                 </button>
               </div>
 
               {asignacionesParaFormulario.length === 0 && (
                 <div className="erp-horario-empty-note">
-                  No hay asignaciones docentes para los filtros seleccionados. Primero crea asignaciones desde el módulo de docentes.
+                  {!seccionId
+                    ? 'Selecciona una sección del horario para programar una clase.'
+                    : 'No hay cursos y docentes asignados para esta sección. Revisa Asignaciones docentes en Configuración.'}
                 </div>
               )}
             </div>
@@ -578,10 +656,10 @@ export default function CalendarioPage() {
               <h2>Horario semanal</h2>
               <p>
                 {isProfesorHorario
-                  ? 'Consulta tus bloques de clase asignados.'
-                  : canManageHorario
-                    ? 'Vista por día. Puedes filtrar por sección o docente.'
-                    : 'Vista de consulta por día, sección y docente.'}
+                  ? `${clasesProgramadas} en tu horario.`
+                  : selectedSeccion || selectedDocente
+                    ? `${vistaActual} · ${clasesProgramadas}.`
+                    : `Vista general de todas las secciones y docentes · ${clasesProgramadas}.`}
               </p>
             </div>
 
@@ -602,7 +680,13 @@ export default function CalendarioPage() {
                   <section key={dia.value} className="erp-horario-day-column">
                     <header className="erp-horario-day-header">
                       <p>{dia.label}</p>
-                      <span>{items.length} bloque(s)</span>
+                      <span>
+                        {items.length === 0
+                          ? 'Sin clases'
+                          : items.length === 1
+                            ? '1 clase'
+                            : `${items.length} clases`}
+                      </span>
                     </header>
 
                     <div className="erp-horario-day-body">
@@ -619,10 +703,23 @@ export default function CalendarioPage() {
 
                               {canManageHorario && (
                                 <div className="erp-horario-class-actions">
-                                  <button type="button" onClick={() => editarHorario(item)} title="Editar">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      editarHorario(item)
+                                    }
+                                    aria-label={`Editar ${item.curso}`}
+                                  >
                                     <Edit3 size={13} />
                                   </button>
-                                  <button type="button" onClick={() => setDeleteTarget(item)} title="Eliminar">
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDeleteTarget(item)
+                                    }
+                                    aria-label={`Eliminar ${item.curso}`}
+                                  >
                                     <Trash2 size={13} />
                                   </button>
                                 </div>
@@ -661,13 +758,13 @@ export default function CalendarioPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="¿Eliminar bloque horario?"
+        title="¿Eliminar esta clase del horario?"
         description={
           deleteTarget
             ? `${labelDia(deleteTarget.dia_semana)} · ${deleteTarget.hora_inicio} - ${deleteTarget.hora_fin} · ${deleteTarget.curso}`
             : 'Esta acción no se puede deshacer.'
         }
-        confirmLabel="Eliminar bloque"
+        confirmLabel="Eliminar clase"
         tone="danger"
         loading={saving}
         onConfirm={eliminarHorario}
@@ -692,11 +789,3 @@ function FilterCard({
   );
 }
 
-function Summary({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="erp-horario-summary-tile">
-      <p>{value}</p>
-      <span>{label}</span>
-    </div>
-  );
-}

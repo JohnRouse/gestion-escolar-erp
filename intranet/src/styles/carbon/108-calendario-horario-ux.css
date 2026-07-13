@@ -1,0 +1,217 @@
+/* ==========================================================
+   108 - Calendario y horario escolar
+   ========================================================== */
+
+/* Año lectivo ocupa el mismo ancho que el formulario.
+   Sección empieza donde comienza el horario semanal. */
+
+.carbon-horario-page
+  .erp-horario-filters {
+  grid-template-columns:
+    370px
+    minmax(0, 1fr)
+    minmax(0, 1fr) !important;
+  gap: 1.25rem !important;
+}
+
+.carbon-horario-page
+  .erp-horario-filters--teacher {
+  grid-template-columns:
+    370px
+    minmax(0, 1fr) !important;
+}
+
+.carbon-horario-page
+  .erp-horario-filter-card {
+  min-width: 0 !important;
+  min-height: 108px !important;
+}
+
+/* Cabecera semanal */
+
+.carbon-horario-page
+  .erp-horario-clean-week-header {
+  display: flex !important;
+  min-height: 96px !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+/* Días */
+
+.carbon-horario-page
+  .erp-horario-day-header {
+  min-height: 68px !important;
+  padding: 14px 14px 11px !important;
+}
+
+.carbon-horario-page
+  .erp-horario-day-header p {
+  margin: 0 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-day-header > span {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #525252 !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.35 !important;
+  text-transform: none !important;
+}
+
+/* Tarjeta de cada clase */
+
+.carbon-horario-page
+  .erp-horario-class-card {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding: 10px !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-top {
+  display: grid !important;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-time {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 4px !important;
+  overflow: hidden !important;
+  color: #0043ce !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-time svg {
+  flex-shrink: 0 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-actions {
+  display: flex !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-actions button {
+  display: inline-flex !important;
+  width: 27px !important;
+  min-width: 27px !important;
+  height: 27px !important;
+  min-height: 27px !important;
+  flex: 0 0 27px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 3px !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  color: #525252 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-actions
+  button:first-child:hover {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-actions
+  button:last-child:hover {
+  border-color: #da1e28 !important;
+  background: #fff1f1 !important;
+  color: #a2191f !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-card h3 {
+  margin: 10px 0 0 !important;
+  overflow-wrap: anywhere !important;
+  color: #161616 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-meta {
+  display: grid !important;
+  gap: 5px !important;
+  margin-top: 8px !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-meta p {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  gap: 5px !important;
+  margin: 0 !important;
+  color: #525252 !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-meta svg {
+  margin-top: 1px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Formulario */
+
+.carbon-horario-page
+  .erp-horario-empty-note {
+  margin-top: 14px !important;
+  border: 1px solid #a6c8ff !important;
+  border-left: 4px solid #0f62fe !important;
+  border-radius: 3px !important;
+  background: #edf5ff !important;
+  padding: 11px 12px !important;
+  color: #393939 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 1280px) {
+  .carbon-horario-page
+    .erp-horario-filters,
+  .carbon-horario-page
+    .erp-horario-filters--teacher {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .carbon-horario-page
+    .erp-horario-filters,
+  .carbon-horario-page
+    .erp-horario-filters--teacher {
+    grid-template-columns: 1fr !important;
+  }
+}
