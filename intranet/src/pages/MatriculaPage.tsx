@@ -424,25 +424,141 @@ export default function MatriculaPage() {
             </button>
           </Card>
 
-          <Card icon={Clock} title="Últimos registros" subtitle="Últimas 5 pre-matrículas registradas." action={<button type="button" onClick={() => navigate('/matricula/historial')} className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-500 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">Ver todas</button>}>
+          <Card icon={Clock} title="Últimos registros" subtitle="Últimas 5 pre-matrículas registradas." action={<button type="button" onClick={() => navigate('/matricula/historial')} className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700">Ver todas</button>}>
             {loadingBase ? (
               <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-14 animate-pulse rounded-2xl bg-neutral-100" />))}</div>
             ) : ultimas.length === 0 ? (
               <Empty text="Sin registros recientes" />
             ) : (
-              <div className="space-y-2">
+              <div className="recent-enrollment-list space-y-3">
                 {ultimas.slice(0, 5).map((matricula) => {
-                  const registrador = matricula.registrado_por?.persona ? `${matricula.registrado_por.persona.nombres} ${matricula.registrado_por.persona.apellido_paterno}` : 'No registrado';
+                  const registrador =
+                    matricula.registrado_por?.persona
+                      ? `${matricula.registrado_por.persona.nombres} ${matricula.registrado_por.persona.apellido_paterno}`
+                      : 'No registrado';
+
+                  const nombreAlumno =
+                    `${matricula.estudiante.persona.nombres} ${matricula.estudiante.persona.apellido_paterno}`;
+
+                  const gradoSeccion =
+                    `${matricula.seccion.grado.nombre_grado} "${matricula.seccion.letra}"`;
+
+                  const nivel =
+                    matricula.seccion.grado.nivel?.nombre_nivel ||
+                    'Nivel no indicado';
+
+                  const institucion =
+                    matricula.colegio?.nombre ||
+                    'Institución no indicada';
+
+                  const anio =
+                    matricula.anio?.nombre_anio ||
+                    'Año no indicado';
+
+                  const avatarColor =
+                    getAvatarColor(nombreAlumno);
+
                   return (
-                    <button key={matricula.id_matricula} type="button" onClick={() => abrirDetalleMatricula(matricula.id_matricula)} className="group w-full rounded-xl bg-neutral-50 p-4 text-left ring-1 ring-neutral-200/60 transition-all duration-150 hover:bg-white hover:ring-neutral-300/60">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-neutral-800">{getCodigoMatricula(matricula)} · {matricula.estudiante.persona.nombres} {matricula.estudiante.persona.apellido_paterno}</p>
-                          <p className="mt-0.5 text-xs text-neutral-400">{matricula.seccion.grado.nombre_grado} &quot;{matricula.seccion.letra}&quot; · {matricula.seccion.grado.nivel?.nombre_nivel || 'Nivel'}</p>
-                          <p className="mt-0.5 text-xs text-neutral-400">{formatFechaHora(matricula.fecha_matricula)}</p>
-                          <p className="mt-0.5 truncate text-xs text-neutral-500">Por: {registrador}</p>
+                    <button
+                      key={matricula.id_matricula}
+                      type="button"
+                      onClick={() =>
+                        abrirDetalleMatricula(
+                          matricula.id_matricula,
+                        )
+                      }
+                      className="recent-enrollment-card group w-full text-left"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`recent-enrollment-avatar ${avatarColor}`}
+                        >
+                          {getInitials(
+                            matricula.estudiante.persona.nombres,
+                          )}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="recent-enrollment-code">
+                            {getCodigoMatricula(
+                              matricula,
+                            )}
+                          </p>
+
+                          <p className="recent-enrollment-name">
+                            {nombreAlumno}
+                          </p>
+
+                          <p className="recent-enrollment-dni">
+                            DNI:{' '}
+                            {matricula.estudiante.persona.dni ||
+                              'No registrado'}
+                          </p>
                         </div>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${getEstadoCls(matricula.estado_matricula)}`}>{matricula.estado_matricula || 'Registrado'}</span>
+
+                        <span
+                          className={`recent-enrollment-status ${getEstadoCls(
+                            matricula.estado_matricula,
+                          )}`}
+                        >
+                          {matricula.estado_matricula ||
+                            'Registrado'}
+                        </span>
+                      </div>
+
+                      <div className="recent-enrollment-details">
+                        <div>
+                          <span>
+                            Grado y sección
+                          </span>
+
+                          <strong>
+                            {gradoSeccion}
+                          </strong>
+
+                          <small>
+                            {nivel}
+                          </small>
+                        </div>
+
+                        <div>
+                          <span>
+                            Institución
+                          </span>
+
+                          <strong>
+                            {institucion}
+                          </strong>
+
+                          <small>
+                            {anio}
+                          </small>
+                        </div>
+                      </div>
+
+                      <div className="recent-enrollment-footer">
+                        <span>
+                          <CalendarDays
+                            size={13}
+                            aria-hidden="true"
+                          />
+
+                          {formatFechaHora(
+                            matricula.fecha_matricula,
+                          )}
+                        </span>
+
+                        <span className="min-w-0 truncate">
+                          Registró: {registrador}
+                        </span>
+
+                        <span className="recent-enrollment-open">
+                          Ver detalle
+                          <ArrowRight
+                            size={13}
+                            aria-hidden="true"
+                          />
+                        </span>
                       </div>
                     </button>
                   );

@@ -1,0 +1,357 @@
+/* ==========================================================
+   106 - Sidebar flotante y últimos registros
+   ========================================================== */
+
+/* Sidebar plegado: menú flotante */
+
+.sidebar-hover-flyout {
+  position: fixed;
+  z-index: 6500;
+  width: 296px;
+  max-height: min(
+    560px,
+    calc(100dvh - 24px)
+  );
+  overflow-y: auto;
+  border: 1px solid #a6c8ff;
+  border-left: 4px solid #0f62fe;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 20px 50px
+    rgba(15, 23, 42, 0.22);
+  animation:
+    sidebarFlyoutEnter
+    150ms ease-out;
+  overscroll-behavior: contain;
+}
+
+@keyframes sidebarFlyoutEnter {
+  from {
+    opacity: 0;
+    transform:
+      translateX(-8px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateX(0)
+      scale(1);
+  }
+}
+
+.sidebar-hover-flyout__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #c6c6c6;
+  background: #edf5ff;
+}
+
+.sidebar-hover-flyout__header h3 {
+  margin-top: 2px;
+  color: #161616;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.sidebar-hover-flyout__header > span {
+  flex-shrink: 0;
+  border: 1px solid #a6c8ff;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 4px 7px;
+  color: #0043ce;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sidebar-hover-flyout__eyebrow {
+  color: #0f62fe;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sidebar-hover-flyout__content {
+  padding: 8px;
+}
+
+.sidebar-hover-flyout__group {
+  padding-bottom: 8px;
+}
+
+.sidebar-hover-flyout__group
+  + .sidebar-hover-flyout__group {
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.sidebar-hover-flyout__group-title {
+  padding: 6px 10px;
+  color: #525252;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sidebar-hover-flyout__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 9px 11px;
+  color: #393939;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sidebar-hover-flyout__item:hover {
+  border-color: #a6c8ff;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.sidebar-hover-flyout__item--active {
+  border-color: #78a9ff;
+  background: #d0e2ff;
+  color: #002d9c;
+}
+
+.sidebar-hover-flyout__arrow {
+  flex-shrink: 0;
+  color: #0f62fe;
+  font-size: 15px;
+  transition:
+    transform 120ms ease;
+}
+
+.sidebar-hover-flyout__item:hover
+  .sidebar-hover-flyout__arrow {
+  transform: translateX(3px);
+}
+
+.sidebar-hover-flyout::-webkit-scrollbar {
+  width: 7px;
+}
+
+.sidebar-hover-flyout::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: #c6c6c6;
+}
+
+
+/* Últimos registros */
+
+.carbon-matricula-page
+  .recent-enrollment-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #c6c6c6;
+  border-left: 4px solid #8d8d8d;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+  color: #161616;
+  box-shadow: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-card:hover {
+  border-color: #0f62fe;
+  border-left-color: #0f62fe;
+  background: #f8fbff;
+  box-shadow:
+    0 8px 22px
+    rgba(15, 98, 254, 0.1);
+}
+
+.carbon-matricula-page
+  .recent-enrollment-avatar {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-code {
+  color: #0f62fe;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-name {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #161616;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-dni {
+  margin-top: 2px;
+  color: #525252;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  word-spacing: normal;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-status {
+  flex-shrink: 0;
+  border-radius: 4px !important;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-details {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-details > div {
+  min-width: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  background: #f4f4f4;
+  padding: 8px 9px;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-details span {
+  display: block;
+  color: #6f6f6f;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-details strong {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #262626;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-details small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #6f6f6f;
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-footer {
+  display: grid;
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid #e0e0e0;
+  color: #6f6f6f;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-footer > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-open {
+  color: #0f62fe;
+  font-weight: 700;
+}
+
+.carbon-matricula-page
+  .recent-enrollment-card:hover
+  .recent-enrollment-open svg {
+  transform: translateX(3px);
+}
+
+.carbon-matricula-page
+  .recent-enrollment-open svg {
+  transition:
+    transform 120ms ease;
+}
+
+@media (max-width: 560px) {
+  .carbon-matricula-page
+    .recent-enrollment-details {
+    grid-template-columns: 1fr;
+  }
+
+  .carbon-matricula-page
+    .recent-enrollment-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .carbon-matricula-page
+    .recent-enrollment-open {
+    justify-content: flex-end;
+  }
+}

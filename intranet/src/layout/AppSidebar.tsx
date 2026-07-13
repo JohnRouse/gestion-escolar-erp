@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState, type ElementType } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ElementType,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -189,7 +196,20 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isOpen, close, isCollapsed, toggleCollapse } = useSidebar();
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] =
+    useState<string | null>(null);
+
+  const [hoveredItem, setHoveredItem] =
+    useState<NavItem | null>(null);
+
+  const [flyoutPosition, setFlyoutPosition] =
+    useState({
+      top: 0,
+      left: 0,
+    });
+
+  const flyoutCloseTimer =
+    useRef<number | null>(null);
 
   const categorias = useMemo(() => {
     const filterByRole = (items: NavItem[]) =>
@@ -243,9 +263,101 @@ export default function AppSidebar() {
   const handleNavigate = (path?: string) => {
     if (!path) return;
 
+    setHoveredItem(null);
     navigate(path);
     close();
   };
+
+  const clearFlyoutCloseTimer = () => {
+    if (flyoutCloseTimer.current === null) {
+      return;
+    }
+
+    window.clearTimeout(
+      flyoutCloseTimer.current,
+    );
+
+    flyoutCloseTimer.current = null;
+  };
+
+  const scheduleFlyoutClose = () => {
+    clearFlyoutCloseTimer();
+
+    flyoutCloseTimer.current =
+      window.setTimeout(() => {
+        setHoveredItem(null);
+        flyoutCloseTimer.current = null;
+      }, 180);
+  };
+
+  const openCollapsedFlyout = (
+    item: NavItem,
+    target: HTMLElement,
+  ) => {
+    if (
+      !isCollapsed ||
+      !item.children?.length
+    ) {
+      return;
+    }
+
+    clearFlyoutCloseTimer();
+
+    const rect =
+      target.getBoundingClientRect();
+
+    const optionCount =
+      getChildPaths(item).length;
+
+    const groupCount =
+      item.children.filter(
+        (child) =>
+          Boolean(child.children?.length),
+      ).length;
+
+    const estimatedHeight = Math.min(
+      520,
+      86 +
+        optionCount * 43 +
+        groupCount * 30,
+    );
+
+    const top = Math.max(
+      12,
+      Math.min(
+        rect.top - 8,
+        window.innerHeight -
+          estimatedHeight -
+          12,
+      ),
+    );
+
+    setFlyoutPosition({
+      top,
+      left: rect.right + 12,
+    });
+
+    setHoveredItem(item);
+  };
+
+  useEffect(() => {
+    setHoveredItem(null);
+  }, [
+    isCollapsed,
+    location.pathname,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (
+        flyoutCloseTimer.current !== null
+      ) {
+        window.clearTimeout(
+          flyoutCloseTimer.current,
+        );
+      }
+    };
+  }, []);
 
   const Tooltip = ({ title }: { title: string }) => (
     <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-[80] -translate-y-1/2 whitespace-nowrap rounded-2xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-xl shadow-slate-950/15 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100">
@@ -269,8 +381,24 @@ export default function AppSidebar() {
         <div key={item.title} className="relative">
           <button
             type="button"
+            onMouseEnter={(event) =>
+              openCollapsedFlyout(
+                item,
+                event.currentTarget,
+              )
+            }
+            onMouseLeave={() =>
+              scheduleFlyoutClose()
+            }
+            onFocus={(event) =>
+              openCollapsedFlyout(
+                item,
+                event.currentTarget,
+              )
+            }
             onClick={() => {
               if (isCollapsed) {
+                setHoveredItem(null);
                 toggleCollapse();
                 setExpanded(item.title);
                 return;
@@ -312,7 +440,6 @@ export default function AppSidebar() {
               />
             )}
 
-            {isCollapsed && <Tooltip title={item.title} />}
           </button>
 
           {isExpanded && !isCollapsed && (
@@ -561,6 +688,156 @@ export default function AppSidebar() {
           </div>
         </div>
       </aside>
+
+      {isCollapsed &&
+        hoveredItem?.children?.length &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <aside
+            className="sidebar-hover-flyout"
+            style={{
+              top: flyoutPosition.top,
+              left: flyoutPosition.left,
+            }}
+            onMouseEnter={
+              clearFlyoutCloseTimer
+            }
+            onMouseLeave={() =>
+              scheduleFlyoutClose()
+            }
+            aria-label={`Opciones de ${hoveredItem.title}`}
+          >
+            <div className="sidebar-hover-flyout__header">
+              <div>
+                <p className="sidebar-hover-flyout__eyebrow">
+                  Menú
+                </p>
+
+                <h3>
+                  {hoveredItem.title}
+                </h3>
+              </div>
+
+              <span>
+                {
+                  getChildPaths(
+                    hoveredItem,
+                  ).length
+                }{' '}
+                opciones
+              </span>
+            </div>
+
+            <div className="sidebar-hover-flyout__content">
+              {hoveredItem.children.map(
+                (child) => {
+                  const nestedChildren =
+                    child.children || [];
+
+                  if (
+                    nestedChildren.length > 0
+                  ) {
+                    return (
+                      <section
+                        key={child.title}
+                        className="sidebar-hover-flyout__group"
+                      >
+                        <p className="sidebar-hover-flyout__group-title">
+                          {child.title}
+                        </p>
+
+                        <div>
+                          {nestedChildren.map(
+                            (
+                              nestedChild,
+                            ) => {
+                              const active =
+                                isChildActive(
+                                  nestedChild.path,
+                                );
+
+                              return (
+                                <button
+                                  key={
+                                    nestedChild.title
+                                  }
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() =>
+                                    handleNavigate(
+                                      nestedChild.path,
+                                    )
+                                  }
+                                  className={cx(
+                                    'sidebar-hover-flyout__item',
+                                    active &&
+                                      'sidebar-hover-flyout__item--active',
+                                  )}
+                                >
+                                  <span>
+                                    {
+                                      nestedChild.title
+                                    }
+                                  </span>
+
+                                  <span
+                                    aria-hidden="true"
+                                    className="sidebar-hover-flyout__arrow"
+                                  >
+                                    →
+                                  </span>
+                                </button>
+                              );
+                            },
+                          )}
+                        </div>
+                      </section>
+                    );
+                  }
+
+                  if (!child.path) {
+                    return null;
+                  }
+
+                  const active =
+                    isChildActive(
+                      child.path,
+                    );
+
+                  return (
+                    <button
+                      key={child.title}
+                      type="button"
+                      role="menuitem"
+                      onClick={() =>
+                        handleNavigate(
+                          child.path,
+                        )
+                      }
+                      className={cx(
+                        'sidebar-hover-flyout__item',
+                        active &&
+                          'sidebar-hover-flyout__item--active',
+                      )}
+                    >
+                      <span>
+                        {child.title}
+                      </span>
+
+                      <span
+                        aria-hidden="true"
+                        className="sidebar-hover-flyout__arrow"
+                      >
+                        →
+                      </span>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          </aside>,
+          document.body,
+        )}
     </>
   );
 }
