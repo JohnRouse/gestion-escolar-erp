@@ -17,13 +17,42 @@ function toInt(value: string | number) {
 
 export default function EscalaTab() {
   const { token } = useAuth();
-  const { tenant, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const {
+    tenant,
+    colegios,
+    activeScope,
+    activeColegio,
+    queryString,
+    scopeLabel,
+  } = useSchool();
   const { showToast } = useToast();
 
+  const [colegioGestionId, setColegioGestionId] =
+    useState('');
+
   const colegioConfigId =
-    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+    activeScope.tipo === 'colegio' &&
+    activeColegio?.id_colegio
       ? activeColegio.id_colegio
-      : null;
+      : Number(
+          colegioGestionId ||
+            colegios[0]?.id_colegio ||
+            0,
+        ) || null;
+
+  const colegioGestion = colegios.find(
+    (colegio) =>
+      colegio.id_colegio === colegioConfigId,
+  );
+
+  const escalaQueryString = colegioConfigId
+    ? `?colegio_id=${colegioConfigId}`
+    : queryString;
+
+  const escalaScopeLabel =
+    colegioGestion?.nombre ||
+    colegioGestion?.nombre_corto ||
+    scopeLabel;
 
   const [minima, setMinima] = useState(0);
   const [maxima, setMaxima] = useState(20);
@@ -44,18 +73,51 @@ export default function EscalaTab() {
 
   useEffect(() => {
     if (!token) return;
+
+    if (!colegioConfigId) {
+      setLoading(false);
+      setMensaje({
+        type: 'error',
+        text: 'Selecciona una institución para consultar su escala.',
+      });
+      return;
+    }
+
+    setLoading(true);
+    setMensaje(null);
+
     axios
-      .get(`/api/calificaciones/escala${queryString}`, authHeader)
+      .get(
+        `/api/calificaciones/escala${escalaQueryString}`,
+        authHeader,
+      )
       .then((res) => {
         if (res.data) {
           setMinima(Number(res.data.nota_minima));
           setMaxima(Number(res.data.nota_maxima));
-          setAprobatoria(Number(res.data.nota_aprobatoria));
+          setAprobatoria(
+            Number(res.data.nota_aprobatoria),
+          );
         }
       })
-      .catch(() => setMensaje({ type: 'error', text: 'No se pudo cargar la escala de calificación.' }))
+      .catch((error) => {
+        const status = error?.response?.status;
+
+        setMensaje({
+          type: 'error',
+          text:
+            status === 403
+              ? 'Tu perfil no tiene permiso para consultar esta escala.'
+              : 'No se pudo cargar la escala de calificación.',
+        });
+      })
       .finally(() => setLoading(false));
-  }, [token, authHeader, queryString]);
+  }, [
+    token,
+    authHeader,
+    escalaQueryString,
+    colegioConfigId,
+  ]);
 
   const handleSave = async () => {
     setMensaje(null);
@@ -87,7 +149,7 @@ export default function EscalaTab() {
       showToast({
         type: 'success',
         title: 'Escala guardada',
-        message: `Escala actualizada para ${scopeLabel}.`,
+        message: `Escala actualizada para ${escalaScopeLabel}.`,
       });
     } catch {
       setMensaje({ type: 'error', text: 'No se pudo guardar la escala.' });
@@ -115,6 +177,43 @@ export default function EscalaTab() {
         <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Escala de calificación</h3>
         <p className="mt-1 text-sm text-gray-500">Configura el rango de notas que usará el registro académico.</p>
       </div>
+
+      {activeScope.tipo === 'todos' &&
+        colegios.length > 0 && (
+          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.04em] text-slate-600">
+                Institución para configurar
+              </span>
+
+              <select
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                value={String(colegioConfigId || '')}
+                onChange={(event) => {
+                  setColegioGestionId(
+                    event.target.value,
+                  );
+                  setMensaje(null);
+                }}
+              >
+                {colegios.map((colegio) => (
+                  <option
+                    key={colegio.id_colegio}
+                    value={colegio.id_colegio}
+                  >
+                    {colegio.nombre ||
+                      colegio.nombre_corto}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="mt-2 text-xs font-normal text-slate-600">
+              Cada institución conserva su propia
+              escala de calificación.
+            </p>
+          </section>
+        )}
 
       {mensaje && (
         <div

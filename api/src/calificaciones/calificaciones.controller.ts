@@ -223,7 +223,7 @@ export class CalificacionesController {
 
   // ── Escala de calificación ──────────────────────
   @Get('escala')
-  @Roles('Admin')
+  @Roles('Admin', 'Director')
   async getEscala(
     @Request() req,
     @Query('scope') scope?: string,
@@ -259,7 +259,7 @@ export class CalificacionesController {
   }
 
   @Put('escala')
-  @Roles('Admin')
+  @Roles('Admin', 'Director')
   async updateEscala(
     @Request() req,
     @Body()

@@ -601,37 +601,78 @@ export default function PeriodosUnidadesTab() {
 
               return (
                 <article key={periodo.id_bimestre} className="transition-colors duration-200 hover:bg-slate-50/50">
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((prev) => ({ ...prev, [periodo.id_bimestre]: !abierto }))}
-                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h5 className="font-black text-slate-950">{periodo.nombre || periodo.label}</h5>
+                  <div className="flex w-full items-center gap-3 px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpanded((prev) => ({
+                          ...prev,
+                          [periodo.id_bimestre]:
+                            !abierto,
+                        }))
+                      }
+                      className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left"
+                      aria-expanded={abierto}
+                    >
+                      <div className="min-w-0">
+                        <h5 className="truncate font-black text-slate-950">
+                          {periodo.nombre ||
+                            periodo.label}
+                        </h5>
+
                         <p className="mt-1 text-sm text-slate-500">
-                          {formatDate(periodo.fecha_inicio)} - {formatDate(periodo.fecha_fin)} · {periodo.unidades.length} unidad(es)
+                          {formatDate(
+                            periodo.fecha_inicio,
+                          )}{' '}
+                          -{' '}
+                          {formatDate(
+                            periodo.fecha_fin,
+                          )}{' '}
+                          · {periodo.unidades.length}{' '}
+                          unidad(es)
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditando({
-                            tipo: 'periodo',
-                            id: periodo.id_bimestre,
-                            nombre: periodo.nombre || periodo.label,
-                            fecha_inicio: toInputDate(periodo.fecha_inicio),
-                            fecha_fin: toInputDate(periodo.fecha_fin),
-                          });
-                        }}
-                        className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-slate-700"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                    </div>
-                    {abierto ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
-                  </button>
+
+                      {abierto ? (
+                        <ChevronUp
+                          size={18}
+                          className="shrink-0 text-slate-400"
+                        />
+                      ) : (
+                        <ChevronDown
+                          size={18}
+                          className="shrink-0 text-slate-400"
+                        />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditando({
+                          tipo: 'periodo',
+                          id: periodo.id_bimestre,
+                          nombre:
+                            periodo.nombre ||
+                            periodo.label,
+                          fecha_inicio: toInputDate(
+                            periodo.fecha_inicio,
+                          ),
+                          fecha_fin: toInputDate(
+                            periodo.fecha_fin,
+                          ),
+                        })
+                      }
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                      aria-label={`Editar ${
+                        periodo.nombre ||
+                        periodo.label
+                      }`}
+                      title="Editar periodo"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  </div>
 
                   {abierto && (
                     <div className="grid gap-3 px-5 pb-5 md:grid-cols-2 xl:grid-cols-3">
