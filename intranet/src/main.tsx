@@ -15,6 +15,7 @@ import './styles/carbon/105-pensiones-carbon-ui.css';
 import './styles/carbon/106-sidebar-hover-ultimos-registros.css';
 import './styles/carbon/107-asistencia-mobile-carbon.css';
 import './styles/carbon/108-calendario-horario-ux.css';
+import './styles/carbon/109-header-selector-busqueda-global.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

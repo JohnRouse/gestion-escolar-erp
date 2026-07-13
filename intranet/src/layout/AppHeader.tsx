@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -10,16 +12,15 @@ import {
   LogOut,
   Menu,
   School,
-  Search,
   Settings,
   User,
-  X,
   Zap,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { assetUrl } from '../utils/assets';
+import HeaderGlobalSearch from '../components/header/HeaderGlobalSearch';
 
 function obtenerPartesNombre(nombre?: string | null): string[] {
   return (nombre || '')
@@ -93,7 +94,7 @@ function InstitutionMark({ kind, colegio, compact = false }: InstitutionMarkProp
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center ${outerSize} ${
+      className={`school-mark inline-flex shrink-0 items-center justify-center ${outerSize} ${
         kind === 'group'
           ? 'border border-slate-200 bg-white shadow-sm'
           : 'shadow-[0_0_0_2px_rgba(255,255,255,0.95),0_5px_14px_rgba(15,23,42,0.22)]'
@@ -132,6 +133,8 @@ export default function AppHeader() {
     activeScope,
     activeColegio,
     scopeLabel,
+    institutionSingularLabel,
+    institutionPluralLabel,
     setColegioActivo,
     setTodosLosColegios,
   } = useSchool();
@@ -141,10 +144,6 @@ export default function AppHeader() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-
   const userName = user?.nombre || 'Usuario';
   const userShortName = obtenerNombreCortoUsuario(userName);
   const userInitials = obtenerInicialesUsuario(userName);
@@ -167,40 +166,39 @@ export default function AppHeader() {
       ? activeColegio?.nombre || scopeLabel || 'Colegio seleccionado'
       : scopeLabel || 'Todos los colegios';
 
+  const consolidatedScopeTitle =
+    institutionPluralLabel === 'Academias'
+      ? 'Todas las academias'
+      : institutionPluralLabel === 'Institutos'
+        ? 'Todos los institutos'
+        : 'Todos los colegios';
+
   const handleLogout = () => {
     logout();
     navigate('/login');
     setDropdownOpen(false);
     setSchoolDropdownOpen(false);
   };
-
-  const handleSearch = (value: string) => {
-    const query = value.trim();
-
-    if (!query) return;
-
-    navigate(`/matricula?dni=${encodeURIComponent(query)}`);
-    setMobileSearchOpen(false);
-    searchInputRef.current?.blur();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+useEffect(() => {
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
       if (event.key === 'Escape') {
         setDropdownOpen(false);
         setSchoolDropdownOpen(false);
-        setMobileSearchOpen(false);
-      }
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        searchInputRef.current?.focus();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener(
+      'keydown',
+      handleKeyDown,
+    );
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () =>
+      window.removeEventListener(
+        'keydown',
+        handleKeyDown,
+      );
   }, []);
 
   return (
@@ -245,7 +243,7 @@ export default function AppHeader() {
                   setSchoolDropdownOpen((value) => !value);
                   setDropdownOpen(false);
                 }}
-                className="group hidden h-11 max-w-sm items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
+                className="header-school-trigger group hidden h-11 max-w-sm items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
               >
                 <InstitutionMark
                   kind={activeTipo === 'todos' ? 'all' : 'school'}
@@ -287,8 +285,8 @@ export default function AppHeader() {
               {schoolDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setSchoolDropdownOpen(false)} />
-                  <div className="header-dropdown-enter absolute left-0 z-[1000] mt-3 w-[21rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
-                    <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
+                  <div className="header-school-dropdown header-dropdown-enter absolute left-0 z-[1000] mt-3 w-[21rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
+                    <div className="header-school-dropdown__header border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                       <div className="flex items-center gap-3">
                         <InstitutionMark kind="group" />
                         <div className="min-w-0">
@@ -296,7 +294,7 @@ export default function AppHeader() {
                             {tenant?.nombre || 'Grupo educativo'}
                           </p>
                           <p className="truncate text-xs font-medium text-slate-600">
-                            Selecciona el colegio de trabajo
+                            Selecciona el {institutionSingularLabel.toLowerCase()} de trabajo
                           </p>
                         </div>
                       </div>
@@ -310,13 +308,17 @@ export default function AppHeader() {
                             setTodosLosColegios();
                             setSchoolDropdownOpen(false);
                           }}
-                          className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 hover:bg-slate-50"
+                          className={`header-school-option ${
+                            activeTipo === 'todos'
+                              ? 'header-school-option--active'
+                              : ''
+                          }`}
                         >
                           <span className="flex min-w-0 items-center gap-3">
                             <InstitutionMark kind="all" />
                             <span className="min-w-0">
                               <span className="block text-sm font-bold text-slate-950">
-                                Todas las instituciones
+                                {consolidatedScopeTitle}
                               </span>
                               <span className="block truncate text-xs font-medium text-slate-600">
                                 Vista consolidada del grupo
@@ -344,7 +346,11 @@ export default function AppHeader() {
                               setColegioActivo(colegio.id_colegio);
                               setSchoolDropdownOpen(false);
                             }}
-                            className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 hover:bg-slate-50"
+                            className={`header-school-option ${
+                              selected
+                                ? 'header-school-option--active'
+                                : ''
+                            }`}
                           >
                             <span className="flex min-w-0 items-center gap-3">
                               <InstitutionMark kind="school" colegio={colegio} />
@@ -362,40 +368,27 @@ export default function AppHeader() {
                         );
                       })}
                     </div>
+
+                    <div className="header-school-dropdown__footer">
+                      Al cambiar de institución,
+                      los listados y filtros se
+                      actualizarán automáticamente.
+                    </div>
                   </div>
                 </>
               )}
             </div>
           )}
 
-          <form
-            className="hidden h-11 w-[min(26rem,42vw)] items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 px-4 text-sm transition-all duration-200 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10 md:flex"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleSearch((event.currentTarget.elements.namedItem('search') as HTMLInputElement).value);
+          <HeaderGlobalSearch
+            onOpen={() => {
+              setDropdownOpen(false);
+              setSchoolDropdownOpen(false);
             }}
-          >
-            <Search size={17} className="shrink-0 text-slate-500" />
-            <input
-              ref={searchInputRef}
-              name="search"
-              type="text"
-              placeholder="Buscar alumno o DNI..."
-              className="h-full min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-500"
-            />
-          </form>
+          />
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileSearchOpen((value) => !value)}
-            aria-label="Buscar alumno"
-            className={`${iconButtonClass} md:hidden`}
-          >
-            {mobileSearchOpen ? <X size={18} /> : <Search size={18} />}
-          </button>
-
           <button type="button" aria-label="Ver notificaciones" className={`${iconButtonClass} relative`}>
             <Bell size={18} strokeWidth={2} />
             <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
@@ -525,32 +518,6 @@ export default function AppHeader() {
           </div>
         </div>
 
-        {mobileSearchOpen && (
-          <form
-            className="header-search-enter absolute inset-x-0 top-[4.75rem] z-40 mx-auto flex h-12 items-center gap-2.5 rounded-2xl border border-slate-200/80 bg-white px-4 py-2 shadow-2xl shadow-slate-950/10"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleSearch((event.currentTarget.elements.namedItem('mobileSearch') as HTMLInputElement).value);
-            }}
-          >
-            <Search size={17} className="text-slate-500" />
-            <input
-              name="mobileSearch"
-              autoFocus
-              type="text"
-              placeholder="Buscar alumno o DNI..."
-              className="h-9 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-500"
-            />
-            <button
-              type="button"
-              onClick={() => setMobileSearchOpen(false)}
-              aria-label="Cerrar búsqueda"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
-            >
-              <X size={16} />
-            </button>
-          </form>
-        )}
       </div>
     </header>
   );

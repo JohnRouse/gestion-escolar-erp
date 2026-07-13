@@ -145,6 +145,24 @@ export default function AlumnosPage() {
   const [confirmApoderadoDestino, setConfirmApoderadoDestino] = useState<{ id: number; nombre: string } | null>(null);
 
   useEffect(() => {
+    const search =
+      new URLSearchParams(
+        location.search,
+      );
+
+    const queryParam =
+      (search.get('q') || '').trim();
+
+    setQ((current) =>
+      current === queryParam
+        ? current
+        : queryParam,
+    );
+
+    setPage(1);
+  }, [location.search]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 350);
     return () => window.clearTimeout(timer);
   }, [q]);
