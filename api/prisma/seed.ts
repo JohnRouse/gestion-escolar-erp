@@ -3,8 +3,192 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
-const money = (value: number) => Number(value.toFixed(2));
+const flagEnabled = (name: string) =>
+  ['1', 'true', 'yes', 'si', 'sí'].includes(
+    String(process.env[name] || '').trim().toLowerCase(),
+  );
+
+const RESET_PASSWORDS = flagEnabled('SEED_RESET_PASSWORDS');
+const FORCE_DEMO_SEED = flagEnabled('SEED_FORCE_DEMO');
+
+const date = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`Fecha inválida en seed: ${value}`);
+  }
+
+  const result = new Date(`${value}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(result.getTime()) ||
+    result.toISOString().slice(0, 10) !== value
+  ) {
+    throw new Error(`Fecha inexistente en seed: ${value}`);
+  }
+
+  return result;
+};
+
+const money = (value: number) => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`Monto inválido en seed: ${value}`);
+  }
+
+  return Number(value.toFixed(2));
+};
+
+function validatePersonaData(data: {
+  dni: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  fecha_nacimiento: Date;
+  genero?: string;
+  correo?: string | null;
+  telefono?: string | null;
+}) {
+  if (!/^\d{8}$/.test(data.dni)) {
+    throw new Error(`DNI inválido en seed: ${data.dni}`);
+  }
+
+  for (const [field, value] of [
+    ['nombres', data.nombres],
+    ['apellido_paterno', data.apellido_paterno],
+    ['apellido_materno', data.apellido_materno],
+  ]) {
+    const normalized = String(value || '').trim();
+
+    if (normalized.length < 2 || normalized.length > 100) {
+      throw new Error(
+        `${field} inválido para DNI ${data.dni}: ${normalized}`,
+      );
+    }
+  }
+
+  if (Number.isNaN(data.fecha_nacimiento.getTime())) {
+    throw new Error(
+      `Fecha de nacimiento inválida para DNI ${data.dni}`,
+    );
+  }
+
+  if (
+    data.fecha_nacimiento.getTime() >
+    Date.now()
+  ) {
+    throw new Error(
+      `Fecha de nacimiento futura para DNI ${data.dni}`,
+    );
+  }
+
+  if (
+    data.genero &&
+    !['M', 'F', 'O'].includes(data.genero)
+  ) {
+    throw new Error(
+      `Género inválido para DNI ${data.dni}: ${data.genero}`,
+    );
+  }
+
+  if (
+    data.correo &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)
+  ) {
+    throw new Error(
+      `Correo inválido para DNI ${data.dni}: ${data.correo}`,
+    );
+  }
+
+  if (
+    data.telefono &&
+    !/^\d{9}$/.test(data.telefono)
+  ) {
+    throw new Error(
+      `Teléfono inválido para DNI ${data.dni}: ${data.telefono}`,
+    );
+  }
+}
+
+function validateColegioData(data: {
+  nombre: string;
+  nombre_corto: string;
+  codigo: string;
+  telefono: string;
+  color_principal: string;
+}) {
+  if (data.nombre.trim().length < 3) {
+    throw new Error('El nombre institucional del seed es inválido.');
+  }
+
+  if (!/^[A-Z0-9-]{2,30}$/.test(data.codigo)) {
+    throw new Error(
+      `Código institucional inválido: ${data.codigo}`,
+    );
+  }
+
+  if (!/^\d{9}$/.test(data.telefono)) {
+    throw new Error(
+      `Teléfono institucional inválido: ${data.telefono}`,
+    );
+  }
+
+  if (!/^#[0-9A-F]{6}$/i.test(data.color_principal)) {
+    throw new Error(
+      `Color institucional inválido: ${data.color_principal}`,
+    );
+  }
+}
+
+async function assertDemoDatabaseScope() {
+  const tenants = await prisma.tenant.findMany({
+    select: {
+      id_tenant: true,
+      nombre: true,
+      slug: true,
+    },
+  });
+
+  const foreignTenants = tenants.filter(
+    (tenant) => tenant.slug !== 'grupo-victoria',
+  );
+
+  if (foreignTenants.length > 0 && !FORCE_DEMO_SEED) {
+    throw new Error(
+      'Seed bloqueado: la base contiene tenants que no pertenecen ' +
+      'al entorno de demostración. Usa SEED_FORCE_DEMO=true solo ' +
+      'después de verificar la base.',
+    );
+  }
+
+  const demoTenant = tenants.find(
+    (tenant) => tenant.slug === 'grupo-victoria',
+  );
+
+  if (!demoTenant) return;
+
+  const colegios = await prisma.colegio.findMany({
+    where: {
+      id_tenant: demoTenant.id_tenant,
+    },
+    select: {
+      nombre: true,
+      codigo: true,
+    },
+  });
+
+  const expectedCodes = new Set(['SMV', 'SGD']);
+
+  const unexpected = colegios.filter(
+    (colegio) =>
+      !colegio.codigo ||
+      !expectedCodes.has(colegio.codigo),
+  );
+
+  if (unexpected.length > 0 && !FORCE_DEMO_SEED) {
+    throw new Error(
+      'Seed bloqueado: el tenant de demostración contiene ' +
+      'instituciones no reconocidas. No se modificarán datos reales.',
+    );
+  }
+}
 
 async function upsertById<T extends { [key: string]: any }>(
   model: any,
@@ -12,10 +196,71 @@ async function upsertById<T extends { [key: string]: any }>(
   idValue: number,
   data: T,
 ) {
-  return model.upsert({
-    where: { [idField]: idValue },
-    update: data,
-    create: { [idField]: idValue, ...data },
+  const where = { [idField]: idValue };
+
+  const existing = await model.findUnique({
+    where,
+  });
+
+  if (existing) {
+    const protectedFields = [
+      'id_tenant',
+      'id_colegio',
+      'id_anio',
+      'id_bimestre',
+      'id_nivel',
+      'id_grado',
+      'id_aula',
+      'id_area',
+    ];
+
+    for (const field of protectedFields) {
+      if (
+        data[field] != null &&
+        existing[field] != null &&
+        Number(data[field]) !== Number(existing[field])
+      ) {
+        throw new Error(
+          `Colisión de ID en ${idField}=${idValue}: ` +
+          `${field} no coincide.`,
+        );
+      }
+    }
+
+    const identityFields = [
+      'nombre_nivel',
+      'nombre_grado',
+      'nombre_area',
+      'nombre_curso',
+      'nombre_anio',
+    ];
+
+    for (const field of identityFields) {
+      if (
+        data[field] != null &&
+        existing[field] != null &&
+        String(data[field]).trim() !==
+          String(existing[field]).trim() &&
+        !FORCE_DEMO_SEED
+      ) {
+        throw new Error(
+          `Colisión de identidad en ${idField}=${idValue}: ` +
+          `${field} no coincide.`,
+        );
+      }
+    }
+
+    return model.update({
+      where,
+      data,
+    });
+  }
+
+  return model.create({
+    data: {
+      [idField]: idValue,
+      ...data,
+    },
   });
 }
 
@@ -33,6 +278,8 @@ async function upsertPersona(data: {
   provincia?: string;
   distrito?: string;
 }) {
+  validatePersonaData(data);
+
   return prisma.persona.upsert({
     where: { dni: data.dni },
     update: {
@@ -59,18 +306,54 @@ async function upsertUsuario(params: {
   id_rol: number;
   avatar_url?: string | null;
 }) {
-  const password_hash = await bcrypt.hash(params.password, 10);
+  if (!/^[a-z0-9._-]{3,50}$/i.test(params.username)) {
+    throw new Error(
+      `Nombre de usuario inválido: ${params.username}`,
+    );
+  }
 
-  return prisma.usuario.upsert({
-    where: { username: params.username },
-    update: {
-      password_hash,
+  if (params.password.length < 8) {
+    throw new Error(
+      `Contraseña demasiado corta para ${params.username}`,
+    );
+  }
+
+  const existing = await prisma.usuario.findUnique({
+    where: {
+      username: params.username,
+    },
+  });
+
+  if (existing) {
+    const updateData: Record<string, any> = {
       id_persona: params.id_persona,
       id_rol: params.id_rol,
       estado: true,
       avatar_url: params.avatar_url || null,
-    },
-    create: {
+    };
+
+    if (RESET_PASSWORDS) {
+      updateData.password_hash = await bcrypt.hash(
+        params.password,
+        10,
+      );
+    }
+
+    return prisma.usuario.update({
+      where: {
+        username: params.username,
+      },
+      data: updateData,
+    });
+  }
+
+  const password_hash = await bcrypt.hash(
+    params.password,
+    10,
+  );
+
+  return prisma.usuario.create({
+    data: {
       username: params.username,
       password_hash,
       id_persona: params.id_persona,
@@ -91,6 +374,8 @@ async function upsertColegio(data: {
   logo_url?: string | null;
   color_principal: string;
 }) {
+  validateColegioData(data);
+
   const existing = await prisma.colegio.findFirst({
     where: { id_tenant: data.id_tenant, codigo: data.codigo },
   });
@@ -141,6 +426,22 @@ async function ensureApoderadoEstudiante(
   id_estudiante: number,
   parentesco: string,
 ) {
+  const parentescosPermitidos = [
+    'Padre',
+    'Madre',
+    'Tutor',
+    'Tutora',
+    'Abuelo',
+    'Abuela',
+    'Otro',
+  ];
+
+  if (!parentescosPermitidos.includes(parentesco)) {
+    throw new Error(
+      `Parentesco inválido en seed: ${parentesco}`,
+    );
+  }
+
   return prisma.apoderadoEstudiante.upsert({
     where: { id_apoderado_id_estudiante: { id_apoderado, id_estudiante } },
     update: { parentesco },
@@ -153,6 +454,12 @@ async function ensureCodigoColegio(
   id_colegio: number,
   codigo: string,
 ) {
+  if (!/^[A-Z0-9-]{4,40}$/.test(codigo)) {
+    throw new Error(
+      `Código de estudiante inválido: ${codigo}`,
+    );
+  }
+
   return prisma.estudianteCodigoColegio.upsert({
     where: { id_estudiante_id_colegio: { id_estudiante, id_colegio } },
     update: { codigo },
@@ -168,9 +475,72 @@ async function ensureAsignacion(data: {
   id_seccion: number;
   id_anio: number;
 }) {
-  const existing = await prisma.asignacionDocente.findFirst({ where: data });
+  const [docente, curso, seccion, anio] =
+    await Promise.all([
+      prisma.docente.findUnique({
+        where: {
+          id_persona: data.id_docente,
+        },
+      }),
+      prisma.curso.findUnique({
+        where: {
+          id_curso: data.id_curso,
+        },
+      }),
+      prisma.seccion.findUnique({
+        where: {
+          id_seccion: data.id_seccion,
+        },
+      }),
+      prisma.anioLectivo.findUnique({
+        where: {
+          id_anio: data.id_anio,
+        },
+      }),
+    ]);
+
+  if (!docente || !curso || !seccion || !anio) {
+    throw new Error(
+      'Asignación inválida: docente, curso, sección o año no existe.',
+    );
+  }
+
+  for (const [label, item] of [
+    ['curso', curso],
+    ['sección', seccion],
+    ['año', anio],
+  ] as const) {
+    if (
+      item.id_colegio != null &&
+      Number(item.id_colegio) !==
+        Number(data.id_colegio)
+    ) {
+      throw new Error(
+        `Asignación inválida: ${label} pertenece a otra institución.`,
+      );
+    }
+
+    if (
+      item.id_tenant != null &&
+      Number(item.id_tenant) !==
+        Number(data.id_tenant)
+    ) {
+      throw new Error(
+        `Asignación inválida: ${label} pertenece a otro tenant.`,
+      );
+    }
+  }
+
+  const existing =
+    await prisma.asignacionDocente.findFirst({
+      where: data,
+    });
+
   if (existing) return existing;
-  return prisma.asignacionDocente.create({ data });
+
+  return prisma.asignacionDocente.create({
+    data,
+  });
 }
 
 async function ensureEvaluacion(data: {
@@ -205,6 +575,16 @@ async function ensureNota(
   valor_nota: number,
   comentario?: string,
 ) {
+  if (
+    !Number.isFinite(valor_nota) ||
+    valor_nota < 0 ||
+    valor_nota > 20
+  ) {
+    throw new Error(
+      `Nota inválida: ${valor_nota}. Debe estar entre 0 y 20.`,
+    );
+  }
+
   const existing = await prisma.notaAlumno.findFirst({
     where: { id_matricula, id_evaluacion_det },
   });
@@ -234,12 +614,48 @@ async function ensureCronograma(data: {
   visible_apoderado?: boolean;
   referencia_pago: string;
 }) {
+  const montoProgramado =
+    data.monto_programado ??
+    data.monto_base_original ??
+    0;
+
+  if (
+    !Number.isFinite(montoProgramado) ||
+    montoProgramado <= 0
+  ) {
+    throw new Error(
+      `Monto programado inválido: ${montoProgramado}`,
+    );
+  }
+
+  if (
+    Number.isNaN(data.fecha_vencimiento.getTime())
+  ) {
+    throw new Error(
+      'Fecha de vencimiento inválida en cronograma.',
+    );
+  }
+
+  if (!data.referencia_pago.trim()) {
+    throw new Error(
+      'La referencia de pago no puede estar vacía.',
+    );
+  }
+
   const existing = await prisma.cronogramaPagos.findFirst({
     where: {
       id_matricula: data.id_matricula,
       id_concepto: data.id_concepto,
     },
   });
+
+  const fechaPublicacion = new Date(
+    Date.UTC(
+      data.fecha_vencimiento.getUTCFullYear(),
+      data.fecha_vencimiento.getUTCMonth(),
+      1,
+    ),
+  );
 
   const payload = {
     fecha_vencimiento: data.fecha_vencimiento,
@@ -250,8 +666,11 @@ async function ensureCronograma(data: {
     id_plan_pension_detalle: data.id_plan_pension_detalle || null,
     estado_publicacion: data.estado_publicacion || 'Publicado',
     visible_apoderado: data.visible_apoderado ?? true,
-    fecha_publicacion: date('2026-01-15'),
-    fecha_publicado: new Date('2026-01-15T08:00:00.000Z'),
+    fecha_publicacion: fechaPublicacion,
+    fecha_publicado: new Date(
+      fechaPublicacion.getTime() +
+        8 * 60 * 60 * 1000,
+    ),
     referencia_pago: data.referencia_pago,
   };
 
@@ -280,6 +699,27 @@ async function ensurePagoTransaccion(data: {
   metodo_pago: string;
   nro_operacion: string;
 }) {
+  if (
+    !Number.isFinite(data.monto_pagado) ||
+    data.monto_pagado <= 0
+  ) {
+    throw new Error(
+      `Monto de pago inválido: ${data.monto_pagado}`,
+    );
+  }
+
+  if (!data.nro_operacion.trim()) {
+    throw new Error(
+      'El número de operación no puede estar vacío.',
+    );
+  }
+
+  if (Number.isNaN(data.fecha_pago.getTime())) {
+    throw new Error(
+      'La fecha de pago no es válida.',
+    );
+  }
+
   const existing = await prisma.pagoTransaccion.findFirst({
     where: {
       id_cronograma: data.id_cronograma,
@@ -299,6 +739,14 @@ async function ensurePagoTransaccion(data: {
 
 async function main() {
   console.log('🌱 Seed ERP escolar iniciado...');
+
+  await assertDemoDatabaseScope();
+
+  console.log(
+    RESET_PASSWORDS
+      ? '🔐 Se restablecerán las contraseñas de demostración.'
+      : '🔐 Las contraseñas existentes serán conservadas.',
+  );
 
   // ─────────────────────────────────────────────
   // ROLES
@@ -342,7 +790,7 @@ async function main() {
     codigo: 'SMV',
     direccion: 'Av. Principal 123, Villa María del Triunfo',
     telefono: '987654321',
-    color_principal: '#CCF32F',
+    color_principal: '#0F62FE',
     logo_url: null,
   });
 
@@ -939,7 +1387,7 @@ async function main() {
     update: {
       id_tenant: tenant.id_tenant,
       id_colegio: colegioSMV.id_colegio,
-      cargo: 'Docente tutora',
+      cargo: 'Docente tutor',
       area: 'Primaria',
       id_seccion: 15,
       es_tutor: true,
@@ -949,7 +1397,7 @@ async function main() {
       id_tenant: tenant.id_tenant,
       id_colegio: colegioSMV.id_colegio,
       id_persona: personaDocente1.id_persona,
-      cargo: 'Docente tutora',
+      cargo: 'Docente tutor',
       area: 'Primaria',
       id_seccion: 15,
       es_tutor: true,
@@ -1019,8 +1467,8 @@ async function main() {
   ];
 
   for (const m of matriculas2027) {
-    if (m.id_seccion !== 15 && m.id_seccion !== 17) continue;
-    const base = m.id_seccion === 15 ? 14 : 12;
+    if (m.id_seccion !== 15) continue;
+    const base = 14;
     await ensureNota(m.id_matricula, evals[0].id_evaluacion_det, base + 2, 'Buen avance en lectura.');
     await ensureNota(m.id_matricula, evals[1].id_evaluacion_det, base + 1, 'Debe cuidar la ortografía.');
     await ensureNota(m.id_matricula, evals[2].id_evaluacion_det, base, 'Resuelve con orden.');
