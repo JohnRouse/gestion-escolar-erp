@@ -304,6 +304,7 @@ export default function CalendarioPage() {
 
     const params = new URLSearchParams(scopeParams);
 
+    if (anioId) params.set('anio_id', anioId);
     if (seccionId) params.set('seccion_id', seccionId);
     if (!isProfesorHorario && docenteId) params.set('docente_id', docenteId);
 
@@ -337,7 +338,7 @@ export default function CalendarioPage() {
   useEffect(() => {
     fetchHorarios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, queryString, seccionId, docenteId, isProfesorHorario]);
+  }, [token, queryString, anioId, seccionId, docenteId, isProfesorHorario]);
 
   useEffect(() => {
     if (isProfesorHorario && docenteId) {

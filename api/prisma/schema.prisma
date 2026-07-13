@@ -337,6 +337,8 @@ model AnioLectivo {
   planes_pensiones   PlanPensiones[]
   campanas_descuento CampanaDescuento[]
 
+  horarios Horario[]
+
   @@index([id_tenant])
   @@index([id_colegio])
 }
@@ -1052,6 +1054,7 @@ model Horario {
   id_seccion  Int
   id_curso    Int
   id_docente  Int
+  id_anio     Int?
   dia_semana  Int
   hora_inicio String @db.VarChar(5)
   hora_fin    String @db.VarChar(5)
@@ -1060,9 +1063,12 @@ model Horario {
   curso   Curso   @relation(fields: [id_curso], references: [id_curso])
   docente Docente @relation(fields: [id_docente], references: [id_persona])
 
+  anio AnioLectivo? @relation(fields: [id_anio], references: [id_anio], onDelete: Restrict)
+
   @@index([id_seccion])
   @@index([id_curso])
   @@index([id_docente])
+  @@index([id_anio])
 }
 
 model Staff {

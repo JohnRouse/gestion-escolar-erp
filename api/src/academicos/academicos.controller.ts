@@ -1318,6 +1318,7 @@ async deleteGrado(
     @Query('seccion_id') seccionId?: string,
     @Query('docente_id') docenteId?: string,
     @Query('curso_id') cursoId?: string,
+    @Query('anio_id') anioId?: string,
   ) {
     return this.academicosService.listarHorariosGestion({
       userId: req.user.userId,
@@ -1327,6 +1328,7 @@ async deleteGrado(
       seccionId: seccionId ? Number(seccionId) : undefined,
       docenteId: docenteId ? Number(docenteId) : undefined,
       cursoId: cursoId ? Number(cursoId) : undefined,
+      anioId: anioId ? Number(anioId) : undefined,
     });
   }
 

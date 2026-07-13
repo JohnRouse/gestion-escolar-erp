@@ -4627,6 +4627,7 @@ const existente = await this.prisma.persona.findUnique({
       id_seccion: horario.id_seccion,
       id_curso: horario.id_curso,
       id_docente: horario.id_docente,
+      id_anio: horario.id_anio,
       dia_semana: horario.dia_semana,
       hora_inicio: horario.hora_inicio,
       hora_fin: horario.hora_fin,
@@ -4743,6 +4744,7 @@ const existente = await this.prisma.persona.findUnique({
     horaFin: string;
     idSeccion: number;
     idDocente: number;
+    idAnio?: number;
     excluirHorarioId?: number;
   }) {
     /*
@@ -4761,6 +4763,7 @@ const existente = await this.prisma.persona.findUnique({
           : undefined,
         dia_semana: params.diaSemana,
         id_docente: params.idDocente,
+        id_anio: params.idAnio || undefined,
         hora_inicio: {
           lt: params.horaFin,
         },
@@ -4784,6 +4787,7 @@ const existente = await this.prisma.persona.findUnique({
     seccionId?: number;
     docenteId?: number;
     cursoId?: number;
+    anioId?: number;
   }) {
     const scope = await this.resolveScope(params);
 
@@ -4838,6 +4842,7 @@ const existente = await this.prisma.persona.findUnique({
 
     if (params.seccionId) where.id_seccion = params.seccionId;
     if (params.cursoId) where.id_curso = params.cursoId;
+    if (params.anioId) where.id_anio = params.anioId;
 
     const horarios = await this.prisma.horario.findMany({
       where,
@@ -4884,6 +4889,7 @@ const existente = await this.prisma.persona.findUnique({
       horaFin,
       idSeccion: asignacion.id_seccion,
       idDocente: asignacion.id_docente,
+      idAnio: asignacion.id_anio,
     });
 
     const creado = await this.prisma.horario.create({
@@ -4891,6 +4897,7 @@ const existente = await this.prisma.persona.findUnique({
         id_seccion: asignacion.id_seccion,
         id_curso: asignacion.id_curso,
         id_docente: asignacion.id_docente,
+        id_anio: asignacion.id_anio,
         dia_semana: diaSemana,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -5088,7 +5095,10 @@ const existente = await this.prisma.persona.findUnique({
     }
 
     const horarios = await this.prisma.horario.findMany({
-      where: { id_seccion: matriculaActiva.id_seccion },
+      where: {
+        id_seccion: matriculaActiva.id_seccion,
+        id_anio: matriculaActiva.id_anio,
+      },
       orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
       include: { curso: true, docente: { include: { persona: true } } },
     });
@@ -7233,10 +7243,19 @@ const existente = await this.prisma.persona.findUnique({
         id_estudiante: { in: estudianteIds },
         estado_matricula: 'Activo',
       },
-      select: { id_seccion: true },
+      select: {
+        id_seccion: true,
+        id_anio: true,
+      },
     });
 
-    const seccionIds = [...new Set(matriculas.map((m) => m.id_seccion))];
+    const seccionIds = [
+      ...new Set(matriculas.map((m) => m.id_seccion)),
+    ];
+
+    const anioIds = [
+      ...new Set(matriculas.map((m) => m.id_anio)),
+    ];
 
     const staffPorSeccion = await this.prisma.staff.findMany({
       where: {
@@ -7280,10 +7299,17 @@ const existente = await this.prisma.persona.findUnique({
           where: { id_persona: staff.id_persona },
           include: {
             asignaciones: {
-              where: { id_seccion: { in: seccionIds } },
+              where: {
+                id_seccion: { in: seccionIds },
+                id_anio: { in: anioIds },
+              },
               include: { curso: true },
             },
             horarios: {
+              where: {
+                id_seccion: { in: seccionIds },
+                id_anio: { in: anioIds },
+              },
               include: { curso: true },
               orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
             },
