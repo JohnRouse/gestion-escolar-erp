@@ -409,7 +409,7 @@ export default function PagosExtraordinariosPage() {
                                   onClick={() => toggleSeccion(seccion.id_seccion)}
                                   className={`extraordinary-target-card rounded-3xl border p-4 text-left transition-all ${
                                     selected
-                                      ? 'border-blue-200 bg-blue-50 text-blue-700 ring-2 ring-blue-100'
+                                      ? 'extraordinary-target-card--selected'
                                       : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-white'
                                   }`}
                                 >

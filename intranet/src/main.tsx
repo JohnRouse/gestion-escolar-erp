@@ -10,6 +10,8 @@ import './styles/carbon/100-comunidad-login-final.css';
 import './styles/carbon/101-configuracion-ux.css';
 import './styles/carbon/102-operacion-matricula-tesoreria.css';
 import './styles/carbon/103-selecciones-sidebar-y-cabeceras.css';
+import './styles/carbon/104-matricula-modales-selecciones.css';
+import './styles/carbon/105-pensiones-carbon-ui.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

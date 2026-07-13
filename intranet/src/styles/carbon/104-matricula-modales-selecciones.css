@@ -1,0 +1,141 @@
+/* ==========================================================
+   104 - Matrícula: portales, acciones y selecciones
+   ========================================================== */
+
+/* Modales montados directamente en document.body */
+
+body > .carbon-matricula-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  width: 100dvw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 6000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  padding: 24px !important;
+}
+
+body
+  > .carbon-matricula-modal-overlay
+  > .carbon-matricula-modal-panel {
+  position: relative !important;
+  margin: 0 !important;
+  max-height: calc(100dvh - 48px) !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+/* Sección seleccionada en Registrar matrícula */
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-section-card--selected {
+  border: 2px solid #0f62fe !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 98, 254, 0.12) !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-section-card--selected
+  .matricula-section-title {
+  color: #161616 !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-section-card--selected
+  .matricula-section-meta,
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-section-card--selected
+  .matricula-section-availability {
+  color: #525252 !important;
+  opacity: 1 !important;
+}
+
+/* Acciones de apoderados */
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-guardian-action {
+  min-height: 30px;
+  border: 1px solid #a8a8a8 !important;
+  background: #ffffff !important;
+  color: #393939 !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-guardian-action:hover {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-guardian-action--danger {
+  border-color: #ffb3b8 !important;
+  color: #a2191f !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.matricula-guardian-action--danger:hover {
+  border-color: #da1e28 !important;
+  background: #fff1f1 !important;
+  color: #a2191f !important;
+}
+
+/* Pagos extraordinarios */
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected {
+  border: 2px solid #0f62fe !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 98, 254, 0.12) !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected p {
+  color: #161616 !important;
+  opacity: 1 !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected
+  p + p {
+  color: #525252 !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected span {
+  border: 1px solid #a6c8ff !important;
+  background: #ffffff !important;
+  color: #0043ce !important;
+}
+
+@media (max-width: 768px) {
+  body > .carbon-matricula-modal-overlay {
+    padding: 12px !important;
+  }
+
+  body
+    > .carbon-matricula-modal-overlay
+    > .carbon-matricula-modal-panel {
+    max-height: calc(100dvh - 24px) !important;
+  }
+}

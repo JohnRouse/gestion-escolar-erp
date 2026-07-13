@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -138,6 +139,16 @@ const StepHint = ({ step, title, description, done = false, warning = false }: {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+function ViewportPortal({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(children, document.body);
+}
+
 export default function MatriculaPage() {
   const { token } = useAuth();
   const { activeScope, activeColegio, colegios, scopeLabel, queryString, puedeVerConsolidado } = useSchool();
@@ -186,6 +197,33 @@ export default function MatriculaPage() {
   const [codigoModularProcedencia, setCodigoModularProcedencia] = useState('');
   const [gradoProcedencia, setGradoProcedencia] = useState('');
   const [observacionProcedencia, setObservacionProcedencia] = useState('');
+
+  const modalActivo =
+    modalAlumno ||
+    modalApoderado ||
+    modalEditarAlumno ||
+    modalEditarApoderado ||
+    confirmOpen ||
+    detalleOpen;
+
+  useEffect(() => {
+    if (
+      !modalActivo ||
+      typeof document === 'undefined'
+    ) {
+      return;
+    }
+
+    const overflowAnterior =
+      document.body.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow =
+        overflowAnterior;
+    };
+  }, [modalActivo]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -514,7 +552,7 @@ export default function MatriculaPage() {
                           <button
                             type="button"
                             onClick={() => abrirEditarApoderado(a)}
-                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition-all duration-150 hover:bg-neutral-100 hover:text-neutral-800"
+                            className="matricula-guardian-action inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 transition-all duration-150 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700"
                           >
                             <PencilLine size={12} /> Editar
                           </button>
@@ -533,7 +571,7 @@ export default function MatriculaPage() {
                                 setMensaje(err.response?.data?.message || 'No se pudo desvincular el apoderado.');
                               }
                             }}
-                            className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-500 transition-all duration-150 hover:bg-red-50 hover:text-red-700"
+                            className="matricula-guardian-action matricula-guardian-action--danger rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-all duration-150 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
                           >
                             Quitar
                           </button>
@@ -554,10 +592,10 @@ export default function MatriculaPage() {
 
                 <div className="mt-5 grid max-h-[310px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
                   {seccionesFiltradas.map((s) => { const selected = s.id_seccion === seccionId; const sinCupos = s.disponibles <= 0; const porcentaje = s.capacidad > 0 ? Math.min(100, Math.round((s.matriculados / s.capacidad) * 100)) : 0; return (
-                    <button key={s.id_seccion} type="button" disabled={sinCupos} onClick={() => { setSeccionId(selected ? '' : s.id_seccion); setExcepcionTraslado(false); }} className={cx('rounded-2xl border p-4 text-left transition-all duration-150', selected ? 'border-[#0f62fe] bg-[#0f62fe]/5 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300', sinCupos && 'cursor-not-allowed opacity-50')}>
-                      <div className="flex justify-between gap-3"><div><p className="text-sm font-medium text-neutral-800">{s.grado.nombre_grado} &quot;{s.letra}&quot;</p><p className="mt-0.5 text-xs text-neutral-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p></div>{selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}</div>
+                    <button key={s.id_seccion} type="button" disabled={sinCupos} onClick={() => { setSeccionId(selected ? '' : s.id_seccion); setExcepcionTraslado(false); }} className={cx('matricula-section-card rounded-2xl border p-4 text-left transition-all duration-150', selected ? 'matricula-section-card--selected' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300', sinCupos && 'cursor-not-allowed opacity-50')}>
+                      <div className="flex justify-between gap-3"><div><p className="matricula-section-title text-sm font-medium text-neutral-800">{s.grado.nombre_grado} &quot;{s.letra}&quot;</p><p className="matricula-section-meta mt-0.5 text-xs text-neutral-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p></div>{selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}</div>
                       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60"><div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} /></div>
-                      <p className="mt-2 text-xs text-neutral-500">{s.matriculados} registrados · {s.disponibles} disponibles</p>
+                      <p className="matricula-section-availability mt-2 text-xs text-neutral-500">{s.matriculados} registrados · {s.disponibles} disponibles</p>
                     </button> ); })}
                 </div>
                 {seccionesFiltradas.length === 0 && <Empty text="Sin secciones disponibles" />}
@@ -601,7 +639,8 @@ export default function MatriculaPage() {
 
       {/* ── Modal confirmación ── */}
       {confirmOpen && alumno && seccionSeleccionada && (
-        <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
+        <ViewportPortal>
+          <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
           <div className={`carbon-matricula-modal-panel relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             <ModalHead title="Revisar pre-matrícula" subtitle="Verifica los datos antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
@@ -626,7 +665,8 @@ export default function MatriculaPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </ViewportPortal>
       )}
 
       {/* ── Modales persona ── */}
@@ -651,7 +691,8 @@ export default function MatriculaPage() {
 
       {/* ── Modal detalle matrícula ── */}
       {detalleOpen && (
-        <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'detail' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setDetalleOpen, 'detail'); }}>
+        <ViewportPortal>
+          <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'detail' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setDetalleOpen, 'detail'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
           <div className={`relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[90vh] ${closingModal === 'detail' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             <div className="flex items-start justify-between gap-4 border-b border-neutral-100 p-6 flex-shrink-0">
@@ -735,7 +776,8 @@ export default function MatriculaPage() {
               ) : null}
             </div>
           </div>
-        </div>
+          </div>
+        </ViewportPortal>
       )}
     </div>
   );
@@ -816,7 +858,11 @@ function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: stri
 
 function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, alumno, apoderado, aviso, parentesco, onParentescoChange, isClosing }: any) {
   const set = (key: keyof PersonaForm, value: string) => setForm({ ...form, [key]: value });
-  return (
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    (
     <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute inset-0 bg-neutral-950/40" />
       <div className={`carbon-matricula-modal-panel relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
@@ -867,6 +913,8 @@ function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, a
         </div>
       </div>
     </div>
+    ),
+    document.body,
   );
 }
 

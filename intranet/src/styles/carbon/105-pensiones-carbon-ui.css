@@ -1,0 +1,213 @@
+/* ==========================================================
+   105 - Pensiones y descuentos con Carbon Design UI
+   ========================================================== */
+
+.carbon-tesoreria-config-page {
+  color: #161616;
+}
+
+/* Pasos del proceso */
+
+.carbon-tesoreria-config-page
+  .pension-guide-card {
+  position: relative;
+  min-height: 104px;
+  border: 1px solid #c6c6c6 !important;
+  border-left: 4px solid #0f62fe !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-guide-card:hover {
+  transform: none !important;
+  border-color: #8d8d8d !important;
+}
+
+/* KPIs */
+
+.carbon-tesoreria-config-page
+  .pension-kpi {
+  position: relative;
+  min-height: 112px;
+  border: 1px solid #c6c6c6 !important;
+  border-left: 4px solid #0f62fe !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-kpi:nth-child(2) {
+  border-left-color: #8a3ffc !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-kpi:nth-child(3) {
+  border-left-color: #525252 !important;
+}
+
+/* Tarjetas principales */
+
+.carbon-tesoreria-config-page
+  .pension-config-card {
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-config-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-config-card__header {
+  min-height: 86px;
+  border-bottom: 2px solid #c6c6c6 !important;
+  background: #f4f4f4 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-config-card__header h2 {
+  color: #161616 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-config-card__header p {
+  color: #525252 !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-config-card__icon {
+  border: 1px solid #a6c8ff !important;
+  border-radius: 2px !important;
+  background: #d0e2ff !important;
+  color: #0043ce !important;
+}
+
+/* Campos */
+
+.carbon-tesoreria-config-page
+  .pension-carbon-input {
+  height: 44px !important;
+  border: 1px solid transparent !important;
+  border-bottom: 2px solid #8d8d8d !important;
+  border-radius: 0 !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-carbon-input:hover {
+  border-bottom-color: #525252 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-carbon-input:focus {
+  border-bottom-color: #0f62fe !important;
+  background: #ffffff !important;
+  outline: 2px solid #0f62fe !important;
+  outline-offset: -2px !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-carbon-label {
+  color: #525252 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* Aviso de contexto */
+
+.carbon-tesoreria-config-page
+  .pension-context-note {
+  border: 1px solid #a6c8ff !important;
+  border-left: 4px solid #0f62fe !important;
+  border-radius: 4px !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-context-note p,
+.carbon-tesoreria-config-page
+  .pension-context-note svg {
+  color: #0043ce !important;
+}
+
+/* Planes registrados */
+
+.carbon-tesoreria-config-page
+  .pension-plan-row {
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  background: #f4f4f4 !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page
+  .pension-plan-row:hover {
+  border-color: #8d8d8d !important;
+  background: #ffffff !important;
+}
+
+/* Botones Carbon */
+
+.carbon-tesoreria-config-page button {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.carbon-tesoreria-config-page button:hover {
+  transform: none !important;
+}
+
+.carbon-tesoreria-config-page
+  button[class*="bg-slate-950"] {
+  background: #161616 !important;
+  color: #ffffff !important;
+}
+
+.carbon-tesoreria-config-page
+  button[class*="bg-slate-950"]:hover {
+  background: #393939 !important;
+}
+
+/* Badges */
+
+.carbon-tesoreria-config-page
+  span[class*="rounded-full"] {
+  border-radius: 2px !important;
+  letter-spacing: 0 !important;
+}
+
+/* Modal */
+
+.carbon-config-modal-panel {
+  border: 1px solid #8d8d8d !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.24) !important;
+}
+
+@media (max-width: 768px) {
+  .carbon-tesoreria-config-page
+    .pension-guide-card,
+  .carbon-tesoreria-config-page
+    .pension-kpi {
+    min-height: auto;
+  }
+}

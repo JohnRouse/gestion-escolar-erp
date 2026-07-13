@@ -73,10 +73,10 @@ type CampanaDescuento = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
+  'pension-carbon-input h-11 w-full border border-transparent border-b-2 border-b-slate-400 bg-slate-100 px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-b-blue-600 focus:bg-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500';
 
 const labelClass =
-  'mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
+  'pension-carbon-label mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600';
 
 const currency = (value: number | string | null | undefined) =>
   new Intl.NumberFormat('es-PE', {
@@ -153,7 +153,7 @@ function GuideCard({
   description: string;
 }) {
   return (
-    <div className="carbon-tesoreria-page rounded-[28px] border border-white bg-white/90 p-4 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="pension-guide-card border border-slate-300 bg-white p-4">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
         Paso {step}
       </p>
@@ -177,10 +177,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[30px] border border-white bg-white/95 shadow-sm shadow-slate-200/70 ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md">
-      <div className="border-b border-slate-100 p-5">
+    <section className="pension-config-card overflow-hidden border border-slate-300 bg-white">
+      <div className="pension-config-card__header border-b border-slate-300 p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+          <div className="pension-config-card__icon flex h-11 w-11 shrink-0 items-center justify-center bg-blue-100 text-blue-700">
             <Icon size={19} />
           </div>
           <div>
@@ -214,9 +214,9 @@ function ModalShell({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+    <div className="carbon-config-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[34px] bg-white shadow-2xl shadow-slate-950/20 ring-1 ring-white/70 animate-in fade-in zoom-in-95 duration-200">
+      <div className="carbon-config-modal-panel relative max-h-[90vh] w-full max-w-3xl overflow-hidden bg-white animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
@@ -672,24 +672,24 @@ export default function TesoreriaConfiguracionPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="pension-kpi border border-slate-300 bg-white p-5">
           <p className={labelClass}>Cronogramas</p>
           <p className="text-3xl font-black text-slate-950">{planes.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">registrados</p>
         </div>
-        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="pension-kpi border border-slate-300 bg-white p-5">
           <p className={labelClass}>Campañas</p>
           <p className="text-3xl font-black text-slate-950">{campanas.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">descuentos configurados</p>
         </div>
-        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="pension-kpi border border-slate-300 bg-white p-5">
           <p className={labelClass}>Instituciones</p>
           <p className="text-3xl font-black text-slate-950">{colegios.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">disponibles para gestionar</p>
         </div>
       </section>
 
-      <div className="rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 text-sm font-bold text-blue-700">
+      <div className="pension-context-note border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-slate-800">
         <div className="flex items-start gap-3">
           <Megaphone size={18} className="mt-0.5 shrink-0" />
           <p>
@@ -825,7 +825,7 @@ export default function TesoreriaConfiguracionPage() {
               </p>
             ) : (
               planesVisibles.map((plan) => (
-                <div key={plan.id_plan_pension} className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 transition duration-300 hover:bg-slate-100/70">
+                <div key={plan.id_plan_pension} className="pension-plan-row border border-slate-300 bg-slate-50 p-4 transition hover:bg-white">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-black text-slate-900">{plan.nombre}</p>
