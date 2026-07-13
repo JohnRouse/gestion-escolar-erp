@@ -1,0 +1,86 @@
+/* 102 - Matrícula y tesorería */
+
+.pagos-recibidos-modal-overlay {
+  isolation: isolate;
+}
+
+.pagos-recibidos-modal-panel {
+  overscroll-behavior: contain;
+}
+
+.carbon-matricula-page .renewal-section-card--selected {
+  background: #eff6ff !important;
+  border-color: #0f62fe !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 98, 254, 0.22),
+    0 8px 20px -18px rgba(15, 98, 254, 0.8) !important;
+}
+
+.carbon-matricula-page
+  .renewal-section-card--selected
+  .renewal-section-title {
+  color: #161616 !important;
+}
+
+.carbon-matricula-page
+  .renewal-section-card--selected
+  .renewal-section-meta,
+.carbon-matricula-page
+  .renewal-section-card--selected
+  .renewal-section-availability {
+  color: #334155 !important;
+}
+
+.matricula-history-header {
+  min-height: 50px;
+  background: #262626;
+  border-bottom: 3px solid #0f62fe;
+}
+
+.matricula-history-header span {
+  color: #ffffff !important;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.matricula-history-row {
+  min-height: 94px;
+  background: #ffffff;
+  border-bottom-color: #d8e0e8 !important;
+}
+
+.matricula-history-row:nth-child(even) {
+  background: #f8fafc;
+}
+
+.matricula-history-row:hover {
+  background: #eef5ff;
+}
+
+.matricula-history-primary,
+.matricula-history-secondary {
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  text-rendering: optimizeLegibility;
+}
+
+.matricula-history-secondary {
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 1023px) {
+  .matricula-history-row {
+    margin: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+  }
+
+  .matricula-history-list {
+    background: #f8fafc;
+  }
+}

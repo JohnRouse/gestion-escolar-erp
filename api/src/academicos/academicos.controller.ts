@@ -1242,7 +1242,7 @@ async deleteGrado(
 
   @Get('asignaciones-docentes')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director')
+  @Roles('Admin', 'Director', 'Secretaria')
   async listarAsignacionesDocentesGestion(
     @Request() req,
     @Query('scope') scope?: string,
@@ -1310,7 +1310,7 @@ async deleteGrado(
   // ── HORARIO ACADÉMICO ─────────────────────────────────
   @Get('horarios')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Director', 'Profesor')
+  @Roles('Admin', 'Director', 'Profesor', 'Secretaria')
   async listarHorariosGestion(
     @Request() req,
     @Query('scope') scope?: string,

@@ -284,7 +284,7 @@ export default function RenovacionMatriculaPage() {
                 <span className={labelClass}>Colegio destino</span>
                 <select className={selectClass} value={colegioDestinoId} disabled={activeScope.tipo === 'colegio'} onChange={(e) => { setColegioDestinoId(e.target.value ? Number(e.target.value) : ''); setAnioDestinoId(''); setSeccionDestinoId(''); setSecciones([]); }}>
                   <option value="">Selecciona colegio</option>
-                  {colegios.map((c) => <option key={c.id_colegio} value={c.id_colegio}>{c.nombre_corto || c.nombre}</option>)}
+                  {colegios.map((c) => <option key={c.id_colegio} value={c.id_colegio}>{c.nombre || c.nombre_corto}</option>)}
                 </select>
               </label>
               <label className="block">
@@ -368,22 +368,22 @@ export default function RenovacionMatriculaPage() {
                 return (
                   <button key={seccion.id_seccion} type="button" disabled={sinCupos} onClick={() => setSeccionDestinoId(selected ? '' : seccion.id_seccion)}
                     className={cx(
-                      'rounded-2xl border p-4 text-left transition-all duration-150',
-                      selected ? 'border-[#0f62fe] bg-[#0f62fe]/5 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
+                      'renewal-section-card rounded-2xl border p-4 text-left transition-all duration-150',
+                      selected ? 'renewal-section-card--selected border-[#0f62fe] bg-blue-50 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
                       sinCupos && 'cursor-not-allowed opacity-50'
                     )}
                   >
                     <div className="flex justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-neutral-800">{seccion.grado.nombre_grado} "{seccion.letra}"</p>
-                        <p className="mt-1 text-xs text-neutral-400">{seccion.grado.nivel?.nombre_nivel || 'Nivel'} · {seccion.capacidad} cupos</p>
+                        <p className="renewal-section-title text-sm font-semibold text-neutral-900">{seccion.grado.nombre_grado} "{seccion.letra}"</p>
+                        <p className="renewal-section-meta mt-1 text-xs text-neutral-600">{seccion.grado.nivel?.nombre_nivel || 'Nivel'} · {seccion.capacidad} cupos</p>
                       </div>
                       {selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}
                     </div>
                     <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
                       <div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} />
                     </div>
-                    <p className="mt-2 text-xs text-neutral-500">{seccion.matriculados} registrados · {seccion.disponibles} disponibles</p>
+                    <p className="renewal-section-availability mt-2 text-xs font-medium text-neutral-600">{seccion.matriculados} registrados · {seccion.disponibles} disponibles</p>
                   </button>
                 );
               })}
@@ -395,7 +395,7 @@ export default function RenovacionMatriculaPage() {
 
             {seccionDestino && (
               <div className="mt-5 flex items-start gap-2 rounded-xl bg-emerald-50/50 p-4 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200/60">
-                <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" /> Destino seleccionado: {colegioDestino?.nombre_corto || colegioDestino?.nombre} · {seccionDestino.grado.nombre_grado} "{seccionDestino.letra}" · {seccionDestino.grado.nivel?.nombre_nivel || 'Nivel'}.
+                <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" /> Destino seleccionado: {colegioDestino?.nombre || colegioDestino?.nombre_corto} · {seccionDestino.grado.nombre_grado} "{seccionDestino.letra}" · {seccionDestino.grado.nivel?.nombre_nivel || 'Nivel'}.
               </div>
             )}
 

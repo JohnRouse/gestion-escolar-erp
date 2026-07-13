@@ -109,7 +109,23 @@ export default function CalendarioPage() {
   const { queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
-  const isProfesorHorario = String(user?.rol || '').trim().toLowerCase() === 'profesor';
+  const normalizedRole = String(user?.rol || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const isProfesorHorario = [
+    'profesor',
+    'docente',
+  ].includes(normalizedRole);
+
+  const canManageHorario = [
+    'admin',
+    'administrador',
+    'director',
+    'direccion',
+  ].includes(normalizedRole);
 
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioId, setAnioId] = useState('');
@@ -382,7 +398,9 @@ export default function CalendarioPage() {
         description={
           isProfesorHorario
             ? 'Consulta tu horario semanal de clases asignadas.'
-            : 'Organiza el horario semanal por sección, curso y docente. El sistema evita cruces de horario por docente.'
+            : canManageHorario
+              ? 'Organiza el horario semanal por sección, curso y docente. El sistema evita cruces de horario por docente.'
+              : 'Consulta el horario semanal por sección, curso y docente.'
         }
         icon={CalendarDays}
         meta={[
@@ -459,8 +477,8 @@ export default function CalendarioPage() {
         </section>
       </section>
 
-      <section className={`erp-horario-main-grid ${isProfesorHorario ? 'erp-horario-main-grid--readonly' : ''}`}>
-        {!isProfesorHorario ? (
+      <section className={`erp-horario-main-grid ${!canManageHorario ? 'erp-horario-main-grid--readonly' : ''}`}>
+        {canManageHorario ? (
           <article className="erp-horario-clean-form-card erp-horario-form-card">
             <header className="erp-horario-clean-form-header">
               <h2>{editing ? 'Editar bloque horario' : 'Crear bloque horario'}</h2>
@@ -561,7 +579,9 @@ export default function CalendarioPage() {
               <p>
                 {isProfesorHorario
                   ? 'Consulta tus bloques de clase asignados.'
-                  : 'Vista por día. Puedes filtrar por sección o docente.'}
+                  : canManageHorario
+                    ? 'Vista por día. Puedes filtrar por sección o docente.'
+                    : 'Vista de consulta por día, sección y docente.'}
               </p>
             </div>
 
@@ -597,7 +617,7 @@ export default function CalendarioPage() {
                                 {item.hora_inicio} - {item.hora_fin}
                               </span>
 
-                              {!isProfesorHorario && (
+                              {canManageHorario && (
                                 <div className="erp-horario-class-actions">
                                   <button type="button" onClick={() => editarHorario(item)} title="Editar">
                                     <Edit3 size={13} />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CheckCircle2,
@@ -177,6 +178,20 @@ export default function PagosRecibidosPage() {
 
   const [historial, setHistorial] = useState<PagoRecibidoHistorial[]>([]);
   const [historialLoading, setHistorialLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [selected]);
 
   const resumen = useMemo(() => {
     const total = pagos.reduce((sum, item) => sum + Number(item.monto_recibido || 0), 0);
@@ -515,9 +530,10 @@ export default function PagosRecibidosPage() {
         )}
       </section>
 
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm">
-          <div className="max-h-[calc(100vh-2rem)] w-full max-w-3xl animate-modal-pop overflow-y-auto rounded-[30px] bg-white p-4 shadow-2xl shadow-slate-950/20 sm:p-6">
+      {selected &&
+        createPortal(
+          <div className="pagos-recibidos-modal-overlay fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+            <div className="pagos-recibidos-modal-panel my-auto max-h-[calc(100vh-3rem)] w-full max-w-3xl animate-modal-pop overflow-y-auto rounded-[24px] bg-white p-4 shadow-2xl shadow-slate-950/25 ring-1 ring-slate-200 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
@@ -725,7 +741,7 @@ export default function PagosRecibidosPage() {
               </label>
             </div>
 
-            <div className="sticky bottom-0 -mx-4 mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
+            <div className="-mx-4 mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:-mx-6 sm:px-6">
               {selected.estado !== 'Aplicado' && (
                 <>
                   <button type="button" onClick={() => cambiarEstado('Observado')} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 text-sm font-black text-amber-700 ring-1 ring-amber-100 transition hover:bg-amber-100 disabled:opacity-50">
@@ -750,9 +766,10 @@ export default function PagosRecibidosPage() {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

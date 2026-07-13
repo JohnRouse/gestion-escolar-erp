@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
-  ArrowLeft,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -22,7 +21,7 @@ import {
   Sparkles,
   Banknote,
 } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import PageHeader from '../../components/PageHeader';
@@ -226,7 +225,6 @@ const mensajeMatriculaFinal = (detalle: any) => {
 export default function MatriculasHistorialPage() {
   const { token } = useAuth();
   const { queryString, scopeLabel } = useSchool();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
@@ -697,18 +695,11 @@ export default function MatriculasHistorialPage() {
 
       {/* ── Tabla / Lista ────────────────────────────────── */}
       <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
-          <button
-            type="button"
-            onClick={() => navigate('/matricula')}
-            className="inline-flex items-center gap-2 rounded-xl bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-600 ring-1 ring-neutral-200/60 transition-all duration-150 hover:bg-neutral-100"
-          >
-            <ArrowLeft size={16} />
-            Volver
-          </button>
-          <div className="text-sm font-medium text-neutral-400">
-            Página {meta.page} de {meta.totalPages || 1}
-          </div>
+        <div className="matricula-history-header hidden gap-5 px-5 py-4 lg:grid lg:grid-cols-[1.35fr_1fr_1fr_auto] lg:items-center">
+          <span>Matrícula y alumno</span>
+          <span>Institución y sección</span>
+          <span>Estado y registro</span>
+          <span className="text-right">Acción</span>
         </div>
 
         {loading ? (
@@ -727,7 +718,7 @@ export default function MatriculasHistorialPage() {
             <p className="mt-1 text-sm text-neutral-400">Ajusta los filtros para buscar otra matrícula.</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="matricula-history-list divide-y divide-slate-200">
             {data.map((matricula) => {
               const alumno = matricula.estudiante.persona;
               const apoderado = matricula.estudiante.apoderados?.[0];
@@ -738,15 +729,15 @@ export default function MatriculasHistorialPage() {
               return (
                 <div
                   key={matricula.id_matricula}
-                  className="group grid gap-4 px-5 py-4 transition-colors duration-150 hover:bg-neutral-50/50 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-center"
+                  className="matricula-history-row group grid gap-5 px-5 py-5 transition-colors duration-150 lg:grid-cols-[1.35fr_1fr_1fr_auto] lg:items-center"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-neutral-900 truncate">
+                    <p className="matricula-history-primary truncate text-sm font-semibold text-slate-950">
                       {matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`}
                       <span className="mx-1.5 text-neutral-300">·</span>
                       {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
                     </p>
-                    <p className="mt-1 text-xs text-neutral-400">DNI: {alumno.dni} · Código: {getCodigoAlumno(matricula)}</p>
+                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">DNI: {alumno.dni} · Código: {getCodigoAlumno(matricula)}</p>
                     {apoderado && (
                       <p className="mt-1 text-xs text-neutral-400">
                         Apoderado: {apoderado.apoderado.persona.nombres} {apoderado.apoderado.persona.apellido_paterno}
@@ -755,20 +746,27 @@ export default function MatriculasHistorialPage() {
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-neutral-700 truncate">
+                    <p className="truncate text-sm font-semibold text-slate-900">
                       {matricula.colegio?.nombre || 'Colegio'}
                     </p>
-                    <p className="mt-1 text-xs text-neutral-400">
+                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">
                       {matricula.seccion.grado.nivel?.nombre_nivel} · {matricula.seccion.grado.nombre_grado} &ldquo;{matricula.seccion.letra}&rdquo;
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <EstadoBadge estado={matricula.estado_matricula} />
-                    <RevisionBadge estado={matricula.estado_revision || 'Por revisar'} />
-                    <span className="text-xs text-neutral-400 ml-1">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <EstadoBadge estado={matricula.estado_matricula} />
+                      <RevisionBadge estado={matricula.estado_revision || 'Por revisar'} />
+                    </div>
+
+                    <p className="matricula-history-secondary mt-2 text-xs text-slate-600">
                       {formatFechaHora(matricula.fecha_matricula)}
-                    </span>
+                    </p>
+
+                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">
+                      Registrado por: {registrador}
+                    </p>
                   </div>
 
                   <button
