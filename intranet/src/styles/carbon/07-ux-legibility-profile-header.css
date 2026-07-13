@@ -12,32 +12,32 @@
 }
 
 /* Header selector de colegios */
-.carbon-shell header [class*="header-dropdown-enter"] {
+.carbon-shell .erp-app-header [class*="header-dropdown-enter"] {
   border-radius: 4px !important;
   border-color: #c6c6c6 !important;
   color: #161616 !important;
 }
 
-.carbon-shell header [class*="header-dropdown-enter"] p,
-.carbon-shell header [class*="header-dropdown-enter"] button {
+.carbon-shell .erp-app-header [class*="header-dropdown-enter"] p,
+.carbon-shell .erp-app-header [class*="header-dropdown-enter"] button {
   color: #161616 !important;
 }
 
-.carbon-shell header [class*="header-dropdown-enter"] [class*="text-slate-500"],
-.carbon-shell header [class*="header-dropdown-enter"] [class*="text-slate-400"] {
+.carbon-shell .erp-app-header [class*="header-dropdown-enter"] [class*="text-slate-500"],
+.carbon-shell .erp-app-header [class*="header-dropdown-enter"] [class*="text-slate-400"] {
   color: #525252 !important;
 }
 
-.carbon-shell header button span {
+.carbon-shell .erp-app-header button span {
   text-rendering: geometricPrecision;
 }
 
 /* Avatar en header */
-.carbon-shell header img {
+.carbon-shell .erp-app-header img {
   background: #ffffff !important;
 }
 
-.carbon-shell header span[class*="font-black"] {
+.carbon-shell .erp-app-header span[class*="font-black"] {
   color: inherit;
 }
 

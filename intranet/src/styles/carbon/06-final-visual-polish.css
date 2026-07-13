@@ -228,22 +228,22 @@
    Selector de colegios del header: texto legible
    ---------------------------------------------------------- */
 
-.carbon-shell header [class*="absolute"][class*="bg-white"],
-.carbon-shell header [class*="absolute"][class*="bg-slate"],
-.carbon-shell header [class*="absolute"][class*="bg-neutral"] {
+.carbon-shell .erp-app-header [class*="absolute"][class*="bg-white"],
+.carbon-shell .erp-app-header [class*="absolute"][class*="bg-slate"],
+.carbon-shell .erp-app-header [class*="absolute"][class*="bg-neutral"] {
   color: var(--erp-carbon-text) !important;
 }
 
-.carbon-shell header [class*="absolute"] button,
-.carbon-shell header [class*="absolute"] p,
-.carbon-shell header [class*="absolute"] span,
-.carbon-shell header [class*="absolute"] div {
+.carbon-shell .erp-app-header [class*="absolute"] button,
+.carbon-shell .erp-app-header [class*="absolute"] p,
+.carbon-shell .erp-app-header [class*="absolute"] span,
+.carbon-shell .erp-app-header [class*="absolute"] div {
   color: var(--erp-carbon-text) !important;
 }
 
-.carbon-shell header [class*="absolute"] [class*="text-slate-400"],
-.carbon-shell header [class*="absolute"] [class*="text-neutral-400"],
-.carbon-shell header [class*="absolute"] [class*="text-gray-400"] {
+.carbon-shell .erp-app-header [class*="absolute"] [class*="text-slate-400"],
+.carbon-shell .erp-app-header [class*="absolute"] [class*="text-neutral-400"],
+.carbon-shell .erp-app-header [class*="absolute"] [class*="text-gray-400"] {
   color: var(--erp-carbon-text-helper) !important;
 }
 

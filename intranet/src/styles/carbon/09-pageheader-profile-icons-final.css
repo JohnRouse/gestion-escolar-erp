@@ -87,40 +87,40 @@
 /* El bloque anterior forzaba todos los span a negro.
    Aquí devolvemos contraste correcto a los iconos circulares. */
 .erp-app-header .header-dropdown-enter span[class*="h-10"][class*="w-10"],
-.carbon-shell header .header-dropdown-enter span[class*="h-10"][class*="w-10"] {
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="h-10"][class*="w-10"] {
   color: inherit !important;
 }
 
 /* Icono "Todas las instituciones": fondo negro, icono blanco */
 .erp-app-header .header-dropdown-enter span[class*="bg-slate-950"],
-.carbon-shell header .header-dropdown-enter span[class*="bg-slate-950"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="bg-slate-950"],
 .erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"],
-.carbon-shell header .header-dropdown-enter span[class*="bg-neutral-950"] {
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"] {
   color: #ffffff !important;
 }
 
 .erp-app-header .header-dropdown-enter span[class*="bg-slate-950"] svg,
-.carbon-shell header .header-dropdown-enter span[class*="bg-slate-950"] svg,
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="bg-slate-950"] svg,
 .erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"] svg,
-.carbon-shell header .header-dropdown-enter span[class*="bg-neutral-950"] svg {
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="bg-neutral-950"] svg {
   color: #ffffff !important;
   stroke: currentColor !important;
 }
 
 /* Iconos de colegios con color institucional */
 .erp-app-header .header-dropdown-enter span[style*="background-color"] svg,
-.carbon-shell header .header-dropdown-enter span[style*="background-color"] svg {
+.carbon-shell .erp-app-header .header-dropdown-enter span[style*="background-color"] svg {
   color: currentColor !important;
   stroke: currentColor !important;
 }
 
 /* Texto dentro del selector: legible, pero sin afectar iconos */
 .erp-app-header .header-dropdown-enter p,
-.carbon-shell header .header-dropdown-enter p {
+.carbon-shell .erp-app-header .header-dropdown-enter p {
   color: #161616 !important;
 }
 
 .erp-app-header .header-dropdown-enter [class*="text-slate-500"],
-.carbon-shell header .header-dropdown-enter [class*="text-slate-500"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="text-slate-500"] {
   color: #525252 !important;
 }

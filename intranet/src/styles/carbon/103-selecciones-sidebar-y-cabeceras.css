@@ -1,0 +1,144 @@
+/* ==========================================================
+   103 - Cabeceras, selecciones y resultados
+   Evita colisiones con reglas globales basadas en nombres
+   de clases Tailwind.
+   ========================================================== */
+
+/* Cursos y Áreas */
+
+.config-cursos-page .config-cursos-hero {
+  min-height: 96px;
+  align-items: center !important;
+  padding: 20px !important;
+  text-align: left !important;
+  color: #161616 !important;
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.config-cursos-page .config-cursos-hero::before {
+  display: none !important;
+  content: none !important;
+}
+
+.config-cursos-page .config-cursos-hero h3 {
+  margin: 0 !important;
+  color: #161616 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.config-cursos-page .config-cursos-hero p {
+  margin-top: 5px !important;
+  color: #525252 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+}
+
+.config-cursos-page .config-primary-action {
+  min-width: 144px;
+  border: 1px solid #0f62fe !important;
+  background: #0f62fe !important;
+  color: #ffffff !important;
+  white-space: nowrap;
+}
+
+.config-cursos-page .config-primary-action:hover {
+  background: #0043ce !important;
+  border-color: #0043ce !important;
+}
+
+/* Pagos extraordinarios */
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card {
+  min-height: 68px;
+  border-radius: 8px !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected {
+  border: 2px solid #0f62fe !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 98, 254, 0.12) !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected p {
+  color: #161616 !important;
+  opacity: 1 !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected
+  p + p {
+  color: #525252 !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.extraordinary-target-card--selected span {
+  border: 1px solid #a6c8ff !important;
+  background: #ffffff !important;
+  color: #0043ce !important;
+}
+
+/* Estado de cuenta */
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.estado-cuenta-result-card {
+  width: 100%;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.carbon-shell
+  .carbon-tesoreria-page
+  button.estado-cuenta-result-card:hover {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+}
+
+/* Renovación */
+
+.carbon-shell
+  .carbon-matricula-page
+  button.renewal-section-card--selected {
+  border: 2px solid #0f62fe !important;
+  border-radius: 8px !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 3px rgba(15, 98, 254, 0.12) !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.renewal-section-card--selected
+  .renewal-section-title {
+  color: #161616 !important;
+}
+
+.carbon-shell
+  .carbon-matricula-page
+  button.renewal-section-card--selected
+  .renewal-section-meta,
+.carbon-shell
+  .carbon-matricula-page
+  button.renewal-section-card--selected
+  .renewal-section-availability {
+  color: #525252 !important;
+  opacity: 1 !important;
+}

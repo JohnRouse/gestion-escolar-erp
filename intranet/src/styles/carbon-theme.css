@@ -168,14 +168,14 @@ body {
    Se aplica sobre AppHeader sin reescribir toda su lógica.
    ========================================================== */
 
-.carbon-shell header {
+.carbon-shell .erp-app-header {
   top: 0 !important;
   padding: 0 !important;
   background: var(--cds-gray-100);
   border-bottom: 1px solid var(--cds-gray-80);
 }
 
-.carbon-shell header::before {
+.carbon-shell .erp-app-header::before {
   content: '';
   display: block;
   height: 3px;
@@ -183,7 +183,7 @@ body {
   background: linear-gradient(90deg, var(--cds-blue-60), var(--cds-blue-50), var(--cds-cyan-60));
 }
 
-.carbon-shell header > div.relative {
+.carbon-shell .erp-app-header > div.relative {
   max-width: none !important;
   height: 56px !important;
   border-radius: 0 !important;
@@ -194,43 +194,43 @@ body {
   backdrop-filter: none !important;
 }
 
-.carbon-shell header button {
+.carbon-shell .erp-app-header button {
   border-radius: var(--cds-radius-sm) !important;
 }
 
-.carbon-shell header form {
+.carbon-shell .erp-app-header form {
   border-radius: 0 !important;
   border-color: var(--cds-gray-80) !important;
   background: var(--cds-gray-90) !important;
   box-shadow: none !important;
 }
 
-.carbon-shell header form input {
+.carbon-shell .erp-app-header form input {
   color: #ffffff !important;
 }
 
-.carbon-shell header form input::placeholder {
+.carbon-shell .erp-app-header form input::placeholder {
   color: var(--cds-gray-40) !important;
 }
 
-.carbon-shell header svg {
+.carbon-shell .erp-app-header svg {
   color: inherit;
 }
 
-.carbon-shell header p,
-.carbon-shell header span {
+.carbon-shell .erp-app-header p,
+.carbon-shell .erp-app-header span {
   color: inherit;
 }
 
 /* Botones del header sobre fondo oscuro */
-.carbon-shell header > div.relative > div button {
+.carbon-shell .erp-app-header > div.relative > div button {
   background: transparent;
   border-color: transparent;
   color: var(--cds-gray-30);
   box-shadow: none !important;
 }
 
-.carbon-shell header > div.relative > div button:hover {
+.carbon-shell .erp-app-header > div.relative > div button:hover {
   background: var(--cds-gray-90) !important;
   color: #ffffff !important;
   transform: none !important;
@@ -396,7 +396,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .carbon-shell header > div.relative {
+  .carbon-shell .erp-app-header > div.relative {
     height: 56px !important;
   }
 
@@ -414,46 +414,46 @@ body {
 
 /* ---------- Header: contraste correcto ---------- */
 
-.carbon-shell header {
+.carbon-shell .erp-app-header {
   color: #ffffff !important;
 }
 
-.carbon-shell header > div.relative {
+.carbon-shell .erp-app-header > div.relative {
   color: #ffffff !important;
 }
 
-.carbon-shell header > div.relative > div > button,
-.carbon-shell header > div.relative > div > div > button {
+.carbon-shell .erp-app-header > div.relative > div > button,
+.carbon-shell .erp-app-header > div.relative > div > div > button {
   color: #f4f4f4 !important;
 }
 
-.carbon-shell header > div.relative > div > button *,
-.carbon-shell header > div.relative > div > div > button * {
+.carbon-shell .erp-app-header > div.relative > div > button *,
+.carbon-shell .erp-app-header > div.relative > div > div > button * {
   color: inherit !important;
 }
 
 /* Buscador superior */
-.carbon-shell header form {
+.carbon-shell .erp-app-header form {
   border: 1px solid var(--cds-gray-80) !important;
   background: #262626 !important;
 }
 
-.carbon-shell header form:focus-within {
+.carbon-shell .erp-app-header form:focus-within {
   border-color: var(--cds-blue-60) !important;
   box-shadow: inset 0 -2px 0 var(--cds-blue-60) !important;
 }
 
-.carbon-shell header form input {
+.carbon-shell .erp-app-header form input {
   color: #f4f4f4 !important;
 }
 
-.carbon-shell header form input::placeholder {
+.carbon-shell .erp-app-header form input::placeholder {
   color: #a8a8a8 !important;
 }
 
 /* ---------- Dropdown selector de colegios y menú personal ---------- */
 
-.carbon-shell header .header-dropdown-enter {
+.carbon-shell .erp-app-header .header-dropdown-enter {
   background: #ffffff !important;
   color: #161616 !important;
   border: 1px solid #c6c6c6 !important;
@@ -461,61 +461,61 @@ body {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
 }
 
-.carbon-shell header .header-dropdown-enter *,
-.carbon-shell header .header-dropdown-enter p,
-.carbon-shell header .header-dropdown-enter span,
-.carbon-shell header .header-dropdown-enter button,
-.carbon-shell header .header-dropdown-enter div {
+.carbon-shell .erp-app-header .header-dropdown-enter *,
+.carbon-shell .erp-app-header .header-dropdown-enter p,
+.carbon-shell .erp-app-header .header-dropdown-enter span,
+.carbon-shell .erp-app-header .header-dropdown-enter button,
+.carbon-shell .erp-app-header .header-dropdown-enter div {
   color: #161616 !important;
 }
 
-.carbon-shell header .header-dropdown-enter p[class*="text-slate-500"],
-.carbon-shell header .header-dropdown-enter p[class*="text-slate-400"],
-.carbon-shell header .header-dropdown-enter span[class*="text-slate-500"],
-.carbon-shell header .header-dropdown-enter span[class*="text-slate-400"],
-.carbon-shell header .header-dropdown-enter p[class*="text-xs"],
-.carbon-shell header .header-dropdown-enter span[class*="text-xs"] {
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-slate-500"],
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-slate-400"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-slate-500"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-slate-400"],
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-xs"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-xs"] {
   color: #525252 !important;
 }
 
-.carbon-shell header .header-dropdown-enter button {
+.carbon-shell .erp-app-header .header-dropdown-enter button {
   background: transparent !important;
   border-radius: 2px !important;
 }
 
-.carbon-shell header .header-dropdown-enter button:hover {
+.carbon-shell .erp-app-header .header-dropdown-enter button:hover {
   background: #f4f4f4 !important;
   color: #161616 !important;
   transform: none !important;
 }
 
-.carbon-shell header .header-dropdown-enter button:hover * {
+.carbon-shell .erp-app-header .header-dropdown-enter button:hover * {
   color: #161616 !important;
 }
 
-.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"],
-.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-slate-950"],
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-neutral-900"] {
   background: #161616 !important;
   color: #ffffff !important;
 }
 
-.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"] *,
-.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] * {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-slate-950"] *,
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-neutral-900"] * {
   color: #ffffff !important;
 }
 
 /* Botón de rol Admin dentro del dropdown */
-.carbon-shell header .header-dropdown-enter [class*="bg-blue-50"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-blue-50"] {
   background: #d0e2ff !important;
 }
 
-.carbon-shell header .header-dropdown-enter [class*="text-blue-700"],
-.carbon-shell header .header-dropdown-enter [class*="text-blue-600"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="text-blue-700"],
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="text-blue-600"] {
   color: #0043ce !important;
 }
 
 /* Botón cerrar sesión */
-.carbon-shell header .header-dropdown-enter [class*="text-red-600"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="text-red-600"] {
   color: #da1e28 !important;
 }
 
@@ -749,7 +749,7 @@ body {
    1) Header / selector de colegios / menú personal
    ========================================================== */
 
-.carbon-shell header .header-dropdown-enter {
+.carbon-shell .erp-app-header .header-dropdown-enter {
   z-index: 1000 !important;
   background: #ffffff !important;
   color: #161616 !important;
@@ -759,82 +759,82 @@ body {
 }
 
 /* Forzar contraste correcto dentro de dropdowns */
-.carbon-shell header .header-dropdown-enter,
-.carbon-shell header .header-dropdown-enter div,
-.carbon-shell header .header-dropdown-enter p,
-.carbon-shell header .header-dropdown-enter span,
-.carbon-shell header .header-dropdown-enter button {
+.carbon-shell .erp-app-header .header-dropdown-enter,
+.carbon-shell .erp-app-header .header-dropdown-enter div,
+.carbon-shell .erp-app-header .header-dropdown-enter p,
+.carbon-shell .erp-app-header .header-dropdown-enter span,
+.carbon-shell .erp-app-header .header-dropdown-enter button {
   color: #161616 !important;
 }
 
-.carbon-shell header .header-dropdown-enter p[class*="text-xs"],
-.carbon-shell header .header-dropdown-enter span[class*="text-xs"],
-.carbon-shell header .header-dropdown-enter p[class*="text-slate-500"],
-.carbon-shell header .header-dropdown-enter span[class*="text-slate-500"],
-.carbon-shell header .header-dropdown-enter p[class*="text-slate-400"],
-.carbon-shell header .header-dropdown-enter span[class*="text-slate-400"] {
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-xs"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-xs"],
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-slate-500"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-slate-500"],
+.carbon-shell .erp-app-header .header-dropdown-enter p[class*="text-slate-400"],
+.carbon-shell .erp-app-header .header-dropdown-enter span[class*="text-slate-400"] {
   color: #525252 !important;
 }
 
 /* Esta regla evita que las filas del selector se pongan negras al hover */
-.carbon-shell header > div.relative .header-dropdown-enter button,
-.carbon-shell header > div.relative > div .header-dropdown-enter button,
-.carbon-shell header > div.relative > div > div .header-dropdown-enter button {
+.carbon-shell .erp-app-header > div.relative .header-dropdown-enter button,
+.carbon-shell .erp-app-header > div.relative > div .header-dropdown-enter button,
+.carbon-shell .erp-app-header > div.relative > div > div .header-dropdown-enter button {
   background: transparent !important;
   color: #161616 !important;
   border-radius: 2px !important;
   box-shadow: none !important;
 }
 
-.carbon-shell header > div.relative .header-dropdown-enter button:hover,
-.carbon-shell header > div.relative > div .header-dropdown-enter button:hover,
-.carbon-shell header > div.relative > div > div .header-dropdown-enter button:hover {
+.carbon-shell .erp-app-header > div.relative .header-dropdown-enter button:hover,
+.carbon-shell .erp-app-header > div.relative > div .header-dropdown-enter button:hover,
+.carbon-shell .erp-app-header > div.relative > div > div .header-dropdown-enter button:hover {
   background: #f4f4f4 !important;
   color: #161616 !important;
   transform: none !important;
 }
 
-.carbon-shell header > div.relative .header-dropdown-enter button:hover *,
-.carbon-shell header > div.relative > div .header-dropdown-enter button:hover *,
-.carbon-shell header > div.relative > div > div .header-dropdown-enter button:hover * {
+.carbon-shell .erp-app-header > div.relative .header-dropdown-enter button:hover *,
+.carbon-shell .erp-app-header > div.relative > div .header-dropdown-enter button:hover *,
+.carbon-shell .erp-app-header > div.relative > div > div .header-dropdown-enter button:hover * {
   color: #161616 !important;
 }
 
 /* Icono de opción seleccionada: se mantiene oscuro, pero sin tapar textos */
-.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"],
-.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-slate-950"],
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-neutral-900"] {
   background: #161616 !important;
   color: #ffffff !important;
 }
 
-.carbon-shell header .header-dropdown-enter [class*="bg-slate-950"] *,
-.carbon-shell header .header-dropdown-enter [class*="bg-neutral-900"] * {
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-slate-950"] *,
+.carbon-shell .erp-app-header .header-dropdown-enter [class*="bg-neutral-900"] * {
   color: #ffffff !important;
 }
 
 /* Fila elegida / hover dentro del selector */
-.carbon-shell header .header-dropdown-enter button[aria-current="true"],
-.carbon-shell header .header-dropdown-enter button[data-active="true"] {
+.carbon-shell .erp-app-header .header-dropdown-enter button[aria-current="true"],
+.carbon-shell .erp-app-header .header-dropdown-enter button[data-active="true"] {
   background: #d0e2ff !important;
   color: #161616 !important;
 }
 
 /* Menú personal: opciones visibles */
-.carbon-shell header .header-dropdown-enter button[class*="text-slate"],
-.carbon-shell header .header-dropdown-enter button[class*="text-red"] {
+.carbon-shell .erp-app-header .header-dropdown-enter button[class*="text-slate"],
+.carbon-shell .erp-app-header .header-dropdown-enter button[class*="text-red"] {
   color: #161616 !important;
 }
 
-.carbon-shell header .header-dropdown-enter button[class*="text-red"] {
+.carbon-shell .erp-app-header .header-dropdown-enter button[class*="text-red"] {
   color: #da1e28 !important;
 }
 
-.carbon-shell header .header-dropdown-enter button[class*="text-red"]:hover {
+.carbon-shell .erp-app-header .header-dropdown-enter button[class*="text-red"]:hover {
   background: #fff1f1 !important;
   color: #da1e28 !important;
 }
 
-.carbon-shell header .header-dropdown-enter button[class*="text-red"]:hover * {
+.carbon-shell .erp-app-header .header-dropdown-enter button[class*="text-red"]:hover * {
   color: #da1e28 !important;
 }
 

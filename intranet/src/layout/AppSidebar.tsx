@@ -25,12 +25,23 @@ import {
   BookOpenCheck,
 } from 'lucide-react';
 
+interface NavLeaf {
+  title: string;
+  path: string;
+}
+
+interface NavChild {
+  title: string;
+  path?: string;
+  children?: NavLeaf[];
+}
+
 interface NavItem {
   title: string;
   icon: ElementType;
   path?: string;
   roles?: string[];
-  children?: { title: string; path: string }[];
+  children?: NavChild[];
 }
 
 const menuPrincipal: NavItem[] = [
@@ -107,14 +118,48 @@ const menuFinanzas: NavItem[] = [
     path: '/tesoreria',
     roles: ['Admin', 'Secretaria', 'Director'],
     children: [
-      { title: 'Centro de pagos', path: '/tesoreria/cobranzas' },
-      { title: 'Configurar pensiones', path: '/tesoreria/configuracion' },
-      { title: 'Agenda de cobranzas', path: '/tesoreria/agenda-cobranzas' },
-      { title: 'Estado de cuenta', path: '/tesoreria/estado-cuenta' },
-      { title: 'Validar pagos', path: '/tesoreria/validar-pagos' },
-      { title: 'Pagos recibidos', path: '/tesoreria/pagos-recibidos' },
-      { title: 'Pagos extraordinarios', path: '/tesoreria/pagos-extraordinarios' },
-      { title: 'Datos para cobrar', path: '/tesoreria/datos-cobro' },
+      {
+        title: 'Operaciones',
+        children: [
+          {
+            title: 'Centro de pagos',
+            path: '/tesoreria/cobranzas',
+          },
+          {
+            title: 'Agenda de cobranzas',
+            path: '/tesoreria/agenda-cobranzas',
+          },
+          {
+            title: 'Estado de cuenta',
+            path: '/tesoreria/estado-cuenta',
+          },
+          {
+            title: 'Validar pagos',
+            path: '/tesoreria/validar-pagos',
+          },
+          {
+            title: 'Pagos recibidos',
+            path: '/tesoreria/pagos-recibidos',
+          },
+        ],
+      },
+      {
+        title: 'Configuración',
+        children: [
+          {
+            title: 'Configurar pensiones',
+            path: '/tesoreria/configuracion',
+          },
+          {
+            title: 'Pagos extraordinarios',
+            path: '/tesoreria/pagos-extraordinarios',
+          },
+          {
+            title: 'Datos para cobrar',
+            path: '/tesoreria/datos-cobro',
+          },
+        ],
+      },
     ],
   },
 ];
@@ -174,7 +219,16 @@ export default function AppSidebar() {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
-  const isChildActive = (path: string) => location.pathname === path;
+  const isChildActive = (path: string) =>
+    location.pathname === path;
+
+  const getChildPaths = (item: NavItem) =>
+    (item.children || []).flatMap((child) =>
+      child.children?.map(
+        (nestedChild) => nestedChild.path,
+      ) ??
+      (child.path ? [child.path] : []),
+    );
 
   useEffect(() => {
     const activeParent = categorias
@@ -201,7 +255,11 @@ export default function AppSidebar() {
 
   const renderItem = (item: NavItem) => {
     const hasChildren = Boolean(item.children?.length);
-    const isActive = isRouteActive(item.path) || Boolean(item.children?.some((child) => isRouteActive(child.path)));
+    const isActive =
+      isRouteActive(item.path) ||
+      getChildPaths(item).some((path) =>
+        isRouteActive(path),
+      );
     const Icon = item.icon;
 
     if (hasChildren) {
@@ -213,11 +271,14 @@ export default function AppSidebar() {
             type="button"
             onClick={() => {
               if (isCollapsed) {
-                handleNavigate(item.path);
+                toggleCollapse();
+                setExpanded(item.title);
                 return;
               }
 
-              setExpanded(isExpanded ? null : item.title);
+              setExpanded(
+                isExpanded ? null : item.title,
+              );
             }}
             title={isCollapsed ? item.title : undefined}
             className={cx(
@@ -255,26 +316,102 @@ export default function AppSidebar() {
           </button>
 
           {isExpanded && !isCollapsed && (
-            <div className="relative ml-5 mt-2 space-y-1 border-l border-slate-200 pl-3">
+            <div className="relative ml-5 mt-2 space-y-2 border-l border-slate-200 pl-3">
               {item.children!.map((child) => {
-                const activeChild = isChildActive(child.path);
+                const groupedChildren =
+                  child.children || [];
+
+                if (groupedChildren.length > 0) {
+                  const groupActive =
+                    groupedChildren.some(
+                      (nestedChild) =>
+                        isChildActive(
+                          nestedChild.path,
+                        ),
+                    );
+
+                  return (
+                    <div
+                      key={child.title}
+                      className="space-y-1"
+                    >
+                      <p
+                        className={cx(
+                          'px-3 pt-2 text-[10px] font-black uppercase tracking-[0.14em]',
+                          groupActive
+                            ? 'text-blue-700'
+                            : 'text-slate-400',
+                        )}
+                      >
+                        {child.title}
+                      </p>
+
+                      <div className="space-y-1">
+                        {groupedChildren.map(
+                          (nestedChild) => {
+                            const activeChild =
+                              isChildActive(
+                                nestedChild.path,
+                              );
+
+                            return (
+                              <button
+                                key={
+                                  nestedChild.title
+                                }
+                                type="button"
+                                onClick={() =>
+                                  handleNavigate(
+                                    nestedChild.path,
+                                  )
+                                }
+                                className={cx(
+                                  'flex min-h-9 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
+                                  activeChild
+                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
+                                )}
+                              >
+                                <span className="truncate">
+                                  {
+                                    nestedChild.title
+                                  }
+                                </span>
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (!child.path) return null;
+
+                const activeChild =
+                  isChildActive(child.path);
 
                 return (
                   <button
                     key={child.title}
                     type="button"
-                    onClick={() => handleNavigate(child.path)}
+                    onClick={() =>
+                      handleNavigate(child.path)
+                    }
                     className={cx(
                       'relative flex min-h-8 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
                       activeChild
                         ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
                     )}
                   >
                     {activeChild && (
                       <span className="absolute -left-[17px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-blue-600 ring-4 ring-white" />
                     )}
-                    <span className="truncate">{child.title}</span>
+
+                    <span className="truncate">
+                      {child.title}
+                    </span>
                   </button>
                 );
               })}

@@ -9,6 +9,7 @@ import './styles/carbon/99-legibilidad-y-tablas.css';
 import './styles/carbon/100-comunidad-login-final.css';
 import './styles/carbon/101-configuracion-ux.css';
 import './styles/carbon/102-operacion-matricula-tesoreria.css';
+import './styles/carbon/103-selecciones-sidebar-y-cabeceras.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

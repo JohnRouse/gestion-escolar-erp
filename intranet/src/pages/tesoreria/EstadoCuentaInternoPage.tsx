@@ -9,7 +9,6 @@ import {
   FileText,
   Loader2,
   Printer,
-  ReceiptText,
   Search,
   ShieldCheck,
   UserRound,
@@ -275,14 +274,6 @@ export default function EstadoCuentaInternoPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => (window.location.href = '/tesoreria/pagos-recibidos')}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-700 transition hover:bg-slate-200"
-          >
-            <ReceiptText size={16} />
-            Pagos recibidos
-          </button>
         </div>
 
         {error && (
@@ -298,7 +289,7 @@ export default function EstadoCuentaInternoPage() {
                 key={item.id_matricula}
                 type="button"
                 onClick={() => cargarEstadoCuenta(item.id_matricula)}
-                className="rounded-3xl bg-slate-50 p-4 text-left ring-1 ring-slate-100 transition hover:bg-white hover:shadow-md"
+                className="estado-cuenta-result-card rounded-2xl border border-slate-300 bg-white p-4 text-left transition hover:border-blue-400 hover:bg-blue-50/40"
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">

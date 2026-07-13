@@ -374,9 +374,9 @@ export default function PagosExtraordinariosPage() {
                           key={nivel.id_nivel}
                           type="button"
                           onClick={() => toggleNivel(nivel.id_nivel)}
-                          className={`rounded-3xl border p-4 text-left transition-all ${
+                          className={`extraordinary-target-card rounded-3xl border p-4 text-left transition-all ${
                             selected
-                              ? 'border-accent-200 bg-accent-50 text-accent-700 ring-2 ring-accent-100'
+                              ? 'extraordinary-target-card--selected'
                               : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-white'
                           }`}
                         >
@@ -407,7 +407,7 @@ export default function PagosExtraordinariosPage() {
                                   key={seccion.id_seccion}
                                   type="button"
                                   onClick={() => toggleSeccion(seccion.id_seccion)}
-                                  className={`rounded-3xl border p-4 text-left transition-all ${
+                                  className={`extraordinary-target-card rounded-3xl border p-4 text-left transition-all ${
                                     selected
                                       ? 'border-blue-200 bg-blue-50 text-blue-700 ring-2 ring-blue-100'
                                       : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-white'

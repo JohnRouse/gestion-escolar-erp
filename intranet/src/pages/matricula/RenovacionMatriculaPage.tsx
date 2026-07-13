@@ -369,7 +369,7 @@ export default function RenovacionMatriculaPage() {
                   <button key={seccion.id_seccion} type="button" disabled={sinCupos} onClick={() => setSeccionDestinoId(selected ? '' : seccion.id_seccion)}
                     className={cx(
                       'renewal-section-card rounded-2xl border p-4 text-left transition-all duration-150',
-                      selected ? 'renewal-section-card--selected border-[#0f62fe] bg-blue-50 ring-1 ring-[#0f62fe]/30 shadow-sm' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
+                      selected ? 'renewal-section-card--selected' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
                       sinCupos && 'cursor-not-allowed opacity-50'
                     )}
                   >

@@ -482,7 +482,7 @@ export default function CursosTab() {
               mode: 'create',
             })
           }
-          className="config-primary-action inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-700"
+          className="config-primary-action inline-flex h-11 min-w-[144px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-700"
         >
           <Plus size={17} />
           Nueva área
