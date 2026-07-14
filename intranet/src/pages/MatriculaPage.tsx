@@ -120,23 +120,108 @@ const getCodigoMatricula = (matricula: { id_matricula: number; codigo_matricula?
 const getCodigoDetalleMatricula = (detalle: any) => { if (!detalle) return 'Sin código'; const codigoColegio = detalle.estudiante?.codigos_colegio?.find((item: CodigoColegio) => item.id_colegio === detalle.id_colegio); return codigoColegio?.codigo || detalle.estudiante?.codigo_estudiante || 'Sin código'; };
 const validarFechaNacimientoFrontend = (fecha?: string) => { if (!fecha) return 'Ingresa la fecha de nacimiento.'; const nacimiento = new Date(`${fecha}T00:00:00`); const hoy = new Date(); const minima = new Date('1990-01-01T00:00:00'); if (Number.isNaN(nacimiento.getTime())) return 'La fecha de nacimiento no es válida.'; if (nacimiento > hoy) return 'La fecha de nacimiento no puede ser futura.'; if (nacimiento < minima) return 'La fecha de nacimiento parece demasiado antigua. Revisa el dato.'; return null; };
 
-// ─── Step Hint Component ──────────────────────────────────────────────────────
-const StepHint = ({ step, title, description, done = false, warning = false }: { step: number; title: string; description?: string; done?: boolean; warning?: boolean }) => {
-  const Icon = done ? CheckCircle2 : warning ? AlertCircle : Circle;
-  const cls = done ? 'bg-emerald-50/50 text-emerald-700 ring-emerald-200/60' : warning ? 'bg-amber-50/50 text-amber-700 ring-amber-200/60' : 'bg-neutral-50 text-neutral-500 ring-neutral-200/60';
-  return (
-    <div className={`mb-4 rounded-xl px-4 py-3 ring-1 ${cls}`}>
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/80"><Icon size={14} /></div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest">Paso {step}</p>
-          <p className="mt-0.5 text-sm font-semibold">{title}</p>
-          {description && <p className="mt-1 text-xs leading-5 opacity-80">{description}</p>}
-        </div>
-      </div>
-    </div>
-  );
+// ─── Enrollment progress ────────────────────────────────────────────────────
+
+type EnrollmentProgressStep = {
+  title: string;
+  done: boolean;
 };
+
+function EnrollmentProgress({
+  steps,
+}: {
+  steps: EnrollmentProgressStep[];
+}) {
+  const firstPending =
+    steps.findIndex((step) => !step.done);
+
+  const activeIndex =
+    firstPending === -1
+      ? steps.length - 1
+      : firstPending;
+
+  return (
+    <nav
+      className="matricula-progress"
+      aria-label="Progreso del registro de matrícula"
+    >
+      <div className="matricula-progress__track">
+        {steps.map((step, index) => {
+          const state = step.done
+            ? 'done'
+            : index === activeIndex
+              ? 'current'
+              : 'pending';
+
+          return (
+            <div
+              key={`${index}-${step.title}`}
+              className={`matricula-progress__step matricula-progress__step--${state}`}
+              aria-current={
+                state === 'current'
+                  ? 'step'
+                  : undefined
+              }
+            >
+              <span className="matricula-progress__number">
+                {step.done ? (
+                  <CheckCircle2
+                    size={16}
+                    strokeWidth={2.4}
+                  />
+                ) : (
+                  index + 1
+                )}
+              </span>
+
+              <span className="matricula-progress__title">
+                {step.title}
+              </span>
+
+              {index < steps.length - 1 && (
+                <span
+                  className="matricula-progress__connector"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function getNombreOperacion(
+  tipoIngreso?: string,
+) {
+  const tipo = String(tipoIngreso || '');
+
+  if (tipo === 'Reserva') {
+    return 'reserva';
+  }
+
+  if (
+    tipo === 'Renovación' ||
+    tipo === 'Renovación con cambio de sede'
+  ) {
+    return 'renovación';
+  }
+
+  if (tipo === 'Traslado') {
+    return 'traslado';
+  }
+
+  if (tipo === 'Reingreso') {
+    return 'reingreso';
+  }
+
+  if (tipo === 'Regularización') {
+    return 'regularización';
+  }
+
+  return 'pre-matrícula';
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 function ViewportPortal({
@@ -251,7 +336,23 @@ export default function MatriculaPage() {
   const edadAl31Marzo = (fecha?: string | null) => { if (!fecha) return null; const anioCorte = getAnioCorteFrontend(); const corte = new Date(`${anioCorte}-03-31T23:59:59`); return calcularEdadDetallada(fecha, corte); };
   const niveles = useMemo(() => Array.from(new Set(secciones.map((s) => s.grado?.nivel?.nombre_nivel).filter(Boolean))) as string[], [secciones]);
   const grados = useMemo(() => Array.from(new Set(secciones.filter((s) => !nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro).map((s) => s.grado?.nombre_grado).filter(Boolean))) as string[], [nivelFiltro, secciones]);
-  const seccionesFiltradas = useMemo(() => secciones.filter((s) => (!nivelFiltro || s.grado?.nivel?.nombre_nivel === nivelFiltro) && (!gradoFiltro || s.grado?.nombre_grado === gradoFiltro)), [gradoFiltro, nivelFiltro, secciones]);
+  const seccionesFiltradas = useMemo(() => {
+    if (!nivelFiltro || !gradoFiltro) {
+      return [];
+    }
+
+    return secciones.filter(
+      (seccion) =>
+        seccion.grado?.nivel?.nombre_nivel ===
+          nivelFiltro &&
+        seccion.grado?.nombre_grado ===
+          gradoFiltro,
+    );
+  }, [
+    gradoFiltro,
+    nivelFiltro,
+    secciones,
+  ]);
   const seccionSeleccionada = useMemo(() => secciones.find((s) => s.id_seccion === seccionId) || null, [seccionId, secciones]);
 
   const reglaEdadSeleccionada = (): ReglaEdad | null => { if (!seccionSeleccionada) return null; const nivel = seccionSeleccionada.grado?.nivel?.nombre_nivel?.toLowerCase() || ''; const grado = seccionSeleccionada.grado?.nombre_grado?.toLowerCase() || ''; if (nivel.includes('inicial')) { const edad = Number(grado.match(/\d+/)?.[0]); if (edad >= 3 && edad <= 5) return { edad, permiteExcepcionTraslado: false, label: `Inicial ${edad} años` }; } if (nivel.includes('primaria')) { const gradoNumero = grado.includes('primer')||grado.includes('1') ? 1 : grado.includes('segundo')||grado.includes('2') ? 2 : grado.includes('tercer')||grado.includes('3') ? 3 : grado.includes('cuarto')||grado.includes('4') ? 4 : grado.includes('quinto')||grado.includes('5') ? 5 : grado.includes('sexto')||grado.includes('6') ? 6 : null; if (gradoNumero) return { edad: 5 + gradoNumero, permiteExcepcionTraslado: gradoNumero >= 2, label: `${gradoNumero}.° de primaria` }; } return null; };
@@ -390,6 +491,78 @@ export default function MatriculaPage() {
 
   const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (err: any) { const errorMessage = err.response?.data?.message || 'No se pudo registrar la matrícula.'; setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
 
+
+  const vistaConsolidada =
+    activeScope.tipo === 'todos' &&
+    puedeVerConsolidado;
+
+  const requiereProcedencia =
+    tipoIngreso === 'Traslado' ||
+    tipoIngreso === 'Reingreso';
+
+  useEffect(() => {
+    if (requiereProcedencia) {
+      return;
+    }
+
+    setColegioProcedencia('');
+    setCodigoModularProcedencia('');
+    setGradoProcedencia('');
+  }, [requiereProcedencia]);
+
+  const flujoListo = Boolean(
+    alumno &&
+      colegioDestinoDefinido &&
+      apoderados.length > 0 &&
+      anioSeleccionado &&
+      seccionSeleccionada &&
+      tipoIngreso,
+  );
+
+  const pasosFlujo: EnrollmentProgressStep[] = [
+    {
+      title: 'Alumno',
+      done: Boolean(alumno),
+    },
+
+    ...(vistaConsolidada
+      ? [
+          {
+            title: 'Institución',
+            done: colegioDestinoDefinido,
+          },
+        ]
+      : []),
+
+    {
+      title: 'Apoderados',
+      done: apoderados.length > 0,
+    },
+    {
+      title: 'Sección',
+      done: Boolean(
+        anioSeleccionado &&
+          seccionSeleccionada,
+      ),
+    },
+    {
+      title: 'Ingreso',
+      done: Boolean(tipoIngreso),
+    },
+    {
+      title: 'Revisión',
+      done: flujoListo,
+    },
+  ];
+
+  const pasosCompletos =
+    pasosFlujo.filter(
+      (step) => step.done,
+    ).length;
+
+  const operacionLabel =
+    getNombreOperacion(tipoIngreso);
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="carbon-matricula-page w-full space-y-6">
@@ -405,13 +578,31 @@ export default function MatriculaPage() {
       `}</style>
 
       <div className={`transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-        <PageHeader eyebrow="Gestión académica" title="Gestión de Matrícula" description="Busca alumnos, vincula apoderados y confirma la pre-matrícula en el colegio seleccionado." icon={GraduationCap} meta={[{ label: 'Contexto activo', value: scopeLabel }, { label: 'Colegio destino', value: colegioDestinoNombre }]} />
+        <PageHeader
+          eyebrow="Gestión académica"
+          title="Registro de matrícula"
+          description="Registra reservas o pre-matrículas, vincula apoderados y selecciona la institución, el año lectivo y la sección de destino."
+          icon={GraduationCap}
+          meta={[
+            {
+              label: 'Contexto activo',
+              value: scopeLabel,
+            },
+            {
+              label: 'Institución destino',
+              value: colegioDestinoNombre,
+            },
+          ]}
+        />
       </div>
 
-      <div className={`grid gap-6 xl:grid-cols-[0.95fr_1.55fr] transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <EnrollmentProgress
+        steps={pasosFlujo}
+      />
+
+      <div className={`matricula-main-layout grid gap-5 xl:grid-cols-[0.78fr_1.82fr] transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* ── Columna izquierda ── */}
         <section className="space-y-6">
-          <StepHint step={1} title="Busca o registra al alumno" description="Ingresa DNI para revisar si ya existe. Si no existe, crea su ficha." done={Boolean(alumno)} warning={!alumno} />
           <Card icon={Search} title="Buscar alumno" subtitle="Ingresa el DNI para revisar su ficha.">
             <div className="flex gap-3">
               <input value={dni} onChange={(e) => setDni(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && buscarAlumno()} placeholder="DNI del alumno" className={inputClass} />
@@ -569,7 +760,7 @@ export default function MatriculaPage() {
         </section>
 
         {/* ── Columna derecha ── */}
-        <section className="space-y-6">
+        <section className="matricula-workspace space-y-4">
           {alumno ? (
             <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3.5">
@@ -586,7 +777,7 @@ export default function MatriculaPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   {matriculaActiva ? <Badge tone="amber">{matriculaActiva.estado_matricula}</Badge> : <Badge tone="emerald">Disponible</Badge>}
                   <button type="button" onClick={() => { setFormAlumno({ dni: alumno.dni||'', nombres: alumno.nombres||'', apellido_paterno: alumno.apellido_paterno||'', apellido_materno: alumno.apellido_materno||'', fecha_nacimiento: alumno.fecha_nacimiento ? alumno.fecha_nacimiento.slice(0,10) : '', genero: alumno.genero||'', telefono: alumno.telefono||'', correo: alumno.correo||'', direccion: alumno.direccion||'', pais: alumno.pais||'Perú', departamento: alumno.departamento||'', provincia: alumno.provincia||'', distrito: alumno.distrito||'' }); setErrorPersona(null); setClosingModal(null); setModalEditarAlumno(true); }} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-2.5 text-xs font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300">
-                    <ArrowRight size={12} /> Editar
+                    <PencilLine size={13} /> Editar datos
                   </button>
                 </div>
               </div>
@@ -632,123 +823,848 @@ export default function MatriculaPage() {
           )}
 
           {alumno && !matriculaActiva && (
-            <>
-              {activeScope.tipo === 'todos' && puedeVerConsolidado && (
-                <><StepHint step={2} title="Selecciona el colegio destino" description="La matrícula se registrará en esta sede." done={colegioDestinoDefinido} warning={!colegioDestinoDefinido} /><Card icon={MapPin} title="Colegio destino" subtitle="Selecciona la sede donde se registrará la matrícula."><div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end"><label><span className={labelClass}>Sede de matrícula</span><select value={colegioDestinoId} onChange={(e) => { setColegioDestinoId(e.target.value ? Number(e.target.value) : ''); setSeccionId(''); setAnioId(''); setExcepcionTraslado(false); setMensaje(null); }} className={selectClass}><option value="">Selecciona colegio destino</option>{colegios.map((c) => (<option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>))}</select></label></div></Card></>
-              )}
-              <StepHint step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 3 : 2} title="Selecciona o agrega uno o más apoderados" description="Debe existir al menos un apoderado vinculado para continuar." done={apoderados.length > 0} warning={Boolean(alumno && apoderados.length === 0)} />
-              <Card icon={ShieldCheck} title="Apoderados" subtitle="Debes vincular al menos un apoderado.">
-                <div className="flex gap-3">
-                  <input value={apoderadoDni} onChange={(e) => setApoderadoDni(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && buscarApoderado()} placeholder="DNI del apoderado" className={inputClass} />
-                  <select value={parentesco} onChange={(e) => setParentesco(e.target.value)} className="h-11 w-auto shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 appearance-none">
-                    {parentescos.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <button type="button" onClick={buscarApoderado} disabled={!apoderadoDni || buscandoApoderado} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-50">
-                    {buscandoApoderado ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />} Buscar
-                  </button>
-                </div>
-                <button type="button" onClick={() => { setFormApoderado({ ...emptyApoderado }); setErrorPersona(null); setClosingModal(null); setModalApoderado(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#0f62fe] hover:bg-[#0f62fe]/5 hover:text-neutral-900">
-                  <UserPlus size={15} /> Nuevo apoderado
-                </button>
-                {apoderadoEncontrado && (
-                  <div className="mt-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200/60">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0"><p className="truncate text-sm font-medium text-neutral-800">{apoderadoEncontrado.nombres} {apoderadoEncontrado.apellido_paterno} {apoderadoEncontrado.apellido_materno}</p><p className="mt-0.5 text-xs text-neutral-400">DNI {apoderadoEncontrado.dni} · {apoderadoEncontrado.telefono || 'Sin teléfono'} · {apoderadoEncontrado.distrito || 'Sin distrito'}</p></div>
-                      <button type="button" onClick={() => agregarApoderado({ ...apoderadoEncontrado, parentesco })} className="shrink-0 h-9 rounded-xl bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98]">Agregar como {parentesco}</button>
+            <div className="matricula-enrollment-flow">
+              <div className="matricula-flow-top-grid">
+                {vistaConsolidada && (
+                  <Card
+                    icon={MapPin}
+                    title="Institución destino"
+                    subtitle="Selecciona la sede donde se registrará al alumno."
+                  >
+                    <label>
+                      <span className={labelClass}>
+                        Institución de matrícula
+                      </span>
+
+                      <select
+                        value={colegioDestinoId}
+                        onChange={(event) => {
+                          setColegioDestinoId(
+                            event.target.value
+                              ? Number(
+                                  event.target.value,
+                                )
+                              : '',
+                          );
+
+                          setSeccionId('');
+                          setAnioId('');
+                          setNivelFiltro('');
+                          setGradoFiltro('');
+                          setExcepcionTraslado(false);
+                          setMensaje(null);
+                        }}
+                        className={selectClass}
+                      >
+                        <option value="">
+                          Selecciona institución destino
+                        </option>
+
+                        {colegios.map((colegio) => (
+                          <option
+                            key={colegio.id_colegio}
+                            value={colegio.id_colegio}
+                          >
+                            {colegio.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </Card>
+                )}
+
+                <Card
+                  icon={ShieldCheck}
+                  title="Apoderados"
+                  subtitle="Busca un apoderado existente o registra uno nuevo."
+                >
+                  <div className="matricula-guardian-search">
+                    <input
+                      value={apoderadoDni}
+                      onChange={(event) =>
+                        setApoderadoDni(
+                          event.target.value,
+                        )
+                      }
+                      onKeyDown={(event) =>
+                        event.key === 'Enter' &&
+                        buscarApoderado()
+                      }
+                      placeholder="DNI del apoderado"
+                      className={inputClass}
+                    />
+
+                    <select
+                      value={parentesco}
+                      onChange={(event) =>
+                        setParentesco(
+                          event.target.value,
+                        )
+                      }
+                      className={selectClass}
+                    >
+                      {parentescos.map(
+                        (parentescoItem) => (
+                          <option
+                            key={parentescoItem}
+                            value={parentescoItem}
+                          >
+                            {parentescoItem}
+                          </option>
+                        ),
+                      )}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={buscarApoderado}
+                      disabled={
+                        !apoderadoDni ||
+                        buscandoApoderado
+                      }
+                      className="matricula-guardian-search__button"
+                    >
+                      {buscandoApoderado ? (
+                        <Loader2
+                          size={16}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Search size={16} />
+                      )}
+
+                      Buscar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormApoderado({
+                          ...emptyApoderado,
+                        });
+
+                        setErrorPersona(null);
+                        setClosingModal(null);
+                        setModalApoderado(true);
+                      }}
+                      className="matricula-new-guardian-button"
+                    >
+                      <UserPlus size={16} />
+                      Nuevo apoderado
+                    </button>
+                  </div>
+
+                  {apoderadoEncontrado && (
+                    <div className="matricula-guardian-result">
+                      <div className="min-w-0">
+                        <p className="matricula-guardian-result__name">
+                          {apoderadoEncontrado.nombres}{' '}
+                          {
+                            apoderadoEncontrado.apellido_paterno
+                          }{' '}
+                          {
+                            apoderadoEncontrado.apellido_materno
+                          }
+                        </p>
+
+                        <p className="matricula-guardian-result__detail">
+                          DNI {apoderadoEncontrado.dni}
+                          {' · '}
+                          {apoderadoEncontrado.telefono ||
+                            'Sin teléfono'}
+                          {' · '}
+                          {apoderadoEncontrado.distrito ||
+                            'Sin distrito'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          agregarApoderado({
+                            ...apoderadoEncontrado,
+                            parentesco,
+                          })
+                        }
+                        className="matricula-guardian-result__add"
+                      >
+                        Agregar como {parentesco}
+                      </button>
                     </div>
-                  </div>
-                )}
-                {apoderados.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50/50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200/60">Apoderados cargados</div>
-                    {apoderados.map((a) => { const color = getAvatarColor(a.nombres); const initials = getInitials(a.nombres); return (
-                      <div key={a.id_persona} className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200/60">
-                        <div className="flex min-w-0 items-center gap-2.5"><div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold ${color}`}>{initials}</div><div className="min-w-0"><p className="truncate text-sm font-medium text-neutral-800">{a.nombres} {a.apellido_paterno}</p><p className="mt-0.5 truncate text-xs text-neutral-400">{a.parentesco} · DNI {a.dni} · {a.telefono || 'Sin teléfono'}</p></div></div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => abrirEditarApoderado(a)}
-                            className="matricula-guardian-action inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 transition-all duration-150 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700"
+                  )}
+
+                  {apoderados.length > 0 ? (
+                    <div className="matricula-guardian-chips">
+                      {apoderados.map((apoderado) => {
+                        const avatarColor =
+                          getAvatarColor(
+                            apoderado.nombres,
+                          );
+
+                        const initials =
+                          getInitials(
+                            apoderado.nombres,
+                          );
+
+                        return (
+                          <div
+                            key={apoderado.id_persona}
+                            className="matricula-guardian-chip"
                           >
-                            <PencilLine size={12} /> Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!token || !estudiante?.id_persona) return;
-                              try {
-                                await axios.delete(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados/${a.id_persona}`, {
-                                  headers: { Authorization: `Bearer ${token}` },
-                                });
-                                setApoderados(apoderados.filter((x) => x.id_persona !== a.id_persona));
-                                setMensaje(null);
-                                showToast({ type: 'success', title: 'Apoderado desvinculado', message: 'El apoderado fue retirado de la ficha del alumno.' });
-                              } catch (err: any) {
-                                setMensaje(err.response?.data?.message || 'No se pudo desvincular el apoderado.');
-                              }
-                            }}
-                            className="matricula-guardian-action matricula-guardian-action--danger rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-all duration-150 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                          >
-                            Quitar
-                          </button>
+                            <span
+                              className={`matricula-guardian-chip__avatar ${avatarColor}`}
+                            >
+                              {initials}
+                            </span>
+
+                            <span className="matricula-guardian-chip__copy">
+                              <strong>
+                                {apoderado.nombres}{' '}
+                                {
+                                  apoderado.apellido_paterno
+                                }
+                              </strong>
+
+                              <small>
+                                {apoderado.parentesco}
+                                {' · '}
+                                DNI {apoderado.dni}
+                              </small>
+                            </span>
+
+                            <span className="matricula-guardian-chip__actions">
+                              <button
+                                type="button"
+                                title="Editar apoderado"
+                                aria-label={`Editar a ${apoderado.nombres}`}
+                                onClick={() =>
+                                  abrirEditarApoderado(
+                                    apoderado,
+                                  )
+                                }
+                              >
+                                <PencilLine size={15} />
+                              </button>
+
+                              <button
+                                type="button"
+                                className="matricula-guardian-chip__remove"
+                                title="Desvincular apoderado"
+                                aria-label={`Desvincular a ${apoderado.nombres}`}
+                                onClick={async () => {
+                                  if (
+                                    !token ||
+                                    !estudiante?.id_persona
+                                  ) {
+                                    return;
+                                  }
+
+                                  try {
+                                    await axios.delete(
+                                      `/api/academicos/alumnos/${estudiante.id_persona}/apoderados/${apoderado.id_persona}`,
+                                      {
+                                        headers: {
+                                          Authorization:
+                                            `Bearer ${token}`,
+                                        },
+                                      },
+                                    );
+
+                                    setApoderados(
+                                      (actuales) =>
+                                        actuales.filter(
+                                          (item) =>
+                                            item.id_persona !==
+                                            apoderado.id_persona,
+                                        ),
+                                    );
+
+                                    setMensaje(null);
+
+                                    showToast({
+                                      type: 'success',
+                                      title:
+                                        'Apoderado desvinculado',
+                                      message:
+                                        'El apoderado fue retirado de la ficha del alumno.',
+                                    });
+                                  } catch (
+                                    error: any
+                                  ) {
+                                    setMensaje(
+                                      error.response?.data
+                                        ?.message ||
+                                        'No se pudo desvincular el apoderado.',
+                                    );
+                                  }
+                                }}
+                              >
+                                <X size={15} />
+                              </button>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="matricula-guardian-empty">
+                      Todavía no hay apoderados vinculados.
+                    </div>
+                  )}
+                </Card>
+              </div>
+
+              <Card
+                icon={GraduationCap}
+                title="Año, grado y sección"
+                subtitle="Selecciona primero los filtros y luego la sección de destino."
+              >
+                <div className="matricula-registration-grid">
+                  <section className="matricula-section-picker">
+                    <div className="matricula-section-picker__heading">
+                      <div>
+                        <span>Sección de destino</span>
+                        <strong>
+                          Elige una sección con cupos disponibles
+                        </strong>
+                      </div>
+
+                      {seccionSeleccionada && (
+                        <span className="matricula-selected-section">
+                          {seccionSeleccionada.grado
+                            .nombre_grado}{' '}
+                          “{seccionSeleccionada.letra}”
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="matricula-filter-grid">
+                      <label>
+                        <span className={labelClass}>
+                          Año lectivo
+                        </span>
+
+                        <select
+                          value={anioId}
+                          onChange={(event) => {
+                            setAnioId(
+                              event.target.value
+                                ? Number(
+                                    event.target.value,
+                                  )
+                                : '',
+                            );
+
+                            setNivelFiltro('');
+                            setGradoFiltro('');
+                            setSeccionId('');
+                            setExcepcionTraslado(false);
+                          }}
+                          className={selectClass}
+                        >
+                          <option value="">
+                            Selecciona año
+                          </option>
+
+                          {aniosDisponibles.map(
+                            (anio) => (
+                              <option
+                                key={anio.id_anio}
+                                value={anio.id_anio}
+                              >
+                                {anio.nombre_anio}
+                                {' · '}
+                                {anio.estado}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+
+                      <label>
+                        <span className={labelClass}>
+                          Nivel
+                        </span>
+
+                        <select
+                          value={nivelFiltro}
+                          disabled={!anioId}
+                          onChange={(event) => {
+                            setNivelFiltro(
+                              event.target.value,
+                            );
+
+                            setGradoFiltro('');
+                            setSeccionId('');
+                          }}
+                          className={selectClass}
+                        >
+                          <option value="">
+                            Selecciona nivel
+                          </option>
+
+                          {niveles.map((nivel) => (
+                            <option
+                              key={nivel}
+                              value={nivel}
+                            >
+                              {nivel}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        <span className={labelClass}>
+                          Grado
+                        </span>
+
+                        <select
+                          value={gradoFiltro}
+                          disabled={!nivelFiltro}
+                          onChange={(event) => {
+                            setGradoFiltro(
+                              event.target.value,
+                            );
+
+                            setSeccionId('');
+                          }}
+                          className={selectClass}
+                        >
+                          <option value="">
+                            Selecciona grado
+                          </option>
+
+                          {grados.map((grado) => (
+                            <option
+                              key={grado}
+                              value={grado}
+                            >
+                              {grado}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {aniosDisponibles.length === 0 && (
+                      <p className="matricula-inline-error">
+                        No hay años lectivos disponibles.
+                      </p>
+                    )}
+
+                    {!anioId ||
+                    !nivelFiltro ||
+                    !gradoFiltro ? (
+                      <div className="matricula-section-prompt">
+                        <GraduationCap size={22} />
+
+                        <div>
+                          <strong>
+                            Completa los filtros
+                          </strong>
+
+                          <p>
+                            Selecciona año, nivel y grado
+                            para mostrar únicamente sus
+                            secciones.
+                          </p>
                         </div>
-                      </div> ); })}
-                  </div>
-                )}
-              </Card>
+                      </div>
+                    ) : seccionesFiltradas.length ===
+                      0 ? (
+                      <Empty text="No hay secciones configuradas para este grado." />
+                    ) : (
+                      <div className="matricula-section-grid">
+                        {seccionesFiltradas.map(
+                          (seccion) => {
+                            const selected =
+                              seccion.id_seccion ===
+                              seccionId;
 
-              <StepHint step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 4 : 3} title="Selecciona año, grado y sección" description="El sistema validará cupos, edad y periodo de matrícula." done={Boolean(anioSeleccionado && seccionSeleccionada)} warning={Boolean(alumno && (!anioSeleccionado || !seccionSeleccionada))} />
+                            const sinCupos =
+                              seccion.disponibles <= 0;
 
-              <Card icon={GraduationCap} title="Registrar pre-matrícula" subtitle="Filtra por nivel y grado para elegir sección.">
-                <div className="grid gap-4 xl:grid-cols-3">
-                  <label><span className={labelClass}>Año lectivo</span><select value={anioId} onChange={(e) => { setAnioId(e.target.value ? Number(e.target.value) : ''); setExcepcionTraslado(false); }} className={selectClass}><option value="">Selecciona año</option>{aniosDisponibles.map((a) => <option key={a.id_anio} value={a.id_anio}>{a.nombre_anio} · {a.estado}</option>)}</select>{aniosDisponibles.length === 0 && <p className="mt-2 text-xs font-medium text-red-500">No hay años lectivos disponibles.</p>}</label>
-                  <label><span className={labelClass}>Nivel</span><select value={nivelFiltro} onChange={(e) => { setNivelFiltro(e.target.value); setGradoFiltro(''); setSeccionId(''); }} className={selectClass}><option value="">Todos</option>{niveles.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-                  <label><span className={labelClass}>Grado</span><select value={gradoFiltro} onChange={(e) => { setGradoFiltro(e.target.value); setSeccionId(''); }} className={selectClass}><option value="">Todos</option>{grados.map((g) => <option key={g} value={g}>{g}</option>)}</select></label>
+                            const porcentajeOcupado =
+                              seccion.capacidad > 0
+                                ? Math.min(
+                                    100,
+                                    Math.round(
+                                      (seccion.matriculados /
+                                        seccion.capacidad) *
+                                        100,
+                                    ),
+                                  )
+                                : 0;
+
+                            const porcentajeDisponible =
+                              seccion.capacidad > 0
+                                ? Math.round(
+                                    (seccion.disponibles /
+                                      seccion.capacidad) *
+                                      100,
+                                  )
+                                : 0;
+
+                            const pocosCupos =
+                              !sinCupos &&
+                              (seccion.disponibles <= 5 ||
+                                porcentajeDisponible <=
+                                  20);
+
+                            const statusClass =
+                              sinCupos
+                                ? 'matricula-section-card--full'
+                                : pocosCupos
+                                  ? 'matricula-section-card--warning'
+                                  : 'matricula-section-card--available';
+
+                            const statusLabel =
+                              sinCupos
+                                ? 'Sin cupos'
+                                : pocosCupos
+                                  ? 'Pocos cupos'
+                                  : 'Disponible';
+
+                            return (
+                              <button
+                                key={
+                                  seccion.id_seccion
+                                }
+                                type="button"
+                                disabled={sinCupos}
+                                onClick={() => {
+                                  setSeccionId(
+                                    selected
+                                      ? ''
+                                      : seccion.id_seccion,
+                                  );
+
+                                  setExcepcionTraslado(
+                                    false,
+                                  );
+                                }}
+                                className={cx(
+                                  'matricula-section-card',
+                                  statusClass,
+                                  selected &&
+                                    'matricula-section-card--selected',
+                                )}
+                              >
+                                <div className="matricula-section-card__header">
+                                  <div>
+                                    <strong>
+                                      {
+                                        seccion.grado
+                                          .nombre_grado
+                                      }{' '}
+                                      “{seccion.letra}”
+                                    </strong>
+
+                                    <small>
+                                      {seccion.grado
+                                        .nivel
+                                        ?.nombre_nivel ||
+                                        'Nivel'}
+                                    </small>
+                                  </div>
+
+                                  <span className="matricula-section-card__status">
+                                    {selected ? (
+                                      <CheckCircle2
+                                        size={14}
+                                      />
+                                    ) : null}
+
+                                    {selected
+                                      ? 'Seleccionada'
+                                      : statusLabel}
+                                  </span>
+                                </div>
+
+                                <div className="matricula-section-card__vacancies">
+                                  <span>
+                                    <strong>
+                                      {
+                                        seccion.disponibles
+                                      }
+                                    </strong>
+                                    vacantes
+                                  </span>
+
+                                  <span>
+                                    {
+                                      seccion.matriculados
+                                    }
+                                    {' '}
+                                    matriculados
+                                  </span>
+                                </div>
+
+                                <div className="matricula-section-card__meter">
+                                  <span
+                                    style={{
+                                      width:
+                                        `${porcentajeOcupado}%`,
+                                    }}
+                                  />
+                                </div>
+
+                                <small className="matricula-section-card__capacity">
+                                  Capacidad total:{' '}
+                                  {seccion.capacidad}
+                                </small>
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="matricula-entry-panel">
+                    <div className="matricula-entry-panel__heading">
+                      <span>Tipo de ingreso</span>
+
+                      <strong>
+                        Define cómo ingresa el alumno
+                      </strong>
+                    </div>
+
+                    <label>
+                      <span className={labelClass}>
+                        Proceso
+                      </span>
+
+                      <select
+                        value={tipoIngreso}
+                        onChange={(event) =>
+                          setTipoIngreso(
+                            event.target.value,
+                          )
+                        }
+                        className={selectClass}
+                        disabled={
+                          tiposIngresoPermitidos.length ===
+                          0
+                        }
+                      >
+                        {tiposIngresoPermitidos.length ===
+                        0 ? (
+                          <option value="">
+                            Selecciona primero un año
+                          </option>
+                        ) : (
+                          tiposIngresoPermitidos.map(
+                            (tipo) => (
+                              <option
+                                key={tipo}
+                                value={tipo}
+                              >
+                                {tipo}
+                              </option>
+                            ),
+                          )
+                        )}
+                      </select>
+                    </label>
+
+                    {anioSeleccionado && (
+                      <div className="matricula-year-status">
+                        {getEstadoOperativoAnioFrontend(
+                          anioSeleccionado,
+                        ) === 'Planificación'
+                          ? 'Año en planificación: permite reservas y renovaciones anticipadas.'
+                          : getEstadoOperativoAnioFrontend(
+                                anioSeleccionado,
+                              ) === 'En curso'
+                            ? 'Año en curso: permite traslado, reingreso o regularización.'
+                            : 'Matrícula abierta: permite el ingreso regular.'}
+                      </div>
+                    )}
+
+                    {requiereProcedencia ? (
+                      <div className="matricula-origin-fields">
+                        <label>
+                          <span className={labelClass}>
+                            Institución de procedencia
+                          </span>
+
+                          <input
+                            value={colegioProcedencia}
+                            onChange={(event) =>
+                              setColegioProcedencia(
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Nombre de la institución anterior"
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label>
+                          <span className={labelClass}>
+                            Grado de procedencia
+                          </span>
+
+                          <input
+                            value={gradoProcedencia}
+                            onChange={(event) =>
+                              setGradoProcedencia(
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Ej. 4to de primaria"
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="matricula-origin-not-required">
+                        Para este tipo de ingreso no se
+                        requieren datos de otra institución.
+                      </div>
+                    )}
+
+                    <details className="matricula-optional-fields">
+                      <summary>
+                        Datos adicionales y observación
+                      </summary>
+
+                      <div className="matricula-optional-fields__content">
+                        {requiereProcedencia && (
+                          <label>
+                            <span className={labelClass}>
+                              Código modular
+                            </span>
+
+                            <input
+                              value={
+                                codigoModularProcedencia
+                              }
+                              onChange={(event) =>
+                                setCodigoModularProcedencia(
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Opcional"
+                              className={inputClass}
+                            />
+                          </label>
+                        )}
+
+                        <label>
+                          <span className={labelClass}>
+                            Observación opcional
+                          </span>
+
+                          <textarea
+                            value={
+                              observacionProcedencia
+                            }
+                            onChange={(event) =>
+                              setObservacionProcedencia(
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Información adicional sobre el proceso"
+                            className="matricula-observation"
+                          />
+                        </label>
+                      </div>
+                    </details>
+                  </section>
                 </div>
 
-                <div className="mt-5 grid max-h-[310px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
-                  {seccionesFiltradas.map((s) => { const selected = s.id_seccion === seccionId; const sinCupos = s.disponibles <= 0; const porcentaje = s.capacidad > 0 ? Math.min(100, Math.round((s.matriculados / s.capacidad) * 100)) : 0; return (
-                    <button key={s.id_seccion} type="button" disabled={sinCupos} onClick={() => { setSeccionId(selected ? '' : s.id_seccion); setExcepcionTraslado(false); }} className={cx('matricula-section-card rounded-2xl border p-4 text-left transition-all duration-150', selected ? 'matricula-section-card--selected' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300', sinCupos && 'cursor-not-allowed opacity-50')}>
-                      <div className="flex justify-between gap-3"><div><p className="matricula-section-title text-sm font-medium text-neutral-800">{s.grado.nombre_grado} &quot;{s.letra}&quot;</p><p className="matricula-section-meta mt-0.5 text-xs text-neutral-400">{s.grado.nivel?.nombre_nivel || 'Nivel'} · {s.capacidad} cupos</p></div>{selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}</div>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60"><div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} /></div>
-                      <p className="matricula-section-availability mt-2 text-xs text-neutral-500">{s.matriculados} registrados · {s.disponibles} disponibles</p>
-                    </button> ); })}
-                </div>
-                {seccionesFiltradas.length === 0 && <Empty text="Sin secciones disponibles" />}
+                {seccionSeleccionada &&
+                  reglaEdadSeleccionada()
+                    ?.permiteExcepcionTraslado && (
+                    <label className="matricula-transfer-exception">
+                      <input
+                        type="checkbox"
+                        checked={excepcionTraslado}
+                        onChange={(event) =>
+                          setExcepcionTraslado(
+                            event.target.checked,
+                          )
+                        }
+                      />
 
-                <StepHint step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 5 : 4} title="Define el tipo de ingreso" description="Nuevo, traslado, reingreso, regularización o reserva, según el año lectivo." done={Boolean(tipoIngreso)} warning={!tipoIngreso} />
+                      <span>
+                        <strong>
+                          Excepción por traslado
+                        </strong>
 
-                <div className="mt-5 rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Procedencia del alumno</p>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <label><span className={labelClass}>Tipo de ingreso</span><select value={tipoIngreso} onChange={(e) => setTipoIngreso(e.target.value)} className={selectClass} disabled={tiposIngresoPermitidos.length === 0}>{tiposIngresoPermitidos.length === 0 ? <option value="">Sin opciones disponibles</option> : tiposIngresoPermitidos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}</select>{anioSeleccionado && <p className="mt-2 text-xs text-neutral-400">{getEstadoOperativoAnioFrontend(anioSeleccionado) === 'Planificación' ? 'Año en planificación: solo permite reservas.' : getEstadoOperativoAnioFrontend(anioSeleccionado) === 'En curso' ? 'Año en curso: solo permite traslado, reingreso o regularización.' : 'Matrícula abierta: permite ingreso regular.'}</p>}</label>
-                    {(tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso') && (<><label><span className={labelClass}>Colegio de procedencia</span><input value={colegioProcedencia} onChange={(e) => setColegioProcedencia(e.target.value)} placeholder="Nombre del colegio anterior" className={inputClass} /></label><label><span className={labelClass}>Código modular</span><input value={codigoModularProcedencia} onChange={(e) => setCodigoModularProcedencia(e.target.value)} placeholder="Opcional" className={inputClass} /></label><label><span className={labelClass}>Grado procedencia</span><input value={gradoProcedencia} onChange={(e) => setGradoProcedencia(e.target.value)} placeholder="Ej. Inicial 4 años, 2do primaria" className={inputClass} /></label></>)}
-                    <label className="md:col-span-2"><span className={labelClass}>Observación</span><textarea value={observacionProcedencia} onChange={(e) => setObservacionProcedencia(e.target.value)} placeholder="Información adicional sobre ingreso, traslado o continuidad" className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400" /></label>
-                  </div>
-                </div>
-
-                {seccionSeleccionada && reglaEdadSeleccionada()?.permiteExcepcionTraslado && (
-                  <label className="mt-4 flex items-start gap-3 rounded-xl bg-amber-50/50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60">
-                    <input type="checkbox" checked={excepcionTraslado} onChange={(e) => setExcepcionTraslado(e.target.checked)} className="mt-1" />
-                    <span>Excepción por traslado. Usar solo si el alumno viene de otra institución con constancia/certificado de estudios que sustente la continuidad.</span>
-                  </label>
-                )}
+                        Usar únicamente cuando exista una
+                        constancia o certificado que sustente
+                        la continuidad del alumno.
+                      </span>
+                    </label>
+                  )}
 
                 {mensajeValidacionMatricula && (
-                  <div className={cx('mt-4 flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-medium ring-1', mensajeValidacionMatricula.tipo === 'error' ? 'bg-red-50/50 text-red-600 ring-red-200/60' : mensajeValidacionMatricula.tipo === 'warning' ? 'bg-amber-50/50 text-amber-700 ring-amber-200/60' : 'bg-sky-50/50 text-sky-700 ring-sky-200/60')}>
-                    {mensajeValidacionMatricula.tipo === 'error' ? <AlertCircle size={16} className="mt-0.5 flex-shrink-0" /> : <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />}
-                    {mensajeValidacionMatricula.texto}
+                  <div
+                    className={cx(
+                      'matricula-validation-message',
+                      mensajeValidacionMatricula.tipo ===
+                        'error'
+                        ? 'matricula-validation-message--error'
+                        : mensajeValidacionMatricula.tipo ===
+                            'warning'
+                          ? 'matricula-validation-message--warning'
+                          : 'matricula-validation-message--info',
+                    )}
+                  >
+                    {mensajeValidacionMatricula.tipo ===
+                    'error' ? (
+                      <AlertCircle size={17} />
+                    ) : (
+                      <AlertTriangle size={17} />
+                    )}
+
+                    {
+                      mensajeValidacionMatricula.texto
+                    }
                   </div>
                 )}
-                {mensaje && (<div className="mt-4 flex items-start gap-2 rounded-xl bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-600 ring-1 ring-neutral-200/60"><AlertCircle size={16} className="mt-0.5 flex-shrink-0" />{mensaje}</div>)}
 
-                <StepHint step={activeScope.tipo === 'todos' && puedeVerConsolidado ? 6 : 5} title="Revisa y registra" description="Confirma que alumno, apoderado, sede, sección y tipo de ingreso estén correctos." done={Boolean(alumno && apoderados.length > 0 && seccionSeleccionada)} />
+                {mensaje && (
+                  <div className="matricula-validation-message matricula-validation-message--neutral">
+                    <AlertCircle size={17} />
+                    {mensaje}
+                  </div>
+                )}
 
-                <button type="button" onClick={revisarMatricula} disabled={aniosDisponibles.length === 0} className="mt-5 h-12 w-full rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2">
-                  {tipoIngreso === 'Reserva' ? 'Revisar y registrar reserva' : 'Revisar y registrar pre-matrícula'}
-                </button>
+                <div className="matricula-final-action">
+                  <div>
+                    <span>
+                      {pasosCompletos} de{' '}
+                      {pasosFlujo.length} pasos
+                      completados
+                    </span>
+
+                    <strong>
+                      {flujoListo
+                        ? `Todo listo para registrar la ${operacionLabel}.`
+                        : 'Completa los datos pendientes para continuar.'}
+                    </strong>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={revisarMatricula}
+                    disabled={
+                      !flujoListo ||
+                      aniosDisponibles.length === 0
+                    }
+                  >
+                    Revisar y registrar{' '}
+                    {operacionLabel}
+                    <ArrowRight size={17} />
+                  </button>
+                </div>
               </Card>
-            </>
+            </div>
           )}
         </section>
       </div>
@@ -759,7 +1675,7 @@ export default function MatriculaPage() {
           <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
           <div className={`carbon-matricula-modal-panel relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
-            <ModalHead title="Revisar pre-matrícula" subtitle="Verifica los datos antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
+            <ModalHead title={`Revisar ${operacionLabel}`} subtitle="Verifica los datos antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
             <div className="space-y-4 p-6 overflow-y-auto">
               {alertaEdad && (<div className="flex items-start gap-2 rounded-xl bg-amber-50/50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60"><AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />{alertaEdad}</div>)}
               <div className="grid gap-3 sm:grid-cols-2">
@@ -777,7 +1693,7 @@ export default function MatriculaPage() {
             <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={() => closeModal(setConfirmOpen, 'confirm')} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Corregir</button>
               <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
-                {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar pre-matrícula
+                {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar {operacionLabel}
               </button>
             </div>
           </div>
