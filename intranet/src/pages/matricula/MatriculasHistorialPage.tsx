@@ -244,6 +244,8 @@ export default function MatriculasHistorialPage() {
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
+  const [detalleTab, setDetalleTab] =
+    useState<'general' | 'finanzas'>('general');
   const [isClosing, setIsClosing] = useState(false);
 
   const [revisionEstado, setRevisionEstado] = useState('Aprobado');
@@ -430,7 +432,9 @@ export default function MatriculasHistorialPage() {
   const abrirDetalleMatricula = async (idMatricula: number) => {
     if (!token) return;
     setDetalleOpen(true); setDetalleLoading(true); setDetalleMatricula(null);
-    setCronogramaOpen(false); setIsClosing(false);
+    setCronogramaOpen(false);
+    setDetalleTab('general');
+    setIsClosing(false);
     try {
       const res = await axios.get(
         `/api/academicos/matriculas/${idMatricula}/detalle${detalleQueryString}`,
@@ -647,7 +651,7 @@ export default function MatriculasHistorialPage() {
 
       {/* ── Filtros ──────────────────────────────────────── */}
       <div className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
+        <div className="grid gap-3 xl:grid-cols-[1.3fr_1.15fr_0.8fr_0.8fr_0.8fr_auto]">
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
@@ -658,8 +662,38 @@ export default function MatriculasHistorialPage() {
             />
           </div>
 
-          <input type="date" value={desde} onChange={(e) => { setPage(1); setDesde(e.target.value); }} className={inputClass} />
-          <input type="date" value={hasta} onChange={(e) => { setPage(1); setHasta(e.target.value); }} className={inputClass} />
+          <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 focus-within:border-[#0f62fe] focus-within:ring-2 focus-within:ring-blue-100">
+            <CalendarDays
+              size={16}
+              className="shrink-0 text-slate-500"
+            />
+
+            <input
+              type="date"
+              aria-label="Fecha desde"
+              value={desde}
+              onChange={(event) => {
+                setPage(1);
+                setDesde(event.target.value);
+              }}
+              className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-800 outline-none"
+            />
+
+            <span className="shrink-0 text-slate-400">
+              —
+            </span>
+
+            <input
+              type="date"
+              aria-label="Fecha hasta"
+              value={hasta}
+              onChange={(event) => {
+                setPage(1);
+                setHasta(event.target.value);
+              }}
+              className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-800 outline-none"
+            />
+          </div>
 
           <input
             value={registradoPor}
@@ -695,8 +729,10 @@ export default function MatriculasHistorialPage() {
 
       {/* ── Tabla / Lista ────────────────────────────────── */}
       <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="matricula-history-header hidden gap-5 px-5 py-4 lg:grid lg:grid-cols-[1.35fr_1fr_1fr_auto] lg:items-center">
-          <span>Matrícula y alumno</span>
+        {/* history-table-v2 */}
+        <div className="matricula-history-header hidden gap-5 px-5 py-4 lg:grid lg:grid-cols-[170px_1.35fr_1fr_1fr_auto] lg:items-center">
+          <span>Matrícula</span>
+          <span>Alumno</span>
           <span>Institución y sección</span>
           <span>Estado y registro</span>
           <span className="text-right">Acción</span>
@@ -705,77 +741,166 @@ export default function MatriculasHistorialPage() {
         {loading ? (
           <div className="flex min-h-[340px] items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <Loader2 size={28} className="animate-spin text-[#0f62fe]" />
-              <p className="text-sm text-neutral-400">Cargando matrículas…</p>
+              <Loader2
+                size={28}
+                className="animate-spin text-[#0f62fe]"
+              />
+
+              <p className="text-sm text-slate-500">
+                Cargando matrículas…
+              </p>
             </div>
           </div>
         ) : data.length === 0 ? (
           <div className="flex min-h-[340px] flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
-              <CalendarDays size={28} className="text-neutral-300" />
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
+              <CalendarDays
+                size={28}
+                className="text-slate-400"
+              />
             </div>
-            <p className="text-sm font-semibold text-neutral-600">Sin resultados</p>
-            <p className="mt-1 text-sm text-neutral-400">Ajusta los filtros para buscar otra matrícula.</p>
+
+            <p className="text-sm font-semibold text-slate-700">
+              Sin resultados
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Ajusta los filtros para buscar otra matrícula.
+            </p>
           </div>
         ) : (
           <div className="matricula-history-list divide-y divide-slate-200">
             {data.map((matricula) => {
-              const alumno = matricula.estudiante.persona;
-              const apoderado = matricula.estudiante.apoderados?.[0];
-              const registrador = matricula.registrado_por?.persona
-                ? `${matricula.registrado_por.persona.nombres} ${matricula.registrado_por.persona.apellido_paterno}`
-                : 'No registrado';
+              const alumno =
+                matricula.estudiante.persona;
+
+              const apoderado =
+                matricula.estudiante.apoderados?.[0];
+
+              const registrador =
+                matricula.registrado_por?.persona
+                  ? `${matricula.registrado_por.persona.nombres} ${matricula.registrado_por.persona.apellido_paterno}`
+                  : 'No registrado';
 
               return (
                 <div
                   key={matricula.id_matricula}
-                  className="matricula-history-row group grid gap-5 px-5 py-5 transition-colors duration-150 lg:grid-cols-[1.35fr_1fr_1fr_auto] lg:items-center"
+                  className="group grid gap-5 px-5 py-5 transition-colors even:bg-slate-50/60 hover:bg-blue-50/50 lg:grid-cols-[170px_1.35fr_1fr_1fr_auto] lg:items-center"
                 >
                   <div className="min-w-0">
-                    <p className="matricula-history-primary truncate text-sm font-semibold text-slate-950">
-                      {matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`}
-                      <span className="mx-1.5 text-neutral-300">·</span>
-                      {alumno.nombres} {alumno.apellido_paterno} {alumno.apellido_materno}
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 lg:hidden">
+                      Matrícula
+                    </span>
+
+                    <p className="break-words text-sm font-bold text-slate-950">
+                      {matricula.codigo_matricula ||
+                        `MAT-${String(
+                          matricula.id_matricula,
+                        ).padStart(6, '0')}`}
                     </p>
-                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">DNI: {alumno.dni} · Código: {getCodigoAlumno(matricula)}</p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 lg:hidden">
+                      Alumno
+                    </span>
+
+                    <p className="truncate text-sm font-semibold text-slate-950">
+                      {alumno.nombres}
+                      {' '}
+                      {alumno.apellido_paterno}
+                      {' '}
+                      {alumno.apellido_materno}
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                      DNI:
+                      {' '}
+                      {alumno.dni}
+                      {' · '}
+                      Código:
+                      {' '}
+                      {getCodigoAlumno(matricula)}
+                    </p>
+
                     {apoderado && (
-                      <p className="mt-1 text-xs text-neutral-400">
-                        Apoderado: {apoderado.apoderado.persona.nombres} {apoderado.apoderado.persona.apellido_paterno}
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        Apoderado:
+                        {' '}
+                        {apoderado.apoderado.persona.nombres}
+                        {' '}
+                        {apoderado.apoderado.persona.apellido_paterno}
                       </p>
                     )}
                   </div>
 
                   <div className="min-w-0">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 lg:hidden">
+                      Institución y sección
+                    </span>
+
                     <p className="truncate text-sm font-semibold text-slate-900">
-                      {matricula.colegio?.nombre || 'Colegio'}
+                      {matricula.colegio?.nombre ||
+                        'Institución'}
                     </p>
-                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">
-                      {matricula.seccion.grado.nivel?.nombre_nivel} · {matricula.seccion.grado.nombre_grado} &ldquo;{matricula.seccion.letra}&rdquo;
+
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                      {matricula.seccion.grado.nivel?.nombre_nivel ||
+                        'Nivel'}
+                      {' · '}
+                      {matricula.seccion.grado.nombre_grado}
+                      {' '}
+                      &ldquo;{matricula.seccion.letra}&rdquo;
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      {matricula.anio?.nombre_anio ||
+                        'Año no registrado'}
                     </p>
                   </div>
 
                   <div className="min-w-0">
+                    <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 lg:hidden">
+                      Estado y registro
+                    </span>
+
                     <div className="flex flex-wrap items-center gap-2">
-                      <EstadoBadge estado={matricula.estado_matricula} />
-                      <RevisionBadge estado={matricula.estado_revision || 'Por revisar'} />
+                      <EstadoBadge
+                        estado={matricula.estado_matricula}
+                      />
+
+                      <RevisionBadge
+                        estado={
+                          matricula.estado_revision ||
+                          'Por revisar'
+                        }
+                      />
                     </div>
 
-                    <p className="matricula-history-secondary mt-2 text-xs text-slate-600">
-                      {formatFechaHora(matricula.fecha_matricula)}
+                    <p className="mt-2 text-xs text-slate-600">
+                      {formatFechaHora(
+                        matricula.fecha_matricula,
+                      )}
                     </p>
 
-                    <p className="matricula-history-secondary mt-1 text-xs text-slate-600">
-                      Registrado por: {registrador}
+                    <p className="mt-1 text-xs text-slate-500">
+                      Registrado por:
+                      {' '}
+                      {registrador}
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => abrirDetalleMatricula(matricula.id_matricula)}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98]"
+                    onClick={() =>
+                      abrirDetalleMatricula(
+                        matricula.id_matricula,
+                      )
+                    }
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#0f62fe] bg-white px-4 text-sm font-semibold text-[#0043ce] transition hover:bg-blue-50"
                   >
                     <Eye size={15} />
-                    Ver
+                    Ver detalles
                   </button>
                 </div>
               );
@@ -794,7 +919,15 @@ export default function MatriculasHistorialPage() {
             <ChevronLeft size={16} />
             Anterior
           </button>
-          <p className="text-sm font-medium text-neutral-400">{meta.total} registros</p>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-slate-700">
+              Página {meta.page || page} de {meta.totalPages || 1}
+            </p>
+
+            <p className="mt-0.5 text-xs text-slate-500">
+              {meta.total} registros
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => setPage((c) => Math.min(c + 1, meta.totalPages || 1))}
@@ -816,7 +949,7 @@ export default function MatriculasHistorialPage() {
           onClick={(e) => { if (e.target === e.currentTarget) cerrarDetalle(); }}
         >
           <div
-            className={`carbon-matricula-modal-panel w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${
+            className={`carbon-matricula-modal-panel w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${
               isClosing ? 'modal-panel-exit' : 'modal-panel-enter'
             }`}
           >
@@ -839,7 +972,7 @@ export default function MatriculasHistorialPage() {
               <button
                 type="button"
                 onClick={cerrarDetalle}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all duration-150 hover:bg-neutral-200 hover:text-neutral-600 flex-shrink-0"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 hover:text-slate-950"
               >
                 <X size={16} />
               </button>
@@ -864,6 +997,44 @@ export default function MatriculasHistorialPage() {
                     </div>
                   )}
 
+                  <div
+                    className="matricula-detail-tabs"
+                    role="tablist"
+                    aria-label="Secciones del detalle de matrícula"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={detalleTab === 'general'}
+                      onClick={() => setDetalleTab('general')}
+                      className={
+                        detalleTab === 'general'
+                          ? 'matricula-detail-tab matricula-detail-tab--active'
+                          : 'matricula-detail-tab'
+                      }
+                    >
+                      <GraduationCap size={16} />
+                      Datos generales
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={detalleTab === 'finanzas'}
+                      onClick={() => setDetalleTab('finanzas')}
+                      className={
+                        detalleTab === 'finanzas'
+                          ? 'matricula-detail-tab matricula-detail-tab--active'
+                          : 'matricula-detail-tab'
+                      }
+                    >
+                      <CreditCard size={16} />
+                      Finanzas y pagos
+                    </button>
+                  </div>
+
+                  {detalleTab === 'general' && (
+                    <div className="matricula-general-panel space-y-5">
                   {/* Info general */}
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
                     <DetailCard label="ID matrícula" value={formatNumeroMatricula(detalleMatricula)} icon={FileText} />
@@ -969,18 +1140,23 @@ export default function MatriculasHistorialPage() {
                         </div>
                         <div>
                           <SectionLabel>Observación</SectionLabel>
-                          <input
+                          <textarea
                             value={revisionObservacion}
-                            onChange={(e) => setRevisionObservacion(e.target.value)}
-                            placeholder="Observación de revisión"
-                            className={inputClass}
+                            onChange={(event) =>
+                              setRevisionObservacion(
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Escribe una observación administrativa."
+                            rows={3}
+                            className="min-h-[84px] w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
                         <button
                           type="button"
                           onClick={guardarRevision}
                           disabled={savingRevision}
-                          className="h-11 rounded-2xl bg-neutral-900 px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                          className="h-11 rounded-md bg-[#0f62fe] px-5 text-sm font-semibold text-white transition hover:bg-[#0043ce] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                         >
                           {savingRevision ? 'Guardando…' : 'Guardar revisión'}
                         </button>
@@ -1002,6 +1178,11 @@ export default function MatriculasHistorialPage() {
                     )}
                   </ModalSection>
 
+                    </div>
+                  )}
+
+                  {detalleTab === 'finanzas' && (
+                    <div className="matricula-finance-panel space-y-5">
                   {/* Resumen financiero */}
                   <ModalSection title="Resumen financiero" icon={CreditCard}>
                     <div className="grid gap-3 md:grid-cols-4">
@@ -1099,7 +1280,7 @@ export default function MatriculasHistorialPage() {
                               type="button"
                               onClick={activarMatricula}
                               disabled={savingPago}
-                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
                               {savingPago ? (
                                 <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Activando…</span>
@@ -1150,7 +1331,7 @@ export default function MatriculasHistorialPage() {
                               type="button"
                               onClick={registrarPagoMatricula}
                               disabled={savingPago}
-                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-medium text-black transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                              className="h-11 rounded-2xl bg-[#0f62fe] px-6 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
                               {savingPago ? (
                                 <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Registrando…</span>
@@ -1179,7 +1360,7 @@ export default function MatriculasHistorialPage() {
                         type="button"
                         onClick={aplicarPromocionMatricula}
                         disabled={savingPago || !puedeAplicarPromocionMatricula}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white transition-all duration-150 hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0f62fe] px-4 text-sm font-semibold text-white transition hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
                       >
                         {savingPago ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                         Aplicar promoción vigente
@@ -1272,6 +1453,8 @@ export default function MatriculasHistorialPage() {
                       </div>
                     )}
                   </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>

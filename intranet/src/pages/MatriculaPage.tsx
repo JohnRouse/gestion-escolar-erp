@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
@@ -252,13 +252,17 @@ export default function MatriculaPage() {
   const { token } = useAuth();
   const { activeScope, activeColegio, colegios, scopeLabel, queryString, puedeVerConsolidado } = useSchool();
   const navigate = useNavigate();
+  const [matriculaSearchParams] = useSearchParams();
   const { showToast } = useToast();
+
+  const dniInicial =
+    matriculaSearchParams.get('dni')?.trim() || '';
 
   const [mounted, setMounted] = useState(false);
   const [closingModal, setClosingModal] = useState<string | null>(null);
 
   const [colegioDestinoId, setColegioDestinoId] = useState<number | ''>('');
-  const [dni, setDni] = useState('');
+  const [dni, setDni] = useState(dniInicial);
   const [alumno, setAlumno] = useState<Alumno | null>(null);
   const [anios, setAnios] = useState<Anio[]>([]);
   const [anioId, setAnioId] = useState<number | ''>('');
@@ -325,6 +329,16 @@ export default function MatriculaPage() {
   }, [modalActivo]);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Sincroniza el DNI recibido desde Renovación.
+  useEffect(() => {
+    const dniUrl =
+      matriculaSearchParams.get('dni')?.trim();
+
+    if (dniUrl && dniUrl !== dni) {
+      setDni(dniUrl);
+    }
+  }, [matriculaSearchParams, dni]);
 
   const estudiante = alumno?.estudiantes?.[0] || null;
   const estadosMatriculaBloqueantes = ['Activo','Pre-matriculado','Reserva','Pendiente','Observado'];

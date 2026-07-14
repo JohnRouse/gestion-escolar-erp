@@ -1,0 +1,115 @@
+/*
+ * Detalle de matrícula:
+ * pestañas y controles administrativos/financieros.
+ */
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border: 1px solid #d9e2f1;
+  border-radius: 6px;
+  background: #f4f7fb;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(22, 22, 22, 0.06);
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab {
+  display: inline-flex;
+  min-height: 42px;
+  flex: 1 0 180px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0 16px;
+  color: #525252;
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab:hover {
+  border-color: #a6c8ff;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab--active {
+  border-color: #0f62fe;
+  background: #0f62fe;
+  color: #ffffff;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab--active:hover {
+  border-color: #0043ce;
+  background: #0043ce;
+  color: #ffffff;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-general-panel,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel {
+  min-height: 320px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-finance-panel input,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel select,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel textarea {
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+  box-shadow: none !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-finance-panel input:hover,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel select:hover,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel textarea:hover {
+  border-color: #8d8d8d !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-finance-panel input:focus,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel select:focus,
+.carbon-matricula-modal-panel
+  .matricula-finance-panel textarea:focus {
+  border-color: #0f62fe !important;
+  outline: 2px solid #a6c8ff !important;
+  outline-offset: 1px;
+}
+
+@media (max-width: 640px) {
+  .carbon-matricula-modal-panel
+    .matricula-detail-tabs {
+    position: static;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-detail-tab {
+    flex-basis: 160px;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+}

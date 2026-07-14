@@ -180,6 +180,12 @@ export default function RenovacionMatriculaPage() {
   const seccionDestino = useMemo(() => secciones.find((item) => item.id_seccion === seccionDestinoId) || null, [secciones, seccionDestinoId]);
   const apoderados = useMemo(() => estudiante?.apoderados || [], [estudiante?.apoderados]);
 
+  const sinMatriculaOrigen = Boolean(
+    alumno &&
+    !matriculaMismoAnio &&
+    !matriculaOrigen,
+  );
+
   const puedeRenovar = useMemo(() => {
     if (!alumno || !estudiante) return false;
     if (!colegioDestinoId || !anioDestinoId || !seccionDestinoId) return false;
@@ -291,12 +297,37 @@ export default function RenovacionMatriculaPage() {
                 <span className={labelClass}>Año destino</span>
                 <select className={selectClass} value={anioDestinoId} onChange={(e) => { setAnioDestinoId(e.target.value ? Number(e.target.value) : ''); setSeccionDestinoId(''); }} disabled={!colegioDestinoId || loadingBase}>
                   <option value="">Selecciona año</option>
-                  {aniosDisponibles.map((a) => <option key={a.id_anio} value={a.id_anio}>{a.nombre_anio} · {a.estado}</option>)}
+                  {aniosDisponibles.map((a) => (
+                    <option
+                      key={a.id_anio}
+                      value={a.id_anio}
+                    >
+                      {a.nombre_anio}
+                    </option>
+                  ))}
                 </select>
               </label>
               {anioDestino && (
-                <div className="flex items-start gap-2 rounded-xl bg-sky-50/50 p-4 text-sm font-medium text-sky-700 ring-1 ring-sky-200/60">
-                  <CalendarDays size={16} className="mt-0.5 flex-shrink-0" /> Estado del año destino: {getEstadoOperativo(anioDestino)}. La renovación se registrará como pre-matrícula si el año está en planificación.
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CalendarDays
+                      size={16}
+                      className="text-blue-600"
+                    />
+
+                    <span className="text-sm font-semibold text-slate-900">
+                      {anioDestino.nombre_anio}
+                    </span>
+
+                    <span className="inline-flex rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.04em] text-blue-700">
+                      {getEstadoOperativo(anioDestino)}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Si el año está en planificación, el proceso se
+                    registrará como pre-matrícula anticipada.
+                  </p>
                 </div>
               )}
             </div>
@@ -339,82 +370,377 @@ export default function RenovacionMatriculaPage() {
             )}
           </Card>
 
-          <Card icon={GraduationCap} title="Sección destino" subtitle="Elige el grado y sección del siguiente año.">
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="block">
-                <span className={labelClass}>Nivel</span>
-                <select className={selectClass} value={nivelFiltro} onChange={(e) => { setNivelFiltro(e.target.value); setGradoFiltro(''); setSeccionDestinoId(''); }} disabled={!anioDestinoId}>
-                  <option value="">Todos</option> {niveles.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelClass}>Grado</span>
-                <select className={selectClass} value={gradoFiltro} onChange={(e) => { setGradoFiltro(e.target.value); setSeccionDestinoId(''); }} disabled={!anioDestinoId}>
-                  <option value="">Todos</option> {grados.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelClass}>Tipo proceso</span>
-                <input className={inputClass} value={tipoRenovacion} readOnly />
-              </label>
-            </div>
+          <Card
+            icon={GraduationCap}
+            title="Sección destino"
+            subtitle="Elige el grado y sección del siguiente año."
+          >
+            {!alumno ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
+                <GraduationCap
+                  size={24}
+                  className="mx-auto text-slate-400"
+                />
 
-            <div className="mt-5 grid max-h-[330px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
-              {seccionesFiltradas.map((seccion) => {
-                const selected = seccion.id_seccion === seccionDestinoId;
-                const sinCupos = seccion.disponibles <= 0;
-                const porcentaje = seccion.capacidad > 0 ? Math.min(100, Math.round((seccion.matriculados / seccion.capacidad) * 100)) : 0;
+                <p className="mt-3 text-sm font-semibold text-slate-700">
+                  Primero busca un alumno
+                </p>
 
-                return (
-                  <button key={seccion.id_seccion} type="button" disabled={sinCupos} onClick={() => setSeccionDestinoId(selected ? '' : seccion.id_seccion)}
-                    className={cx(
-                      'renewal-section-card rounded-2xl border p-4 text-left transition-all duration-150',
-                      selected ? 'renewal-section-card--selected' : 'border-neutral-200/60 bg-neutral-50 hover:bg-white hover:border-neutral-300',
-                      sinCupos && 'cursor-not-allowed opacity-50'
-                    )}
-                  >
-                    <div className="flex justify-between gap-3">
-                      <div>
-                        <p className="renewal-section-title text-sm font-semibold text-neutral-900">{seccion.grado.nombre_grado} "{seccion.letra}"</p>
-                        <p className="renewal-section-meta mt-1 text-xs text-neutral-600">{seccion.grado.nivel?.nombre_nivel || 'Nivel'} · {seccion.capacidad} cupos</p>
-                      </div>
-                      {selected && <CheckCircle2 size={18} className="text-[#0f62fe] flex-shrink-0" />}
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
-                      <div className="h-full rounded-full bg-[#0f62fe] transition-all duration-500" style={{ width: `${porcentaje}%` }} />
-                    </div>
-                    <p className="renewal-section-availability mt-2 text-xs font-medium text-neutral-600">{seccion.matriculados} registrados · {seccion.disponibles} disponibles</p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {!seccionesFiltradas.length && (
-              <p className="mt-5 rounded-xl bg-neutral-50 p-5 text-center text-sm text-neutral-400 ring-1 ring-neutral-200/60">Selecciona año destino o crea secciones para ese año.</p>
-            )}
-
-            {seccionDestino && (
-              <div className="mt-5 flex items-start gap-2 rounded-xl bg-emerald-50/50 p-4 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200/60">
-                <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" /> Destino seleccionado: {colegioDestino?.nombre || colegioDestino?.nombre_corto} · {seccionDestino.grado.nombre_grado} "{seccionDestino.letra}" · {seccionDestino.grado.nivel?.nombre_nivel || 'Nivel'}.
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  El sistema validará su matrícula vigente antes de
+                  habilitar la selección del siguiente año.
+                </p>
               </div>
-            )}
+            ) : matriculaMismoAnio ? (
+              <div className="renewal-origin-empty rounded-xl border border-amber-300 bg-amber-50 p-5">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle
+                    size={20}
+                    className="mt-0.5 shrink-0 text-amber-700"
+                  />
 
-            <label className="mt-5 block">
-              <span className={labelClass}>Observación del proceso</span>
-              <textarea className="min-h-24 w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all duration-150 focus:border-[#0f62fe] focus:bg-white focus:ring-2 focus:ring-[#0f62fe]/20 hover:border-neutral-300 placeholder:text-neutral-400" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej. Renovación anticipada por campaña noviembre-diciembre." />
-            </label>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-950">
+                      Ya existe un proceso para el año destino
+                    </p>
 
-            {!puedeRenovar && alumno && (
-              <div className="mt-5 flex items-start gap-2 rounded-xl bg-amber-50/50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60">
-                <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" /> Revisa que exista matrícula origen vigente, año destino, sección destino y apoderados vinculados. También valida que no exista otro proceso para el mismo año destino.
+                    <p className="mt-2 text-sm leading-6 text-amber-900">
+                      El alumno ya tiene la matrícula
+                      {' '}
+                      <strong>
+                        {matriculaMismoAnio.codigo_matricula ||
+                          `#${matriculaMismoAnio.id_matricula}`}
+                      </strong>
+                      {' '}
+                      para
+                      {' '}
+                      {matriculaMismoAnio.anio?.nombre_anio ||
+                        'el año seleccionado'}.
+                      No se puede crear una segunda renovación.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/matricula/historial?matricula_id=${matriculaMismoAnio.id_matricula}`,
+                        )
+                      }
+                      className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-amber-700 bg-white px-4 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
+                    >
+                      Revisar matrícula existente
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+            ) : sinMatriculaOrigen ? (
+              <div className="renewal-origin-empty rounded-xl border border-amber-300 bg-amber-50 p-5">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle
+                    size={20}
+                    className="mt-0.5 shrink-0 text-amber-700"
+                  />
 
-            <button type="button" disabled={!puedeRenovar || guardando} onClick={registrarRenovacion}
-              className="mt-5 h-12 w-full rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"
-            >
-              {guardando ? <Loader2 size={16} className="animate-spin" /> : <CalendarDays size={16} />} Registrar renovación / re-matrícula
-            </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-amber-950">
+                      Este alumno no tiene una matrícula anterior
+                      disponible para renovar
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-amber-900">
+                      La renovación necesita una matrícula vigente de
+                      origen. Para un alumno nuevo, un traslado externo
+                      o un reingreso, utiliza Registro de matrícula.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/matricula?dni=${encodeURIComponent(
+                            alumno.dni,
+                          )}`,
+                        )
+                      }
+                      className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0f62fe] px-4 text-sm font-semibold text-white transition hover:bg-[#0043ce]"
+                    >
+                      <ArrowRightLeft size={16} />
+                      Ir a Registro de matrícula
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <label className="block">
+                    <span className={labelClass}>Nivel</span>
+
+                    <select
+                      className={selectClass}
+                      value={nivelFiltro}
+                      onChange={(event) => {
+                        setNivelFiltro(event.target.value);
+                        setGradoFiltro('');
+                        setSeccionDestinoId('');
+                      }}
+                      disabled={!anioDestinoId}
+                    >
+                      <option value="">Todos los niveles</option>
+
+                      {niveles.map((nivel) => (
+                        <option key={nivel} value={nivel}>
+                          {nivel}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className={labelClass}>Grado</span>
+
+                    <select
+                      className={selectClass}
+                      value={gradoFiltro}
+                      onChange={(event) => {
+                        setGradoFiltro(event.target.value);
+                        setSeccionDestinoId('');
+                      }}
+                      disabled={!anioDestinoId}
+                    >
+                      <option value="">Todos los grados</option>
+
+                      {grados.map((grado) => (
+                        <option key={grado} value={grado}>
+                          {grado}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className={labelClass}>Tipo de proceso</span>
+
+                    <input
+                      className={inputClass}
+                      value={tipoRenovacion}
+                      readOnly
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5 grid max-h-[360px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
+                  {seccionesFiltradas.map((seccion) => {
+                    const selected =
+                      seccion.id_seccion === seccionDestinoId;
+
+                    const sinCupos =
+                      seccion.disponibles <= 0;
+
+                    const pocosCupos =
+                      seccion.disponibles > 0 &&
+                      seccion.disponibles <= 5;
+
+                    const porcentaje =
+                      seccion.capacidad > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (
+                                seccion.matriculados /
+                                seccion.capacidad
+                              ) * 100,
+                            ),
+                          )
+                        : 0;
+
+                    const estadoLabel = sinCupos
+                      ? 'Sin cupos'
+                      : selected
+                        ? 'Seleccionada'
+                        : pocosCupos
+                          ? 'Pocos cupos'
+                          : 'Disponible';
+
+                    return (
+                      <button
+                        key={seccion.id_seccion}
+                        type="button"
+                        disabled={sinCupos}
+                        onClick={() =>
+                          setSeccionDestinoId(
+                            selected
+                              ? ''
+                              : seccion.id_seccion,
+                          )
+                        }
+                        className={cx(
+                          'rounded-md border-2 p-4 text-left transition',
+                          selected &&
+                            'border-emerald-500 bg-emerald-50 shadow-sm',
+                          !selected &&
+                            !sinCupos &&
+                            !pocosCupos &&
+                            'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/40',
+                          !selected &&
+                            pocosCupos &&
+                            'border-amber-300 bg-amber-50/50 hover:border-amber-500',
+                          sinCupos &&
+                            'cursor-not-allowed border-red-200 bg-slate-100 opacity-65',
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-950">
+                              {seccion.grado.nombre_grado}
+                              {' '}
+                              &ldquo;{seccion.letra}&rdquo;
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-600">
+                              {seccion.grado.nivel?.nombre_nivel ||
+                                'Nivel'}
+                            </p>
+                          </div>
+
+                          <span
+                            className={cx(
+                              'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold',
+                              selected &&
+                                'border-emerald-300 bg-white text-emerald-800',
+                              !selected &&
+                                !sinCupos &&
+                                !pocosCupos &&
+                                'border-emerald-200 bg-emerald-50 text-emerald-700',
+                              pocosCupos &&
+                                !selected &&
+                                'border-amber-300 bg-white text-amber-800',
+                              sinCupos &&
+                                'border-red-200 bg-white text-red-700',
+                            )}
+                          >
+                            {selected && (
+                              <CheckCircle2 size={12} />
+                            )}
+                            {estadoLabel}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-end justify-between gap-3">
+                          <div>
+                            <strong className="text-2xl font-semibold text-slate-950">
+                              {seccion.disponibles}
+                            </strong>
+
+                            <span className="ml-1 text-xs text-slate-600">
+                              disponibles
+                            </span>
+                          </div>
+
+                          <span className="text-xs text-slate-500">
+                            {seccion.matriculados} matriculados
+                          </span>
+                        </div>
+
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className={cx(
+                              'h-full rounded-full transition-all',
+                              selected && 'bg-emerald-600',
+                              !selected &&
+                                pocosCupos &&
+                                'bg-amber-500',
+                              !selected &&
+                                sinCupos &&
+                                'bg-red-500',
+                              !selected &&
+                                !pocosCupos &&
+                                !sinCupos &&
+                                'bg-blue-500',
+                            )}
+                            style={{
+                              width: `${porcentaje}%`,
+                            }}
+                          />
+                        </div>
+
+                        <p className="mt-2 text-[11px] text-slate-500">
+                          Capacidad total:
+                          {' '}
+                          {seccion.capacidad}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {!seccionesFiltradas.length && (
+                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-5 text-center">
+                    <p className="text-sm font-semibold text-slate-700">
+                      No hay secciones para los filtros seleccionados
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Selecciona otro nivel, grado o año lectivo.
+                    </p>
+                  </div>
+                )}
+
+                {seccionDestino && (
+                  <div className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+                    <CheckCircle2
+                      size={17}
+                      className="mt-0.5 shrink-0"
+                    />
+
+                    Destino confirmado:
+                    {' '}
+                    {colegioDestino?.nombre ||
+                      colegioDestino?.nombre_corto}
+                    {' · '}
+                    {seccionDestino.grado.nombre_grado}
+                    {' '}
+                    &ldquo;{seccionDestino.letra}&rdquo;
+                    {' · '}
+                    {seccionDestino.grado.nivel?.nombre_nivel ||
+                      'Nivel'}.
+                  </div>
+                )}
+
+                <label className="mt-5 block">
+                  <span className={labelClass}>
+                    Observación del proceso
+                  </span>
+
+                  <textarea
+                    className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-blue-100"
+                    value={observacion}
+                    onChange={(event) =>
+                      setObservacion(event.target.value)
+                    }
+                    placeholder="Ej. Renovación anticipada por campaña noviembre-diciembre."
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  disabled={!puedeRenovar || guardando}
+                  onClick={registrarRenovacion}
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#0f62fe] px-5 text-sm font-semibold text-white transition hover:bg-[#0043ce] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                >
+                  {guardando ? (
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <CalendarDays size={16} />
+                  )}
+
+                  Registrar renovación / re-matrícula
+                </button>
+              </>
+            )}
           </Card>
         </section>
       </div>

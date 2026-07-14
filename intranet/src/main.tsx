@@ -18,6 +18,7 @@ import './styles/carbon/108-calendario-horario-ux.css';
 import './styles/carbon/109-header-selector-busqueda-global.css';
 import './styles/carbon/110-sidebar-branding-institucional.css';
 import './styles/carbon/111-matricula-flujo-compacto.css';
+import './styles/carbon/112-renovacion-historial-tabs.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
