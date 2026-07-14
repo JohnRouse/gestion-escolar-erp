@@ -1061,3 +1061,667 @@
   }
 }
 
+/* 111B - Progreso flotante y estados confirmados */
+
+/*
+ * AppHeader está fuera del contenedor main desplazable.
+ * Por eso top: 0 fija esta barra debajo del header general.
+ */
+
+.carbon-matricula-page
+  .matricula-progress {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 80 !important;
+  isolation: isolate;
+  border-color: #c6c6c6 !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 1px 0 rgba(22, 22, 22, 0.08),
+    0 10px 22px -18px
+      rgba(22, 22, 22, 0.7) !important;
+  overscroll-behavior-inline: contain;
+}
+
+/* Paso completado: check verde */
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__number {
+  border-color: #24a148 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+  box-shadow:
+    0 0 0 2px
+      rgba(36, 161, 72, 0.1) !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__title {
+  color: #0e6027 !important;
+  font-weight: 700 !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__connector {
+  background: #42be65 !important;
+}
+
+/* Paso actual: azul */
+
+.carbon-matricula-page
+  .matricula-progress__step--current
+  .matricula-progress__number {
+  border-color: #0f62fe !important;
+  background: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--current
+  .matricula-progress__title {
+  color: #161616 !important;
+  font-weight: 700 !important;
+}
+
+/* Paso pendiente: neutro y legible */
+
+.carbon-matricula-page
+  .matricula-progress__step--pending
+  .matricula-progress__number {
+  border-color: #a8a8a8 !important;
+  background: #ffffff !important;
+  color: #525252 !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--pending
+  .matricula-progress__title {
+  color: #525252 !important;
+}
+
+/* Sección seleccionada: confirmación verde */
+
+.carbon-matricula-page
+  .matricula-section-card--selected {
+  border: 2px solid #24a148 !important;
+  border-left-width: 5px !important;
+  border-left-color: #24a148 !important;
+  background: #f1fff4 !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 2px
+      rgba(36, 161, 72, 0.1) !important;
+}
+
+.carbon-matricula-page
+  .matricula-section-card--selected:hover {
+  border-color: #198038 !important;
+  border-left-color: #198038 !important;
+  background: #e8faed !important;
+}
+
+.carbon-matricula-page
+  .matricula-section-card--selected
+  .matricula-section-card__status {
+  border-color: #42be65 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+}
+
+.carbon-matricula-page
+  .matricula-section-card--selected
+  .matricula-section-card__meter
+  span {
+  background: #24a148 !important;
+}
+
+.carbon-matricula-page
+  .matricula-selected-section {
+  border-color: #42be65 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+}
+
+/* CTA deshabilitado claramente */
+
+.carbon-matricula-page
+  .matricula-final-action
+  button:disabled,
+.carbon-matricula-page
+  .matricula-final-action
+  button[aria-disabled='true'] {
+  border: 1px solid #c6c6c6 !important;
+  background: #e0e0e0 !important;
+  color: #6f6f6f !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/*
+ * Evita que los componentes enfocados queden visualmente
+ * ocultos debajo de la barra flotante.
+ */
+
+.carbon-matricula-page
+  .matricula-enrollment-flow,
+.carbon-matricula-page
+  .matricula-workspace {
+  scroll-margin-top: 88px;
+}
+
+@media (max-width: 640px) {
+  .carbon-matricula-page
+    .matricula-progress {
+    top: 0 !important;
+    padding: 10px 12px !important;
+  }
+
+  .carbon-matricula-page
+    .matricula-progress__step {
+    min-width: 108px;
+    flex-basis: 108px;
+  }
+}
+
+/* 111C - Historial, apoderados y revisión final */
+
+/* Historial académico visible */
+
+.carbon-matricula-page
+  .matricula-visible-history {
+  overflow: hidden;
+  border: 1px solid #d9e2f1;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #d9e2f1;
+  background: #eef4fb;
+  padding: 11px 13px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__heading p {
+  color: #161616;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__heading span {
+  display: block;
+  margin-top: 2px;
+  color: #525252;
+  font-size: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__heading strong {
+  display: inline-flex;
+  min-width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a6c8ff;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0043ce;
+  font-size: 11px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__list {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__item {
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #4589ff;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 11px 12px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__title strong {
+  display: block;
+  color: #161616;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__title small {
+  display: block;
+  margin-top: 2px;
+  color: #6f6f6f;
+  font-size: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__status {
+  flex-shrink: 0;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  margin-top: 9px;
+  color: #525252;
+  font-size: 10.5px;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.carbon-matricula-page
+  .matricula-visible-history__meta svg {
+  flex-shrink: 0;
+  color: #0f62fe;
+}
+
+/* Barra compacta de apoderados */
+
+.carbon-matricula-page
+  .matricula-guardian-search {
+  grid-template-columns:
+    minmax(180px, 1fr)
+    auto
+    auto !important;
+}
+
+.carbon-matricula-page
+  .matricula-new-guardian-button {
+  min-width: 92px;
+  padding-inline: 13px;
+}
+
+.carbon-matricula-page
+  .matricula-guardian-result__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.carbon-matricula-page
+  .matricula-guardian-result__relationship {
+  min-height: 36px;
+  max-width: 145px;
+  border: 1px solid #8d8d8d;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 0 28px 0 10px;
+  color: #161616;
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+}
+
+.carbon-matricula-page
+  .matricula-guardian-result__relationship:focus {
+  border-color: #0f62fe;
+  box-shadow: inset 0 0 0 1px #0f62fe;
+}
+
+/* Advertencia no bloqueante de otro año */
+
+.carbon-matricula-page
+  .matricula-future-enrollment-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 13px;
+  border: 1px solid #fddc69;
+  border-left: 4px solid #f1c21b;
+  border-radius: 4px;
+  background: #fff8e1;
+  padding: 11px 12px;
+  color: #684e00;
+}
+
+.carbon-matricula-page
+  .matricula-future-enrollment-warning svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.carbon-matricula-page
+  .matricula-future-enrollment-warning strong {
+  display: block;
+  color: #4d3900;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.carbon-matricula-page
+  .matricula-future-enrollment-warning p {
+  margin-top: 3px;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+/* Modal final */
+
+.carbon-matricula-page
+  .matricula-review-modal {
+  border-radius: 8px !important;
+}
+
+.carbon-matricula-page
+  .matricula-review-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #a7f0ba;
+  border-left: 4px solid #24a148;
+  border-radius: 5px;
+  background: #defbe6;
+  padding: 13px 14px;
+}
+
+.carbon-matricula-page
+  .matricula-review-intro > span {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #198038;
+}
+
+.carbon-matricula-page
+  .matricula-review-intro small {
+  color: #0e6027;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-page
+  .matricula-review-intro strong {
+  display: block;
+  margin-top: 2px;
+  color: #161616;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.carbon-matricula-page
+  .matricula-review-intro p {
+  margin-top: 3px;
+  color: #393939;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert strong {
+  display: block;
+  font-weight: 750;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert p {
+  margin-top: 2px;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert--warning {
+  border-color: #fddc69;
+  border-left-color: #f1c21b;
+  background: #fff8e1;
+  color: #684e00;
+}
+
+.carbon-matricula-page
+  .matricula-review-alert--info {
+  border-color: #a6c8ff;
+  border-left-color: #0f62fe;
+  background: #edf5ff;
+  color: #0043ce;
+}
+
+.carbon-matricula-page
+  .matricula-review-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-review-summary {
+  min-height: 106px;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #78a9ff;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  padding: 13px !important;
+  box-shadow: none;
+}
+
+.carbon-matricula-page
+  .matricula-review-summary p:first-child {
+  color: #525252 !important;
+  letter-spacing: 0.06em !important;
+}
+
+.carbon-matricula-page
+  .matricula-review-summary p:nth-child(2) {
+  color: #161616 !important;
+  font-size: 13px !important;
+  line-height: 1.35;
+}
+
+.carbon-matricula-page
+  .matricula-review-summary p:last-child {
+  color: #525252 !important;
+  line-height: 1.4;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardians {
+  overflow: hidden;
+  border: 1px solid #d9e2f1;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardians__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #d9e2f1;
+  background: #eef4fb;
+  padding: 10px 12px;
+  color: #0043ce;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardians__heading span {
+  display: block;
+  color: #161616;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardians__heading small {
+  display: block;
+  margin-top: 2px;
+  color: #525252;
+  font-size: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardians__list {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardian {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  padding: 9px 10px;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardian__avatar {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardian strong {
+  display: block;
+  overflow: hidden;
+  color: #161616;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carbon-matricula-page
+  .matricula-review-guardian small {
+  display: block;
+  margin-top: 1px;
+  color: #6f6f6f;
+  font-size: 9.5px;
+}
+
+.carbon-matricula-page
+  .matricula-review-footer {
+  background: #f4f4f4;
+}
+
+@media (max-width: 900px) {
+  .carbon-matricula-page
+    .matricula-guardian-search {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto
+      auto !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .carbon-matricula-page
+    .matricula-guardian-search {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto !important;
+  }
+
+  .carbon-matricula-page
+    .matricula-new-guardian-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .carbon-matricula-page
+    .matricula-guardian-result {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .carbon-matricula-page
+    .matricula-guardian-result__actions {
+    width: 100%;
+  }
+
+  .carbon-matricula-page
+    .matricula-guardian-result__actions label {
+    flex: 1;
+  }
+
+  .carbon-matricula-page
+    .matricula-guardian-result__relationship {
+    width: 100%;
+    max-width: none;
+  }
+
+  .carbon-matricula-page
+    .matricula-review-grid,
+  .carbon-matricula-page
+    .matricula-review-guardians__list {
+    grid-template-columns: 1fr;
+  }
+}
+

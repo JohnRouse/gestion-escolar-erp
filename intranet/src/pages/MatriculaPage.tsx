@@ -223,6 +223,20 @@ function getNombreOperacion(
   return 'pre-matrícula';
 }
 
+function getArticuloOperacion(
+  tipoIngreso?: string,
+) {
+  const operacion =
+    getNombreOperacion(tipoIngreso);
+
+  return [
+    'traslado',
+    'reingreso',
+  ].includes(operacion)
+    ? 'el'
+    : 'la';
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function ViewportPortal({
   children,
@@ -313,7 +327,7 @@ export default function MatriculaPage() {
   useEffect(() => { setMounted(true); }, []);
 
   const estudiante = alumno?.estudiantes?.[0] || null;
-  const estadosMatriculaBloqueantes = ['Activo','Pre-matriculado','Reserva','Pendiente'];
+  const estadosMatriculaBloqueantes = ['Activo','Pre-matriculado','Reserva','Pendiente','Observado'];
 
   const colegioDestinoQuery = useMemo(() => { if (activeScope.tipo === 'colegio') return queryString; if (colegioDestinoId) return `?colegio_id=${colegioDestinoId}`; return queryString; }, [activeScope.tipo, colegioDestinoId, queryString]);
   const colegioDestinoNombre = useMemo(() => { if (activeScope.tipo === 'colegio') return activeColegio?.nombre_corto || activeColegio?.nombre || 'Colegio activo'; if (!colegioDestinoId) return 'Por seleccionar'; const colegio = colegios.find((item) => item.id_colegio === colegioDestinoId); return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado'; }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
@@ -362,6 +376,48 @@ export default function MatriculaPage() {
   const avisoEdadFichaAlumno = useMemo(() => { if (!formAlumno.fecha_nacimiento) return null; const anioCorte = getAnioCorteFrontend(); const corte = new Date(`${anioCorte}-03-31T23:59:59`); const edad = calcularEdadDetallada(formAlumno.fecha_nacimiento, corte); if (!edad) return null; if (edad.anios < 3) return `Aviso: para el año lectivo ${anioCorte}, el alumno tendría ${edad.texto} al 31 de marzo.`; return null; }, [formAlumno.fecha_nacimiento, anioId]);
 
   const matriculaActiva = useMemo(() => { if (!estudiante?.matriculas?.length || !anioId) return null; const anioDestino = getAnioCorteFrontend(); const matriculasBloqueantes = estudiante.matriculas.filter((m) => estadosMatriculaBloqueantes.includes(m.estado_matricula) && getAnioCorteMatriculaFrontend(m) === anioDestino); if (!matriculasBloqueantes.length) return null; if (activeScope.tipo === 'colegio') { const mismaSede = matriculasBloqueantes.find((m) => m.id_colegio === activeScope.id_colegio); if (mismaSede) return mismaSede; } if (colegioDestinoId) { const mismaSedeDestino = matriculasBloqueantes.find((m) => m.id_colegio === colegioDestinoId); if (mismaSedeDestino) return mismaSedeDestino; } return matriculasBloqueantes[0]; }, [activeScope, colegioDestinoId, estudiante?.matriculas, anioId]);
+
+  const matriculaPosterior = useMemo(() => {
+    if (
+      !estudiante?.matriculas?.length ||
+      !anioId
+    ) {
+      return null;
+    }
+
+    const anioDestino =
+      getAnioCorteFrontend();
+
+    return (
+      estudiante.matriculas
+        .filter((matricula) => {
+          const anioMatricula =
+            getAnioCorteMatriculaFrontend(
+              matricula,
+            );
+
+          return (
+            estadosMatriculaBloqueantes.includes(
+              matricula.estado_matricula,
+            ) &&
+            anioMatricula !== null &&
+            anioMatricula > anioDestino
+          );
+        })
+        .sort(
+          (a, b) =>
+            Number(
+              getAnioCorteMatriculaFrontend(a),
+            ) -
+            Number(
+              getAnioCorteMatriculaFrontend(b),
+            ),
+        )[0] || null
+    );
+  }, [
+    estudiante?.matriculas,
+    anioId,
+  ]);
 
   const alertaEdad = useMemo(() => { if (!alumno || !seccionSeleccionada) return null; const edad = edadNumero(alumno.fecha_nacimiento); if (edad === null) return null; if (edad < 0) return 'La fecha de nacimiento del alumno es futura o inválida.'; const nivel = seccionSeleccionada.grado?.nivel?.nombre_nivel?.toLowerCase() || ''; if (nivel.includes('primaria') && edad < 6) return 'El alumno parece menor para Primaria.'; if (nivel.includes('secundaria') && edad < 11) return 'El alumno parece menor para Secundaria.'; if (nivel.includes('inicial') && edad > 6) return 'El alumno parece mayor para Inicial.'; return null; }, [alumno, seccionSeleccionada]);
 
@@ -487,7 +543,117 @@ export default function MatriculaPage() {
 
   const limpiarFlujoMatricula = () => { setDni(''); setAlumno(null); setApoderados([]); setApoderadoDni(''); setApoderadoEncontrado(null); setParentesco('Madre'); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setExcepcionTraslado(false); setMensaje(null); setTipoIngreso('Nuevo'); setColegioProcedencia(''); setCodigoModularProcedencia(''); setGradoProcedencia(''); setObservacionProcedencia(''); };
 
-  const revisarMatricula = () => { if (!alumno || !estudiante) return setMensaje('Primero busca o registra un alumno.'); if (colegioDestinoRequerido) { setMensaje('Selecciona el colegio destino.'); return; } if (mensajeValidacionMatricula && (mensajeValidacionMatricula.tipo === 'error' || mensajeValidacionMatricula.tipo === 'warning')) { setMensaje(mensajeValidacionMatricula.texto); return; } if (!anioId || !seccionId) return setMensaje('Selecciona año lectivo y sección.'); if (!apoderados.length) return setMensaje('Debes vincular al menos un apoderado.'); setClosingModal(null); setConfirmOpen(true); };
+  const revisarMatricula = () => {
+    // Validación defensiva completa antes de abrir la revisión.
+
+    setMensaje(null);
+
+    if (!alumno || !estudiante) {
+      setMensaje(
+        'Primero busca o registra un alumno.',
+      );
+      return;
+    }
+
+    if (matriculaActiva) {
+      setMensaje(
+        formatMatriculaActiva(
+          matriculaActiva,
+        ),
+      );
+      return;
+    }
+
+    if (colegioDestinoRequerido) {
+      setMensaje(
+        'Selecciona la institución de destino.',
+      );
+      return;
+    }
+
+    if (!anioId) {
+      setMensaje(
+        'Selecciona el año lectivo.',
+      );
+      return;
+    }
+
+    if (!nivelFiltro) {
+      setMensaje(
+        'Selecciona el nivel educativo.',
+      );
+      return;
+    }
+
+    if (!gradoFiltro) {
+      setMensaje(
+        'Selecciona el grado.',
+      );
+      return;
+    }
+
+    if (
+      !seccionId ||
+      !seccionSeleccionada
+    ) {
+      setMensaje(
+        'Selecciona una sección con cupos disponibles.',
+      );
+      return;
+    }
+
+    if (!apoderados.length) {
+      setMensaje(
+        'Debes vincular al menos un apoderado.',
+      );
+      return;
+    }
+
+    if (!tipoIngreso) {
+      setMensaje(
+        'Selecciona el tipo de ingreso.',
+      );
+      return;
+    }
+
+    if (
+      requiereProcedencia &&
+      !colegioProcedencia.trim()
+    ) {
+      setMensaje(
+        'Indica la institución de procedencia.',
+      );
+      return;
+    }
+
+    if (
+      requiereProcedencia &&
+      !gradoProcedencia.trim()
+    ) {
+      setMensaje(
+        'Indica el grado de procedencia.',
+      );
+      return;
+    }
+
+    if (
+      mensajeValidacionMatricula &&
+      (
+        mensajeValidacionMatricula.tipo ===
+          'error' ||
+        mensajeValidacionMatricula.tipo ===
+          'warning'
+      )
+    ) {
+      setMensaje(
+        mensajeValidacionMatricula.texto,
+      );
+      return;
+    }
+
+    setClosingModal(null);
+    setConfirmOpen(true);
+  };
 
   const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (err: any) { const errorMessage = err.response?.data?.message || 'No se pudo registrar la matrícula.'; setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
 
@@ -604,6 +770,9 @@ export default function MatriculaPage() {
 
   const operacionLabel =
     getNombreOperacion(tipoIngreso);
+
+  const operacionConArticulo =
+    `${getArticuloOperacion(tipoIngreso)} ${operacionLabel}`;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -831,13 +1000,73 @@ export default function MatriculaPage() {
                   <Info icon={MapPin} label="Distrito" value={alumno.distrito || '—'} />
                 </div>
                 {estudiante?.matriculas?.length > 0 && (
-                  <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Historial visible</p>
-                    <div className="mt-3 space-y-2">
-                      {estudiante.matriculas.map((m) => (
-                        <div key={m.id_matricula} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-neutral-200/60">
-                          <div><p className="text-sm font-medium text-neutral-800">{m.seccion?.grado?.nombre_grado || 'Grado'} &quot;{m.seccion?.letra || '-'}&quot;</p><p className="mt-0.5 text-xs text-neutral-400">{m.colegio?.nombre || 'Colegio'} · {m.anio?.nombre_anio || 'Año lectivo'}</p></div>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${getEstadoCls(m.estado_matricula)}`}>{m.estado_matricula}</span>
+                  <div className="matricula-visible-history">
+                    <div className="matricula-visible-history__heading">
+                      <div>
+                        <p>Matrículas registradas</p>
+                        <span>
+                          Historial académico visible del alumno.
+                        </span>
+                      </div>
+
+                      <strong>
+                        {estudiante.matriculas.length}
+                      </strong>
+                    </div>
+
+                    <div className="matricula-visible-history__list">
+                      {estudiante.matriculas.map((matricula) => (
+                        <div
+                          key={matricula.id_matricula}
+                          className="matricula-visible-history__item"
+                        >
+                          <div className="matricula-visible-history__title">
+                            <div>
+                              <strong>
+                                {matricula.seccion?.grado
+                                  ?.nombre_grado ||
+                                  'Grado no indicado'}{' '}
+                                &quot;
+                                {matricula.seccion?.letra ||
+                                  '-'}
+                                &quot;
+                              </strong>
+
+                              <small>
+                                {matricula.codigo_matricula ||
+                                  `Matrícula ${matricula.id_matricula}`}
+                              </small>
+                            </div>
+
+                            <span
+                              className={`matricula-visible-history__status ${getEstadoCls(
+                                matricula.estado_matricula,
+                              )}`}
+                            >
+                              {matricula.estado_matricula}
+                            </span>
+                          </div>
+
+                          <div className="matricula-visible-history__meta">
+                            <span>
+                              <GraduationCap size={13} />
+                              {matricula.seccion?.grado
+                                ?.nivel?.nombre_nivel ||
+                                'Nivel no indicado'}
+                            </span>
+
+                            <span>
+                              <MapPin size={13} />
+                              {matricula.colegio?.nombre ||
+                                'Institución no indicada'}
+                            </span>
+
+                            <span>
+                              <CalendarDays size={13} />
+                              {matricula.anio?.nombre_anio ||
+                                'Año lectivo no indicado'}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -936,27 +1165,6 @@ export default function MatriculaPage() {
                       className={inputClass}
                     />
 
-                    <select
-                      value={parentesco}
-                      onChange={(event) =>
-                        setParentesco(
-                          event.target.value,
-                        )
-                      }
-                      className={selectClass}
-                    >
-                      {parentescos.map(
-                        (parentescoItem) => (
-                          <option
-                            key={parentescoItem}
-                            value={parentescoItem}
-                          >
-                            {parentescoItem}
-                          </option>
-                        ),
-                      )}
-                    </select>
-
                     <button
                       type="button"
                       onClick={buscarApoderado}
@@ -981,6 +1189,8 @@ export default function MatriculaPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setParentesco('Madre');
+
                         setFormApoderado({
                           ...emptyApoderado,
                         });
@@ -992,7 +1202,7 @@ export default function MatriculaPage() {
                       className="matricula-new-guardian-button"
                     >
                       <UserPlus size={16} />
-                      Nuevo apoderado
+                      Nuevo
                     </button>
                   </div>
 
@@ -1020,18 +1230,48 @@ export default function MatriculaPage() {
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          agregarApoderado({
-                            ...apoderadoEncontrado,
-                            parentesco,
-                          })
-                        }
-                        className="matricula-guardian-result__add"
-                      >
-                        Agregar como {parentesco}
-                      </button>
+                      <div className="matricula-guardian-result__actions">
+                        <label>
+                          <span className="sr-only">
+                            Vínculo con el alumno
+                          </span>
+
+                          <select
+                            value={parentesco}
+                            onChange={(event) =>
+                              setParentesco(
+                                event.target.value,
+                              )
+                            }
+                            className="matricula-guardian-result__relationship"
+                            aria-label="Vínculo con el alumno"
+                          >
+                            {parentescos.map(
+                              (parentescoItem) => (
+                                <option
+                                  key={parentescoItem}
+                                  value={parentescoItem}
+                                >
+                                  {parentescoItem}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            agregarApoderado({
+                              ...apoderadoEncontrado,
+                              parentesco,
+                            })
+                          }
+                          className="matricula-guardian-result__add"
+                        >
+                          Vincular
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1670,6 +1910,38 @@ export default function MatriculaPage() {
                   </div>
                 )}
 
+                {matriculaPosterior && (
+                  <div className="matricula-future-enrollment-warning">
+                    <CalendarDays size={18} />
+
+                    <div>
+                      <strong>
+                        El alumno tiene un proceso para un año posterior
+                      </strong>
+
+                      <p>
+                        {matriculaPosterior.anio?.nombre_anio ||
+                          'Año posterior'}
+                        {' · '}
+                        {matriculaPosterior.colegio?.nombre ||
+                          'Institución no indicada'}
+                        {' · '}
+                        {matriculaPosterior.seccion?.grado
+                          ?.nombre_grado ||
+                          'Grado no indicado'}{' '}
+                        &quot;
+                        {matriculaPosterior.seccion?.letra ||
+                          '-'}
+                        &quot;.
+                        Este registro se realizará para{' '}
+                        {anioSeleccionado?.nombre_anio ||
+                          'el año seleccionado'}.
+                        Verifica que corresponda antes de continuar.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {mensaje && (
                   <div className="matricula-validation-message matricula-validation-message--neutral">
                     <AlertCircle size={17} />
@@ -1687,7 +1959,7 @@ export default function MatriculaPage() {
 
                     <strong>
                       {flujoListo
-                        ? `Todo listo para registrar la ${operacionLabel}.`
+                        ? `Todo listo para registrar ${operacionConArticulo}.`
                         : textoPasoPendiente}
                     </strong>
                   </div>
@@ -1707,7 +1979,7 @@ export default function MatriculaPage() {
                     }
                   >
                     Revisar y registrar{' '}
-                    {operacionLabel}
+                    {operacionConArticulo}
                     <ArrowRight size={17} />
                   </button>
                 </div>
@@ -1722,26 +1994,150 @@ export default function MatriculaPage() {
         <ViewportPortal>
           <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
           <div className="absolute inset-0 bg-neutral-950/40" />
-          <div className={`carbon-matricula-modal-panel relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
-            <ModalHead title={`Revisar ${operacionLabel}`} subtitle="Verifica los datos antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
+          <div className={`carbon-matricula-modal-panel matricula-review-modal relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
+            <ModalHead title={`Revisar ${operacionConArticulo}`} subtitle="Confirma la institución, sección, proceso y apoderados antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
             <div className="space-y-4 p-6 overflow-y-auto">
-              {alertaEdad && (<div className="flex items-start gap-2 rounded-xl bg-amber-50/50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60"><AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />{alertaEdad}</div>)}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Summary label="Alumno" value={`${alumno.nombres} ${alumno.apellido_paterno} ${alumno.apellido_materno}`} detail={`DNI ${alumno.dni} · ${edadTexto(alumno.fecha_nacimiento)}`} />
-                <Summary label="Destino" value={colegioDestinoNombre} detail={`${seccionSeleccionada.grado.nombre_grado} "${seccionSeleccionada.letra}" · ${seccionSeleccionada.grado.nivel?.nombre_nivel || ''}`} />
-                <Summary label="Procedencia" value={tipoIngreso} detail={tipoIngreso === 'Traslado' || tipoIngreso === 'Reingreso' ? colegioProcedencia || 'Colegio de procedencia no indicado' : 'Sin colegio de procedencia'} />
+              <div className="matricula-review-intro">
+                <span>
+                  <CheckCircle2 size={22} />
+                </span>
+
+                <div>
+                  <small>Revisión final</small>
+
+                  <strong>
+                    Confirma los datos antes de registrar{' '}
+                    {operacionConArticulo}
+                  </strong>
+
+                  <p>
+                    El sistema todavía no guardará cambios
+                    hasta que pulses el botón de confirmación.
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">Apoderados</p>
-                <div className="mt-3 space-y-2">
-                  {apoderados.map((a) => (<div key={a.id_persona} className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-neutral-700 ring-1 ring-neutral-200/60">{a.parentesco}: {a.nombres} {a.apellido_paterno} · DNI {a.dni}</div>))}
+
+              {alertaEdad && (
+                <div className="matricula-review-alert matricula-review-alert--warning">
+                  <AlertTriangle size={17} />
+                  {alertaEdad}
+                </div>
+              )}
+
+              {matriculaPosterior && (
+                <div className="matricula-review-alert matricula-review-alert--info">
+                  <CalendarDays size={17} />
+
+                  <div>
+                    <strong>
+                      Existe un proceso para un año posterior
+                    </strong>
+
+                    <p>
+                      {matriculaPosterior.anio?.nombre_anio ||
+                        'Año posterior'}
+                      {' · '}
+                      {matriculaPosterior.colegio?.nombre ||
+                        'Institución no indicada'}.
+                      El registro actual corresponde a{' '}
+                      {anioSeleccionado?.nombre_anio ||
+                        'otro año lectivo'}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="matricula-review-grid">
+                <Summary
+                  label="Alumno"
+                  value={`${alumno.nombres} ${alumno.apellido_paterno} ${alumno.apellido_materno}`}
+                  detail={`DNI ${alumno.dni} · ${edadTexto(
+                    alumno.fecha_nacimiento,
+                  )}`}
+                />
+
+                <Summary
+                  label="Institución destino"
+                  value={colegioDestinoNombre}
+                  detail={
+                    anioSeleccionado?.nombre_anio ||
+                    'Año lectivo no indicado'
+                  }
+                />
+
+                <Summary
+                  label="Destino académico"
+                  value={`${seccionSeleccionada.grado.nombre_grado} "${seccionSeleccionada.letra}"`}
+                  detail={
+                    seccionSeleccionada.grado.nivel
+                      ?.nombre_nivel ||
+                    'Nivel no indicado'
+                  }
+                />
+
+                <Summary
+                  label="Proceso"
+                  value={tipoIngreso}
+                  detail={
+                    requiereProcedencia
+                      ? `${colegioProcedencia} · ${gradoProcedencia}`
+                      : 'No requiere institución de procedencia'
+                  }
+                />
+              </div>
+
+              <div className="matricula-review-guardians">
+                <div className="matricula-review-guardians__heading">
+                  <div>
+                    <span>Apoderados vinculados</span>
+                    <small>
+                      {apoderados.length}{' '}
+                      {apoderados.length === 1
+                        ? 'apoderado'
+                        : 'apoderados'}
+                    </small>
+                  </div>
+
+                  <Users size={18} />
+                </div>
+
+                <div className="matricula-review-guardians__list">
+                  {apoderados.map((apoderado) => (
+                    <div
+                      key={apoderado.id_persona}
+                      className="matricula-review-guardian"
+                    >
+                      <span
+                        className={`matricula-review-guardian__avatar ${getAvatarColor(
+                          apoderado.nombres,
+                        )}`}
+                      >
+                        {getInitials(
+                          apoderado.nombres,
+                        )}
+                      </span>
+
+                      <div>
+                        <strong>
+                          {apoderado.nombres}{' '}
+                          {apoderado.apellido_paterno}
+                        </strong>
+
+                        <small>
+                          {apoderado.parentesco}
+                          {' · '}
+                          DNI {apoderado.dni}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-            <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
+            <div className="matricula-review-footer flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={() => closeModal(setConfirmOpen, 'confirm')} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Corregir</button>
               <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
-                {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar {operacionLabel}
+                {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar {operacionConArticulo}
               </button>
             </div>
           </div>
@@ -1897,7 +2293,7 @@ function Badge({ tone, children }: { tone: 'emerald' | 'amber'; children: string
 
 function Summary({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
+    <div className="matricula-review-summary rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">{label}</p>
       <p className="mt-1.5 text-sm font-semibold text-neutral-900">{value}</p>
       <p className="mt-0.5 text-xs text-neutral-400">{detail}</p>
