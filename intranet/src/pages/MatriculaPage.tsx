@@ -330,7 +330,37 @@ export default function MatriculaPage() {
   const estadosMatriculaBloqueantes = ['Activo','Pre-matriculado','Reserva','Pendiente','Observado'];
 
   const colegioDestinoQuery = useMemo(() => { if (activeScope.tipo === 'colegio') return queryString; if (colegioDestinoId) return `?colegio_id=${colegioDestinoId}`; return queryString; }, [activeScope.tipo, colegioDestinoId, queryString]);
-  const colegioDestinoNombre = useMemo(() => { if (activeScope.tipo === 'colegio') return activeColegio?.nombre_corto || activeColegio?.nombre || 'Colegio activo'; if (!colegioDestinoId) return 'Por seleccionar'; const colegio = colegios.find((item) => item.id_colegio === colegioDestinoId); return colegio?.nombre_corto || colegio?.nombre || 'Colegio seleccionado'; }, [activeScope.tipo, activeColegio, colegioDestinoId, colegios]);
+  // Nombre institucional completo para matrícula y revisión.
+  const colegioDestinoNombre = useMemo(() => {
+    if (activeScope.tipo === 'colegio') {
+      return (
+        activeColegio?.nombre ||
+        activeColegio?.nombre_corto ||
+        'Institución activa'
+      );
+    }
+
+    if (!colegioDestinoId) {
+      return 'Por seleccionar';
+    }
+
+    const colegio = colegios.find(
+      (item) =>
+        item.id_colegio ===
+        colegioDestinoId,
+    );
+
+    return (
+      colegio?.nombre ||
+      colegio?.nombre_corto ||
+      'Institución seleccionada'
+    );
+  }, [
+    activeScope.tipo,
+    activeColegio,
+    colegioDestinoId,
+    colegios,
+  ]);
   const colegioDestinoDefinido = useMemo(() => { if (activeScope.tipo === 'colegio') return Boolean(activeScope.id_colegio); return Boolean(colegioDestinoId); }, [activeScope.tipo, activeScope.id_colegio, colegioDestinoId]);
   const anioSeleccionado = useMemo(() => anios.find((item) => item.id_anio === anioId) || null, [anioId, anios]);
 
@@ -1996,7 +2026,7 @@ export default function MatriculaPage() {
           <div className="absolute inset-0 bg-neutral-950/40" />
           <div className={`carbon-matricula-modal-panel matricula-review-modal relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
             <ModalHead title={`Revisar ${operacionConArticulo}`} subtitle="Confirma la institución, sección, proceso y apoderados antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
-            <div className="space-y-4 p-6 overflow-y-auto">
+            <div className="matricula-review-body space-y-4 p-6 overflow-y-auto">
               <div className="matricula-review-intro">
                 <span>
                   <CheckCircle2 size={22} />
@@ -2134,7 +2164,7 @@ export default function MatriculaPage() {
                 </div>
               </div>
             </div>
-            <div className="matricula-review-footer flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
+            <div className="matricula-review-footer flex flex-col-reverse gap-3 border-t border-neutral-100 sm:flex-row sm:justify-end flex-shrink-0">
               <button type="button" onClick={() => closeModal(setConfirmOpen, 'confirm')} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Corregir</button>
               <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
                 {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar {operacionConArticulo}

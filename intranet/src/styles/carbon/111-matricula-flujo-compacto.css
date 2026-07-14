@@ -1725,3 +1725,360 @@
   }
 }
 
+/* 111D - Modal de revisión fuera del contenedor principal */
+
+/*
+ * El modal se renderiza dentro de document.body mediante
+ * createPortal. Por eso estos selectores parten del overlay
+ * y no de .carbon-matricula-page.
+ */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-modal {
+  width: min(760px, calc(100vw - 32px)) !important;
+  max-width: 760px !important;
+  max-height: min(88vh, 790px) !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 24px 60px rgba(22, 22, 22, 0.26),
+    0 8px 20px rgba(22, 22, 22, 0.14) !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-body {
+  min-height: 0;
+  padding: 20px 22px !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: #ffffff;
+}
+
+/* Presentación de revisión */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-intro {
+  display: flex !important;
+  align-items: center !important;
+  gap: 13px !important;
+  border: 1px solid #a7f0ba !important;
+  border-left: 4px solid #24a148 !important;
+  border-radius: 5px !important;
+  background: #defbe6 !important;
+  padding: 13px 15px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-intro > span {
+  display: inline-flex !important;
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid #a7f0ba;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #198038 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-intro small {
+  display: block;
+  color: #0e6027 !important;
+  font-size: 9px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-intro strong {
+  display: block !important;
+  margin-top: 2px !important;
+  color: #161616 !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-intro p {
+  margin-top: 3px !important;
+  color: #393939 !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+
+/* Alertas */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 9px !important;
+  border: 1px solid !important;
+  border-left-width: 4px !important;
+  border-radius: 4px !important;
+  padding: 11px 13px !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert strong {
+  display: block;
+  font-weight: 750;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert p {
+  margin-top: 3px;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert--warning {
+  border-color: #fddc69 !important;
+  border-left-color: #f1c21b !important;
+  background: #fff8e1 !important;
+  color: #684e00 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-alert--info {
+  border-color: #a6c8ff !important;
+  border-left-color: #0f62fe !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+/* Resumen principal */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-grid {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-summary {
+  min-width: 0;
+  min-height: 104px !important;
+  border: 1px solid #d9e2f1 !important;
+  border-left: 4px solid #4589ff !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  padding: 13px 14px !important;
+  box-shadow: none !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-summary p:first-child {
+  margin: 0 !important;
+  color: #525252 !important;
+  font-size: 9px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-summary p:nth-child(2) {
+  margin-top: 7px !important;
+  color: #161616 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-summary p:last-child {
+  margin-top: 3px !important;
+  color: #525252 !important;
+  font-size: 10.5px !important;
+  line-height: 1.4 !important;
+}
+
+/* Apoderados */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardians {
+  overflow: hidden !important;
+  border: 1px solid #d9e2f1 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardians__heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  border-bottom: 1px solid #d9e2f1 !important;
+  background: #eef4fb !important;
+  padding: 10px 13px !important;
+  color: #0043ce !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardians__heading span {
+  display: block !important;
+  color: #161616 !important;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardians__heading small {
+  display: block !important;
+  margin-top: 2px !important;
+  color: #525252 !important;
+  font-size: 10px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardians__list {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 10px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardian {
+  display: flex !important;
+  min-width: 0;
+  align-items: center !important;
+  gap: 9px !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  padding: 9px 10px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardian__avatar {
+  display: inline-flex !important;
+  width: 32px !important;
+  height: 32px !important;
+  flex: 0 0 32px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  font-size: 9px !important;
+  font-weight: 750 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardian > div {
+  min-width: 0;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardian strong {
+  display: block !important;
+  overflow: hidden;
+  color: #161616 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-guardian small {
+  display: block !important;
+  margin-top: 2px !important;
+  color: #6f6f6f !important;
+  font-size: 9.5px !important;
+}
+
+/* Pie del modal */
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer {
+  z-index: 2;
+  gap: 10px !important;
+  border-top: 1px solid #e0e0e0 !important;
+  background: #f4f4f4 !important;
+  padding: 15px 22px !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer button {
+  min-height: 40px;
+  border-radius: 4px !important;
+  font-weight: 650 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer button:first-child {
+  border: 1px solid #8d8d8d !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer button:first-child:hover {
+  background: #e8e8e8 !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer button:last-child {
+  border: 1px solid #0f62fe !important;
+  background: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-modal-overlay
+  .matricula-review-footer button:last-child:hover {
+  border-color: #0043ce !important;
+  background: #0043ce !important;
+}
+
+/* Tabletas y celulares */
+
+@media (max-width: 700px) {
+  .carbon-matricula-modal-overlay
+    .matricula-review-modal {
+    width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 20px) !important;
+  }
+
+  .carbon-matricula-modal-overlay
+    .matricula-review-body {
+    padding: 15px !important;
+  }
+
+  .carbon-matricula-modal-overlay
+    .matricula-review-grid,
+  .carbon-matricula-modal-overlay
+    .matricula-review-guardians__list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .carbon-matricula-modal-overlay
+    .matricula-review-footer {
+    padding: 13px 15px !important;
+  }
+
+  .carbon-matricula-modal-overlay
+    .matricula-review-footer button {
+    width: 100%;
+  }
+}
+
