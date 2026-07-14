@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ArrowRight,
-  Command,
   GraduationCap,
   LayoutDashboard,
   Loader2,
@@ -599,7 +598,7 @@ export default function HeaderGlobalSearch({
 
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           value={query}
           placeholder="Buscar alumno, DNI, página o herramienta..."
           autoComplete="off"
@@ -643,10 +642,6 @@ export default function HeaderGlobalSearch({
           </button>
         )}
 
-        <span className="header-global-search__shortcut">
-          <Command size={12} />
-          K
-        </span>
       </form>
 
       {open && (

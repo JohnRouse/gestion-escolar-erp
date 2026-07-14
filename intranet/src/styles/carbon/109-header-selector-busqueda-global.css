@@ -304,20 +304,7 @@
   color: #78a9ff !important;
 }
 
-.erp-app-header
-  .header-global-search__shortcut {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 3px;
-  border: 1px solid #525252;
-  border-radius: 3px;
-  background: #393939;
-  padding: 3px 6px;
-  color: #c6c6c6 !important;
-  font-size: 10px;
-  font-weight: 600;
-}
+
 
 .header-global-search__mobile-trigger {
   display: none !important;
@@ -843,3 +830,129 @@
     display: none !important;
   }
 }
+
+/* Corrección final del hover de resultados */
+
+/*
+ * carbon-theme.css aplica fondo oscuro a todos los
+ * botones del header. Esta regla más específica mantiene
+ * claros únicamente los resultados del buscador.
+ */
+
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"] {
+  border-color: #a6c8ff !important;
+  border-left-color: #0f62fe !important;
+  background: #edf5ff !important;
+  color: #161616 !important;
+  transform: none !important;
+}
+
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover
+  .header-search-result__content
+  strong,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"]
+  .header-search-result__content
+  strong {
+  color: #161616 !important;
+}
+
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover
+  .header-search-result__content
+  small,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"]
+  .header-search-result__content
+  small {
+  color: #393939 !important;
+}
+
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover
+  .header-search-result__content
+  em,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"]
+  .header-search-result__content
+  em {
+  color: #525252 !important;
+}
+
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover
+  .header-search-result__category,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"]
+  .header-search-result__category,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result:hover
+  .header-search-result__badge,
+.carbon-shell
+  .erp-app-header
+  > div.relative
+  > div
+  .header-global-search__panel
+  button.header-search-result[data-active="true"]
+  .header-search-result__badge {
+  border-color: #a6c8ff !important;
+  background: #ffffff !important;
+  color: #0043ce !important;
+}
+
+/* Protección adicional por compatibilidad con navegadores. */
+
+.header-global-search__form
+  input::-webkit-search-cancel-button {
+  display: none !important;
+  appearance: none !important;
+}
+
