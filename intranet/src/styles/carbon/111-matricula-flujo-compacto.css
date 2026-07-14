@@ -916,3 +916,148 @@
     width: 100%;
   }
 }
+
+/* 111B - Progreso sticky y confirmaciones finales */
+
+/*
+ * El header principal se encuentra fuera del contenedor
+ * main que maneja el scroll. Por ello top: 0 mantiene
+ * esta barra debajo del header sin superponerlo.
+ */
+
+.carbon-matricula-page
+  .matricula-progress {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 70 !important;
+  isolation: isolate;
+  border-color: #c6c6c6 !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 8px 18px -14px rgba(22, 22, 22, 0.5),
+    0 1px 0 rgba(22, 22, 22, 0.08) !important;
+  backdrop-filter: none !important;
+}
+
+/* Paso completado */
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__number {
+  border-color: #24a148 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+  box-shadow:
+    0 0 0 2px rgba(36, 161, 72, 0.09) !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__title {
+  color: #0e6027 !important;
+  font-weight: 700 !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--done
+  .matricula-progress__connector {
+  background: #42be65 !important;
+}
+
+/* Paso actual */
+
+.carbon-matricula-page
+  .matricula-progress__step--current
+  .matricula-progress__number {
+  border-color: #0f62fe !important;
+  background: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--current
+  .matricula-progress__title {
+  color: #161616 !important;
+}
+
+/* Paso pendiente */
+
+.carbon-matricula-page
+  .matricula-progress__step--pending
+  .matricula-progress__number {
+  border-color: #c6c6c6 !important;
+  background: #ffffff !important;
+  color: #6f6f6f !important;
+}
+
+.carbon-matricula-page
+  .matricula-progress__step--pending
+  .matricula-progress__title {
+  color: #6f6f6f !important;
+}
+
+/* Sección confirmada */
+
+.carbon-matricula-page
+  .matricula-section-card--selected {
+  border-color: #24a148 !important;
+  border-left-color: #24a148 !important;
+  background: #f1fff4 !important;
+  color: #161616 !important;
+  box-shadow:
+    0 0 0 2px rgba(36, 161, 72, 0.1) !important;
+}
+
+.carbon-matricula-page
+  .matricula-section-card--selected
+  .matricula-section-card__status {
+  border-color: #42be65 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+}
+
+.carbon-matricula-page
+  .matricula-section-card--selected
+  .matricula-section-card__meter
+  span {
+  background: #24a148 !important;
+}
+
+.carbon-matricula-page
+  .matricula-selected-section {
+  border-color: #42be65 !important;
+  background: #defbe6 !important;
+  color: #0e6027 !important;
+}
+
+/* Botón bloqueado claramente */
+
+.carbon-matricula-page
+  .matricula-final-action
+  button:disabled {
+  border-color: #c6c6c6 !important;
+  background: #c6c6c6 !important;
+  color: #6f6f6f !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/*
+ * Evita que el contenido enfocado quede oculto detrás
+ * de la barra sticky.
+ */
+
+.carbon-matricula-page
+  .matricula-workspace {
+  scroll-margin-top: 82px;
+}
+
+@media (max-width: 640px) {
+  .carbon-matricula-page
+    .matricula-progress {
+    top: 0 !important;
+    padding-block: 10px !important;
+  }
+}
+

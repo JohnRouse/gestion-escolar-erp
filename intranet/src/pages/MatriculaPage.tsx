@@ -492,6 +492,7 @@ export default function MatriculaPage() {
   const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (err: any) { const errorMessage = err.response?.data?.message || 'No se pudo registrar la matrícula.'; setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
 
 
+
   const vistaConsolidada =
     activeScope.tipo === 'todos' &&
     puedeVerConsolidado;
@@ -510,14 +511,33 @@ export default function MatriculaPage() {
     setGradoProcedencia('');
   }, [requiereProcedencia]);
 
-  const flujoListo = Boolean(
-    alumno &&
-      colegioDestinoDefinido &&
-      apoderados.length > 0 &&
-      anioSeleccionado &&
-      seccionSeleccionada &&
-      tipoIngreso,
-  );
+  const procedenciaCompleta =
+    !requiereProcedencia ||
+    Boolean(
+      colegioProcedencia.trim() &&
+      gradoProcedencia.trim(),
+    );
+
+  const validacionBloqueante =
+    mensajeValidacionMatricula?.tipo ===
+      'error' ||
+    mensajeValidacionMatricula?.tipo ===
+      'warning';
+
+  const datosPrincipalesCompletos =
+    Boolean(
+      alumno &&
+        colegioDestinoDefinido &&
+        apoderados.length > 0 &&
+        anioSeleccionado &&
+        seccionSeleccionada &&
+        tipoIngreso &&
+        procedenciaCompleta,
+    );
+
+  const flujoListo =
+    datosPrincipalesCompletos &&
+    !validacionBloqueante;
 
   const pasosFlujo: EnrollmentProgressStep[] = [
     {
@@ -547,7 +567,10 @@ export default function MatriculaPage() {
     },
     {
       title: 'Ingreso',
-      done: Boolean(tipoIngreso),
+      done: Boolean(
+        tipoIngreso &&
+          procedenciaCompleta,
+      ),
     },
     {
       title: 'Revisión',
@@ -559,6 +582,25 @@ export default function MatriculaPage() {
     pasosFlujo.filter(
       (step) => step.done,
     ).length;
+
+  const pasoPendiente =
+    pasosFlujo.find(
+      (step) => !step.done,
+    );
+
+  const textoPasoPendiente =
+    validacionBloqueante
+      ? mensajeValidacionMatricula?.texto ||
+        'Existe una validación pendiente.'
+      : requiereProcedencia &&
+          !colegioProcedencia.trim()
+        ? 'Falta indicar la institución de procedencia.'
+        : requiereProcedencia &&
+            !gradoProcedencia.trim()
+          ? 'Falta indicar el grado de procedencia.'
+          : pasoPendiente
+            ? `Falta completar el paso ${pasoPendiente.title}.`
+            : 'Revisa la información antes de continuar.';
 
   const operacionLabel =
     getNombreOperacion(tipoIngreso);
@@ -1377,7 +1419,7 @@ export default function MatriculaPage() {
                                     ) : null}
 
                                     {selected
-                                      ? 'Seleccionada'
+                                      ? 'Confirmada'
                                       : statusLabel}
                                   </span>
                                 </div>
@@ -1646,7 +1688,7 @@ export default function MatriculaPage() {
                     <strong>
                       {flujoListo
                         ? `Todo listo para registrar la ${operacionLabel}.`
-                        : 'Completa los datos pendientes para continuar.'}
+                        : textoPasoPendiente}
                     </strong>
                   </div>
 
@@ -1655,6 +1697,12 @@ export default function MatriculaPage() {
                     onClick={revisarMatricula}
                     disabled={
                       !flujoListo ||
+                      validacionBloqueante ||
+                      aniosDisponibles.length === 0
+                    }
+                    aria-disabled={
+                      !flujoListo ||
+                      validacionBloqueante ||
                       aniosDisponibles.length === 0
                     }
                   >
