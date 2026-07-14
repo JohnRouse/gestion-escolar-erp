@@ -19,6 +19,7 @@ import './styles/carbon/109-header-selector-busqueda-global.css';
 import './styles/carbon/110-sidebar-branding-institucional.css';
 import './styles/carbon/111-matricula-flujo-compacto.css';
 import './styles/carbon/112-renovacion-historial-tabs.css';
+import './styles/carbon/113-historial-filtros-revision.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

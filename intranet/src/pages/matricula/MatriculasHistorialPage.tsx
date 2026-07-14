@@ -662,37 +662,50 @@ export default function MatriculasHistorialPage() {
             />
           </div>
 
-          <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 focus-within:border-[#0f62fe] focus-within:ring-2 focus-within:ring-blue-100">
-            <CalendarDays
-              size={16}
-              className="shrink-0 text-slate-500"
-            />
+          <div
+            className="matricula-history-date-range"
+            aria-label="Periodo de matrícula"
+          >
+            <label className="matricula-history-date-field">
+              <span className="matricula-history-date-label">
+                Desde
+              </span>
 
-            <input
-              type="date"
-              aria-label="Fecha desde"
-              value={desde}
-              onChange={(event) => {
-                setPage(1);
-                setDesde(event.target.value);
-              }}
-              className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-800 outline-none"
-            />
+              <input
+                type="date"
+                aria-label="Fecha desde"
+                value={desde}
+                onChange={(event) => {
+                  setPage(1);
+                  setDesde(event.target.value);
+                }}
+                className="matricula-history-date-input"
+              />
+            </label>
 
-            <span className="shrink-0 text-slate-400">
+            <span
+              className="matricula-history-date-separator"
+              aria-hidden="true"
+            >
               —
             </span>
 
-            <input
-              type="date"
-              aria-label="Fecha hasta"
-              value={hasta}
-              onChange={(event) => {
-                setPage(1);
-                setHasta(event.target.value);
-              }}
-              className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-800 outline-none"
-            />
+            <label className="matricula-history-date-field">
+              <span className="matricula-history-date-label">
+                Hasta
+              </span>
+
+              <input
+                type="date"
+                aria-label="Fecha hasta"
+                value={hasta}
+                onChange={(event) => {
+                  setPage(1);
+                  setHasta(event.target.value);
+                }}
+                className="matricula-history-date-input"
+              />
+            </label>
           </div>
 
           <input
@@ -1106,75 +1119,193 @@ export default function MatriculasHistorialPage() {
                   </ModalSection>
 
                   {/* Revisión administrativa */}
-                  <ModalSection title="Revisión administrativa" icon={CheckCircle2}>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <DetailCard label="Estado revisión" value={detalleMatricula.estado_revision || 'Por revisar'} />
-                      <DetailCard
-                        label="Revisado por"
-                        value={
-                          detalleMatricula.revisado_por?.persona
-                            ? `${detalleMatricula.revisado_por.persona.nombres} ${detalleMatricula.revisado_por.persona.apellido_paterno}`
-                            : '—'
-                        }
-                      />
-                      <DetailCard
-                        label="Fecha revisión"
-                        value={detalleMatricula.fecha_revision ? formatFechaHora(detalleMatricula.fecha_revision) : '—'}
-                      />
-                    </div>
+                  <ModalSection
+                    title="Revisión administrativa"
+                    icon={CheckCircle2}
+                  >
+                    <div className="matricula-review-status-grid">
+                      <div className="matricula-review-status-card matricula-review-status-card--state">
+                        <span className="matricula-review-status-label">
+                          Estado actual
+                        </span>
 
-                    {!esMatriculaFinal(detalleMatricula) ? (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto] items-end">
-                        <div>
-                          <SectionLabel>Estado</SectionLabel>
-                          <select
-                            value={revisionEstado}
-                            onChange={(e) => setRevisionEstado(e.target.value)}
-                            className={selectClass}
-                          >
-                            <option value="Aprobado">Aprobado</option>
-                            <option value="Observado">Observado</option>
-                            <option value="Rechazado">Rechazado</option>
-                            <option value="Por revisar">Por revisar</option>
-                          </select>
-                        </div>
-                        <div>
-                          <SectionLabel>Observación</SectionLabel>
-                          <textarea
-                            value={revisionObservacion}
-                            onChange={(event) =>
-                              setRevisionObservacion(
-                                event.target.value,
-                              )
+                        <div className="mt-3">
+                          <RevisionBadge
+                            estado={
+                              detalleMatricula.estado_revision ||
+                              'Por revisar'
                             }
-                            placeholder="Escribe una observación administrativa."
-                            rows={3}
-                            className="min-h-[84px] w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={guardarRevision}
-                          disabled={savingRevision}
-                          className="h-11 rounded-md bg-[#0f62fe] px-5 text-sm font-semibold text-white transition hover:bg-[#0043ce] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
-                        >
-                          {savingRevision ? 'Guardando…' : 'Guardar revisión'}
-                        </button>
+                      </div>
+
+                      <div className="matricula-review-status-card">
+                        <span className="matricula-review-status-label">
+                          Revisado por
+                        </span>
+
+                        <strong className="matricula-review-status-value">
+                          {detalleMatricula.revisado_por?.persona
+                            ? `${detalleMatricula.revisado_por.persona.nombres} ${detalleMatricula.revisado_por.persona.apellido_paterno}`
+                            : 'Aún no revisado'}
+                        </strong>
+                      </div>
+
+                      <div className="matricula-review-status-card">
+                        <span className="matricula-review-status-label">
+                          Fecha de revisión
+                        </span>
+
+                        <strong className="matricula-review-status-value">
+                          {detalleMatricula.fecha_revision
+                            ? formatFechaHora(
+                                detalleMatricula.fecha_revision,
+                              )
+                            : 'Sin fecha registrada'}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {detalleMatricula.observacion_revision && (
+                      <div className="matricula-review-current-note">
+                        <div>
+                          <span className="matricula-review-status-label">
+                            Observación registrada
+                          </span>
+
+                          <p>
+                            {detalleMatricula.observacion_revision}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {!esMatriculaFinal(detalleMatricula) ? (
+                      <div className="matricula-review-editor">
+                        <div className="matricula-review-editor__header">
+                          <div>
+                            <h5>
+                              Actualizar revisión
+                            </h5>
+
+                            <p>
+                              Selecciona el resultado y registra una
+                              observación cuando sea necesaria.
+                            </p>
+                          </div>
+
+                          <span>
+                            Acción administrativa
+                          </span>
+                        </div>
+
+                        <div className="matricula-review-editor__fields">
+                          <label className="block">
+                            <SectionLabel>
+                              Nuevo estado
+                            </SectionLabel>
+
+                            <select
+                              value={revisionEstado}
+                              onChange={(event) =>
+                                setRevisionEstado(
+                                  event.target.value,
+                                )
+                              }
+                              className="matricula-review-control"
+                            >
+                              <option value="Aprobado">
+                                Aprobado
+                              </option>
+
+                              <option value="Observado">
+                                Observado
+                              </option>
+
+                              <option value="Rechazado">
+                                Rechazado
+                              </option>
+
+                              <option value="Por revisar">
+                                Por revisar
+                              </option>
+                            </select>
+                          </label>
+
+                          <label className="block">
+                            <SectionLabel>
+                              Nueva observación
+                            </SectionLabel>
+
+                            <textarea
+                              value={revisionObservacion}
+                              onChange={(event) =>
+                                setRevisionObservacion(
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Describe el motivo de la observación o deja una nota administrativa."
+                              rows={4}
+                              className="matricula-review-control matricula-review-textarea"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="matricula-review-editor__footer">
+                          <p>
+                            El cambio quedará registrado con el
+                            usuario y la fecha de actualización.
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={guardarRevision}
+                            disabled={savingRevision}
+                            className="matricula-review-save"
+                          >
+                            {savingRevision ? (
+                              <>
+                                <Loader2
+                                  size={16}
+                                  className="animate-spin"
+                                />
+                                Guardando…
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 size={16} />
+                                Guardar revisión
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="mt-4 rounded-xl bg-white p-3 text-sm text-neutral-500 ring-1 ring-neutral-200/60">
-                        La revisión está bloqueada porque esta matrícula está cerrada.
-                      </p>
+                      <div className="matricula-review-locked">
+                        <AlertTriangle size={17} />
+
+                        <p>
+                          La revisión no puede modificarse porque
+                          esta matrícula está cerrada.
+                        </p>
+                      </div>
                     )}
 
                     {mensajeRevision && (
-                      <p className={`mt-3 rounded-xl p-3 text-sm font-medium ring-1 ${
-                        mensajeRevision.includes('No se pudo') || mensajeRevision.includes('cerrada')
-                          ? 'bg-red-50 text-red-600 ring-red-200/60'
-                          : 'bg-emerald-50 text-emerald-600 ring-emerald-200/60'
-                      }`}>
+                      <div
+                        className={
+                          mensajeRevision.includes(
+                            'No se pudo',
+                          ) ||
+                          mensajeRevision.includes(
+                            'cerrada',
+                          )
+                            ? 'matricula-review-message matricula-review-message--error'
+                            : 'matricula-review-message matricula-review-message--success'
+                        }
+                      >
                         {mensajeRevision}
-                      </p>
+                      </div>
                     )}
                   </ModalSection>
 

@@ -1,0 +1,515 @@
+/*
+ * Historial de matrículas:
+ * rango de fechas, revisión administrativa
+ * y superficie flotante de las pestañas.
+ */
+
+
+/* ========================================================
+   RANGO DE FECHAS
+   ======================================================== */
+
+.carbon-matricula-page
+  .matricula-history-date-range {
+  display: grid;
+  min-width: 280px;
+  height: 44px;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr);
+  align-items: stretch;
+  gap: 6px;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 4px 9px 3px;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-field:hover {
+  border-color: #8d8d8d;
+  background: #f9fbfd;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-field:focus-within {
+  border-color: #0f62fe;
+  box-shadow:
+    0 0 0 1px #0f62fe,
+    0 0 0 3px rgba(15, 98, 254, 0.12);
+}
+
+.carbon-matricula-page
+  .matricula-history-date-label {
+  display: block;
+  margin-bottom: 1px;
+  color: #6f6f6f;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-input {
+  width: 100%;
+  min-width: 0;
+  height: 23px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #161616;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-input::-webkit-calendar-picker-indicator {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 1px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.carbon-matricula-page
+  .matricula-history-date-separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8d8d8d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* ========================================================
+   PESTAÑAS FLOTANTES DEL MODAL
+   ======================================================== */
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tabs {
+  top: 0 !important;
+  margin:
+    -24px
+    -24px
+    20px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-bottom:
+    1px solid #d9e2f1 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  padding:
+    16px
+    24px
+    12px !important;
+  box-shadow:
+    0 8px 16px rgba(22, 22, 22, 0.08) !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab {
+  border:
+    1px solid #c6c6c6 !important;
+  border-radius: 4px !important;
+  background: #f4f7fb !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab:hover {
+  border-color: #78a9ff !important;
+  background: #edf5ff !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab--active {
+  border-color: #0f62fe !important;
+  background: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-detail-tab--active:hover {
+  border-color: #0043ce !important;
+  background: #0043ce !important;
+}
+
+
+/* ========================================================
+   REVISIÓN ADMINISTRATIVA
+   ======================================================== */
+
+.carbon-matricula-modal-panel
+  .matricula-review-status-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 0.8fr)
+    minmax(210px, 1fr)
+    minmax(210px, 1fr);
+  gap: 10px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-status-card {
+  min-width: 0;
+  min-height: 88px;
+  border: 1px solid #d9e2f1;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 13px 14px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-status-card--state {
+  border-left: 4px solid #0f62fe;
+  background: #f7faff;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-status-label {
+  display: block;
+  color: #6f6f6f;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-status-value {
+  display: block;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  color: #161616;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-current-note {
+  margin-top: 10px;
+  border: 1px solid #d9e2f1;
+  border-left: 4px solid #8a3ffc;
+  border-radius: 5px;
+  background: #f7f4ff;
+  padding: 12px 14px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-current-note p {
+  margin-top: 6px;
+  color: #393939;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #c6c6c6;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f4f4f4;
+  padding: 13px 15px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__header h5 {
+  margin: 0;
+  color: #161616;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__header p {
+  margin-top: 3px;
+  color: #525252;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__header > span {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid #a6c8ff;
+  border-radius: 999px;
+  background: #edf5ff;
+  padding: 4px 8px;
+  color: #0043ce;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__fields {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 0.8fr)
+    minmax(0, 2fr);
+  align-items: start;
+  gap: 14px;
+  padding: 15px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-control {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #8d8d8d;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 0 12px;
+  color: #161616;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-control:hover {
+  border-color: #525252;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-control:focus {
+  border-color: #0f62fe;
+  box-shadow:
+    0 0 0 1px #0f62fe,
+    0 0 0 3px rgba(15, 98, 254, 0.12);
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-textarea {
+  min-height: 96px;
+  resize: vertical;
+  padding:
+    10px
+    12px;
+  line-height: 1.5;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid #e0e0e0;
+  background: #f9fafb;
+  padding: 12px 15px;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-editor__footer p {
+  max-width: 520px;
+  color: #6f6f6f;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-save {
+  display: inline-flex;
+  min-width: 168px;
+  min-height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #0f62fe;
+  border-radius: 4px;
+  background: #0f62fe;
+  padding: 0 18px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-save:hover:not(:disabled) {
+  border-color: #0043ce;
+  background: #0043ce;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-save:disabled {
+  cursor: not-allowed;
+  border-color: #c6c6c6;
+  background: #c6c6c6;
+  color: #525252;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  border: 1px solid #fddc69;
+  border-left: 4px solid #f1c21b;
+  border-radius: 4px;
+  background: #fff8e1;
+  padding: 12px 14px;
+  color: #684e00;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-message {
+  margin-top: 12px;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 11px 13px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-message--success {
+  border-color: #a7f0ba;
+  border-left-color: #24a148;
+  background: #defbe6;
+  color: #0e6027;
+}
+
+.carbon-matricula-modal-panel
+  .matricula-review-message--error {
+  border-color: #ffb3b8;
+  border-left-color: #da1e28;
+  background: #fff1f1;
+  color: #a2191f;
+}
+
+
+/* ========================================================
+   AJUSTES RESPONSIVOS
+   ======================================================== */
+
+@media (max-width: 1100px) {
+  .carbon-matricula-modal-panel
+    .matricula-review-status-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-status-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .carbon-matricula-page
+    .matricula-history-date-range {
+    min-width: 0;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-detail-tabs {
+    margin:
+      -24px
+      -24px
+      16px !important;
+    padding:
+      12px
+      15px
+      10px !important;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-status-grid,
+  .carbon-matricula-modal-panel
+    .matricula-review-editor__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-status-card:last-child {
+    grid-column: auto;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-editor__header,
+  .carbon-matricula-modal-panel
+    .matricula-review-editor__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-editor__header > span {
+    align-self: flex-start;
+  }
+
+  .carbon-matricula-modal-panel
+    .matricula-review-save {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .carbon-matricula-page
+    .matricula-history-date-range {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .carbon-matricula-page
+    .matricula-history-date-separator {
+    display: none;
+  }
+
+  .carbon-matricula-page
+    .matricula-history-date-field {
+    min-height: 44px;
+  }
+}
