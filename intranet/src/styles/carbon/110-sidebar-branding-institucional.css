@@ -1,0 +1,391 @@
+/* ==========================================================
+   110 - Sidebar e identidad institucional
+   ========================================================== */
+
+/* Icono institucional compartido */
+
+.institution-mark {
+  display: inline-flex !important;
+  width: 42px !important;
+  height: 42px !important;
+  flex: 0 0 42px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 7px !important;
+  background: #ffffff !important;
+  padding: 3px !important;
+  box-shadow: none !important;
+}
+
+.institution-mark--compact {
+  width: 36px !important;
+  height: 36px !important;
+  flex-basis: 36px !important;
+  border-radius: 6px !important;
+  padding: 2px !important;
+}
+
+.institution-mark--school {
+  border-color: #78a9ff !important;
+}
+
+.institution-mark--all,
+.institution-mark--group {
+  border-color: #8d8d8d !important;
+}
+
+.institution-mark__inner {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  color: #161616 !important;
+  outline: 0 !important;
+  ring: 0 !important;
+}
+
+.institution-mark__image {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  padding: 2px !important;
+}
+
+.institution-mark__icon {
+  color: #393939 !important;
+  stroke-width: 2 !important;
+}
+
+.institution-mark--school
+  .institution-mark__icon {
+  color: #0f62fe !important;
+}
+
+/* Selector del header */
+
+.erp-app-header
+  .header-school-trigger
+  .institution-mark {
+  border-color: #6f6f6f !important;
+  background: #ffffff !important;
+}
+
+.erp-app-header
+  .header-school-option
+  .institution-mark {
+  width: 40px !important;
+  height: 40px !important;
+  flex-basis: 40px !important;
+}
+
+.header-school-row {
+  position: relative;
+  margin-bottom: 4px;
+  border-radius: 4px;
+}
+
+.header-school-row
+  .header-school-option {
+  min-height: 64px !important;
+  padding-right: 76px !important;
+}
+
+.header-school-row__actions {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-50%);
+}
+
+.carbon-shell
+  .erp-app-header
+  .header-school-logo-action {
+  display: inline-flex !important;
+  width: 29px !important;
+  min-width: 29px !important;
+  height: 29px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid #c6c6c6 !important;
+  border-radius: 3px !important;
+  background: #ffffff !important;
+  color: #525252 !important;
+  cursor: pointer;
+}
+
+.carbon-shell
+  .erp-app-header
+  .header-school-logo-action:hover {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.header-school-row__check {
+  display: none;
+}
+
+.header-school-logo-error {
+  margin: 0 10px 8px;
+  border: 1px solid #ffb3b8;
+  border-left: 4px solid #da1e28;
+  border-radius: 3px;
+  background: #fff1f1;
+  padding: 9px 10px;
+  color: #a2191f !important;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Cabecera del sidebar */
+
+.app-sidebar .sidebar-brand {
+  display: flex;
+  min-height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 9px 12px;
+  background: #ffffff;
+}
+
+.app-sidebar
+  .sidebar-brand__identity {
+  display: flex !important;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  padding: 4px !important;
+  color: #161616 !important;
+  text-align: left;
+}
+
+.app-sidebar
+  .sidebar-brand__identity:hover {
+  background: #f4f4f4 !important;
+}
+
+.app-sidebar
+  .sidebar-brand__copy {
+  display: block;
+  min-width: 0;
+}
+
+.app-sidebar
+  .sidebar-brand__copy
+  strong {
+  display: block;
+  overflow: hidden;
+  color: #161616 !important;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar
+  .sidebar-brand__copy
+  small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #6f6f6f !important;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0 !important;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar
+  .sidebar-brand__collapse {
+  display: inline-flex !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  color: #6f6f6f !important;
+}
+
+.app-sidebar
+  .sidebar-brand__collapse:hover {
+  border-color: #c6c6c6 !important;
+  background: #f4f4f4 !important;
+  color: #161616 !important;
+}
+
+/* Etiquetas más legibles */
+
+.app-sidebar
+  .sidebar-section-label {
+  color: #525252 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em !important;
+  line-height: 1.3 !important;
+}
+
+.app-sidebar
+  .sidebar-group-label {
+  color: #6f6f6f !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+.app-sidebar
+  .sidebar-role-label {
+  color: #6f6f6f !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* Elementos principales */
+
+.app-sidebar
+  .sidebar-nav-item {
+  min-height: 42px !important;
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  letter-spacing: 0 !important;
+  transform: none !important;
+}
+
+.app-sidebar
+  .sidebar-nav-item:not(.bg-slate-950) {
+  background: transparent !important;
+  color: #393939 !important;
+}
+
+.app-sidebar
+  .sidebar-nav-item:not(.bg-slate-950):hover {
+  border-color: #a6c8ff !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.app-sidebar
+  .sidebar-nav-icon {
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  color: #6f6f6f !important;
+  box-shadow: none !important;
+}
+
+.app-sidebar
+  .sidebar-nav-item:not(.bg-slate-950):hover
+  .sidebar-nav-icon {
+  border-color: #a6c8ff !important;
+  background: #ffffff !important;
+  color: #0f62fe !important;
+}
+
+.app-sidebar
+  .sidebar-nav-item.bg-slate-950
+  .sidebar-nav-icon {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Opciones secundarias */
+
+.app-sidebar
+  .sidebar-subitem {
+  min-height: 34px !important;
+  border-radius: 3px !important;
+  letter-spacing: 0 !important;
+  line-height: 1.35 !important;
+}
+
+.app-sidebar
+  .sidebar-subitem:hover {
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.app-sidebar
+  .sidebar-role-card {
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  background: #f4f4f4 !important;
+  box-shadow: none !important;
+}
+
+/* Sidebar plegado */
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-brand {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-brand__identity {
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 2px !important;
+}
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-nav-item {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin-inline: auto;
+  border-radius: 4px !important;
+}
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-nav-icon {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-nav-item:not(.bg-slate-950)
+  .sidebar-nav-icon {
+  background: transparent !important;
+}
+
+.app-sidebar.w-\[5\.5rem\]
+  .sidebar-nav-item.bg-slate-950 {
+  border-color: #161616 !important;
+  background: #161616 !important;
+}
+
+@media (max-width: 767px) {
+  .header-school-row
+    .header-school-option {
+    padding-right: 66px !important;
+  }
+}

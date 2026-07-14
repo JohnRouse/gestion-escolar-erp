@@ -1,9 +1,19 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class ColegiosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService:
+      StorageService,
+  ) {}
 
   async getMisColegios(userId: number) {
     const usuario = await this.prisma.usuario.findUnique({
@@ -95,4 +105,132 @@ export class ColegiosService {
           },
     };
   }
+
+  private async validarPermisoLogo(
+    userId: number,
+    rol: string,
+    colegioId: number,
+  ) {
+    if (
+      !['Admin', 'Director'].includes(
+        String(rol || ''),
+      )
+    ) {
+      throw new ForbiddenException(
+        'No tienes permisos para modificar la identidad visual.',
+      );
+    }
+
+    const colegio =
+      await this.prisma.colegio.findUnique({
+        where: {
+          id_colegio: colegioId,
+        },
+      });
+
+    if (!colegio) {
+      throw new NotFoundException(
+        'El colegio no existe.',
+      );
+    }
+
+    const accesoColegio =
+      await this.prisma.usuarioColegio.findFirst({
+        where: {
+          id_usuario: userId,
+          id_colegio: colegioId,
+          estado: 'Activo',
+        },
+      });
+
+    const accesoTenant =
+      await this.prisma.usuarioTenant.findFirst({
+        where: {
+          id_usuario: userId,
+          id_tenant: colegio.id_tenant,
+          estado: 'Activo',
+        },
+      });
+
+    if (!accesoColegio && !accesoTenant) {
+      throw new ForbiddenException(
+        'No tienes acceso a este colegio.',
+      );
+    }
+
+    return colegio;
+  }
+
+  async actualizarLogo(
+    userId: number,
+    rol: string,
+    colegioId: number,
+    file: any,
+  ) {
+    await this.validarPermisoLogo(
+      userId,
+      rol,
+      colegioId,
+    );
+
+    const saved =
+      await this.storageService.saveFile(
+        file,
+        {
+          folder: 'colegios',
+          prefix: 'logo',
+          entityId: colegioId,
+          filenameBase:
+            `colegio-${colegioId}`,
+          allowedMimeExtensions: {
+            'image/jpeg': '.jpg',
+            'image/png': '.png',
+            'image/webp': '.webp',
+          },
+        },
+      );
+
+    return this.prisma.colegio.update({
+      where: {
+        id_colegio: colegioId,
+      },
+      data: {
+        logo_url: saved.url,
+      },
+      select: {
+        id_colegio: true,
+        nombre: true,
+        logo_url: true,
+        color_principal: true,
+      },
+    });
+  }
+
+  async quitarLogo(
+    userId: number,
+    rol: string,
+    colegioId: number,
+  ) {
+    await this.validarPermisoLogo(
+      userId,
+      rol,
+      colegioId,
+    );
+
+    return this.prisma.colegio.update({
+      where: {
+        id_colegio: colegioId,
+      },
+      data: {
+        logo_url: null,
+      },
+      select: {
+        id_colegio: true,
+        nombre: true,
+        logo_url: true,
+        color_principal: true,
+      },
+    });
+  }
+
 }

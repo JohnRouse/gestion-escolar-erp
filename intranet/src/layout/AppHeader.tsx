@@ -2,16 +2,17 @@ import {
   useEffect,
   useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   Bell,
-  Building2,
   Check,
   ChevronDown,
-  Globe2,
   HelpCircle,
+  RotateCcw,
+  Loader2,
+  ImagePlus,
   LogOut,
   Menu,
-  School,
   Settings,
   User,
   Zap,
@@ -21,6 +22,7 @@ import { useSchool } from '../contexts/SchoolContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { assetUrl } from '../utils/assets';
 import HeaderGlobalSearch from '../components/header/HeaderGlobalSearch';
+import InstitutionMark from '../components/InstitutionMark';
 
 function obtenerPartesNombre(nombre?: string | null): string[] {
   return (nombre || '')
@@ -57,75 +59,11 @@ function obtenerNombreCortoUsuario(nombre?: string | null): string {
   return `${primerNombre} ${apellidoPaterno}`;
 }
 
-type ColegioLike = {
-  id_colegio?: number;
-  nombre?: string | null;
-  logo_url?: string | null;
-  color_principal?: string | null;
-  niveles?: Array<{ nombre_nivel?: string | null }>;
-};
-
-type InstitutionMarkProps = {
-  kind: 'group' | 'all' | 'school';
-  colegio?: ColegioLike | null;
-  compact?: boolean;
-};
-
-function InstitutionMark({ kind, colegio, compact = false }: InstitutionMarkProps) {
-  const [logoFailed, setLogoFailed] = useState(false);
-
-  const isSchool = kind === 'school';
-  const logoSrc = isSchool ? assetUrl(colegio?.logo_url || '') : '';
-  const showLogo = Boolean(logoSrc && !logoFailed);
-
-  useEffect(() => {
-    setLogoFailed(false);
-  }, [logoSrc]);
-
-  const color = isSchool
-    ? colegio?.color_principal || '#0f62fe'
-    : kind === 'all'
-      ? '#161616'
-      : '#ffffff';
-
-  const outerSize = compact ? 'h-9 w-9 rounded-xl p-1' : 'h-11 w-11 rounded-2xl p-1';
-  const innerSize = compact ? 'h-7 w-7 rounded-lg' : 'h-9 w-9 rounded-xl';
-  const iconSize = compact ? 18 : 20;
-
-  return (
-    <span
-      className={`school-mark inline-flex shrink-0 items-center justify-center ${outerSize} ${
-        kind === 'group'
-          ? 'border border-slate-200 bg-white shadow-sm'
-          : 'shadow-[0_0_0_2px_rgba(255,255,255,0.95),0_5px_14px_rgba(15,23,42,0.22)]'
-      }`}
-      style={kind !== 'group' ? { backgroundColor: color } : undefined}
-    >
-      <span className={`flex ${innerSize} items-center justify-center overflow-hidden bg-white text-slate-950 shadow-sm ring-1 ring-slate-200`}>
-        {showLogo ? (
-          <img
-            src={logoSrc}
-            alt={colegio?.nombre || 'Colegio'}
-            className="h-full w-full object-contain p-0.5"
-            onError={() => setLogoFailed(true)}
-          />
-        ) : kind === 'all' ? (
-          <Globe2 size={iconSize} strokeWidth={2.8} />
-        ) : kind === 'group' ? (
-          <Building2 size={iconSize} strokeWidth={2.8} />
-        ) : (
-          <School size={iconSize} strokeWidth={2.8} />
-        )}
-      </span>
-    </span>
-  );
-}
-
 const iconButtonClass =
   'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
 
 export default function AppHeader() {
-  const { user, logout } = useAuth();
+  const { user, logout, token, refreshUser } = useAuth();
   const {
     tenant,
     colegios,
@@ -144,10 +82,27 @@ export default function AppHeader() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
+
+  const [
+    uploadingSchoolId,
+    setUploadingSchoolId,
+  ] = useState<number | null>(null);
+
+  const [
+    schoolLogoError,
+    setSchoolLogoError,
+  ] = useState('');
+
   const userName = user?.nombre || 'Usuario';
   const userShortName = obtenerNombreCortoUsuario(userName);
   const userInitials = obtenerInicialesUsuario(userName);
   const userRole = user?.rol || 'Admin';
+
+  const canManageBranding =
+    ['Admin', 'Director'].includes(
+      userRole,
+    );
+
   const userEmail = (user as any)?.email || (user as any)?.correo || 'admin@smv.edu.pe';
 
   const avatarUrl =
@@ -172,6 +127,80 @@ export default function AppHeader() {
       : institutionPluralLabel === 'Institutos'
         ? 'Todos los institutos'
         : 'Todos los colegios';
+
+
+  const handleSchoolLogoUpload =
+    async (
+      colegioId: number,
+      file?: File,
+    ) => {
+      if (!file || !token) return;
+
+      setSchoolLogoError('');
+
+      if (file.size > 2 * 1024 * 1024) {
+        setSchoolLogoError(
+          'La imagen debe pesar menos de 2 MB.',
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      setUploadingSchoolId(colegioId);
+
+      try {
+        await axios.post(
+          `/api/colegios/${colegioId}/logo`,
+          formData,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          },
+        );
+
+        await refreshUser();
+      } catch (error: any) {
+        setSchoolLogoError(
+          error?.response?.data?.message ||
+            'No se pudo actualizar el logo.',
+        );
+      } finally {
+        setUploadingSchoolId(null);
+      }
+    };
+
+  const handleRemoveSchoolLogo =
+    async (colegioId: number) => {
+      if (!token) return;
+
+      setSchoolLogoError('');
+      setUploadingSchoolId(colegioId);
+
+      try {
+        await axios.delete(
+          `/api/colegios/${colegioId}/logo`,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          },
+        );
+
+        await refreshUser();
+      } catch (error: any) {
+        setSchoolLogoError(
+          error?.response?.data?.message ||
+            'No se pudo restaurar el icono predeterminado.',
+        );
+      } finally {
+        setUploadingSchoolId(null);
+      }
+    };
 
   const handleLogout = () => {
     logout();
@@ -288,7 +317,11 @@ useEffect(() => {
                   <div className="header-school-dropdown header-dropdown-enter absolute left-0 z-[1000] mt-3 w-[21rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
                     <div className="header-school-dropdown__header border-b border-slate-100 bg-slate-50/80 px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <InstitutionMark kind="group" />
+                        <InstitutionMark
+                          kind="group"
+                          logoUrl={tenant?.logo_url}
+                          label={tenant?.nombre}
+                        />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black text-slate-950">
                             {tenant?.nombre || 'Grupo educativo'}
@@ -332,42 +365,145 @@ useEffect(() => {
                       {puedeVerConsolidado && colegios.length > 1 && <div className="my-2 border-t border-slate-100" />}
 
                       {colegios.map((colegio: any) => {
-                        const selected = activeTipo === 'colegio' && activeScope?.id_colegio === colegio.id_colegio;
-                        const niveles = (colegio.niveles || [])
-                          .map((nivel: any) => nivel.nombre_nivel)
-                          .filter(Boolean)
-                          .join(' · ');
+                        const selected =
+                          activeTipo === 'colegio' &&
+                          activeScope?.id_colegio ===
+                            colegio.id_colegio;
+
+                        const niveles =
+                          (colegio.niveles || [])
+                            .map(
+                              (nivel: any) =>
+                                nivel.nombre_nivel,
+                            )
+                            .filter(Boolean)
+                            .join(' · ');
+
+                        const uploading =
+                          uploadingSchoolId ===
+                          colegio.id_colegio;
 
                         return (
-                          <button
+                          <div
                             key={colegio.id_colegio}
-                            type="button"
-                            onClick={() => {
-                              setColegioActivo(colegio.id_colegio);
-                              setSchoolDropdownOpen(false);
-                            }}
-                            className={`header-school-option ${
+                            className={`header-school-row ${
                               selected
-                                ? 'header-school-option--active'
+                                ? 'header-school-row--active'
                                 : ''
                             }`}
                           >
-                            <span className="flex min-w-0 items-center gap-3">
-                              <InstitutionMark kind="school" colegio={colegio} />
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-bold text-slate-950">
-                                  {colegio.nombre}
-                                </span>
-                                <span className="block truncate text-xs font-medium text-slate-600">
-                                  {niveles || 'Sin niveles configurados'}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setColegioActivo(
+                                  colegio.id_colegio,
+                                );
+
+                                setSchoolDropdownOpen(
+                                  false,
+                                );
+                              }}
+                              className={`header-school-option ${
+                                selected
+                                  ? 'header-school-option--active'
+                                  : ''
+                              }`}
+                            >
+                              <span className="flex min-w-0 items-center gap-3">
+                                <InstitutionMark
+                                  kind="school"
+                                  colegio={colegio}
+                                />
+
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-bold text-slate-950">
+                                    {colegio.nombre}
+                                  </span>
+
+                                  <span className="block truncate text-xs font-medium text-slate-600">
+                                    {niveles ||
+                                      'Sin niveles configurados'}
+                                  </span>
                                 </span>
                               </span>
-                            </span>
-                            {selected && <Check size={18} className="shrink-0 text-blue-600" />}
-                          </button>
+
+                              {selected && (
+                                <Check
+                                  size={18}
+                                  className="header-school-row__check"
+                                />
+                              )}
+                            </button>
+
+                            {canManageBranding && (
+                              <div className="header-school-row__actions">
+                                <label
+                                  className="header-school-logo-action"
+                                  title={
+                                    colegio.logo_url
+                                      ? 'Cambiar logo'
+                                      : 'Cargar logo'
+                                  }
+                                >
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    hidden
+                                    disabled={uploading}
+                                    onChange={(event) => {
+                                      const file =
+                                        event.currentTarget
+                                          .files?.[0];
+
+                                      void handleSchoolLogoUpload(
+                                        colegio.id_colegio,
+                                        file,
+                                      );
+
+                                      event.currentTarget.value =
+                                        '';
+                                    }}
+                                  />
+
+                                  {uploading ? (
+                                    <Loader2
+                                      size={15}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <ImagePlus size={15} />
+                                  )}
+                                </label>
+
+                                {colegio.logo_url &&
+                                  !uploading && (
+                                    <button
+                                      type="button"
+                                      className="header-school-logo-action"
+                                      title="Usar icono predeterminado"
+                                      onClick={() =>
+                                        void handleRemoveSchoolLogo(
+                                          colegio.id_colegio,
+                                        )
+                                      }
+                                    >
+                                      <RotateCcw
+                                        size={14}
+                                      />
+                                    </button>
+                                  )}
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
+
+                    {schoolLogoError && (
+                      <div className="header-school-logo-error">
+                        {schoolLogoError}
+                      </div>
+                    )}
 
                     <div className="header-school-dropdown__footer">
                       Al cambiar de institución,

@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useSchool } from '../contexts/SchoolContext';
+import InstitutionMark from '../components/InstitutionMark';
 import { canAccessTutoria } from '../config/accessRules';
 import {
   ChevronDown,
@@ -196,6 +198,30 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isOpen, close, isCollapsed, toggleCollapse } = useSidebar();
+
+  const {
+    tenant,
+    activeScope,
+    activeColegio,
+  } = useSchool();
+
+  const showingSchool =
+    activeScope.tipo === 'colegio';
+
+  const brandTitle =
+    showingSchool
+      ? activeColegio?.nombre ||
+        tenant?.nombre ||
+        'Gestión Escolar'
+      : tenant?.nombre ||
+        'Gestión Escolar';
+
+  const brandSubtitle =
+    showingSchool
+      ? tenant?.nombre ||
+        'Institución educativa'
+      : 'Gestión Escolar';
+
   const [expanded, setExpanded] =
     useState<string | null>(null);
 
@@ -410,7 +436,7 @@ export default function AppSidebar() {
             }}
             title={isCollapsed ? item.title : undefined}
             className={cx(
-              'group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
+              'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
               isCollapsed ? 'justify-center px-0' : 'justify-between px-3',
               isActive
                 ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
@@ -420,7 +446,7 @@ export default function AppSidebar() {
             <span className={cx('flex min-w-0 items-center', isCollapsed ? 'justify-center' : 'gap-3')}>
               <span
                 className={cx(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+                  'sidebar-nav-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
                   isActive ? 'bg-transparent text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
                 )}
               >
@@ -464,7 +490,7 @@ export default function AppSidebar() {
                     >
                       <p
                         className={cx(
-                          'px-3 pt-2 text-[10px] font-black uppercase tracking-[0.14em]',
+                          'sidebar-group-label px-3 pt-2 text-[10px] font-black uppercase',
                           groupActive
                             ? 'text-blue-700'
                             : 'text-slate-400',
@@ -493,7 +519,7 @@ export default function AppSidebar() {
                                   )
                                 }
                                 className={cx(
-                                  'flex min-h-9 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
+                                  'sidebar-subitem flex min-h-9 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
                                   activeChild
                                     ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
                                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
@@ -526,7 +552,7 @@ export default function AppSidebar() {
                       handleNavigate(child.path)
                     }
                     className={cx(
-                      'relative flex min-h-8 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
+                      'sidebar-subitem relative flex min-h-8 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
                       activeChild
                         ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
@@ -555,7 +581,7 @@ export default function AppSidebar() {
         onClick={() => handleNavigate(item.path)}
         title={isCollapsed ? item.title : undefined}
         className={cx(
-          'group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
+          'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
           isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
           isActive
             ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
@@ -564,7 +590,7 @@ export default function AppSidebar() {
       >
         <span
           className={cx(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+            'sidebar-nav-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
             isActive ? 'bg-transparent text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
           )}
         >
@@ -595,32 +621,43 @@ export default function AppSidebar() {
         )}
       >
         <div className="flex h-[calc(100vh-24px)] flex-col rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl overflow-hidden">
-          {/* Cabecera institucional alineada a la izquierda */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4">
+          <div className="sidebar-brand">
             <button
               type="button"
-              onClick={() => handleNavigate('/dashboard')}
-              className={cx(
-                'group flex min-w-0 items-center rounded-2xl text-left transition-all duration-200 hover:bg-slate-50',
-                isCollapsed ? 'h-10 w-full justify-center px-1' : 'w-full justify-start px-2 py-2'
-              )}
+              onClick={() =>
+                handleNavigate('/dashboard')
+              }
+              className="sidebar-brand__identity"
             >
-              {!isCollapsed ? (
-                <span className="min-w-0">
-                  <span className="block truncate text-base font-black tracking-[-0.02em] text-slate-950">
-                    Colegios Santa María
-                  </span>
-                  <span className="block truncate text-[11px] font-semibold text-slate-400">
-                    Gestión Escolar
-                  </span>
-                </span>
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-slate-200/70">
-                  <img
-                    src="https://i.ibb.co/DfvXnNKY/logo-sm-victoria.jpg"
-                    alt="Logo SMV"
-                    className="h-full w-full object-contain"
-                  />
+              <InstitutionMark
+                kind={
+                  showingSchool
+                    ? 'school'
+                    : 'group'
+                }
+                colegio={
+                  showingSchool
+                    ? activeColegio
+                    : undefined
+                }
+                logoUrl={
+                  showingSchool
+                    ? undefined
+                    : tenant?.logo_url
+                }
+                label={brandTitle}
+                compact
+              />
+
+              {!isCollapsed && (
+                <span className="sidebar-brand__copy">
+                  <strong>
+                    {brandTitle}
+                  </strong>
+
+                  <small>
+                    {brandSubtitle}
+                  </small>
                 </span>
               )}
             </button>
@@ -629,7 +666,7 @@ export default function AppSidebar() {
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 active:scale-95"
+                className="sidebar-brand__collapse"
                 title="Contraer menú"
               >
                 <PanelLeft size={18} />
@@ -638,6 +675,7 @@ export default function AppSidebar() {
           </div>
 
           {isCollapsed && (
+
             <div className="flex justify-center border-b border-slate-100 py-2">
               <button
                 type="button"
@@ -657,7 +695,7 @@ export default function AppSidebar() {
             {categorias.map((categoria) => (
               <section key={categoria.titulo} className="space-y-1.5">
                 {!isCollapsed ? (
-                  <p className="px-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <p className="sidebar-section-label px-3 text-[11px] font-black uppercase text-slate-400">
                     {categoria.titulo}
                   </p>
                 ) : (
@@ -671,8 +709,8 @@ export default function AppSidebar() {
 
           <div className="mt-auto shrink-0 border-t border-slate-100 p-3">
             {!isCollapsed ? (
-              <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-200/70">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Rol activo</p>
+              <div className="sidebar-role-card rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-200/70">
+                <p className="sidebar-role-label text-[11px] font-black uppercase text-slate-400">Rol activo</p>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 ring-1 ring-slate-200">
                     <Sparkles size={15} />
