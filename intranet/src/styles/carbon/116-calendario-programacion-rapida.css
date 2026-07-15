@@ -1,0 +1,74 @@
+/*
+ * Calendario escolar:
+ * programación rápida y ayuda contextual.
+ */
+
+.carbon-horario-page
+.erp-horario-disabled-help {
+  margin: -0.15rem 0 0;
+  border-left: 3px solid #8d8d8d;
+  background: #f4f4f4;
+  padding: 0.65rem 0.75rem;
+  color: #525252;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.carbon-horario-page
+.erp-horario-day-header {
+  position: relative;
+}
+
+.carbon-horario-page
+.erp-horario-day-add {
+  margin-top: 0.45rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #0f62fe;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.carbon-horario-page
+.erp-horario-day-add:hover {
+  color: #0043ce;
+  text-decoration: underline;
+}
+
+.carbon-horario-page
+.erp-horario-day-add:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 3px;
+}
+
+.carbon-horario-page
+.erp-horario-empty-day--action small {
+  max-width: 9rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.carbon-horario-page
+.erp-horario-primary-button:disabled {
+  background: #c6c6c6;
+  color: #525252;
+  opacity: 1;
+}
+
+.carbon-horario-page
+.erp-horario-teacher-legend {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .carbon-horario-page
+  .erp-horario-day-add {
+    min-height: 2.25rem;
+    margin-top: 0.35rem;
+    padding: 0 0.35rem;
+  }
+}

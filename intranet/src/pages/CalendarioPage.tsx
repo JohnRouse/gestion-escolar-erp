@@ -166,6 +166,41 @@ function getTimeOptions(
   ).sort();
 }
 
+function addMinutesToTime(
+  value: string,
+  minutesToAdd: number,
+) {
+  const [
+    hoursValue,
+    minutesValue,
+  ] = value
+    .split(':')
+    .map(Number);
+
+  const baseMinutes =
+    hoursValue * 60 + minutesValue;
+
+  const finalMinutes =
+    baseMinutes + minutesToAdd;
+
+  const normalizedHours =
+    Math.floor(finalMinutes / 60) % 24;
+
+  const normalizedMinutes =
+    finalMinutes % 60;
+
+  return [
+    String(normalizedHours).padStart(
+      2,
+      '0',
+    ),
+    String(normalizedMinutes).padStart(
+      2,
+      '0',
+    ),
+  ].join(':');
+}
+
 const emptyForm: HorarioForm = {
   id_asignacion: '',
   dia_semana: '1',
@@ -358,6 +393,16 @@ export default function CalendarioPage() {
       ? '1 clase programada'
       : `${horarios.length} clases programadas`;
 
+  const programacionPendiente =
+    !seccionId
+      ? 'Selecciona una sección del horario.'
+      : !form.id_asignacion
+        ? 'Selecciona un curso y docente para habilitar la programación.'
+        : form.hora_fin
+            <= form.hora_inicio
+          ? 'La hora final debe ser posterior a la hora de inicio.'
+          : '';
+
   const fetchAnios = async () => {
     if (!token) return;
 
@@ -535,11 +580,39 @@ export default function CalendarioPage() {
       return;
     }
 
+    const horariosDelDia = horarios
+      .filter(
+        (item) =>
+          item.dia_semana === dia,
+      )
+      .sort(
+        (a, b) =>
+          a.hora_inicio.localeCompare(
+            b.hora_inicio,
+          ),
+      );
+
+    const ultimaClase =
+      horariosDelDia[
+        horariosDelDia.length - 1
+      ];
+
+    const inicioSugerido =
+      ultimaClase?.hora_fin || '08:00';
+
+    const finSugerido =
+      addMinutesToTime(
+        inicioSugerido,
+        45,
+      );
+
     setEditing(null);
 
     setForm((current) => ({
       ...current,
       dia_semana: String(dia),
+      hora_inicio: inicioSugerido,
+      hora_fin: finSugerido,
     }));
 
     window.requestAnimationFrame(() => {
@@ -908,13 +981,24 @@ export default function CalendarioPage() {
                 <button
                   type="button"
                   onClick={guardarHorario}
-                  disabled={saving || !form.id_asignacion}
+                  disabled={saving || Boolean(programacionPendiente)}
                   className="erp-horario-primary-button"
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {editing ? 'Guardar cambios' : 'Programar clase'}
+                  {editing
+                    ? 'Guardar cambios'
+                    : 'Programar clase'}
                 </button>
               </div>
+
+              {programacionPendiente && (
+                <p
+                  className="erp-horario-disabled-help"
+                  role="status"
+                >
+                  {programacionPendiente}
+                </p>
+              )}
 
               {asignacionesParaFormulario.length === 0 && (
                 <div className="erp-horario-empty-note">
@@ -951,7 +1035,7 @@ export default function CalendarioPage() {
             )}
 
             {vistaTodosDocentes &&
-              docentesEnVista.length > 1 && (
+              docentesEnVista.length > 0 && (
                 <div className="erp-horario-teacher-legend">
                   <span className="erp-horario-teacher-legend__title">
                     Docentes en esta vista
@@ -1001,6 +1085,22 @@ export default function CalendarioPage() {
                             ? '1 clase'
                             : `${items.length} clases`}
                       </span>
+
+                      {canManageHorario &&
+                        seccionId && (
+                          <button
+                            type="button"
+                            className="erp-horario-day-add"
+                            onClick={() =>
+                              prepararClaseEnDia(
+                                dia.value,
+                              )
+                            }
+                            title={`Programar una clase el ${dia.label}`}
+                          >
+                            + Programar
+                          </button>
+                        )}
                     </header>
 
                     <div className="erp-horario-day-body">
@@ -1025,7 +1125,7 @@ export default function CalendarioPage() {
 
                             <small>
                               {seccionId
-                                ? 'Programar aquí'
+                                ? 'Usará el primer horario disponible'
                                 : 'Selecciona una sección'}
                             </small>
                           </button>
