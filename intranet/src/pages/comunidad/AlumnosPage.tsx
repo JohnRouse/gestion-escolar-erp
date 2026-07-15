@@ -190,7 +190,7 @@ export default function AlumnosPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarDraft, setAvatarDraft] = useState<{ file: File; previewUrl: string } | null>(null);
-  const [avatarZoom, setAvatarZoom] = useState(1.08);
+  const [avatarZoom, setAvatarZoom] = useState(1);
   const [avatarOffsetY, setAvatarOffsetY] = useState(0);
   const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -531,7 +531,7 @@ export default function AlumnosPage() {
       URL.revokeObjectURL(avatarDraft.previewUrl);
     }
 
-    setAvatarZoom(1.08);
+    setAvatarZoom(1);
     setAvatarOffsetY(0);
     setAvatarDraft({
       file,
@@ -926,15 +926,20 @@ export default function AlumnosPage() {
       )}
 
       {/* ── Tabla de alumnos ── */}
-      <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
-        <CommunityTableHeader
-          columns={[
-            'Alumno',
-            'Grado y sección',
-            'Estado',
-          ]}
-          gridClassName="xl:grid-cols-[minmax(0,1.55fr)_minmax(250px,0.9fr)_minmax(130px,0.35fr)_auto]"
-        />
+      <div className="carbon-list-panel community-student-list-panel overflow-hidden border border-slate-200 bg-white">
+        
+<CommunityTableHeader
+  columns={[
+    'Código',
+    'Alumno',
+    'Distrito',
+    'Grado y sección',
+    'Institución',
+    'Estado',
+  ]}
+  gridClassName="community-student-table-grid community-student-table-header"
+  actionSpacerClassName="w-full"
+/>
 
         {loading && data.length === 0 ? (
           <CommunityTableLoading />

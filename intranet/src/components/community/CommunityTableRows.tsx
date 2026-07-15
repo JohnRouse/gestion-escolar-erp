@@ -2,6 +2,7 @@ import {
   Briefcase,
   Eye,
   Mail,
+  MapPin,
   Phone,
 } from 'lucide-react';
 import PersonAvatar from '../PersonAvatar';
@@ -27,18 +28,10 @@ type StudentRowProps = {
     matriculas?: any[];
     apoderados?: any[];
   };
-  onOpen: (
-    id: number,
-  ) => void;
-  getCodigo: (
-    alumno: any,
-  ) => string;
-  getEstadoBadge: (
-    estado?: string,
-  ) => string;
-  assetUrl: (
-    url?: string | null,
-  ) => string;
+  onOpen: (id: number) => void;
+  getCodigo: (alumno: any) => string;
+  getEstadoBadge: (estado?: string) => string;
+  assetUrl: (url?: string | null) => string;
 };
 
 type GuardianRowProps = {
@@ -48,15 +41,9 @@ type GuardianRowProps = {
     persona: PersonaResumen;
     estudiantes?: any[];
   };
-  onOpen: (
-    id: number,
-  ) => void;
-  estadoClass: (
-    apoderado: any,
-  ) => string;
-  estadoLabel: (
-    apoderado: any,
-  ) => string;
+  onOpen: (id: number) => void;
+  estadoClass: (apoderado: any) => string;
+  estadoLabel: (apoderado: any) => string;
 };
 
 export function StudentTableRow({
@@ -74,9 +61,12 @@ export function StudentTableRow({
       alumno.persona,
     );
 
-  const estadoMatricula =
-    ultimaMatricula?.estado_matricula
-    || 'Sin matrícula';
+  const codigo =
+    getCodigo(alumno);
+
+  const distrito =
+    alumno.persona.distrito
+    || 'Sin distrito';
 
   const grado =
     ultimaMatricula
@@ -103,25 +93,32 @@ export function StudentTableRow({
     ultimaMatricula
       ?.colegio
       ?.nombre
-    || null;
+    || 'Sin institución';
 
-  const anio =
+  const estadoMatricula =
     ultimaMatricula
-      ?.anio
-      ?.nombre_anio
-    || null;
+      ?.estado_matricula
+    || 'Sin matrícula';
 
   return (
-    <div className="carbon-list-row community-student-row group grid items-center gap-5 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.55fr)_minmax(250px,0.9fr)_minmax(130px,0.35fr)_auto]">
+    <div className="carbon-list-row community-student-row community-student-table-grid group px-5 py-4">
+      <div className="community-code-cell">
+        <span className="erp-compact-code">
+          {codigo}
+        </span>
+      </div>
+
       <div className="flex min-w-0 items-center gap-3">
         {alumno.avatar_url ? (
-          <img
-            src={assetUrl(
-              alumno.avatar_url,
-            )}
-            alt={nombre}
-            className="h-12 w-12 shrink-0 rounded-xl bg-white object-cover ring-1 ring-slate-200"
-          />
+          <span className="community-student-photo-frame">
+            <img
+              src={assetUrl(
+                alumno.avatar_url,
+              )}
+              alt={nombre}
+              className="community-student-list-photo"
+            />
+          </span>
         ) : (
           <PersonAvatar
             persona={alumno.persona}
@@ -135,32 +132,21 @@ export function StudentTableRow({
             {nombre}
           </p>
 
-          <p className="community-id-line mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-600">
-            <span className="erp-compact-code">
-              {getCodigo(alumno)}
-            </span>
-
-            <span aria-hidden="true">
-              ·
-            </span>
-
-            <span>
-              DNI {alumno.persona.dni || '—'}
-            </span>
-
-            {alumno.persona.distrito && (
-              <>
-                <span aria-hidden="true">
-                  ·
-                </span>
-
-                <span>
-                  {alumno.persona.distrito}
-                </span>
-              </>
-            )}
+          <p className="community-id-line mt-1 text-xs text-slate-600">
+            DNI {alumno.persona.dni || '—'}
           </p>
         </div>
+      </div>
+
+      <div className="community-location-cell">
+        <MapPin
+          size={14}
+          className="shrink-0 text-slate-400"
+        />
+
+        <span>
+          {distrito}
+        </span>
       </div>
 
       <div className="min-w-0">
@@ -172,16 +158,8 @@ export function StudentTableRow({
             </p>
 
             <p className="mt-1 text-xs font-medium text-slate-600">
-              {[nivel, colegio]
-                .filter(Boolean)
-                .join(' · ')}
+              {nivel || 'Sin nivel'}
             </p>
-
-            {anio && (
-              <p className="mt-0.5 text-xs text-slate-500">
-                {anio}
-              </p>
-            )}
           </>
         ) : (
           <>
@@ -190,10 +168,16 @@ export function StudentTableRow({
             </p>
 
             <p className="mt-1 text-xs text-slate-500">
-              No tiene una matrícula visible.
+              Sin sección visible
             </p>
           </>
         )}
+      </div>
+
+      <div className="min-w-0">
+        <p className="community-school-name text-sm font-semibold text-slate-900">
+          {colegio}
+        </p>
       </div>
 
       <div>

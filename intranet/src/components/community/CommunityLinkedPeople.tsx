@@ -241,7 +241,7 @@ export function LinkedGuardianCards({
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="community-linked-people">
       {items.map((relation) => {
         const persona = relation.apoderado.persona;
         const nombre = communityPersonName(persona);
@@ -256,7 +256,7 @@ export function LinkedGuardianCards({
                 nombre,
               })
             }
-            className="group flex min-h-[112px] w-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
+            className="community-linked-person-card group flex min-h-[112px] items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
           >
             <PersonAvatar
               persona={persona}
@@ -301,7 +301,9 @@ export function LinkedStudentCards({
   onSelect,
 }: {
   items: LinkedStudent[];
-  onSelect: (target: LinkedPersonTarget) => void;
+  onSelect: (
+    target: LinkedPersonTarget,
+  ) => void;
 }) {
   if (!items.length) {
     return (
@@ -312,24 +314,37 @@ export function LinkedStudentCards({
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="community-linked-students-grid">
       {items.map((relation) => {
-        const estudiante = relation.estudiante;
-        const nombre = communityPersonName(
-          estudiante.persona,
-        );
-        const matricula = estudiante.matriculas?.[0];
+        const estudiante =
+          relation.estudiante;
+
+        const nombre =
+          communityPersonName(
+            estudiante.persona,
+          );
+
+        const matricula =
+          estudiante.matriculas?.[0];
+
         const estadoMatricula =
           matricula?.estado_matricula;
-        const seccion = matricula?.seccion;
 
-        const salon = seccion?.grado
-          ? `${seccion.grado.nombre_grado} "${
-              seccion.letra
-            }" · ${
-              seccion.grado.nivel?.nombre_nivel || ''
-            }`.trim()
-          : 'Sin sección activa';
+        const seccion =
+          matricula?.seccion;
+
+        const salon =
+          seccion?.grado
+            ? `${seccion.grado.nombre_grado} "${seccion.letra}"${
+                seccion.grado.nivel?.nombre_nivel
+                  ? ` · ${seccion.grado.nivel.nombre_nivel}`
+                  : ''
+              }`
+            : 'Sin sección activa';
+
+        const colegio =
+          matricula?.colegio?.nombre
+          || null;
 
         return (
           <button
@@ -341,59 +356,71 @@ export function LinkedStudentCards({
                 nombre,
               })
             }
-            className="group flex min-h-[128px] w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
+            className="community-linked-student-card"
           >
-            {estudiante.avatar_url ? (
-              <img
-                src={communityAssetUrl(
-                  estudiante.avatar_url,
-                )}
-                alt={nombre}
-                className="h-16 w-16 shrink-0 rounded-xl bg-white object-cover ring-1 ring-slate-200"
-              />
-            ) : (
-              <PersonAvatar
-                persona={estudiante.persona}
-                size="md"
-                rounded="xl"
-              />
-            )}
+            <span className="community-linked-student-main">
+              {estudiante.avatar_url ? (
+                <span className="community-linked-student-photo-frame">
+                  <img
+                    src={communityAssetUrl(
+                      estudiante.avatar_url,
+                    )}
+                    alt={nombre}
+                    className="community-linked-student-photo"
+                  />
+                </span>
+              ) : (
+                <PersonAvatar
+                  persona={estudiante.persona}
+                  size="md"
+                  rounded="xl"
+                />
+              )}
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm font-semibold leading-5 text-slate-950">
-                  {nombre}
-                </p>
+              <span className="min-w-0 flex-1">
+                <span className="community-linked-student-heading">
+                  <span className="community-linked-student-name">
+                    {nombre}
+                  </span>
 
-                {estadoMatricula && (
-                  <span
-                    className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ${getEstadoBadge(
-                      estadoMatricula,
-                    )}`}
-                  >
-                    {estadoMatricula}
+                  {estadoMatricula && (
+                    <span
+                      className={`community-linked-student-status ${getEstadoBadge(
+                        estadoMatricula,
+                      )}`}
+                    >
+                      {estadoMatricula}
+                    </span>
+                  )}
+                </span>
+
+                <span className="community-linked-relation">
+                  {relation.parentesco}
+                </span>
+
+                <span className="community-linked-student-meta">
+                  {communityStudentCode(
+                    estudiante,
+                  )}
+                  {' · '}
+                  DNI {estudiante.persona.dni || '—'}
+                </span>
+
+                <span className="community-linked-student-room">
+                  {salon}
+                </span>
+
+                {colegio && (
+                  <span className="community-linked-student-school">
+                    {colegio}
                   </span>
                 )}
-              </div>
+              </span>
+            </span>
 
-              <p className="mt-1 text-xs font-medium text-slate-700">
-                {relation.parentesco}
-              </p>
-
-              <p className="community-id-line mt-1 text-xs leading-5 text-slate-600">
-                {communityStudentCode(estudiante)}
-                {' · '}
-                DNI {estudiante.persona.dni || '—'}
-              </p>
-
-              <p className="mt-0.5 text-xs leading-5 text-slate-600">
-                {salon}
-              </p>
-
-              <p className="mt-2 text-xs font-semibold text-blue-700">
-                Ver ficha del alumno
-              </p>
-            </div>
+            <span className="community-linked-student-link">
+              Ver ficha del alumno
+            </span>
           </button>
         );
       })}

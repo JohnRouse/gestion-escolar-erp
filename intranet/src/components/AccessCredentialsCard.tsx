@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 import axios from 'axios';
 import {
   ChevronDown,
@@ -8,9 +11,13 @@ import {
   ShieldCheck,
   ShieldOff,
 } from 'lucide-react';
-import { useToast } from '../contexts/ToastContext';
+import {
+  useToast,
+} from '../contexts/ToastContext';
 
-type TipoCredencial = 'docente' | 'apoderado';
+type TipoCredencial =
+  | 'docente'
+  | 'apoderado';
 
 type Credencial = {
   existe: boolean;
@@ -34,8 +41,12 @@ type AccessCredentialsCardProps = {
   queryString?: string;
   className?: string;
   defaultOpen?: boolean;
-  onLoaded?: (credencial: Credencial) => void;
-  onSaved?: (credencial: Credencial) => void;
+  onLoaded?: (
+    credencial: Credencial,
+  ) => void;
+  onSaved?: (
+    credencial: Credencial,
+  ) => void;
 };
 
 export default function AccessCredentialsCard({
@@ -48,53 +59,130 @@ export default function AccessCredentialsCard({
   onLoaded,
   onSaved,
 }: AccessCredentialsCardProps) {
-  const { showToast } = useToast();
+  const {
+    showToast,
+  } = useToast();
 
-  const [expanded, setExpanded] = useState(defaultOpen);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [
+    expanded,
+    setExpanded,
+  ] = useState(defaultOpen);
 
-  const [credencial, setCredencial] = useState<Credencial | null>(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [estado, setEstado] = useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
+  const [
+    credencial,
+    setCredencial,
+  ] = useState<Credencial | null>(
+    null,
+  );
+
+  const [
+    username,
+    setUsername,
+  ] = useState('');
+
+  const [
+    password,
+    setPassword,
+  ] = useState('');
+
+  const [
+    estado,
+    setEstado,
+  ] = useState(true);
 
   const params = (() => {
-    const search = new URLSearchParams(queryString.replace('?', ''));
-    search.set('tipo', tipo);
+    const search =
+      new URLSearchParams(
+        queryString.replace(
+          '?',
+          '',
+        ),
+      );
 
-    const value = search.toString();
-    return value ? `?${value}` : '';
+    search.set(
+      'tipo',
+      tipo,
+    );
+
+    const value =
+      search.toString();
+
+    return value
+      ? `?${value}`
+      : '';
   })();
 
-  const cargarCredencial = async () => {
-    if (!token || !personaId) return;
+  const cargarCredencial =
+    async () => {
+      if (
+        !token
+        || !personaId
+      ) {
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
 
-    try {
-      const res = await axios.get(`/api/academicos/personas/${personaId}/credencial${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      try {
+        const response =
+          await axios.get(
+            `/api/academicos/personas/${personaId}/credencial${params}`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            },
+          );
 
-      const data = res.data as Credencial;
+        const data =
+          response.data as Credencial;
 
-      setCredencial(data);
-      setUsername(data.username || '');
-      setEstado(Boolean(data.estado));
-      setPassword('');
-      onLoaded?.(data);
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo cargar la credencial.';
-      showToast({ type: 'error', title: 'Error de credencial', message });
-    } finally {
-      setLoading(false);
-    }
-  };
+        setCredencial(data);
+        setUsername(
+          data.username || '',
+        );
+        setEstado(
+          Boolean(data.estado),
+        );
+        setPassword('');
+        onLoaded?.(data);
+      } catch (error: any) {
+        const message =
+          error.response
+            ?.data
+            ?.message
+          || 'No se pudo cargar la credencial.';
+
+        showToast({
+          type: 'error',
+          title:
+            'Error de credencial',
+          message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
-    cargarCredencial();
-  }, [personaId, tipo, token, queryString]);
+    void cargarCredencial();
+  }, [
+    personaId,
+    tipo,
+    token,
+    queryString,
+  ]);
 
   const guardar = async () => {
     if (!token) return;
@@ -102,175 +190,297 @@ export default function AccessCredentialsCard({
     if (!username.trim()) {
       showToast({
         type: 'warning',
-        title: 'Usuario requerido',
-        message: 'Ingresa el usuario de acceso.',
+        title:
+          'Usuario requerido',
+        message:
+          'Ingresa el usuario de acceso.',
       });
+
       return;
     }
 
-    if (!credencial?.existe && !password.trim()) {
+    if (
+      !credencial?.existe
+      && !password.trim()
+    ) {
       showToast({
         type: 'warning',
-        title: 'Contraseña requerida',
-        message: 'Para crear una credencial nueva debes ingresar una contraseña temporal.',
+        title:
+          'Contraseña requerida',
+        message:
+          'Para crear una credencial nueva debes ingresar una contraseña temporal.',
       });
+
       return;
     }
 
     setSaving(true);
 
     try {
-      const res = await axios.put(
-        `/api/academicos/personas/${personaId}/credencial${params}`,
-        {
-          tipo,
-          username: username.trim(),
-          password: password.trim() || undefined,
-          estado,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response =
+        await axios.put(
+          `/api/academicos/personas/${personaId}/credencial${params}`,
+          {
+            tipo,
+            username:
+              username.trim(),
+            password:
+              password.trim()
+              || undefined,
+            estado,
+          },
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          },
+        );
 
-      const next = res.data?.credencial as Credencial;
+      const next =
+        response.data
+          ?.credencial as Credencial;
 
       setCredencial(next);
-      setUsername(next.username || username.trim());
-      setEstado(Boolean(next.estado));
+
+      setUsername(
+        next.username
+        || username.trim(),
+      );
+
+      setEstado(
+        Boolean(next.estado),
+      );
+
       setPassword('');
       onSaved?.(next);
 
       showToast({
         type: 'success',
-        title: credencial?.existe ? 'Credencial actualizada' : 'Credencial creada',
-        message: res.data?.message || 'La credencial fue guardada correctamente.',
+        title:
+          credencial?.existe
+            ? 'Credencial actualizada'
+            : 'Credencial creada',
+        message:
+          response.data?.message
+          || 'La credencial fue guardada correctamente.',
       });
     } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo guardar la credencial.';
-      showToast({ type: 'error', title: 'No se pudo guardar', message });
+      const message =
+        error.response
+          ?.data
+          ?.message
+        || 'No se pudo guardar la credencial.';
+
+      showToast({
+        type: 'error',
+        title:
+          'No se pudo guardar',
+        message,
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const titulo = tipo === 'docente' ? 'Credenciales del docente' : 'Credenciales del apoderado';
+  const titulo =
+    tipo === 'docente'
+      ? 'Credenciales del docente'
+      : 'Credenciales del apoderado';
 
-  const estadoBadge = credencial?.existe
-    ? credencial.estado
-      ? {
-          className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-          icon: <ShieldCheck size={12} />,
-          label: 'Activo',
-        }
+  const estadoBadge =
+    credencial?.existe
+      ? credencial.estado
+        ? {
+            className:
+              'community-credentials-status--active',
+            icon:
+              <ShieldCheck size={12} />,
+            label:
+              'Activo',
+          }
+        : {
+            className:
+              'community-credentials-status--inactive',
+            icon:
+              <ShieldOff size={12} />,
+            label:
+              'Inactivo',
+          }
       : {
-          className: 'bg-slate-100 text-slate-600 ring-slate-200',
-          icon: <ShieldOff size={12} />,
-          label: 'Inactivo',
-        }
-    : {
-        className: 'bg-amber-50 text-amber-700 ring-amber-200',
-        icon: null,
-        label: 'Sin credencial',
-      };
+          className:
+            'community-credentials-status--missing',
+          icon: null,
+          label:
+            'Sin credencial',
+        };
+
+  const buttonLabel =
+    credencial?.existe
+      ? 'Guardar cambios'
+      : 'Crear credencial';
 
   return (
-    <section className={`rounded-[18px] border border-slate-200 bg-white ${className}`}>
+    <section
+      className={`community-credentials-card ${className}`}
+    >
       <button
         type="button"
-        onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+        onClick={() =>
+          setExpanded(
+            (value) => !value,
+          )
+        }
+        className="community-credentials-header"
       >
-        <span className="flex min-w-0 items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+        <span className="community-credentials-title-group">
+          <span className="community-credentials-icon">
             <KeyRound size={19} />
           </span>
 
           <span className="min-w-0">
-            <span className="block text-sm font-black text-slate-950">{titulo}</span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-slate-600">
-              Administra usuario, contraseña temporal y estado de acceso.
+            <span className="community-credentials-title">
+              {titulo}
+            </span>
+
+            <span className="community-credentials-description">
+              Administra el usuario, la contraseña temporal y el estado de acceso.
             </span>
           </span>
         </span>
 
-        <span className="flex shrink-0 items-center gap-2">
+        <span className="community-credentials-header-actions">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${estadoBadge.className}`}
+            className={`community-credentials-status ${estadoBadge.className}`}
           >
             {estadoBadge.icon}
             {estadoBadge.label}
           </span>
 
           <ChevronDown
-            size={16}
-            className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            size={17}
+            className={`community-credentials-chevron ${
+              expanded
+                ? 'community-credentials-chevron--open'
+                : ''
+            }`}
           />
         </span>
       </button>
 
       {expanded && (
-        <div className="border-t border-slate-200 p-4">
+        <div className="community-credentials-body">
           {loading ? (
-            <div className="flex h-20 items-center justify-center rounded-sm bg-slate-50">
-              <Loader2 size={18} className="animate-spin text-blue-600" />
+            <div className="community-credentials-loading">
+              <Loader2
+                size={20}
+                className="animate-spin"
+              />
+
+              Cargando credenciales…
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
-              <label className="space-y-1">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-                  Usuario
-                </span>
-                <input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder={tipo === 'docente' ? 'docente.dni' : 'apoderado.dni'}
-                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
+            <>
+              <div className="community-credentials-fields">
+                <label className="community-credentials-field">
+                  <span>
+                    Usuario
+                  </span>
 
-              <label className="space-y-1">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-                  Nueva contraseña
-                </span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={credencial?.existe ? 'Dejar vacío si no cambia' : 'Contraseña temporal'}
-                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
+                  <input
+                    value={username}
+                    onChange={(event) =>
+                      setUsername(
+                        event.target.value,
+                      )
+                    }
+                    placeholder={
+                      tipo === 'docente'
+                        ? 'docente.dni'
+                        : 'apoderado.dni'
+                    }
+                  />
+                </label>
 
-              <label className="space-y-1">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-                  Estado
-                </span>
-                <select
-                  value={estado ? 'activo' : 'inactivo'}
-                  onChange={(event) => setEstado(event.target.value === 'activo')}
-                  className="h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                <label className="community-credentials-field">
+                  <span>
+                    Nueva contraseña
+                  </span>
+
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) =>
+                      setPassword(
+                        event.target.value,
+                      )
+                    }
+                    placeholder={
+                      credencial?.existe
+                        ? 'Dejar vacío si no cambia'
+                        : 'Contraseña temporal'
+                    }
+                  />
+                </label>
+
+                <label className="community-credentials-field">
+                  <span>
+                    Estado de acceso
+                  </span>
+
+                  <select
+                    value={
+                      estado
+                        ? 'activo'
+                        : 'inactivo'
+                    }
+                    onChange={(event) =>
+                      setEstado(
+                        event.target.value
+                        === 'activo',
+                      )
+                    }
+                  >
+                    <option value="activo">
+                      Activo
+                    </option>
+
+                    <option value="inactivo">
+                      Desactivado
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="community-credentials-footer">
+                <p className="community-credentials-help">
+                  La contraseña actual no se muestra por seguridad. Déjala vacía cuando no necesites cambiarla.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void guardar()
+                  }
+                  disabled={saving}
+                  className="community-credentials-save"
                 >
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Desactivado</option>
-                </select>
-              </label>
+                  {saving ? (
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Save size={16} />
+                  )}
 
-              <button
-                type="button"
-                onClick={guardar}
-                disabled={saving}
-                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 md:mt-[22px]"
-              >
-                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                Guardar
-              </button>
-            </div>
+                  {saving
+                    ? 'Guardando…'
+                    : buttonLabel}
+                </button>
+              </div>
+            </>
           )}
-
-          <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
-            La contraseña actual no se muestra por seguridad. Para cambiarla, ingresa una nueva contraseña temporal y guarda.
-          </p>
         </div>
       )}
     </section>
