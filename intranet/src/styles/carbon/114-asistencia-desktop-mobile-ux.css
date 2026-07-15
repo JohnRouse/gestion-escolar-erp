@@ -1,0 +1,303 @@
+/*
+ * Asistencia de escritorio y móvil:
+ * calendario neutral, controles claros y autoguardado.
+ */
+
+
+/* ========================================================
+   ESCRITORIO
+   ======================================================== */
+
+.attendance-desktop-page
+  .attendance-calendar-panel,
+.attendance-desktop-page
+  .attendance-roster-panel {
+  border-color: #d9e2f1;
+  border-radius: 12px;
+  box-shadow:
+    0 2px 6px rgba(22, 22, 22, 0.04);
+}
+
+.attendance-desktop-page
+  .attendance-calendar-grid {
+  overflow-x: auto;
+  border-color: #d9e2f1;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-grid
+  > .grid {
+  min-width: 880px;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day {
+  min-height: 84px;
+  border-radius: 6px;
+  padding: 9px;
+  box-shadow: none;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day:hover:not(:disabled) {
+  box-shadow:
+    0 3px 10px rgba(22, 22, 22, 0.07);
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day
+  > div:first-child
+  span:first-child {
+  font-size: 13px;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day
+  > div:first-child
+  span:last-child {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 2px 5px;
+  font-size: 10px;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day__status {
+  overflow: visible;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.attendance-desktop-page
+  .attendance-calendar-day:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.attendance-desktop-page
+  .attendance-outline-toggle {
+  min-width: 142px;
+}
+
+.attendance-desktop-page
+  .attendance-outline-toggle:focus-visible,
+.attendance-desktop-page
+  .attendance-save-button:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.attendance-desktop-page
+  .attendance-save-button {
+  min-width: 154px;
+  justify-content: center;
+}
+
+.attendance-desktop-page
+  .attendance-roster-panel
+  .carbon-list-header {
+  border-bottom-color: #c6c6c6;
+  background: #f4f7fb;
+}
+
+.attendance-desktop-page
+  .attendance-roster-panel
+  .carbon-list-row {
+  min-height: 72px;
+}
+
+.attendance-desktop-page
+  .attendance-roster-panel
+  .carbon-list-row:hover {
+  background: #f7faff;
+}
+
+.attendance-desktop-page
+  .attendance-roster-panel
+  .carbon-list-row
+  button {
+  min-height: 42px;
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .attendance-desktop-page
+    .attendance-calendar-panel {
+    padding: 16px;
+  }
+
+  .attendance-desktop-page
+    .attendance-calendar-grid {
+    padding: 10px;
+  }
+}
+
+
+/* ========================================================
+   MÓVIL
+   ======================================================== */
+
+.attendance-mobile-sync {
+  border-color: #a6c8ff !important;
+  background: #edf5ff !important;
+  color: #0043ce !important;
+}
+
+.attendance-mobile-sync[data-saving="true"] {
+  border-color: #f1c21b !important;
+  background: #fcf4d6 !important;
+  color: #684e00 !important;
+}
+
+.attendance-mobile-autosave-help {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 10px;
+  border-left: 3px solid #0f62fe;
+  background: #edf5ff;
+  padding: 8px 10px;
+  color: #0043ce;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.attendance-mobile-autosave-help svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.attendance-mobile-student__arrow {
+  width: 48px !important;
+  height: 48px !important;
+  border-color: #c6c6c6 !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  color: #0043ce !important;
+  box-shadow:
+    0 3px 10px rgba(22, 22, 22, 0.1);
+  transform: translateY(-25%) !important;
+}
+
+.attendance-mobile-student__arrow--left {
+  left: 7px !important;
+}
+
+.attendance-mobile-student__arrow--right {
+  right: 7px !important;
+}
+
+.attendance-mobile-student__arrow:hover:not(:disabled),
+.attendance-mobile-student__arrow:active:not(:disabled) {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+}
+
+.attendance-mobile-student__arrow:disabled {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none;
+  opacity: 0.24 !important;
+}
+
+.attendance-mobile-student-list {
+  max-width: 100% !important;
+  gap: 7px !important;
+  padding:
+    4px
+    1px
+    7px !important;
+}
+
+.attendance-mobile-student-list button {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 6px !important;
+}
+
+.attendance-mobile-notice--success {
+  position: fixed;
+  top:
+    calc(
+      env(safe-area-inset-top)
+      + 12px
+    );
+  left: 50%;
+  z-index: 11000;
+  width:
+    min(
+      calc(100% - 24px),
+      420px
+    );
+  margin: 0 !important;
+  transform: translateX(-50%);
+  box-shadow:
+    0 12px 30px rgba(22, 22, 22, 0.2);
+  animation:
+    attendance-toast-in
+    180ms ease-out;
+}
+
+@keyframes attendance-toast-in {
+  from {
+    opacity: 0;
+    transform:
+      translate(-50%, -12px);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translate(-50%, 0);
+  }
+}
+
+.attendance-mobile-actions {
+  padding-bottom:
+    env(safe-area-inset-bottom);
+}
+
+.attendance-mobile-actions button {
+  min-height: 70px;
+}
+
+.attendance-mobile-actions button:focus-visible,
+.attendance-mobile-student-list button:focus-visible,
+.attendance-mobile-student__arrow:focus-visible {
+  outline: 3px solid #78a9ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 390px) {
+  .attendance-mobile-student {
+    padding-right: 48px !important;
+    padding-left: 48px !important;
+  }
+
+  .attendance-mobile-student__arrow {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .attendance-mobile-autosave-help {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendance-mobile-notice--success {
+    animation: none;
+  }
+
+  .attendance-mobile-student__arrow,
+  .attendance-calendar-day {
+    transition: none !important;
+  }
+}

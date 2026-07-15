@@ -1,0 +1,43 @@
+CORRER APLIACCIÓN:
+
+npm run start:dev
+
+BASE DE DATOS:
+
+docker start mysql-colegio 2>/dev/null || docker run -d \
+  --name mysql-colegio \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=gestion_escolar_erp \
+  -p 3306:3306 \
+  -v mysql-colegio-data:/var/lib/mysql \
+  mysql:8.0
+
+erp-mysql-start
+
+CORREO INTRANET:
+
+cd ~/gestion-escolar-erp/intranet
+pkill -f vite || true
+npx vite preview --host 0.0.0.0 --port 3002
+
+cd ~/gestion-escolar-erp/intranet
+npm run dev:cloud
+
+GUARDAR REPOSITORIO:
+
+git add .
+git commit -m "Refactorización de código v7"
+git push origin main
+
+DATOS DE PRUEBA:
+
+Usuarios de prueba:
+  admin / admin123
+  directora / directora123
+  secretaria / secretaria123
+  juan.rios / docente123
+  karla.torres / docente123
+  carlos.diaz / apoderado123
+  rosa.pardo / apoderado123
+
+DNI alumno para portal público: 47516237

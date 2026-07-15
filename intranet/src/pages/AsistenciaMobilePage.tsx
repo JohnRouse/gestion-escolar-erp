@@ -60,7 +60,7 @@ function buildUrl(
 
 // Estilos basados en la paleta de Carbon Design System
 function estadoMiniClass(estado: EstadoAsistencia, active: boolean, registrado?: boolean) {
-  const base = 'h-7 min-w-7 px-2 text-[11px] font-semibold transition-colors focus:outline-none';
+  const base = 'h-10 min-w-10 px-3 text-xs font-semibold transition-colors focus:outline-none';
   
   if (active) return `${base} bg-[#0f62fe] text-white border border-[#0f62fe]`;
 
@@ -195,18 +195,42 @@ export default function AsistenciaMobilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionId, fecha, token, scopeKey]);
 
+  useEffect(() => {
+    if (!message) return;
+
+    const timer = window.setTimeout(
+      () => setMessage(null),
+      1900,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   const goPrev = () => setCurrentIndex((value) => Math.max(0, value - 1));
   const goNext = () => setCurrentIndex((value) => Math.min(alumnos.length - 1, value + 1));
 
-  const guardarUno = async (idMatricula: number, estado: EstadoAsistencia) => {
-    if (!token || !headers || !seccionId) return;
+  const guardarUno = async (
+    idMatricula: number,
+    estado: EstadoAsistencia,
+  ): Promise<boolean> => {
+    if (!token || !headers || !seccionId) {
+      return false;
+    }
+
+    const alumnoActual = alumnos.find(
+      (item) =>
+        item.id_matricula === idMatricula,
+    );
 
     setSyncing(true);
     setOfflineMessage(null);
 
     try {
       await axios.post(
-        buildUrl('/api/academicos/asistencia', queryParams),
+        buildUrl(
+          '/api/academicos/asistencia',
+          queryParams,
+        ),
         {
           id_seccion: seccionId,
           fecha,
@@ -223,31 +247,56 @@ export default function AsistenciaMobilePage() {
       setAlumnos((prev) =>
         prev.map((alumno) =>
           alumno.id_matricula === idMatricula
-            ? { ...alumno, estado, registrado: true }
+            ? {
+                ...alumno,
+                estado,
+                registrado: true,
+              }
             : alumno,
         ),
       );
+
+      setMessage(
+        `${estado} guardado para ${
+          alumnoActual?.alumno || 'el alumno'
+        }.`,
+      );
+
+      return true;
     } catch {
       setOfflineMessage(
-        'No se pudo guardar esta marca. Revisa la conexión y vuelve a tocar el estado.',
+        'No se pudo guardar esta marca. '
+        + 'Revisa la conexión y vuelve a tocar '
+        + 'el estado.',
       );
 
       setAlumnos((prev) =>
         prev.map((alumno) =>
           alumno.id_matricula === idMatricula
-            ? { ...alumno, registrado: false }
+            ? {
+                ...alumno,
+                registrado: false,
+              }
             : alumno,
         ),
       );
+
+      return false;
     } finally {
       setSyncing(false);
     }
   };
 
-  const marcarEstado = (estado: EstadoAsistencia) => {
-    if (!currentAlumno) return;
+  const marcarEstado = async (
+    estado: EstadoAsistencia,
+  ) => {
+    if (!currentAlumno || syncing) return;
 
-    const idMatricula = currentAlumno.id_matricula;
+    const idMatricula =
+      currentAlumno.id_matricula;
+
+    const indexGuardado =
+      currentIndex;
 
     setMessage(null);
     setOfflineMessage(null);
@@ -259,17 +308,27 @@ export default function AsistenciaMobilePage() {
               ...alumno,
               estado,
               registrado: true,
-              requiere_justificacion: estado === 'Justificado',
+              requiere_justificacion:
+                estado === 'Justificado',
             }
           : alumno,
       ),
     );
 
-    if (currentIndex < alumnos.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
+    const guardado =
+      await guardarUno(
+        idMatricula,
+        estado,
+      );
 
-    void guardarUno(idMatricula, estado);
+    if (
+      guardado
+      && indexGuardado < alumnos.length - 1
+    ) {
+      setCurrentIndex(
+        indexGuardado + 1,
+      );
+    }
   };
 
   const currentStateLabel =
@@ -317,6 +376,8 @@ export default function AsistenciaMobilePage() {
 
             <div
               className="attendance-mobile-sync"
+              title="Cada estado se guarda automáticamente al tocarlo."
+              aria-label="Guardado automático activado"
               data-saving={
                 syncing ? 'true' : 'false'
               }
@@ -333,7 +394,7 @@ export default function AsistenciaMobilePage() {
               <span>
                 {syncing
                   ? 'Guardando'
-                  : 'Automático'}
+                  : 'Autoguardado'}
               </span>
             </div>
           </div>
@@ -410,6 +471,15 @@ export default function AsistenciaMobilePage() {
               <strong>{pendientes}</strong>
             </div>
           </div>
+          <p className="attendance-mobile-autosave-help">
+            <CheckCircle2
+              size={14}
+              aria-hidden="true"
+            />
+            Toca un estado para guardarlo.
+            El sistema avanzará cuando confirme
+            el registro.
+          </p>
         </div>
       </header>
 
@@ -421,7 +491,7 @@ export default function AsistenciaMobilePage() {
 
               <strong>
                 {alumnos.length > 0
-                  ? `${currentIndex + 1} de ${alumnos.length}`
+                  ? `${registrados} guardados de ${alumnos.length}`
                   : 'Sin alumnos'}
               </strong>
             </div>
@@ -456,7 +526,7 @@ export default function AsistenciaMobilePage() {
         )}
 
         {message && (
-          <div className="attendance-mobile-notice attendance-mobile-notice--success">
+          <div className="attendance-mobile-notice attendance-mobile-notice--success" role="status" aria-live="polite">
             <CheckCircle2
               size={19}
               aria-hidden="true"

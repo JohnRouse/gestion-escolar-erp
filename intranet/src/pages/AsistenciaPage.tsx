@@ -616,6 +616,13 @@ export default function AsistenciaPage() {
         { headers },
       );
 
+      setAlumnos((current) =>
+        current.map((alumno) => ({
+          ...alumno,
+          registrado: true,
+        })),
+      );
+
       setMessage('Asistencia guardada correctamente.');
       await cargarCalendarioAsistencia();
     } catch {
@@ -626,7 +633,7 @@ export default function AsistenciaPage() {
   };
 
   return (
-    <div className="space-y-5 pb-24 md:pb-0">
+    <div className="attendance-desktop-page space-y-5 pb-24 md:pb-0">
       <PageHeader
         eyebrow="Control diario"
         title="Registro de asistencia"
@@ -635,7 +642,7 @@ export default function AsistenciaPage() {
         meta={[
           { label: 'Colegio actual', value: activeColegio?.nombre || scopeLabel },
           { label: 'Alumnos', value: String(resumen.total) },
-          { label: 'Pendientes', value: String(justificacionesPendientes.length) },
+          { label: 'Justif. pendientes', value: String(justificacionesPendientes.length) },
         ]}
       />
 
@@ -721,7 +728,7 @@ export default function AsistenciaPage() {
         </div>
       </section>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="attendance-calendar-panel rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
@@ -742,7 +749,7 @@ export default function AsistenciaPage() {
               <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-100">
                 Parciales: {calendario?.resumen.parciales ?? 0}
               </span>
-              <span className="rounded-full bg-rose-50 px-3 py-1 text-[11px] font-black text-rose-700 ring-1 ring-rose-100">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
                 Sin registro: {calendario?.resumen.sin_registro ?? 0}
               </span>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100">
@@ -771,7 +778,7 @@ export default function AsistenciaPage() {
             <button
               type="button"
               onClick={() => setCalendarioAbierto((value) => !value)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800"
+              className="attendance-outline-toggle inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
             >
               <ChevronDown
                 size={15}
@@ -803,11 +810,11 @@ export default function AsistenciaPage() {
             </p>
           </div>
 
-          <div className="rounded-sm border border-rose-200 bg-rose-50 p-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-700">
+          <div className="rounded-sm border border-slate-300 bg-slate-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-600">
               Sin registro
             </p>
-            <p className="mt-1 text-2xl font-black text-rose-800">
+            <p className="mt-1 text-2xl font-black text-slate-800">
               {calendario?.resumen.sin_registro ?? 0}
             </p>
           </div>
@@ -822,7 +829,7 @@ export default function AsistenciaPage() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-sm border border-slate-200 bg-slate-50 p-3">
+        <div className="attendance-calendar-grid mt-4 rounded-sm border border-slate-200 bg-slate-50 p-3">
           <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
               <span key={day}>{day}</span>
@@ -837,14 +844,14 @@ export default function AsistenciaPage() {
 
               const active = dia.fecha === fecha;
 
-              const tone =
-                dia.estado === 'completo'
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                  : dia.estado === 'parcial'
-                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                    : dia.estado === 'sin_registro'
-                      ? 'border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100'
-                      : 'border-slate-200 bg-white text-slate-300';
+               const tone =
+                 dia.estado === 'completo'
+                   ? 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                   : dia.estado === 'parcial'
+                     ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                     : dia.estado === 'sin_registro'
+                       ? 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                       : 'border-slate-200 bg-white text-slate-500';
 
               return (
                 <button
@@ -856,12 +863,12 @@ export default function AsistenciaPage() {
                     }
                   }}
                   disabled={!dia.lectivo}
-                  className={`min-h-[74px] rounded-sm border p-2 text-left transition ${
+                  className={`attendance-calendar-day min-h-[74px] rounded-sm border p-2 text-left transition ${
                     active ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                   } ${tone}`}
                   title={
                     dia.lectivo
-                      ? `${dia.fecha}: ${dia.avance}% · ${dia.registrados}/${dia.total_alumnos} registrados`
+                      ? `${dia.fecha}: ${dia.avance}% de registro · ${dia.registrados} de ${dia.total_alumnos} registrados`
                       : `${dia.fecha}: no lectivo`
                   }
                 >
@@ -874,9 +881,11 @@ export default function AsistenciaPage() {
 
                   {dia.lectivo ? (
                     <div className="mt-2 space-y-1">
-                      <p className="truncate text-[10px] font-bold">
-                        {dia.registrados}/{dia.total_alumnos} marcados
-                      </p>
+                      <p className="attendance-calendar-day__status truncate text-[11px] font-bold">
+                         {dia.registrados === 0
+                           ? 'Sin registrar'
+                           : `${dia.registrados} de ${dia.total_alumnos} registrados`}
+                       </p>
                       {dia.pendientes_justificacion > 0 && (
                         <p className="truncate text-[10px] font-black">
                           Justif.: {dia.pendientes_justificacion}
@@ -895,7 +904,7 @@ export default function AsistenciaPage() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+      <section className="attendance-roster-panel overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
         <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-6 py-4 md:grid-cols-4">
           <div className="rounded-sm border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
@@ -963,7 +972,7 @@ export default function AsistenciaPage() {
             <button
               type="button"
               onClick={() => setIndicadorSalonAbierto((value) => !value)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800"
+              className="attendance-outline-toggle inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
             >
               <ChevronDown
                 size={15}
@@ -1118,7 +1127,7 @@ export default function AsistenciaPage() {
                 type="button"
                 onClick={guardar}
                 disabled={saving || alumnos.length === 0}
-                className="inline-flex h-10 items-center gap-2 rounded-sm bg-slate-950 px-4 text-xs font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="attendance-save-button inline-flex h-10 items-center gap-2 rounded-sm bg-[#0f62fe] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#0043ce] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Guardar asistencia
@@ -1128,7 +1137,7 @@ export default function AsistenciaPage() {
 
           <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-slate-950 transition-all"
+              className="h-full rounded-full bg-[#0f62fe] transition-all"
               style={{ width: `${resumen.porcentaje}%` }}
             />
           </div>
