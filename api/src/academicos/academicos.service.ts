@@ -6374,27 +6374,62 @@ const existente = await this.prisma.persona.findUnique({
     params: ScopeParams & {
       q?: string;
       estado?: string;
+      nivelId?: number;
+      gradoId?: number;
+      seccionId?: number;
       page?: number;
       limit?: number;
     },
   ) {
     const scope = await this.resolveScope(params);
 
-    const page = Math.max(Number(params.page || 1), 1);
-    const limit = Math.min(Math.max(Number(params.limit || 10), 5), 50);
-    const skip = (page - 1) * limit;
+    const page = Math.max(
+      Number(params.page || 1),
+      1,
+    );
 
-    const and: Prisma.EstudianteWhereInput[] = [];
+    const limit = Math.min(
+      Math.max(
+        Number(params.limit || 10),
+        5,
+      ),
+      50,
+    );
+
+    const skip = (
+      page - 1
+    ) * limit;
+
+    const and:
+      Prisma.EstudianteWhereInput[] = [];
 
     if (scope.colegioIds.length) {
       and.push({
         OR: [
-          { matriculas: { some: { id_colegio: { in: scope.colegioIds } } } },
-          { codigos_colegio: { some: { id_colegio: { in: scope.colegioIds } } } },
+          {
+            matriculas: {
+              some: {
+                id_colegio: {
+                  in: scope.colegioIds,
+                },
+              },
+            },
+          },
+          {
+            codigos_colegio: {
+              some: {
+                id_colegio: {
+                  in: scope.colegioIds,
+                },
+              },
+            },
+          },
         ],
       });
     } else {
-      and.push({ id_persona: -1 });
+      and.push({
+        id_persona: -1,
+      });
     }
 
     const q = params.q?.trim();
@@ -6402,19 +6437,59 @@ const existente = await this.prisma.persona.findUnique({
     if (q) {
       and.push({
         OR: [
-          { codigo_estudiante: { contains: q } },
-          { codigos_colegio: { some: { codigo: { contains: q } } } },
+          {
+            codigo_estudiante: {
+              contains: q,
+            },
+          },
+          {
+            codigos_colegio: {
+              some: {
+                codigo: {
+                  contains: q,
+                },
+              },
+            },
+          },
           {
             persona: {
               is: {
                 OR: [
-                  { dni: { contains: q } },
-                  { nombres: { contains: q } },
-                  { apellido_paterno: { contains: q } },
-                  { apellido_materno: { contains: q } },
-                  { telefono: { contains: q } },
-                  { correo: { contains: q } },
-                  { distrito: { contains: q } },
+                  {
+                    dni: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    nombres: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    apellido_paterno: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    apellido_materno: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    telefono: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    correo: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    distrito: {
+                      contains: q,
+                    },
+                  },
                 ],
               },
             },
@@ -6427,11 +6502,31 @@ const existente = await this.prisma.persona.findUnique({
                     persona: {
                       is: {
                         OR: [
-                          { dni: { contains: q } },
-                          { nombres: { contains: q } },
-                          { apellido_paterno: { contains: q } },
-                          { apellido_materno: { contains: q } },
-                          { telefono: { contains: q } },
+                          {
+                            dni: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            nombres: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            apellido_paterno: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            apellido_materno: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            telefono: {
+                              contains: q,
+                            },
+                          },
                         ],
                       },
                     },
@@ -6444,57 +6539,177 @@ const existente = await this.prisma.persona.findUnique({
       });
     }
 
-    if (params.estado && params.estado !== 'Todos') {
-      if (params.estado === 'Sin matrícula') {
-        and.push({
-          matriculas: {
-            none: {
-              id_colegio: { in: scope.colegioIds },
-              estado_matricula: { in: ['Activo', 'Pre-matriculado', 'Reserva'] },
-            },
-          },
-        });
-      } else {
-        and.push({
-          matriculas: {
-            some: {
-              id_colegio: { in: scope.colegioIds },
-              estado_matricula: params.estado,
-            },
-          },
-        });
-      }
+    /*
+     * Todos los filtros académicos se aplican
+     * sobre la misma matrícula.
+     *
+     * Esto evita que el estado corresponda a
+     * una matrícula y la sección a otra.
+     */
+    const matriculaVisibleWhere:
+      Prisma.MatriculaWhereInput = {
+        id_colegio: {
+          in: scope.colegioIds,
+        },
+      };
+
+    if (
+      params.estado
+      && params.estado !== 'Todos'
+      && params.estado !== 'Sin matrícula'
+    ) {
+      matriculaVisibleWhere.estado_matricula =
+        params.estado;
     }
 
-    const where: Prisma.EstudianteWhereInput = and.length ? { AND: and } : {};
+    if (params.seccionId) {
+      matriculaVisibleWhere.id_seccion =
+        params.seccionId;
+    }
 
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.estudiante.count({ where }),
+    if (
+      params.gradoId
+      || params.nivelId
+    ) {
+      const seccionWhere:
+        Prisma.SeccionWhereInput = {};
+
+      if (params.gradoId) {
+        seccionWhere.id_grado =
+          params.gradoId;
+      }
+
+      if (params.nivelId) {
+        seccionWhere.grado = {
+          id_nivel: params.nivelId,
+        };
+      }
+
+      matriculaVisibleWhere.seccion =
+        seccionWhere;
+    }
+
+    const estadosVigentes = [
+      'Activo',
+      'Matriculado',
+      'Pre-matriculado',
+      'Reserva',
+    ];
+
+    if (
+      params.estado
+      === 'Sin matrícula'
+    ) {
+      and.push({
+        matriculas: {
+          none: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+            estado_matricula: {
+              in: estadosVigentes,
+            },
+          },
+        },
+      });
+    } else if (
+      (
+        params.estado
+        && params.estado !== 'Todos'
+      )
+      || params.nivelId
+      || params.gradoId
+      || params.seccionId
+    ) {
+      and.push({
+        matriculas: {
+          some: matriculaVisibleWhere,
+        },
+      });
+    }
+
+    /*
+     * Para "Sin matrícula", el listado de
+     * matrículas devuelto debe permanecer vacío
+     * si no existe una matrícula vigente.
+     */
+    const matriculaIncludeWhere:
+      Prisma.MatriculaWhereInput =
+        params.estado === 'Sin matrícula'
+          ? {
+              id_colegio: {
+                in: scope.colegioIds,
+              },
+              estado_matricula: {
+                in: estadosVigentes,
+              },
+            }
+          : matriculaVisibleWhere;
+
+    const where:
+      Prisma.EstudianteWhereInput =
+        and.length
+          ? {
+              AND: and,
+            }
+          : {};
+
+    const [
+      total,
+      data,
+    ] = await this.prisma.$transaction([
+      this.prisma.estudiante.count({
+        where,
+      }),
+
       this.prisma.estudiante.findMany({
         where,
+
         include: {
           persona: true,
+
           codigos_colegio: true,
+
           apoderados: {
             include: {
               apoderado: {
-                include: { persona: true },
+                include: {
+                  persona: true,
+                },
               },
             },
           },
+
           matriculas: {
+            where: matriculaIncludeWhere,
+
             include: {
               colegio: true,
               anio: true,
+
               seccion: {
-                include: { grado: { include: { nivel: true } } },
+                include: {
+                  grado: {
+                    include: {
+                      nivel: true,
+                    },
+                  },
+                },
               },
             },
-            orderBy: { fecha_matricula: 'desc' },
+
+            orderBy: {
+              fecha_matricula: 'desc',
+            },
+
             take: 5,
           },
         },
-        orderBy: { id_persona: 'desc' },
+
+        orderBy: {
+          id_persona: 'desc',
+        },
+
         skip,
         take: limit,
       }),
@@ -6502,11 +6717,17 @@ const existente = await this.prisma.persona.findUnique({
 
     return {
       data,
+
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.max(
+          1,
+          Math.ceil(
+            total / limit,
+          ),
+        ),
       },
     };
   }

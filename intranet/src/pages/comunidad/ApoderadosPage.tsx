@@ -30,6 +30,7 @@ import {
   CommunityField as Field,
   CommunityInfo as Info,
   CommunitySection as Section,
+  CommunityTextarea as Textarea,
   communityInputClass,
 } from '../../components/community/CommunityUI';
 
@@ -502,7 +503,18 @@ export default function ApoderadosPage() {
             </div>
 
             <div className="md:col-span-2">
-              <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+              <Textarea
+                label="Dirección"
+                value={form.direccion}
+                rows={3}
+                placeholder="Ingresa la dirección completa del apoderado"
+                onChange={(value) =>
+                  setForm({
+                    ...form,
+                    direccion: value,
+                  })
+                }
+              />
             </div>
           </div>
         )}

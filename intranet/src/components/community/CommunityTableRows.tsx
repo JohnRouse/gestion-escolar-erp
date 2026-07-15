@@ -5,7 +5,9 @@ import {
   Phone,
 } from 'lucide-react';
 import PersonAvatar from '../PersonAvatar';
-import { communityPersonName } from './CommunityLinkedPeople';
+import {
+  communityPersonName,
+} from './CommunityLinkedPeople';
 
 type PersonaResumen = {
   dni?: string | null;
@@ -25,10 +27,18 @@ type StudentRowProps = {
     matriculas?: any[];
     apoderados?: any[];
   };
-  onOpen: (id: number) => void;
-  getCodigo: (alumno: any) => string;
-  getEstadoBadge: (estado?: string) => string;
-  assetUrl: (url?: string | null) => string;
+  onOpen: (
+    id: number,
+  ) => void;
+  getCodigo: (
+    alumno: any,
+  ) => string;
+  getEstadoBadge: (
+    estado?: string,
+  ) => string;
+  assetUrl: (
+    url?: string | null,
+  ) => string;
 };
 
 type GuardianRowProps = {
@@ -38,9 +48,15 @@ type GuardianRowProps = {
     persona: PersonaResumen;
     estudiantes?: any[];
   };
-  onOpen: (id: number) => void;
-  estadoClass: (apoderado: any) => string;
-  estadoLabel: (apoderado: any) => string;
+  onOpen: (
+    id: number,
+  ) => void;
+  estadoClass: (
+    apoderado: any,
+  ) => string;
+  estadoLabel: (
+    apoderado: any,
+  ) => string;
 };
 
 export function StudentTableRow({
@@ -50,16 +66,59 @@ export function StudentTableRow({
   getEstadoBadge,
   assetUrl,
 }: StudentRowProps) {
-  const ultimaMatricula = alumno.matriculas?.[0];
-  const nombre = communityPersonName(alumno.persona);
-  const estadoMatricula = ultimaMatricula?.estado_matricula;
+  const ultimaMatricula =
+    alumno.matriculas?.[0];
+
+  const nombre =
+    communityPersonName(
+      alumno.persona,
+    );
+
+  const estadoMatricula =
+    ultimaMatricula?.estado_matricula
+    || 'Sin matrícula';
+
+  const grado =
+    ultimaMatricula
+      ?.seccion
+      ?.grado
+      ?.nombre_grado
+    || null;
+
+  const nivel =
+    ultimaMatricula
+      ?.seccion
+      ?.grado
+      ?.nivel
+      ?.nombre_nivel
+    || null;
+
+  const seccion =
+    ultimaMatricula
+      ?.seccion
+      ?.letra
+    || null;
+
+  const colegio =
+    ultimaMatricula
+      ?.colegio
+      ?.nombre
+    || null;
+
+  const anio =
+    ultimaMatricula
+      ?.anio
+      ?.nombre_anio
+    || null;
 
   return (
-    <div className="carbon-list-row group grid items-center gap-6 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.9fr)_minmax(260px,1.1fr)_auto]">
+    <div className="carbon-list-row community-student-row group grid items-center gap-5 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.55fr)_minmax(250px,0.9fr)_minmax(130px,0.35fr)_auto]">
       <div className="flex min-w-0 items-center gap-3">
         {alumno.avatar_url ? (
           <img
-            src={assetUrl(alumno.avatar_url)}
+            src={assetUrl(
+              alumno.avatar_url,
+            )}
             alt={nombre}
             className="h-12 w-12 shrink-0 rounded-xl bg-white object-cover ring-1 ring-slate-200"
           />
@@ -72,7 +131,7 @@ export function StudentTableRow({
         )}
 
         <div className="min-w-0">
-          <p className="community-person-name text-sm font-semibold text-slate-950">
+          <p className="community-person-name truncate text-sm font-bold text-slate-950">
             {nombre}
           </p>
 
@@ -81,14 +140,23 @@ export function StudentTableRow({
               {getCodigo(alumno)}
             </span>
 
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true">
+              ·
+            </span>
 
-            <span>DNI {alumno.persona.dni || '—'}</span>
+            <span>
+              DNI {alumno.persona.dni || '—'}
+            </span>
 
             {alumno.persona.distrito && (
               <>
-                <span aria-hidden="true">·</span>
-                <span>{alumno.persona.distrito}</span>
+                <span aria-hidden="true">
+                  ·
+                </span>
+
+                <span>
+                  {alumno.persona.distrito}
+                </span>
               </>
             )}
           </p>
@@ -98,41 +166,58 @@ export function StudentTableRow({
       <div className="min-w-0">
         {ultimaMatricula ? (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-slate-900">
-                {ultimaMatricula.seccion?.grado?.nombre_grado ||
-                  'Grado'}{' '}
-                &quot;{ultimaMatricula.seccion?.letra || '-'}&quot;
-              </p>
-
-              <span
-                className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ${getEstadoBadge(
-                  estadoMatricula,
-                )}`}
-              >
-                {estadoMatricula || '—'}
-              </span>
-            </div>
-
-            <p className="mt-1 text-xs text-slate-600">
-              {ultimaMatricula?.colegio?.nombre || '—'}
+            <p className="text-sm font-bold text-slate-900">
+              {grado || 'Grado'}{' '}
+              &quot;{seccion || '-'}&quot;
             </p>
+
+            <p className="mt-1 text-xs font-medium text-slate-600">
+              {[nivel, colegio]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+
+            {anio && (
+              <p className="mt-0.5 text-xs text-slate-500">
+                {anio}
+              </p>
+            )}
           </>
         ) : (
-          <span className="text-xs text-slate-600">
-            Sin matrícula visible
-          </span>
+          <>
+            <p className="text-sm font-semibold text-slate-700">
+              Sin grado asignado
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              No tiene una matrícula visible.
+            </p>
+          </>
         )}
+      </div>
+
+      <div>
+        <span
+          className={`inline-flex min-h-8 items-center rounded-md px-3 py-1 text-xs font-semibold ${getEstadoBadge(
+            estadoMatricula,
+          )}`}
+        >
+          {estadoMatricula}
+        </span>
       </div>
 
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={() => onOpen(alumno.id_persona)}
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+          onClick={() =>
+            onOpen(
+              alumno.id_persona,
+            )
+          }
+          className="community-view-action inline-flex h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 text-xs font-bold text-blue-700 transition hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
         >
-          <Eye size={15} />
-          Ver
+          <Eye size={14} />
+          Ver detalles
         </button>
       </div>
     </div>
@@ -145,10 +230,13 @@ export function GuardianTableRow({
   estadoClass,
   estadoLabel,
 }: GuardianRowProps) {
-  const nombre = communityPersonName(apoderado.persona);
+  const nombre =
+    communityPersonName(
+      apoderado.persona,
+    );
 
   return (
-    <div className="carbon-list-row group grid items-center gap-6 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1.2fr)_minmax(120px,0.45fr)_auto]">
+    <div className="carbon-list-row community-guardian-row group grid items-center gap-5 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1.2fr)_minmax(120px,0.45fr)_auto]">
       <div className="flex min-w-0 items-center gap-3">
         <PersonAvatar
           persona={apoderado.persona}
@@ -157,7 +245,7 @@ export function GuardianTableRow({
         />
 
         <div className="min-w-0">
-          <p className="community-person-name text-sm font-semibold text-slate-950">
+          <p className="community-person-name truncate text-sm font-bold text-slate-950">
             {nombre}
           </p>
 
@@ -166,15 +254,25 @@ export function GuardianTableRow({
               DNI {apoderado.persona.dni || '—'}
             </span>
 
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true">
+              ·
+            </span>
 
             {apoderado.persona.telefono ? (
               <>
-                <Phone size={12} className="shrink-0" />
-                <span>{apoderado.persona.telefono}</span>
+                <Phone
+                  size={12}
+                  className="shrink-0"
+                />
+
+                <span>
+                  {apoderado.persona.telefono}
+                </span>
               </>
             ) : (
-              <span>Sin teléfono</span>
+              <span>
+                Sin teléfono
+              </span>
             )}
           </p>
         </div>
@@ -188,7 +286,8 @@ export function GuardianTableRow({
           />
 
           <p className="text-sm font-semibold text-slate-900">
-            {apoderado.ocupacion || 'Sin ocupación'}
+            {apoderado.ocupacion
+              || 'Sin ocupación'}
           </p>
         </div>
 
@@ -198,6 +297,7 @@ export function GuardianTableRow({
               size={12}
               className="mt-0.5 shrink-0"
             />
+
             {apoderado.persona.correo}
           </p>
         ) : (
@@ -213,18 +313,24 @@ export function GuardianTableRow({
             apoderado,
           )}`}
         >
-          {estadoLabel(apoderado)}
+          {estadoLabel(
+            apoderado,
+          )}
         </span>
       </div>
 
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={() => onOpen(apoderado.id_persona)}
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+          onClick={() =>
+            onOpen(
+              apoderado.id_persona,
+            )
+          }
+          className="community-view-action inline-flex h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 text-xs font-bold text-blue-700 transition hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
         >
-          <Eye size={15} />
-          Ver
+          <Eye size={14} />
+          Ver detalles
         </button>
       </div>
     </div>

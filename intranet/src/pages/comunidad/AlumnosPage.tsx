@@ -36,11 +36,43 @@ import {
   CommunityField as Field,
   CommunityInfo as Info,
   CommunitySection as Section,
+  CommunityTextarea as Textarea,
   communityInputClass,
 } from '../../components/community/CommunityUI';
 
 type CodigoColegio = { id_colegio: number; codigo: string };
-type Meta = { total: number; page: number; limit: number; totalPages: number };
+type Meta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+type NivelOption = {
+  id_nivel: number;
+  nombre_nivel: string;
+};
+
+type GradoOption = {
+  id_grado: number;
+  id_nivel: number;
+  nombre_grado: string;
+};
+
+type SeccionOption = {
+  id_seccion: number;
+  letra: string;
+  Label?: string;
+  grado?: {
+    nombre_grado?: string;
+    nivel?: {
+      nombre_nivel?: string;
+    };
+  };
+  colegio?: {
+    nombre?: string;
+  };
+};
 
 type AlumnoItem = {
   id_persona: number;
@@ -87,6 +119,7 @@ const assetUrl = (url?: string | null) => {
 
 const estadoBadge: Record<string, string> = {
   Activo: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  Matriculado: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   Reserva: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
   Anulado: 'bg-red-50 text-red-600 ring-1 ring-red-200',
   'Pre-matriculado': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
@@ -125,6 +158,25 @@ export default function AlumnosPage() {
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [estado, setEstado] = useState('Todos');
+
+  const [niveles, setNiveles] =
+    useState<NivelOption[]>([]);
+
+  const [grados, setGrados] =
+    useState<GradoOption[]>([]);
+
+  const [secciones, setSecciones] =
+    useState<SeccionOption[]>([]);
+
+  const [nivelId, setNivelId] =
+    useState('');
+
+  const [gradoId, setGradoId] =
+    useState('');
+
+  const [seccionId, setSeccionId] =
+    useState('');
+
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -167,15 +219,230 @@ export default function AlumnosPage() {
     return () => window.clearTimeout(timer);
   }, [q]);
 
+  useEffect(() => {
+    setNivelId('');
+    setGradoId('');
+    setSeccionId('');
+    setGrados([]);
+    setSecciones([]);
+  }, [queryString]);
+
+  useEffect(() => {
+    if (estado !== 'Sin matrícula') {
+      return;
+    }
+
+    setNivelId('');
+    setGradoId('');
+    setSeccionId('');
+    setGrados([]);
+    setSecciones([]);
+  }, [estado]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    const cargarNiveles = async () => {
+      try {
+        const response = await axios.get(
+          `/api/academicos/niveles${queryString}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (cancelled) return;
+
+        setNiveles(
+          Array.isArray(response.data)
+            ? response.data
+            : response.data?.data || [],
+        );
+      } catch {
+        if (!cancelled) {
+          setNiveles([]);
+        }
+      }
+    };
+
+    void cargarNiveles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryString, token]);
+
+  useEffect(() => {
+    if (!token || !nivelId) {
+      setGrados([]);
+      setSecciones([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const cargarGrados = async () => {
+      const search =
+        new URLSearchParams(
+          queryString.replace('?', ''),
+        );
+
+      search.set(
+        'nivel_id',
+        nivelId,
+      );
+
+      try {
+        const response = await axios.get(
+          `/api/academicos/grados?${search.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (cancelled) return;
+
+        setGrados(
+          Array.isArray(response.data)
+            ? response.data
+            : response.data?.data || [],
+        );
+      } catch {
+        if (!cancelled) {
+          setGrados([]);
+        }
+      }
+    };
+
+    void cargarGrados();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nivelId, queryString, token]);
+
+  useEffect(() => {
+    if (!token || !gradoId) {
+      setSecciones([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const cargarSecciones = async () => {
+      const search =
+        new URLSearchParams(
+          queryString.replace('?', ''),
+        );
+
+      search.set(
+        'grado_id',
+        gradoId,
+      );
+
+      try {
+        const response = await axios.get(
+          `/api/academicos/secciones?${search.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (cancelled) return;
+
+        setSecciones(
+          Array.isArray(response.data)
+            ? response.data
+            : response.data?.data || [],
+        );
+      } catch {
+        if (!cancelled) {
+          setSecciones([]);
+        }
+      }
+    };
+
+    void cargarSecciones();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gradoId, queryString, token]);
+
   const params = useMemo(() => {
-    const search = new URLSearchParams(queryString.replace('?', ''));
-    if (debouncedQ) search.set('q', debouncedQ);
-    if (estado !== 'Todos') search.set('estado', estado);
-    search.set('page', String(page));
-    search.set('limit', '10');
-    const query = search.toString();
-    return query ? `?${query}` : '';
-  }, [debouncedQ, estado, page, queryString]);
+    const search =
+      new URLSearchParams(
+        queryString.replace('?', ''),
+      );
+
+    if (debouncedQ) {
+      search.set(
+        'q',
+        debouncedQ,
+      );
+    }
+
+    if (estado !== 'Todos') {
+      search.set(
+        'estado',
+        estado,
+      );
+    }
+
+    if (nivelId) {
+      search.set(
+        'nivel_id',
+        nivelId,
+      );
+    }
+
+    if (gradoId) {
+      search.set(
+        'grado_id',
+        gradoId,
+      );
+    }
+
+    if (seccionId) {
+      search.set(
+        'seccion_id',
+        seccionId,
+      );
+    }
+
+    search.set(
+      'page',
+      String(page),
+    );
+
+    search.set(
+      'limit',
+      '10',
+    );
+
+    const query =
+      search.toString();
+
+    return query
+      ? `?${query}`
+      : '';
+  }, [
+    debouncedQ,
+    estado,
+    gradoId,
+    nivelId,
+    page,
+    queryString,
+    seccionId,
+  ]);
 
   useEffect(() => {
     fetchAlumnos();
@@ -438,7 +705,12 @@ export default function AlumnosPage() {
     }
   };
 
-  const hasFilters = q.trim() !== '' || estado !== 'Todos';
+  const hasFilters =
+    q.trim() !== ''
+    || estado !== 'Todos'
+    || Boolean(nivelId)
+    || Boolean(gradoId)
+    || Boolean(seccionId);
 
   return (
     <div className="carbon-community-page w-full space-y-5 erp-page-enter">
@@ -454,58 +726,195 @@ export default function AlumnosPage() {
       />
 
       {/* ── Barra de búsqueda y filtros ── */}
-      <div className="community-toolbar flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
-        {/* Búsqueda */}
-        <div className="relative flex-1">
+      <div className="community-toolbar community-student-toolbar rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="community-student-search relative">
           <Search
-            size={15}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            size={16}
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
           />
+
           <input
             value={q}
-            onChange={(e) => {
+            onChange={(event) => {
               setPage(1);
-              setQ(e.target.value);
+              setQ(event.target.value);
             }}
-            placeholder="Buscar por código, DNI, alumno, apoderado, distrito…"
-            className="community-search-input h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+            placeholder="Buscar por código, DNI, alumno, apoderado o distrito…"
+            className="community-search-input h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-10 text-sm font-medium text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
+
           {q && (
             <button
               type="button"
-              onClick={() => { setQ(''); setPage(1); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-0.5 text-slate-400 transition hover:text-slate-600"
+              onClick={() => {
+                setQ('');
+                setPage(1);
+              }}
+              className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Limpiar búsqueda"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           )}
         </div>
 
-        {/* Filtro de estado */}
-        <div className="relative">
-          <SlidersHorizontal
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <select
-            value={estado}
-            onChange={(e) => { setPage(1); setEstado(e.target.value); }}
-            className="community-filter-select h-11 appearance-none rounded-xl border border-slate-200 bg-slate-50 py-0 pl-9 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-          >
-            <option value="Todos">Todos los estados</option>
-            <option value="Pre-matriculado">Pre-matriculado</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-            <option value="Sin matrícula">Sin matrícula</option>
-          </select>
-        </div>
+        <label className="community-filter-field">
+          <span>Nivel</span>
 
-        {/* Limpiar filtros */}
+          <select
+            value={nivelId}
+            disabled={
+              estado === 'Sin matrícula'
+            }
+            onChange={(event) => {
+              setPage(1);
+              setNivelId(
+                event.target.value,
+              );
+              setGradoId('');
+              setSeccionId('');
+              setSecciones([]);
+            }}
+          >
+            <option value="">
+              Todos los niveles
+            </option>
+
+            {niveles.map((nivel) => (
+              <option
+                key={nivel.id_nivel}
+                value={nivel.id_nivel}
+              >
+                {nivel.nombre_nivel}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="community-filter-field">
+          <span>Grado</span>
+
+          <select
+            value={gradoId}
+            disabled={
+              !nivelId
+              || estado === 'Sin matrícula'
+            }
+            onChange={(event) => {
+              setPage(1);
+              setGradoId(
+                event.target.value,
+              );
+              setSeccionId('');
+            }}
+          >
+            <option value="">
+              Todos los grados
+            </option>
+
+            {grados.map((grado) => (
+              <option
+                key={grado.id_grado}
+                value={grado.id_grado}
+              >
+                {grado.nombre_grado}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="community-filter-field">
+          <span>Sección</span>
+
+          <select
+            value={seccionId}
+            disabled={
+              !gradoId
+              || estado === 'Sin matrícula'
+            }
+            onChange={(event) => {
+              setPage(1);
+              setSeccionId(
+                event.target.value,
+              );
+            }}
+          >
+            <option value="">
+              Todas las secciones
+            </option>
+
+            {secciones.map((seccion) => (
+              <option
+                key={seccion.id_seccion}
+                value={seccion.id_seccion}
+              >
+                {seccion.Label
+                  || `${seccion.grado?.nombre_grado || 'Grado'} "${seccion.letra}"`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="community-filter-field">
+          <span>Estado</span>
+
+          <span className="relative">
+            <SlidersHorizontal
+              size={14}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            />
+
+            <select
+              value={estado}
+              onChange={(event) => {
+                setPage(1);
+                setEstado(
+                  event.target.value,
+                );
+              }}
+              className="pl-9"
+            >
+              <option value="Todos">
+                Todos los estados
+              </option>
+
+              <option value="Matriculado">
+                Matriculado
+              </option>
+
+              <option value="Pre-matriculado">
+                Pre-matriculado
+              </option>
+
+              <option value="Activo">
+                Activo
+              </option>
+
+              <option value="Inactivo">
+                Inactivo
+              </option>
+
+              <option value="Sin matrícula">
+                Sin matrícula
+              </option>
+            </select>
+          </span>
+        </label>
+
         {hasFilters && (
           <button
             type="button"
-            onClick={() => { setQ(''); setEstado('Todos'); setPage(1); }}
-            className="h-11 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            onClick={() => {
+              setQ('');
+              setEstado('Todos');
+              setNivelId('');
+              setGradoId('');
+              setSeccionId('');
+              setGrados([]);
+              setSecciones([]);
+              setPage(1);
+            }}
+            className="community-clear-filters"
           >
             Limpiar
           </button>
@@ -519,8 +928,12 @@ export default function AlumnosPage() {
       {/* ── Tabla de alumnos ── */}
       <div className="carbon-list-panel overflow-hidden border border-slate-200 bg-white">
         <CommunityTableHeader
-          columns={['Alumno', 'Matrícula']}
-          gridClassName="xl:grid-cols-[minmax(0,1.9fr)_minmax(260px,1.1fr)_auto]"
+          columns={[
+            'Alumno',
+            'Grado y sección',
+            'Estado',
+          ]}
+          gridClassName="xl:grid-cols-[minmax(0,1.55fr)_minmax(250px,0.9fr)_minmax(130px,0.35fr)_auto]"
         />
 
         {loading && data.length === 0 ? (
@@ -750,7 +1163,18 @@ export default function AlumnosPage() {
             </div>
 
             <div className="md:col-span-2">
-              <Field label="Dirección" value={form.direccion} onChange={(v) => setForm({ ...form, direccion: v })} />
+              <Textarea
+                label="Dirección"
+                value={form.direccion}
+                rows={3}
+                placeholder="Ingresa la dirección completa del alumno"
+                onChange={(value) =>
+                  setForm({
+                    ...form,
+                    direccion: value,
+                  })
+                }
+              />
             </div>
           </div>
         )}

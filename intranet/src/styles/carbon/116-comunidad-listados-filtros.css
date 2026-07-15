@@ -1,0 +1,171 @@
+/* =========================================================
+   COMUNIDAD ESCOLAR
+   Filtros académicos y listados
+   ========================================================= */
+
+.community-student-toolbar {
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 1.7fr)
+    repeat(4, minmax(145px, 0.72fr))
+    auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.community-student-search {
+  min-width: 0;
+}
+
+.community-filter-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.community-filter-field > span:first-child {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.community-filter-field > select,
+.community-filter-field > span > select {
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  padding: 0 2.25rem 0 0.75rem;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.community-filter-field > span > select {
+  padding-left: 2.25rem;
+}
+
+.community-filter-field select:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.community-filter-field select:focus {
+  border-color: #0f62fe;
+  box-shadow:
+    0 0 0 3px
+    rgba(15, 98, 254, 0.12);
+}
+
+.community-filter-field select:disabled {
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
+
+.community-clear-filters {
+  display: inline-flex;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0 1rem;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.community-clear-filters:hover {
+  border-color: #fecaca;
+  background-color: #fff1f2;
+  color: #be123c;
+}
+
+.community-student-row,
+.community-guardian-row {
+  min-height: 5.25rem;
+}
+
+.community-student-row:hover,
+.community-guardian-row:hover {
+  background-color: #f8fafc;
+}
+
+.community-view-action {
+  white-space: nowrap;
+}
+
+.community-person-name,
+.community-id-line,
+.erp-compact-code {
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+}
+
+@media (max-width: 1480px) {
+  .community-student-toolbar {
+    grid-template-columns:
+      minmax(280px, 1.5fr)
+      repeat(2, minmax(160px, 0.75fr));
+  }
+
+  .community-clear-filters {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .community-student-toolbar {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .community-student-search {
+    grid-column: 1 / -1;
+  }
+
+  .community-student-row,
+  .community-guardian-row {
+    gap: 1rem;
+  }
+
+  .community-view-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .community-student-toolbar {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .community-student-search {
+    grid-column: auto;
+  }
+
+  .community-filter-field > select,
+  .community-filter-field > span > select,
+  .community-clear-filters {
+    min-height: 2.875rem;
+    font-size: 0.9375rem;
+  }
+}

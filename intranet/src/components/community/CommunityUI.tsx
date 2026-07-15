@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, ReactNode } from 'react';
 
 export const communityInputClass =
-  'h-11 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
+  'h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
 
 export function CommunityInfo({
   label,
@@ -74,6 +74,39 @@ export function CommunityField({
     </label>
   );
 }
+
+export function CommunityTextarea({
+  label,
+  value,
+  onChange,
+  rows = 3,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  rows?: number;
+  placeholder?: string;
+}) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-600">
+        {label}
+      </span>
+
+      <textarea
+        value={value}
+        rows={rows}
+        placeholder={placeholder}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className="min-h-[96px] w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      />
+    </label>
+  );
+}
+
 
 export function CommunityStatusChip({
   label,

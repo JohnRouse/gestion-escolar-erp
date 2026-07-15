@@ -523,6 +523,9 @@ async deleteGrado(
     @Query('colegio_id') colegioId?: string,
     @Query('q') q?: string,
     @Query('estado') estado?: string,
+    @Query('nivel_id') nivelId?: string,
+    @Query('grado_id') gradoId?: string,
+    @Query('seccion_id') seccionId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -530,11 +533,26 @@ async deleteGrado(
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
+      colegioId: colegioId
+        ? Number(colegioId)
+        : undefined,
       q,
       estado,
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      nivelId: nivelId
+        ? Number(nivelId)
+        : undefined,
+      gradoId: gradoId
+        ? Number(gradoId)
+        : undefined,
+      seccionId: seccionId
+        ? Number(seccionId)
+        : undefined,
+      page: page
+        ? Number(page)
+        : undefined,
+      limit: limit
+        ? Number(limit)
+        : undefined,
     });
   }
 

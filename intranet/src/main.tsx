@@ -23,6 +23,7 @@ import './styles/carbon/113-historial-filtros-revision.css';
 import './styles/carbon/114-asistencia-desktop-mobile-ux.css';
 import './styles/carbon/115-calendario-docentes-interaccion.css';
 import './styles/carbon/116-calendario-programacion-rapida.css';
+import './styles/carbon/116-comunidad-listados-filtros.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
