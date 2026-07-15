@@ -27,6 +27,15 @@ type StudentRowProps = {
     persona: PersonaResumen;
     matriculas?: any[];
     apoderados?: any[];
+    codigos_colegio?: {
+      id_colegio: number;
+      codigo: string;
+      estado_institucional?: string | null;
+      colegio?: {
+        nombre?: string | null;
+        nombre_corto?: string | null;
+      } | null;
+    }[];
   };
   onOpen: (id: number) => void;
   getCodigo: (alumno: any) => string;
@@ -89,16 +98,40 @@ export function StudentTableRow({
       ?.letra
     || null;
 
+  const registroInstitucional =
+    alumno.codigos_colegio?.[0]
+    || null;
+
   const colegio =
     ultimaMatricula
       ?.colegio
       ?.nombre
-    || 'Sin institución';
+    || registroInstitucional
+      ?.colegio
+      ?.nombre
+    || registroInstitucional
+      ?.colegio
+      ?.nombre_corto
+    || 'Institución pendiente';
 
   const estadoMatricula =
     ultimaMatricula
       ?.estado_matricula
-    || 'Sin matrícula';
+    || null;
+
+  const estadoInstitucional =
+    registroInstitucional
+      ?.estado_institucional
+    || null;
+
+  const estadoVisual =
+    estadoMatricula
+    || (
+      estadoInstitucional
+      === 'Inactivo'
+        ? 'Inactivo'
+        : 'Registro incompleto'
+    );
 
   return (
     <div className="carbon-list-row community-student-row community-student-table-grid group px-5 py-4">
@@ -163,12 +196,12 @@ export function StudentTableRow({
           </>
         ) : (
           <>
-            <p className="text-sm font-semibold text-slate-700">
-              Sin grado asignado
+            <p className="text-sm font-semibold text-amber-800">
+              Matrícula pendiente
             </p>
 
             <p className="mt-1 text-xs text-slate-500">
-              Sin sección visible
+              Aún sin grado ni sección
             </p>
           </>
         )}
@@ -183,10 +216,10 @@ export function StudentTableRow({
       <div>
         <span
           className={`inline-flex min-h-8 items-center rounded-md px-3 py-1 text-xs font-semibold ${getEstadoBadge(
-            estadoMatricula,
+            estadoVisual,
           )}`}
         >
-          {estadoMatricula}
+          {estadoVisual}
         </span>
       </div>
 

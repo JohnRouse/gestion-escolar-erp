@@ -1,0 +1,320 @@
+/* =====================================================
+   REGISTRO DE MATRÍCULA
+   Modales de alumno y apoderado
+   ===================================================== */
+
+.matricula-persona-modal {
+  padding: 24px;
+}
+
+.matricula-persona-modal__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(
+    940px,
+    calc(100vw - 32px)
+  );
+  max-height: min(
+    90vh,
+    820px
+  );
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dbe3ec;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow:
+    0 24px 70px
+    rgba(15, 23, 42, 0.28);
+}
+
+.matricula-persona-modal__header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 22px 24px 20px;
+}
+
+.matricula-persona-modal__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.matricula-persona-modal__title {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.matricula-persona-modal__subtitle {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.matricula-persona-modal__close {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.matricula-persona-modal__close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.matricula-persona-modal__body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+
+.matricula-persona-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 17px 18px;
+}
+
+.matricula-persona-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.matricula-persona-label {
+  display: block;
+  margin: 0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.matricula-persona-control {
+  display: block;
+  width: 100%;
+  height: 43px;
+  min-width: 0;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  padding: 0 12px !important;
+  color: #0f172a !important;
+  font-family: inherit;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.35;
+  outline: none !important;
+  box-shadow:
+    0 1px 2px
+    rgba(15, 23, 42, 0.04) !important;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.matricula-persona-control:hover {
+  border-color: #94a3b8 !important;
+}
+
+.matricula-persona-control:focus {
+  border-color: #0f62fe !important;
+  box-shadow:
+    0 0 0 3px
+    rgba(15, 98, 254, 0.12) !important;
+}
+
+.matricula-persona-control::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.matricula-persona-location,
+.matricula-persona-address {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.matricula-persona-location > div {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+}
+
+.matricula-persona-textarea {
+  height: auto;
+  min-height: 88px;
+  max-height: 170px;
+  padding:
+    11px 12px !important;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.matricula-persona-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 16px;
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.matricula-persona-message--warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.matricula-persona-message--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.matricula-persona-modal__footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 15px 24px;
+}
+
+.matricula-persona-cancel,
+.matricula-persona-save {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 9px;
+  padding: 0 17px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.matricula-persona-cancel {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.matricula-persona-cancel:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.matricula-persona-save {
+  min-width: 145px;
+  border: 1px solid #0f62fe;
+  background: #0f62fe;
+  color: #ffffff;
+}
+
+.matricula-persona-save:hover:not(:disabled) {
+  border-color: #0043ce;
+  background: #0043ce;
+  transform: translateY(-1px);
+}
+
+.matricula-persona-cancel:disabled,
+.matricula-persona-save:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 720px) {
+  .matricula-persona-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .matricula-persona-modal__panel {
+    width: 100%;
+    max-height: 94vh;
+    border-radius:
+      18px 18px 0 0;
+  }
+
+  .matricula-persona-modal__header,
+  .matricula-persona-modal__body {
+    padding:
+      18px 16px;
+  }
+
+  .matricula-persona-form-grid,
+  .matricula-persona-location > div {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .matricula-persona-location,
+  .matricula-persona-address {
+    grid-column: auto;
+  }
+
+  .matricula-persona-modal__footer {
+    padding:
+      13px 16px;
+  }
+
+  .matricula-persona-cancel,
+  .matricula-persona-save {
+    flex: 1 1 0;
+  }
+}

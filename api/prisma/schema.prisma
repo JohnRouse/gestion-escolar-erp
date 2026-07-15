@@ -474,6 +474,9 @@ model Matricula {
   id_usuario_revision        Int?
   fecha_revision             DateTime?
   observacion_revision       String?   @db.VarChar(500)
+  fecha_cierre               DateTime?
+  motivo_cierre              String?   @db.VarChar(500)
+  id_usuario_cierre          Int?
 
   tenant         Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
   colegio        Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
@@ -503,6 +506,7 @@ model Matricula {
   @@index([id_matricula_origen])
   @@index([id_colegio_origen, id_anio_origen])
   @@index([tipo_proceso_matricula])
+  @@index([estado_matricula])
 }
 
 // ======================================================
@@ -1342,10 +1346,14 @@ model PlantillaEvaluacionDetalle {
 }
 
 model EstudianteCodigoColegio {
-  id_estudiante Int
-  id_colegio    Int
-  codigo        String   @db.VarChar(30)
-  created_at    DateTime @default(now())
+  id_estudiante        Int
+  id_colegio           Int
+  codigo               String    @db.VarChar(30)
+  estado_institucional String    @default("Activo") @map("estado") @db.VarChar(20)
+  fecha_estado         DateTime?
+  motivo_estado        String?   @db.VarChar(500)
+  id_usuario_estado    Int?
+  created_at           DateTime  @default(now())
 
   estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona])
   colegio    Colegio    @relation(fields: [id_colegio], references: [id_colegio])
@@ -1353,6 +1361,7 @@ model EstudianteCodigoColegio {
   @@id([id_estudiante, id_colegio])
   @@unique([id_colegio, codigo])
   @@index([codigo])
+  @@index([id_colegio, estado_institucional])
 }
 
 model DatosCobroColegio {

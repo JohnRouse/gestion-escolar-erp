@@ -25,6 +25,7 @@ import './styles/carbon/115-calendario-docentes-interaccion.css';
 import './styles/carbon/116-calendario-programacion-rapida.css';
 import './styles/carbon/116-comunidad-listados-filtros.css';
 import './styles/carbon/117-comunidad-tablas-credenciales.css';
+import './styles/carbon/118-matricula-persona-modales.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

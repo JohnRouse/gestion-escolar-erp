@@ -519,7 +519,7 @@ export default function MatriculaPage() {
 
   const agregarApoderado = async (apoderado: Apoderado) => { if (!estudiante?.id_persona || !token) { setMensaje('Primero debes buscar o registrar un alumno.'); return; } if (apoderados.some((item) => item.id_persona === apoderado.id_persona)) { setMensaje('Este apoderado ya está vinculado al alumno.'); return; } const parentescoSeleccionado = apoderado.parentesco || parentesco || 'Apoderado'; try { await axios.post(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados`, { id_apoderado: apoderado.id_persona, parentesco: parentescoSeleccionado }, { headers: { Authorization: `Bearer ${token}` } }); setApoderados([...apoderados, { ...apoderado, parentesco: parentescoSeleccionado }]); setMensaje(null); showToast({ type: 'success', title: 'Apoderado vinculado', message: `${parentescoSeleccionado} agregado correctamente.` }); setApoderadoEncontrado(null); setApoderadoDni(''); setParentesco('Madre'); } catch (error: any) { setMensaje(error.response?.data?.message || 'No se pudo vincular el apoderado.'); } };
 
-  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? '/api/academicos/alumnos' : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); closeModal(setModalAlumno, 'alumno'); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Alumno registrado', message: 'La ficha del alumno se guardó correctamente.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); closeModal(setModalApoderado, 'apoderado'); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
+  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; if (tipo === 'alumno' && !colegioDestinoDefinido) { setErrorPersona('Selecciona primero la institución destino. La ficha se guardará como borrador institucional hasta confirmar la matrícula.'); return; } const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? `/api/academicos/alumnos${colegioDestinoQuery}` : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); closeModal(setModalAlumno, 'alumno'); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Borrador guardado', message: 'La ficha quedó guardada como registro incompleto hasta confirmar la matrícula.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); closeModal(setModalApoderado, 'apoderado'); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
 
   const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); closeModal(setModalEditarAlumno, 'editarAlumno'); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el alumno.'); } finally { setSavingPersona(false); } };
 
@@ -750,11 +750,6 @@ export default function MatriculaPage() {
     !validacionBloqueante;
 
   const pasosFlujo: EnrollmentProgressStep[] = [
-    {
-      title: 'Alumno',
-      done: Boolean(alumno),
-    },
-
     ...(vistaConsolidada
       ? [
           {
@@ -763,6 +758,11 @@ export default function MatriculaPage() {
           },
         ]
       : []),
+
+    {
+      title: 'Alumno',
+      done: Boolean(alumno),
+    },
 
     {
       title: 'Apoderados',
@@ -858,16 +858,133 @@ export default function MatriculaPage() {
       <div className={`matricula-main-layout grid gap-5 xl:grid-cols-[0.78fr_1.82fr] transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* ── Columna izquierda ── */}
         <section className="space-y-6">
-          <Card icon={Search} title="Buscar alumno" subtitle="Ingresa el DNI para revisar su ficha.">
+          <Card
+            icon={Search}
+            title="Buscar o registrar alumno"
+            subtitle={
+              vistaConsolidada
+                ? 'Selecciona primero la institución y luego busca o registra al alumno.'
+                : 'Ingresa el DNI para revisar su ficha.'
+            }
+          >
+            {vistaConsolidada && (
+              <label className="mb-4 block">
+                <span className={labelClass}>
+                  Institución destino
+                </span>
+
+                <select
+                  value={colegioDestinoId}
+                  onChange={(event) => {
+                    setColegioDestinoId(
+                      event.target.value
+                        ? Number(
+                            event.target.value,
+                          )
+                        : '',
+                    );
+
+                    setAlumno(null);
+                    setApoderados([]);
+                    setAnioId('');
+                    setNivelFiltro('');
+                    setGradoFiltro('');
+                    setSeccionId('');
+                    setExcepcionTraslado(false);
+                    setMensaje(null);
+                  }}
+                  className={selectClass}
+                >
+                  <option value="">
+                    Selecciona la institución destino
+                  </option>
+
+                  {colegios.map((colegio) => (
+                    <option
+                      key={colegio.id_colegio}
+                      value={colegio.id_colegio}
+                    >
+                      {colegio.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             <div className="flex gap-3">
-              <input value={dni} onChange={(e) => setDni(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && buscarAlumno()} placeholder="DNI del alumno" className={inputClass} />
-              <button type="button" onClick={buscarAlumno} disabled={!dni || buscandoAlumno} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-50">
-                {buscandoAlumno ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />} Buscar
+              <input
+                value={dni}
+                onChange={(event) =>
+                  setDni(event.target.value)
+                }
+                onKeyDown={(event) =>
+                  event.key === 'Enter'
+                  && buscarAlumno()
+                }
+                placeholder="DNI del alumno"
+                className={inputClass}
+              />
+
+              <button
+                type="button"
+                onClick={buscarAlumno}
+                disabled={
+                  !dni
+                  || buscandoAlumno
+                }
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {buscandoAlumno ? (
+                  <Loader2
+                    size={15}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Search size={15} />
+                )}
+
+                Buscar
               </button>
             </div>
-            <button type="button" onClick={() => { setFormAlumno({ ...emptyAlumno, dni }); setErrorPersona(null); setClosingModal(null); setModalAlumno(true); }} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#0f62fe] hover:bg-[#0f62fe]/5 hover:text-neutral-900">
-              <UserPlus size={15} /> Nuevo alumno
+
+            <button
+              type="button"
+              disabled={
+                vistaConsolidada
+                && !colegioDestinoId
+              }
+              onClick={() => {
+                if (
+                  vistaConsolidada
+                  && !colegioDestinoId
+                ) {
+                  setMensaje(
+                    'Selecciona primero la institución destino.',
+                  );
+                  return;
+                }
+
+                setFormAlumno({
+                  ...emptyAlumno,
+                  dni,
+                });
+
+                setErrorPersona(null);
+                setClosingModal(null);
+                setModalAlumno(true);
+              }}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-500 transition-all duration-150 hover:border-[#0f62fe] hover:bg-[#0f62fe]/5 hover:text-neutral-900 disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
+            >
+              <UserPlus size={15} />
+              Nuevo alumno
             </button>
+
+            {vistaConsolidada
+              && !colegioDestinoId && (
+                <p className="mt-2 text-xs font-medium text-amber-700">
+                  Selecciona una institución para habilitar el registro de un alumno nuevo.
+                </p>
+              )}
           </Card>
 
           <Card icon={Clock} title="Últimos registros" subtitle="Últimas 5 pre-matrículas registradas." action={<button type="button" onClick={() => navigate('/matricula/historial')} className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700">Ver todas</button>}>
@@ -1140,54 +1257,6 @@ export default function MatriculaPage() {
           {alumno && !matriculaActiva && (
             <div className="matricula-enrollment-flow">
               <div className="matricula-flow-top-grid">
-                {vistaConsolidada && (
-                  <Card
-                    icon={MapPin}
-                    title="Institución destino"
-                    subtitle="Selecciona la sede donde se registrará al alumno."
-                  >
-                    <label>
-                      <span className={labelClass}>
-                        Institución de matrícula
-                      </span>
-
-                      <select
-                        value={colegioDestinoId}
-                        onChange={(event) => {
-                          setColegioDestinoId(
-                            event.target.value
-                              ? Number(
-                                  event.target.value,
-                                )
-                              : '',
-                          );
-
-                          setSeccionId('');
-                          setAnioId('');
-                          setNivelFiltro('');
-                          setGradoFiltro('');
-                          setExcepcionTraslado(false);
-                          setMensaje(null);
-                        }}
-                        className={selectClass}
-                      >
-                        <option value="">
-                          Selecciona institución destino
-                        </option>
-
-                        {colegios.map((colegio) => (
-                          <option
-                            key={colegio.id_colegio}
-                            value={colegio.id_colegio}
-                          >
-                            {colegio.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </Card>
-                )}
-
                 <Card
                   icon={ShieldCheck}
                   title="Apoderados"
@@ -2363,86 +2432,474 @@ function SectionBox({ title, children }: { title: string; children: React.ReactN
   );
 }
 
-function ModalHead({ title, subtitle, onClose }: { title: string; subtitle: string; onClose: () => void }) {
+function ModalHead({
+  title,
+  subtitle,
+  eyebrow,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  eyebrow: string;
+  onClose: () => void;
+}) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-neutral-100 p-6 flex-shrink-0">
-      <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0f62fe]/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-800 ring-1 ring-[#0f62fe]/20"><UserPlus size={11} /> Registro</div>
-        <h3 className="mt-2 text-lg font-semibold text-neutral-900 tracking-tight">{title}</h3>
-        <p className="mt-0.5 text-xs text-neutral-400">{subtitle}</p>
+    <header className="matricula-persona-modal__header">
+      <div className="min-w-0">
+        <span className="matricula-persona-modal__eyebrow">
+          <UserPlus size={12} />
+          {eyebrow}
+        </span>
+
+        <h3 className="matricula-persona-modal__title">
+          {title}
+        </h3>
+
+        <p className="matricula-persona-modal__subtitle">
+          {subtitle}
+        </p>
       </div>
-      <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500 transition-all duration-150 hover:bg-neutral-200"><X size={15} /></button>
-    </div>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="matricula-persona-modal__close"
+        aria-label="Cerrar modal"
+      >
+        <X size={17} />
+      </button>
+    </header>
   );
 }
 
-function PersonaModal({ title, form, setForm, error, loading, onClose, onSave, alumno, apoderado, aviso, parentesco, onParentescoChange, isClosing }: any) {
-  const set = (key: keyof PersonaForm, value: string) => setForm({ ...form, [key]: value });
+function PersonaModal({
+  title,
+  form,
+  setForm,
+  error,
+  loading,
+  onClose,
+  onSave,
+  alumno,
+  apoderado,
+  aviso,
+  parentesco,
+  onParentescoChange,
+  isClosing,
+}: any) {
+  const set = (
+    key: keyof PersonaForm,
+    value: string,
+  ) => {
+    setForm({
+      ...form,
+      [key]: value,
+    });
+  };
 
-  if (typeof document === 'undefined') return null;
+  if (
+    typeof document === 'undefined'
+  ) {
+    return null;
+  }
+
+  const esEdicion =
+    String(title)
+      .toLowerCase()
+      .startsWith('editar');
+
+  const tipoPersona =
+    alumno
+      ? 'alumno'
+      : 'apoderado';
+
+  const eyebrow =
+    esEdicion
+      ? `Editar ${tipoPersona}`
+      : `Nuevo ${tipoPersona}`;
+
+  const subtitle =
+    alumno
+      ? 'Completa los datos generales y la ubicación del alumno.'
+      : 'Completa los datos generales y la ubicación del apoderado.';
 
   return createPortal(
     (
-    <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="absolute inset-0 bg-neutral-950/40" />
-      <div className={`carbon-matricula-modal-panel relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
-        <ModalHead title={title} subtitle="Registra datos básicos y ubicación." onClose={onClose} />
-        <div className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="DNI" value={form.dni} onChange={(v: string) => set('dni', v)} />
-            {alumno && <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento || ''} onChange={(v: string) => set('fecha_nacimiento', v)} />}
-            {apoderado && onParentescoChange && (<label><span className={labelClass}>Vínculo con el alumno</span><select value={parentesco || 'Madre'} onChange={(e) => onParentescoChange(e.target.value)} className={selectClass}>{parentescos.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>)}
-            <Field label="Nombres" value={form.nombres} onChange={(v: string) => set('nombres', v)} />
-            <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(v: string) => set('apellido_paterno', v)} />
-            <Field label="Apellido materno" value={form.apellido_materno} onChange={(v: string) => set('apellido_materno', v)} />
-            {alumno && (<label><span className={labelClass}>Género</span><select value={form.genero || ''} onChange={(e) => set('genero', e.target.value)} className={selectClass}><option value="">Selecciona</option><option value="F">Femenino</option><option value="M">Masculino</option></select></label>)}
-            {apoderado && <Field label="Ocupación" value={form.ocupacion || ''} onChange={(v: string) => set('ocupacion', v)} />}
-            <Field label="Teléfono" value={form.telefono} onChange={(v: string) => set('telefono', v)} />
-            <Field label="Correo" type="email" value={form.correo} onChange={(v: string) => set('correo', v)} />
-            <div className="md:col-span-2">
-              <LocationSelects
-                value={{
-                  pais: form.pais || 'Perú',
-                  departamento: form.departamento,
-                  provincia: form.provincia,
-                  distrito: form.distrito,
-                }}
-                onChange={(location) =>
-                  setForm({
-                    ...form,
-                    pais: location.pais || 'Perú',
-                    departamento: location.departamento || '',
-                    provincia: location.provincia || '',
-                    distrito: location.distrito || '',
-                  })
+      <div
+        className={`carbon-matricula-modal-overlay matricula-persona-modal fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${
+          isClosing
+            ? 'modal-overlay-exit'
+            : 'modal-overlay-enter'
+        }`}
+        onClick={(event) => {
+          if (
+            event.target
+            === event.currentTarget
+          ) {
+            onClose();
+          }
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-950/55" />
+
+        <div
+          className={`matricula-persona-modal__panel ${
+            isClosing
+              ? 'modal-panel-exit'
+              : 'modal-panel-enter'
+          }`}
+        >
+          <ModalHead
+            title={title}
+            eyebrow={eyebrow}
+            subtitle={subtitle}
+            onClose={onClose}
+          />
+
+          <div className="matricula-persona-modal__body">
+            <div className="matricula-persona-form-grid">
+              <Field
+                label="DNI"
+                value={form.dni}
+                onChange={(value) =>
+                  set(
+                    'dni',
+                    value,
+                  )
                 }
-                labelClass={labelClass}
-                selectClass={selectClass}
               />
+
+              {alumno && (
+                <Field
+                  label="Fecha de nacimiento"
+                  type="date"
+                  value={
+                    form.fecha_nacimiento
+                    || ''
+                  }
+                  onChange={(value) =>
+                    set(
+                      'fecha_nacimiento',
+                      value,
+                    )
+                  }
+                />
+              )}
+
+              {apoderado
+                && onParentescoChange && (
+                  <label className="matricula-persona-field">
+                    <span className="matricula-persona-label">
+                      Vínculo con el alumno
+                    </span>
+
+                    <select
+                      value={
+                        parentesco
+                        || 'Madre'
+                      }
+                      onChange={(event) =>
+                        onParentescoChange(
+                          event.target.value,
+                        )
+                      }
+                      className="matricula-persona-control"
+                    >
+                      {parentescos.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                )}
+
+              <Field
+                label="Nombres"
+                value={form.nombres}
+                onChange={(value) =>
+                  set(
+                    'nombres',
+                    value,
+                  )
+                }
+              />
+
+              <Field
+                label="Apellido paterno"
+                value={
+                  form.apellido_paterno
+                }
+                onChange={(value) =>
+                  set(
+                    'apellido_paterno',
+                    value,
+                  )
+                }
+              />
+
+              <Field
+                label="Apellido materno"
+                value={
+                  form.apellido_materno
+                }
+                onChange={(value) =>
+                  set(
+                    'apellido_materno',
+                    value,
+                  )
+                }
+              />
+
+              {alumno && (
+                <label className="matricula-persona-field">
+                  <span className="matricula-persona-label">
+                    Género
+                  </span>
+
+                  <select
+                    value={
+                      form.genero
+                      || ''
+                    }
+                    onChange={(event) =>
+                      set(
+                        'genero',
+                        event.target.value,
+                      )
+                    }
+                    className="matricula-persona-control"
+                  >
+                    <option value="">
+                      Selecciona
+                    </option>
+
+                    <option value="F">
+                      Femenino
+                    </option>
+
+                    <option value="M">
+                      Masculino
+                    </option>
+                  </select>
+                </label>
+              )}
+
+              {apoderado && (
+                <Field
+                  label="Ocupación"
+                  value={
+                    form.ocupacion
+                    || ''
+                  }
+                  onChange={(value) =>
+                    set(
+                      'ocupacion',
+                      value,
+                    )
+                  }
+                />
+              )}
+
+              <Field
+                label="Teléfono"
+                value={form.telefono}
+                onChange={(value) =>
+                  set(
+                    'telefono',
+                    value,
+                  )
+                }
+              />
+
+              <Field
+                label="Correo"
+                type="email"
+                value={form.correo}
+                onChange={(value) =>
+                  set(
+                    'correo',
+                    value,
+                  )
+                }
+              />
+
+              <div className="matricula-persona-location">
+                <LocationSelects
+                  value={{
+                    pais:
+                      form.pais
+                      || 'Perú',
+
+                    departamento:
+                      form.departamento,
+
+                    provincia:
+                      form.provincia,
+
+                    distrito:
+                      form.distrito,
+                  }}
+                  onChange={(location) =>
+                    setForm({
+                      ...form,
+
+                      pais:
+                        location.pais
+                        || 'Perú',
+
+                      departamento:
+                        location.departamento
+                        || '',
+
+                      provincia:
+                        location.provincia
+                        || '',
+
+                      distrito:
+                        location.distrito
+                        || '',
+                    })
+                  }
+                  labelClass="matricula-persona-label"
+                  selectClass="matricula-persona-control"
+                />
+              </div>
+
+              <div className="matricula-persona-address">
+                <Field
+                  label="Dirección"
+                  value={form.direccion}
+                  textarea
+                  rows={3}
+                  placeholder="Ingresa la dirección completa"
+                  onChange={(value) =>
+                    set(
+                      'direccion',
+                      value,
+                    )
+                  }
+                />
+              </div>
             </div>
-            <div className="md:col-span-2"><Field label="Dirección" value={form.direccion} onChange={(v: string) => set('direccion', v)} /></div>
+
+            {aviso && (
+              <div className="matricula-persona-message matricula-persona-message--warning">
+                <AlertTriangle
+                  size={17}
+                  className="mt-0.5 shrink-0"
+                />
+
+                {aviso}
+              </div>
+            )}
+
+            {error && (
+              <div className="matricula-persona-message matricula-persona-message--error">
+                <AlertCircle
+                  size={17}
+                  className="mt-0.5 shrink-0"
+                />
+
+                {error}
+              </div>
+            )}
           </div>
-          {aviso && <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50/50 p-3 text-sm font-medium text-amber-700 ring-1 ring-amber-200/60"><AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />{aviso}</div>}
-          {error && <div className="mt-4 flex items-start gap-2 rounded-xl bg-red-50/50 p-3 text-sm font-medium text-red-600 ring-1 ring-red-200/60"><AlertCircle size={16} className="mt-0.5 flex-shrink-0" />{error}</div>}
-        </div>
-        <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 p-6 sm:flex-row sm:justify-end flex-shrink-0">
-          <button type="button" onClick={onClose} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Cancelar</button>
-          <button type="button" onClick={onSave} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
-            {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Guardar
-          </button>
+
+          <footer className="matricula-persona-modal__footer">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="matricula-persona-cancel"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={loading}
+              className="matricula-persona-save"
+            >
+              {loading ? (
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+
+              {loading
+                ? 'Guardando…'
+                : esEdicion
+                  ? 'Guardar cambios'
+                  : 'Guardar'}
+            </button>
+          </footer>
         </div>
       </div>
-    </div>
     ),
     document.body,
   );
 }
 
-function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  textarea = false,
+  rows = 3,
+  placeholder = '',
+}: {
+  label: string;
+  value: string;
+  onChange: (
+    value: string,
+  ) => void;
+  type?: string;
+  textarea?: boolean;
+  rows?: number;
+  placeholder?: string;
+}) {
   return (
-    <label>
-      <span className={labelClass}>{label}</span>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
+    <label className="matricula-persona-field">
+      <span className="matricula-persona-label">
+        {label}
+      </span>
+
+      {textarea ? (
+        <textarea
+          value={value}
+          rows={rows}
+          placeholder={placeholder}
+          onChange={(event) =>
+            onChange(
+              event.target.value,
+            )
+          }
+          className="matricula-persona-control matricula-persona-textarea"
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) =>
+            onChange(
+              event.target.value,
+            )
+          }
+          className="matricula-persona-control"
+        />
+      )}
     </label>
   );
 }

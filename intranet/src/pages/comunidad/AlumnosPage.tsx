@@ -40,7 +40,15 @@ import {
   communityInputClass,
 } from '../../components/community/CommunityUI';
 
-type CodigoColegio = { id_colegio: number; codigo: string };
+type CodigoColegio = {
+  id_colegio: number;
+  codigo: string;
+  estado_institucional?: string | null;
+  colegio?: {
+    nombre?: string | null;
+    nombre_corto?: string | null;
+  } | null;
+};
 type Meta = {
   total: number;
   page: number;
@@ -123,7 +131,13 @@ const estadoBadge: Record<string, string> = {
   Reserva: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
   Anulado: 'bg-red-50 text-red-600 ring-1 ring-red-200',
   'Pre-matriculado': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
-  Inactivo: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
+  Inactivo: 'bg-slate-100 text-slate-600 ring-1 ring-slate-300',
+  'Registro incompleto': 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
+  Retirado: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
+  'No continúa': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+  Finalizado: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+  Promocionado: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
+  Egresado: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
 };
 
 const getEstadoBadge = (estado?: string) =>
@@ -228,7 +242,12 @@ export default function AlumnosPage() {
   }, [queryString]);
 
   useEffect(() => {
-    if (estado !== 'Sin matrícula') {
+    if (
+      ![
+        'Registro incompleto',
+        'Inactivo',
+      ].includes(estado)
+    ) {
       return;
     }
 
@@ -764,7 +783,7 @@ export default function AlumnosPage() {
           <select
             value={nivelId}
             disabled={
-              estado === 'Sin matrícula'
+              ['Registro incompleto', 'Inactivo'].includes(estado)
             }
             onChange={(event) => {
               setPage(1);
@@ -798,7 +817,7 @@ export default function AlumnosPage() {
             value={gradoId}
             disabled={
               !nivelId
-              || estado === 'Sin matrícula'
+              || ['Registro incompleto', 'Inactivo'].includes(estado)
             }
             onChange={(event) => {
               setPage(1);
@@ -830,7 +849,7 @@ export default function AlumnosPage() {
             value={seccionId}
             disabled={
               !gradoId
-              || estado === 'Sin matrícula'
+              || ['Registro incompleto', 'Inactivo'].includes(estado)
             }
             onChange={(event) => {
               setPage(1);
@@ -878,25 +897,53 @@ export default function AlumnosPage() {
                 Todos los estados
               </option>
 
-              <option value="Matriculado">
-                Matriculado
-              </option>
+              <optgroup label="Matrícula">
+                <option value="Matriculado">
+                  Matriculado
+                </option>
 
-              <option value="Pre-matriculado">
-                Pre-matriculado
-              </option>
+                <option value="Pre-matriculado">
+                  Pre-matriculado
+                </option>
 
-              <option value="Activo">
-                Activo
-              </option>
+                <option value="Reserva">
+                  Reserva
+                </option>
 
-              <option value="Inactivo">
-                Inactivo
-              </option>
+                <option value="Retirado">
+                  Retirado
+                </option>
 
-              <option value="Sin matrícula">
-                Sin matrícula
-              </option>
+                <option value="No continúa">
+                  No continúa
+                </option>
+
+                <option value="Anulado">
+                  Anulado
+                </option>
+
+                <option value="Finalizado">
+                  Finalizado
+                </option>
+
+                <option value="Promocionado">
+                  Promocionado
+                </option>
+
+                <option value="Egresado">
+                  Egresado
+                </option>
+              </optgroup>
+
+              <optgroup label="Administración">
+                <option value="Registro incompleto">
+                  Registros incompletos
+                </option>
+
+                <option value="Inactivo">
+                  Alumnos inactivos
+                </option>
+              </optgroup>
             </select>
           </span>
         </label>

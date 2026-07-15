@@ -3063,57 +3063,198 @@ async obtenerPreparacionAnioLectivo(
 
   // ── CREAR ALUMNO ──────────────────────────────────────
 
-  async createAlumno(dto: CreateAlumnoDto) {
-    
-    dto = normalizePersonaInput(dto) as CreateAlumnoDto;
-const existente = await this.prisma.persona.findUnique({
-      where: { dni: dto.dni },
-      include: { estudiantes: true },
+  async createAlumno(params: {
+    dto: CreateAlumnoDto;
+    userId: number;
+    rol: string;
+    scope?: string;
+    colegioId?: number;
+  }) {
+    const scope = await this.resolveScope({
+      userId: params.userId,
+      rol: params.rol,
+      scope: params.scope,
+      colegioId: params.colegioId,
     });
 
-    if (existente?.estudiantes?.length) {
+    if (
+      scope.tipo === 'todos'
+      || scope.colegioIds.length !== 1
+    ) {
       throw new BadRequestException(
-        'El DNI ya pertenece a un alumno registrado.',
+        'Selecciona una institución destino '
+        + 'antes de registrar al alumno.',
+      );
+    }
+
+    const idColegio = scope.colegioIds[0];
+
+    const dto = normalizePersonaInput(
+      params.dto,
+    ) as CreateAlumnoDto;
+
+    const existente =
+      await this.prisma.persona.findUnique({
+        where: {
+          dni: dto.dni,
+        },
+        include: {
+          estudiantes: true,
+        },
+      });
+
+    if (
+      existente
+      ?.estudiantes
+      ?.length
+    ) {
+      throw new BadRequestException(
+        'El DNI ya pertenece a un alumno '
+        + 'registrado. Usa la búsqueda para '
+        + 'continuar la matrícula.',
       );
     }
 
     if (existente) {
       throw new BadRequestException(
-        'El DNI ya pertenece a una persona registrada. Revisa si es apoderado, docente o staff.',
+        'El DNI ya pertenece a una persona '
+        + 'registrada. Revisa si es apoderado, '
+        + 'docente o staff.',
       );
     }
 
     try {
-      const persona = await this.prisma.persona.create({
-        data: {
-          dni: dto.dni.trim(),
-          nombres: dto.nombres.trim(),
-          apellido_paterno: dto.apellido_paterno.trim(),
-          apellido_materno: dto.apellido_materno.trim(),
-          fecha_nacimiento: this.validarFechaNacimiento(dto.fecha_nacimiento),
-          genero: this.normalizeGenero(dto.genero),
-          direccion: this.normalizeEmpty(dto.direccion),
-          pais: this.normalizeEmpty(dto.pais) || 'Perú',
-          departamento: this.normalizeEmpty(dto.departamento),
-          provincia: this.normalizeEmpty(dto.provincia),
-          distrito: this.normalizeEmpty(dto.distrito),
-          telefono: this.normalizeEmpty(dto.telefono),
-          correo: this.normalizeEmpty(dto.correo),
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const persona =
+            await tx.persona.create({
+              data: {
+                dni: dto.dni.trim(),
+
+                nombres:
+                  dto.nombres.trim(),
+
+                apellido_paterno:
+                  dto.apellido_paterno.trim(),
+
+                apellido_materno:
+                  dto.apellido_materno.trim(),
+
+                fecha_nacimiento:
+                  this.validarFechaNacimiento(
+                    dto.fecha_nacimiento,
+                  ),
+
+                genero:
+                  this.normalizeGenero(
+                    dto.genero,
+                  ),
+
+                direccion:
+                  this.normalizeEmpty(
+                    dto.direccion,
+                  ),
+
+                pais:
+                  this.normalizeEmpty(
+                    dto.pais,
+                  )
+                  || 'Perú',
+
+                departamento:
+                  this.normalizeEmpty(
+                    dto.departamento,
+                  ),
+
+                provincia:
+                  this.normalizeEmpty(
+                    dto.provincia,
+                  ),
+
+                distrito:
+                  this.normalizeEmpty(
+                    dto.distrito,
+                  ),
+
+                telefono:
+                  this.normalizeEmpty(
+                    dto.telefono,
+                  ),
+
+                correo:
+                  this.normalizeEmpty(
+                    dto.correo,
+                  ),
+              },
+            });
+
+          const codigoGlobal =
+            `ALU${String(
+              persona.id_persona,
+            ).padStart(6, '0')}`;
+
+          const estudiante =
+            await tx.estudiante.create({
+              data: {
+                id_persona:
+                  persona.id_persona,
+
+                codigo_estudiante:
+                  codigoGlobal,
+              },
+            });
+
+          await this
+            .asegurarCodigoEstudianteColegio(
+              tx,
+              estudiante.id_persona,
+              idColegio,
+            );
+
+          const registroInstitucional =
+            await tx
+              .estudianteCodigoColegio.update({
+                where: {
+                  id_estudiante_id_colegio: {
+                    id_estudiante:
+                      estudiante.id_persona,
+
+                    id_colegio:
+                      idColegio,
+                  },
+                },
+                data: {
+                  estado_institucional:
+                    'Borrador',
+
+                  fecha_estado:
+                    new Date(),
+
+                  motivo_estado:
+                    'Ficha creada durante '
+                    + 'el proceso de matrícula.',
+
+                  id_usuario_estado:
+                    params.userId,
+                },
+              });
+
+          return {
+            persona,
+            estudiante,
+
+            registro_institucional:
+              registroInstitucional,
+
+            estado_registro:
+              'Borrador',
+          };
         },
-      });
-
-      const codigo = `ALU${String(persona.id_persona).padStart(6, '0')}`;
-
-      const estudiante = await this.prisma.estudiante.create({
-        data: {
-          id_persona: persona.id_persona,
-          codigo_estudiante: codigo,
-        },
-      });
-
-      return { persona, estudiante };
+      );
     } catch (error) {
-      this.handlePersonaPrismaError(error);
+      this.handlePersonaPrismaError(
+        error,
+      );
     }
   }
 
@@ -3505,6 +3646,27 @@ const existente = await this.prisma.persona.findUnique({
         params.dto.id_estudiante,
         idColegio,
       );
+
+      await tx.estudianteCodigoColegio.update({
+        where: {
+          id_estudiante_id_colegio: {
+            id_estudiante:
+              params.dto.id_estudiante,
+            id_colegio:
+              idColegio,
+          },
+        },
+        data: {
+          estado_institucional:
+            'Activo',
+          fecha_estado:
+            new Date(),
+          motivo_estado:
+            null,
+          id_usuario_estado:
+            params.userId,
+        },
+      });
 
       for (const ap of params.dto.apoderados) {
         await tx.apoderadoEstudiante.upsert({
@@ -6553,13 +6715,28 @@ const existente = await this.prisma.persona.findUnique({
         },
       };
 
+    const estadoSolicitado =
+      params.estado?.trim()
+      || 'Todos';
+
+    const esRegistroIncompleto =
+      estadoSolicitado
+      === 'Registro incompleto';
+
+    const esInactivoInstitucional =
+      estadoSolicitado
+      === 'Inactivo';
+
+    const esEstadoAdministrativo =
+      esRegistroIncompleto
+      || esInactivoInstitucional;
+
     if (
-      params.estado
-      && params.estado !== 'Todos'
-      && params.estado !== 'Sin matrícula'
+      estadoSolicitado !== 'Todos'
+      && !esEstadoAdministrativo
     ) {
       matriculaVisibleWhere.estado_matricula =
-        params.estado;
+        estadoSolicitado;
     }
 
     if (params.seccionId) {
@@ -6581,7 +6758,8 @@ const existente = await this.prisma.persona.findUnique({
 
       if (params.nivelId) {
         seccionWhere.grado = {
-          id_nivel: params.nivelId,
+          id_nivel:
+            params.nivelId,
         };
       }
 
@@ -6589,59 +6767,52 @@ const existente = await this.prisma.persona.findUnique({
         seccionWhere;
     }
 
-    const estadosVigentes = [
-      'Activo',
-      'Matriculado',
-      'Pre-matriculado',
-      'Reserva',
-    ];
-
-    if (
-      params.estado
-      === 'Sin matrícula'
-    ) {
+    if (esRegistroIncompleto) {
       and.push({
-        matriculas: {
-          none: {
+        codigos_colegio: {
+          some: {
             id_colegio: {
               in: scope.colegioIds,
             },
-            estado_matricula: {
-              in: estadosVigentes,
-            },
+            estado_institucional:
+              'Borrador',
           },
         },
       });
     } else if (
-      (
-        params.estado
-        && params.estado !== 'Todos'
-      )
+      esInactivoInstitucional
+    ) {
+      and.push({
+        codigos_colegio: {
+          some: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+            estado_institucional:
+              'Inactivo',
+          },
+        },
+      });
+    } else if (
+      estadoSolicitado !== 'Todos'
       || params.nivelId
       || params.gradoId
       || params.seccionId
     ) {
       and.push({
         matriculas: {
-          some: matriculaVisibleWhere,
+          some:
+            matriculaVisibleWhere,
         },
       });
     }
 
-    /*
-     * Para "Sin matrícula", el listado de
-     * matrículas devuelto debe permanecer vacío
-     * si no existe una matrícula vigente.
-     */
     const matriculaIncludeWhere:
       Prisma.MatriculaWhereInput =
-        params.estado === 'Sin matrícula'
+        esEstadoAdministrativo
           ? {
               id_colegio: {
                 in: scope.colegioIds,
-              },
-              estado_matricula: {
-                in: estadosVigentes,
               },
             }
           : matriculaVisibleWhere;
@@ -6668,7 +6839,19 @@ const existente = await this.prisma.persona.findUnique({
         include: {
           persona: true,
 
-          codigos_colegio: true,
+          codigos_colegio: {
+            where: {
+              id_colegio: {
+                in: scope.colegioIds,
+              },
+            },
+            include: {
+              colegio: true,
+            },
+            orderBy: {
+              id_colegio: 'asc',
+            },
+          },
 
           apoderados: {
             include: {
@@ -6747,7 +6930,19 @@ const existente = await this.prisma.persona.findUnique({
         persona: {
           select: this.personaBasicaSelect(),
         },
-        codigos_colegio: true,
+        codigos_colegio: {
+          where: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+          include: {
+            colegio: true,
+          },
+          orderBy: {
+            id_colegio: 'asc',
+          },
+        },
         apoderados: {
           include: {
             apoderado: {

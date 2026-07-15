@@ -509,8 +509,21 @@ async deleteGrado(
   @Post('alumnos')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria')
-  createAlumno(@Body() dto: CreateAlumnoDto) {
-    return this.academicosService.createAlumno(dto);
+  createAlumno(
+    @Request() req,
+    @Body() dto: CreateAlumnoDto,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.createAlumno({
+      dto,
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId
+        ? Number(colegioId)
+        : undefined,
+    });
   }
 
   // ── NUEVOS ENDPOINTS DE ALUMNOS ──────────────────────

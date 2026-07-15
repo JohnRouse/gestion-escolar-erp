@@ -36,7 +36,7 @@ export default function CommunityEditModal({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-slate-950/60 px-4 py-8 backdrop-blur-sm">
       <section
-        className={`my-auto w-full ${maxWidthClassName} overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter`}
+        className={`my-auto flex max-h-[calc(100vh-2rem)] w-full ${maxWidthClassName} flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200/80 erp-detail-enter`}
       >
         <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
           <div>
@@ -65,7 +65,7 @@ export default function CommunityEditModal({
           </button>
         </header>
 
-        <div className="max-h-[72vh] overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {children}
         </div>
 
