@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import axios from 'axios';
 import {
   BookOpen,
@@ -68,6 +74,97 @@ const DIAS = [
   { value: 5, label: 'Viernes' },
   { value: 6, label: 'Sábado' },
 ];
+
+const TIME_OPTIONS = Array.from(
+  { length: 57 },
+  (_, index) => {
+    const totalMinutes =
+      6 * 60 + index * 15;
+
+    const hours = Math.floor(
+      totalMinutes / 60,
+    );
+
+    const minutes =
+      totalMinutes % 60;
+
+    return [
+      String(hours).padStart(2, '0'),
+      String(minutes).padStart(2, '0'),
+    ].join(':');
+  },
+);
+
+const TEACHER_TONES = [
+  {
+    accent: '#0f62fe',
+    surface: '#edf5ff',
+    text: '#0043ce',
+  },
+  {
+    accent: '#8a3ffc',
+    surface: '#f6f2ff',
+    text: '#6929c4',
+  },
+  {
+    accent: '#007d79',
+    surface: '#e5f6f5',
+    text: '#005d5d',
+  },
+  {
+    accent: '#d12771',
+    surface: '#fff0f7',
+    text: '#9f1853',
+  },
+  {
+    accent: '#b28600',
+    surface: '#fff8e1',
+    text: '#684e00',
+  },
+  {
+    accent: '#198038',
+    surface: '#defbe6',
+    text: '#0e6027',
+  },
+];
+
+function getTeacherTone(
+  idDocente: number,
+) {
+  const index =
+    Math.abs(Number(idDocente) || 0)
+    % TEACHER_TONES.length;
+
+  return TEACHER_TONES[index];
+}
+
+function getTeacherStyle(
+  idDocente: number,
+): CSSProperties {
+  const tone = getTeacherTone(idDocente);
+
+  return {
+    '--teacher-accent': tone.accent,
+    '--teacher-surface': tone.surface,
+    '--teacher-text': tone.text,
+  } as CSSProperties;
+}
+
+function getTimeOptions(
+  ...currentValues: Array<string | undefined>
+) {
+  const values = currentValues.filter(
+    (value): value is string =>
+      Boolean(value),
+  );
+
+  return Array.from(
+    new Set([
+      ...TIME_OPTIONS,
+      ...values,
+    ]),
+  ).sort();
+}
 
 const emptyForm: HorarioForm = {
   id_asignacion: '',
@@ -142,6 +239,11 @@ export default function CalendarioPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const assignmentSelectRef =
+    useRef<HTMLSelectElement | null>(
+      null,
+    );
+
   const scopeParams = useMemo(() => {
     return new URLSearchParams(queryString.replace('?', ''));
   }, [queryString]);
@@ -214,6 +316,31 @@ export default function CalendarioPage() {
   const selectedDocente = docentes.find(
     (item) =>
       String(item.id_docente) === docenteId,
+  );
+
+  const vistaTodosDocentes =
+    !isProfesorHorario && !docenteId;
+
+  const docentesEnVista = useMemo(() => {
+    return uniqueBy(
+      horarios,
+      (item) => item.id_docente,
+    ).map((item) => ({
+      id_docente: item.id_docente,
+      docente: item.docente,
+    }));
+  }, [horarios]);
+
+  const opcionesHora = useMemo(
+    () =>
+      getTimeOptions(
+        form.hora_inicio,
+        form.hora_fin,
+      ),
+    [
+      form.hora_inicio,
+      form.hora_fin,
+    ],
   );
 
   const vistaActual = selectedSeccion
@@ -346,9 +473,85 @@ export default function CalendarioPage() {
     }
   }, [docenteId, isProfesorHorario]);
 
+  // Autoselecciona una asignación única.
+  useEffect(() => {
+    if (editing) return;
+
+    const currentIsValid =
+      asignacionesParaFormulario.some(
+        (item) =>
+          String(item.id_asignacion)
+          === form.id_asignacion,
+      );
+
+    if (currentIsValid) return;
+
+    if (
+      asignacionesParaFormulario.length
+      === 1
+    ) {
+      setForm((current) => ({
+        ...current,
+        id_asignacion: String(
+          asignacionesParaFormulario[0]
+            .id_asignacion,
+        ),
+      }));
+
+      return;
+    }
+
+    if (form.id_asignacion) {
+      setForm((current) => ({
+        ...current,
+        id_asignacion: '',
+      }));
+    }
+  }, [
+    asignacionesParaFormulario,
+    editing,
+    form.id_asignacion,
+  ]);
+
   const resetForm = () => {
     setForm(emptyForm);
     setEditing(null);
+  };
+
+  const prepararClaseEnDia = (
+    dia: number,
+  ) => {
+    if (
+      !canManageHorario
+      || !seccionId
+    ) {
+      showToast({
+        type: 'warning',
+        title: 'Selecciona una sección',
+        message:
+          'Elige primero la sección del horario para programar una clase.',
+      });
+
+      return;
+    }
+
+    setEditing(null);
+
+    setForm((current) => ({
+      ...current,
+      dia_semana: String(dia),
+    }));
+
+    window.requestAnimationFrame(() => {
+      assignmentSelectRef.current
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+
+      assignmentSelectRef.current
+        ?.focus();
+    });
   };
 
   const guardarHorario = async () => {
@@ -360,6 +563,20 @@ export default function CalendarioPage() {
         title: 'Asignación requerida',
         message: 'Selecciona una sección y una asignación para programar la clase.',
       });
+      return;
+    }
+
+    if (
+      form.hora_fin
+      <= form.hora_inicio
+    ) {
+      showToast({
+        type: 'warning',
+        title: 'Horario no válido',
+        message:
+          'La hora final debe ser posterior a la hora de inicio.',
+      });
+
       return;
     }
 
@@ -555,29 +772,60 @@ export default function CalendarioPage() {
           <article className="erp-horario-clean-form-card erp-horario-form-card">
             <header className="erp-horario-clean-form-header">
               <h2>{editing ? 'Editar clase' : 'Programar clase'}</h2>
-              <p>Selecciona una sección en los filtros superiores y luego elige el curso y docente.</p>
+              <p>
+                {!seccionId
+                  ? 'Selecciona una sección en los filtros superiores.'
+                  : docenteId
+                    ? 'El docente está filtrado. Elige uno de sus cursos asignados.'
+                    : 'Elige el curso y docente sin salir de la vista general.'}
+              </p>
             </header>
 
             <div className="erp-horario-form-body">
               <label className="erp-horario-field">
-                <span>Asignación docente</span>
+                <span>
+                  {docenteId
+                    ? 'Curso asignado'
+                    : 'Curso y docente'}
+                </span>
                 <select
+                  ref={assignmentSelectRef}
                   value={form.id_asignacion}
                   onChange={(event) => setForm({ ...form, id_asignacion: event.target.value })}
                   className={inputClass}
                 >
                   <option value="">
-                      {seccionId
-                        ? 'Selecciona curso y docente'
-                        : 'Primero selecciona una sección'}
-                    </option>
+                    {!seccionId
+                      ? 'Primero selecciona una sección'
+                      : docenteId
+                        ? 'Selecciona el curso'
+                        : 'Selecciona curso y docente'}
+                  </option>
                   {asignacionesParaFormulario.map((item) => (
                     <option key={item.id_asignacion} value={item.id_asignacion}>
-                      {item.seccion} · {item.curso} · {item.docente}
+                      {docenteId
+                        ? item.curso
+                        : `${item.curso} · ${item.docente}`}
                     </option>
                   ))}
                 </select>
               </label>
+
+              {seccionId &&
+                asignacionesParaFormulario.length > 0 && (
+                  <div className="erp-horario-form-context">
+                    <UserRound
+                      size={16}
+                      aria-hidden="true"
+                    />
+
+                    <p>
+                      {docenteId
+                        ? `Vista filtrada por ${selectedDocente?.docente || 'docente'}.`
+                        : 'Puedes escoger cualquier docente asignado a esta sección.'}
+                    </p>
+                  </div>
+                )}
 
               <div className="erp-horario-time-grid">
                 <label className="erp-horario-field">
@@ -597,22 +845,50 @@ export default function CalendarioPage() {
 
                 <label className="erp-horario-field">
                   <span>Inicio</span>
-                  <input
-                    type="time"
+                  <select
                     value={form.hora_inicio}
-                    onChange={(event) => setForm({ ...form, hora_inicio: event.target.value })}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        hora_inicio:
+                          event.target.value,
+                      })
+                    }
                     className={inputClass}
-                  />
+                  >
+                    {opcionesHora.map((hora) => (
+                      <option
+                        key={`inicio-${hora}`}
+                        value={hora}
+                      >
+                        {hora}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label className="erp-horario-field">
                   <span>Fin</span>
-                  <input
-                    type="time"
+                  <select
                     value={form.hora_fin}
-                    onChange={(event) => setForm({ ...form, hora_fin: event.target.value })}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        hora_fin:
+                          event.target.value,
+                      })
+                    }
                     className={inputClass}
-                  />
+                  >
+                    {opcionesHora.map((hora) => (
+                      <option
+                        key={`fin-${hora}`}
+                        value={hora}
+                      >
+                        {hora}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
 
@@ -632,7 +908,7 @@ export default function CalendarioPage() {
                 <button
                   type="button"
                   onClick={guardarHorario}
-                  disabled={saving || asignacionesParaFormulario.length === 0}
+                  disabled={saving || !form.id_asignacion}
                   className="erp-horario-primary-button"
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -666,10 +942,41 @@ export default function CalendarioPage() {
 
             {loading && (
               <span className="erp-horario-loading">
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
                 Actualizando
               </span>
             )}
+
+            {vistaTodosDocentes &&
+              docentesEnVista.length > 1 && (
+                <div className="erp-horario-teacher-legend">
+                  <span className="erp-horario-teacher-legend__title">
+                    Docentes en esta vista
+                  </span>
+
+                  <div className="erp-horario-teacher-legend__items">
+                    {docentesEnVista.map((item) => (
+                      <span
+                        key={item.id_docente}
+                        className="erp-horario-teacher-chip"
+                        style={getTeacherStyle(
+                          item.id_docente,
+                        )}
+                      >
+                        <span
+                          className="erp-horario-teacher-chip__dot"
+                          aria-hidden="true"
+                        />
+
+                        {item.docente}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
           </header>
 
           <div className="erp-horario-board-scroll">
@@ -681,7 +988,13 @@ export default function CalendarioPage() {
                   <section key={dia.value} className="erp-horario-day-column">
                     <header className="erp-horario-day-header">
                       <p>{dia.label}</p>
-                      <span>
+                      <span
+                        className={
+                          items.length === 0
+                            ? 'erp-horario-day-count erp-horario-day-count--empty'
+                            : 'erp-horario-day-count erp-horario-day-count--active'
+                        }
+                      >
                         {items.length === 0
                           ? 'Sin clases'
                           : items.length === 1
@@ -692,10 +1005,53 @@ export default function CalendarioPage() {
 
                     <div className="erp-horario-day-body">
                       {items.length === 0 ? (
-                        <div className="erp-horario-empty-day">Sin clases</div>
+                        canManageHorario ? (
+                          <button
+                            type="button"
+                            disabled={!seccionId}
+                            onClick={() =>
+                              prepararClaseEnDia(
+                                dia.value,
+                              )
+                            }
+                            className="erp-horario-empty-day erp-horario-empty-day--action"
+                            title={
+                              seccionId
+                                ? `Programar una clase el ${dia.label}`
+                                : 'Selecciona primero una sección'
+                            }
+                          >
+                            <span>Sin clases</span>
+
+                            <small>
+                              {seccionId
+                                ? 'Programar aquí'
+                                : 'Selecciona una sección'}
+                            </small>
+                          </button>
+                        ) : (
+                          <div className="erp-horario-empty-day">
+                            Sin clases
+                          </div>
+                        )
                       ) : (
                         items.map((item) => (
-                          <div key={item.id_horario} className="erp-horario-class-card">
+                          <div
+                            key={item.id_horario}
+                            className="erp-horario-class-card"
+                            data-multi-teacher={
+                              vistaTodosDocentes
+                                ? 'true'
+                                : 'false'
+                            }
+                            style={
+                              vistaTodosDocentes
+                                ? getTeacherStyle(
+                                    item.id_docente,
+                                  )
+                                : undefined
+                            }
+                          >
                             <div className="erp-horario-class-top">
                               <span className="erp-horario-class-time">
                                 <Clock3 size={13} />

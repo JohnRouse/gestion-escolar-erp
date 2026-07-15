@@ -1,0 +1,309 @@
+/*
+ * Calendario académico:
+ * programación directa, colores por docente
+ * y mejor lectura de la semana.
+ */
+
+
+/* ========================================================
+   FORMULARIO
+   ======================================================== */
+
+.carbon-horario-page
+  .erp-horario-form-context {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid #a6c8ff;
+  border-left: 4px solid #0f62fe;
+  border-radius: 4px;
+  background: #edf5ff;
+  padding: 10px 11px;
+  color: #0043ce;
+}
+
+.carbon-horario-page
+  .erp-horario-form-context svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.carbon-horario-page
+  .erp-horario-form-context p {
+  margin: 0 !important;
+  color: #393939 !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.45 !important;
+  text-transform: none !important;
+}
+
+.carbon-horario-page
+  .erp-horario-time-grid select {
+  padding-right: 8px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.carbon-horario-page
+  .erp-horario-primary-button:disabled {
+  border-color: #c6c6c6 !important;
+  background: #c6c6c6 !important;
+  color: #525252 !important;
+  opacity: 1 !important;
+}
+
+
+/* ========================================================
+   CABECERA Y LEYENDA
+   ======================================================== */
+
+.carbon-horario-page
+  .erp-horario-clean-week-header {
+  flex-wrap: wrap !important;
+}
+
+.carbon-horario-page
+  .erp-horario-teacher-legend {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 12px;
+}
+
+.carbon-horario-page
+  .erp-horario-teacher-legend__title {
+  flex-shrink: 0;
+  padding-top: 5px;
+  color: #525252;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.carbon-horario-page
+  .erp-horario-teacher-legend__items {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.carbon-horario-page
+  .erp-horario-teacher-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--teacher-accent);
+  border-radius: 999px;
+  background: var(--teacher-surface);
+  padding: 4px 9px;
+  color: var(--teacher-text);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.carbon-horario-page
+  .erp-horario-teacher-chip__dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--teacher-accent);
+}
+
+
+/* ========================================================
+   ENCABEZADOS DE DÍAS
+   ======================================================== */
+
+.carbon-horario-page
+  .erp-horario-day-count {
+  display: inline-flex !important;
+  width: fit-content;
+  min-height: 23px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+}
+
+.carbon-horario-page
+  .erp-horario-day-count--empty {
+  background: #f4f4f4;
+  color: #6f6f6f !important;
+}
+
+.carbon-horario-page
+  .erp-horario-day-count--active {
+  border: 1px solid #a6c8ff;
+  background: #edf5ff;
+  color: #0043ce !important;
+}
+
+
+/* ========================================================
+   DÍAS VACÍOS
+   ======================================================== */
+
+.carbon-horario-page
+  .erp-horario-empty-day {
+  width: 100%;
+  min-height: 64px !important;
+  border: 1px dashed #c6c6c6 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  color: #6f6f6f !important;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action {
+  display: flex !important;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 3px;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action span {
+  color: #525252;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action small {
+  color: #0f62fe;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action:hover:not(:disabled) {
+  border-color: #0f62fe !important;
+  background: #edf5ff !important;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action:disabled {
+  cursor: not-allowed;
+  background: #f4f4f4 !important;
+  opacity: 0.65;
+}
+
+.carbon-horario-page
+  .erp-horario-empty-day--action:disabled small {
+  color: #6f6f6f;
+}
+
+
+/* ========================================================
+   COLORES DE CLASES POR DOCENTE
+   ======================================================== */
+
+.carbon-horario-page
+  .erp-horario-class-card[
+    data-multi-teacher="true"
+  ] {
+  border-color:
+    var(--teacher-accent) !important;
+  border-left-color:
+    var(--teacher-accent) !important;
+  background:
+    var(--teacher-surface) !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-card[
+    data-multi-teacher="true"
+  ]
+  .erp-horario-class-time {
+  color:
+    var(--teacher-text) !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-card[
+    data-multi-teacher="true"
+  ]
+  h3 {
+  color:
+    var(--teacher-text) !important;
+}
+
+.carbon-horario-page
+  .erp-horario-class-card {
+  margin-bottom: 9px;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.carbon-horario-page
+  .erp-horario-class-card:hover {
+  box-shadow:
+    0 5px 14px rgba(22, 22, 22, 0.08) !important;
+}
+
+
+/* ========================================================
+   RESPONSIVE
+   ======================================================== */
+
+@media (max-width: 900px) {
+  .carbon-horario-page
+    .erp-horario-teacher-legend {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .carbon-horario-page
+    .erp-horario-teacher-legend__title {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .carbon-horario-page
+    .erp-horario-time-grid {
+    grid-template-columns:
+      1fr
+      1fr !important;
+  }
+
+  .carbon-horario-page
+    .erp-horario-time-grid
+    .erp-horario-field:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .carbon-horario-page
+    .erp-horario-teacher-chip {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

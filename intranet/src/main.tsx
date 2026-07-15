@@ -21,6 +21,7 @@ import './styles/carbon/111-matricula-flujo-compacto.css';
 import './styles/carbon/112-renovacion-historial-tabs.css';
 import './styles/carbon/113-historial-filtros-revision.css';
 import './styles/carbon/114-asistencia-desktop-mobile-ux.css';
+import './styles/carbon/115-calendario-docentes-interaccion.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
