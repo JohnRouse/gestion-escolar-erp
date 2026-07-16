@@ -18,6 +18,8 @@ import {
   Power,
   RotateCcw,
   School,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -57,6 +59,30 @@ type CodigoColegio = {
     nombre_corto?: string | null;
   } | null;
 };
+type HistorialEstadoInstitucional = {
+  id_historial: number;
+  id_estudiante: number;
+  id_colegio: number;
+  estado_anterior?: string | null;
+  estado_nuevo: string;
+  accion: string;
+  motivo?: string | null;
+  fecha_evento: string;
+  colegio?: {
+    nombre?: string | null;
+    nombre_corto?: string | null;
+  } | null;
+  usuario?: {
+    id_usuario: number;
+    username: string;
+    persona?: {
+      nombres?: string | null;
+      apellido_paterno?: string | null;
+      apellido_materno?: string | null;
+    } | null;
+  } | null;
+};
+
 type Meta = {
   total: number;
   page: number;
@@ -106,6 +132,7 @@ type AlumnoItem = {
     apoderado: { id_persona: number; persona: { dni: string; nombres: string; apellido_paterno: string; apellido_materno: string; telefono?: string | null; correo?: string | null } };
   }[];
   matriculas?: any[];
+  historial_estados?: HistorialEstadoInstitucional[];
 };
 
 type AlumnoForm = {
@@ -131,6 +158,60 @@ const fullName = (p: AlumnoItem['persona']) =>
 
 const fecha = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString('es-PE') : '—';
+
+const fechaHora = (
+  value?: string | null,
+) => {
+  if (!value) return '—';
+
+  const parsed = new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime(),
+    )
+  ) {
+    return '—';
+  }
+
+  return parsed.toLocaleString(
+    'es-PE',
+    {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    },
+  );
+};
+
+const estadoInstitucionalLabel = (
+  estado?: string | null,
+) => {
+  if (!estado) return 'Inicio';
+
+  return estado === 'Borrador'
+    ? 'Registro incompleto'
+    : estado;
+};
+
+const nombreUsuarioHistorial = (
+  item: HistorialEstadoInstitucional,
+) => {
+  const persona =
+    item.usuario?.persona;
+
+  const nombreCompleto = [
+    persona?.nombres,
+    persona?.apellido_paterno,
+    persona?.apellido_materno,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return nombreCompleto
+    || item.usuario?.username
+    || 'Sistema';
+};
 
 const getCodigo = (alumno: AlumnoItem) =>
   alumno.codigos_colegio?.[0]?.codigo || alumno.codigo_estudiante || 'Sin código';
@@ -1480,6 +1561,135 @@ export default function AlumnosPage() {
                 <p className="text-sm text-slate-400">
                   No existe información institucional visible.
                 </p>
+              )}
+            </Section>
+
+            <Section title="Historial institucional">
+              {detalle.historial_estados?.length ? (
+                <div className="relative">
+                  <div
+                    className="absolute bottom-4 left-[17px] top-4 w-px bg-slate-200"
+                    aria-hidden="true"
+                  />
+
+                  <div className="space-y-4">
+                    {detalle.historial_estados.map(
+                      (item) => {
+                        const estadoAnterior =
+                          estadoInstitucionalLabel(
+                            item.estado_anterior,
+                          );
+
+                        const estadoNuevo =
+                          estadoInstitucionalLabel(
+                            item.estado_nuevo,
+                          );
+
+                        const nombreColegio =
+                          item.colegio?.nombre
+                          || item.colegio?.nombre_corto
+                          || `Institución ${item.id_colegio}`;
+
+                        return (
+                          <article
+                            key={item.id_historial}
+                            className="relative flex gap-3"
+                          >
+                            <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-600 shadow-sm">
+                              <History size={15} />
+                            </span>
+
+                            <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold text-slate-900">
+                                    {item.accion}
+                                  </p>
+
+                                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                                    {nombreColegio}
+                                  </p>
+                                </div>
+
+                                <time className="shrink-0 text-[11px] font-semibold text-slate-400">
+                                  {fechaHora(
+                                    item.fecha_evento,
+                                  )}
+                                </time>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                {item.estado_anterior ? (
+                                  <span
+                                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(
+                                      item.estado_anterior,
+                                    )}`}
+                                  >
+                                    {estadoAnterior}
+                                  </span>
+                                ) : (
+                                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+                                    Inicio
+                                  </span>
+                                )}
+
+                                <ArrowRight
+                                  size={14}
+                                  className="text-slate-400"
+                                />
+
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(
+                                    item.estado_nuevo,
+                                  )}`}
+                                >
+                                  {estadoNuevo}
+                                </span>
+                              </div>
+
+                              {item.motivo && (
+                                <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                    Motivo
+                                  </p>
+
+                                  <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
+                                    {item.motivo}
+                                  </p>
+                                </div>
+                              )}
+
+                              <p className="mt-3 text-[11px] text-slate-400">
+                                Registrado por{' '}
+                                <span className="font-bold text-slate-600">
+                                  {nombreUsuarioHistorial(
+                                    item,
+                                  )}
+                                </span>
+                              </p>
+                            </div>
+                          </article>
+                        );
+                      },
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                    <History size={16} />
+                  </span>
+
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Sin movimientos registrados
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Los próximos cambios institucionales aparecerán aquí.
+                    </p>
+                  </div>
+                </div>
               )}
             </Section>
 

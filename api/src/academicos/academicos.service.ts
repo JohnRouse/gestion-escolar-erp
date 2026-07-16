@@ -3239,6 +3239,38 @@ async obtenerPreparacionAnioLectivo(
                 },
               });
 
+          await tx.estudianteEstadoHistorial.create({
+            data: {
+              id_estudiante:
+                estudiante.id_persona,
+
+              id_colegio:
+                idColegio,
+
+              estado_anterior:
+                null,
+
+              estado_nuevo:
+                'Borrador',
+
+              accion:
+                'Registro creado como borrador',
+
+              motivo:
+                registroInstitucional.motivo_estado
+                || 'Ficha creada durante '
+                  + 'el proceso de matrícula.',
+
+              id_usuario:
+                params.userId,
+
+              fecha_evento:
+                registroInstitucional.fecha_estado
+                || new Date(),
+            },
+          });
+
+
           return {
             persona,
             estudiante,
@@ -3647,6 +3679,23 @@ const existente = await this.prisma.persona.findUnique({
         idColegio,
       );
 
+      const estadoInstitucionalAnterior =
+        await tx.estudianteCodigoColegio.findUnique({
+          where: {
+            id_estudiante_id_colegio: {
+              id_estudiante:
+                params.dto.id_estudiante,
+
+              id_colegio:
+                idColegio,
+            },
+          },
+          select: {
+            estado_institucional:
+              true,
+          },
+        });
+
       await tx.estudianteCodigoColegio.update({
         where: {
           id_estudiante_id_colegio: {
@@ -3667,6 +3716,44 @@ const existente = await this.prisma.persona.findUnique({
             params.userId,
         },
       });
+
+      if (
+        estadoInstitucionalAnterior
+          ?.estado_institucional
+        !== 'Activo'
+      ) {
+        await tx.estudianteEstadoHistorial.create({
+          data: {
+            id_estudiante:
+              params.dto.id_estudiante,
+
+            id_colegio:
+              idColegio,
+
+            estado_anterior:
+              estadoInstitucionalAnterior
+                ?.estado_institucional
+              || null,
+
+            estado_nuevo:
+              'Activo',
+
+            accion:
+              'Activado al confirmar matrícula',
+
+            motivo:
+              'La ficha institucional fue '
+              + 'activada al confirmar '
+              + 'la matrícula.',
+
+            id_usuario:
+              params.userId,
+
+            fecha_evento:
+              new Date(),
+          },
+        });
+      }
 
       for (const ap of params.dto.apoderados) {
         await tx.apoderadoEstudiante.upsert({
@@ -6943,6 +7030,39 @@ const existente = await this.prisma.persona.findUnique({
             id_colegio: 'asc',
           },
         },
+        historial_estados: {
+          where: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+          include: {
+            colegio: true,
+            usuario: {
+              select: {
+                id_usuario: true,
+                username: true,
+                persona: {
+                  select: {
+                    nombres: true,
+                    apellido_paterno: true,
+                    apellido_materno: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: [
+            {
+              fecha_evento: 'desc',
+            },
+            {
+              id_historial: 'desc',
+            },
+          ],
+          take: 50,
+        },
+
         apoderados: {
           include: {
             apoderado: {
@@ -7310,6 +7430,45 @@ const existente = await this.prisma.persona.findUnique({
                   colegio: true,
                 },
               });
+
+          const accionHistorialInstitucional =
+            estadoDestino === 'Inactivo'
+              ? registro.estado_institucional
+                === 'Borrador'
+                ? 'Registro incompleto descartado'
+                : 'Alumno dado de baja'
+              : estadoDestino === 'Borrador'
+                ? 'Registro incompleto reactivado'
+                : 'Ficha institucional reactivada';
+
+          await tx.estudianteEstadoHistorial.create({
+            data: {
+              id_estudiante:
+                params.idEstudiante,
+
+              id_colegio:
+                params.idColegio,
+
+              estado_anterior:
+                registro.estado_institucional,
+
+              estado_nuevo:
+                estadoDestino,
+
+              accion:
+                accionHistorialInstitucional,
+
+              motivo:
+                motivo,
+
+              id_usuario:
+                params.userId,
+
+              fecha_evento:
+                actualizado.fecha_estado
+                || new Date(),
+            },
+          });
 
           return {
             actualizado,

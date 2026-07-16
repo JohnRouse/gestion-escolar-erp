@@ -66,17 +66,18 @@ model Usuario {
   tenants                             UsuarioTenant[]
   colegios                            UsuarioColegio[]
   pagos_cajero                        PagoTransaccion[]
-  matriculas_registradas              Matricula[]             @relation("UsuarioMatriculasRegistradas")
-  matriculas_revisadas                Matricula[]             @relation("UsuarioMatriculasRevisadas")
+  matriculas_registradas              Matricula[]                 @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas                Matricula[]                 @relation("UsuarioMatriculasRevisadas")
   circulares                          Circular[]
   notificaciones                      Notificacion[]
   tokensFCM                           TokenFCM[]
-  pagos_recibidos_registrados         PagoRecibido[]          @relation("PagoRecibidoRegistro")
-  pagos_recibidos_validados           PagoRecibido[]          @relation("PagoRecibidoValidacion")
-  pagos_recibidos_historial           PagoRecibidoHistorial[] @relation("PagoRecibidoHistorialUsuario")
-  gestiones_cobranza                  CobranzaGestion[]       @relation("CobranzaGestionUsuario")
-  comentarios_bimestrales_registrados ComentarioBimestral[]   @relation("UsuarioComentariosBimestrales")
-  calificaciones_tutoria              CalificacionTutoria[]   @relation("UsuarioCalificacionesTutoria")
+  pagos_recibidos_registrados         PagoRecibido[]              @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados           PagoRecibido[]              @relation("PagoRecibidoValidacion")
+  pagos_recibidos_historial           PagoRecibidoHistorial[]     @relation("PagoRecibidoHistorialUsuario")
+  gestiones_cobranza                  CobranzaGestion[]           @relation("CobranzaGestionUsuario")
+  comentarios_bimestrales_registrados ComentarioBimestral[]       @relation("UsuarioComentariosBimestrales")
+  calificaciones_tutoria              CalificacionTutoria[]       @relation("UsuarioCalificacionesTutoria")
+  historial_estados_institucionales   EstudianteEstadoHistorial[] @relation("UsuarioEstadoInstitucionalHistorial")
 }
 
 model Tenant {
@@ -149,6 +150,7 @@ model Colegio {
   escalas             EscalaCalificacion[]
   tipos_eval          TipoEvaluacion[]
   codigos_estudiantes EstudianteCodigoColegio[]
+  historial_estados   EstudianteEstadoHistorial[]
   campanas_matricula  CampanaMatricula[]
   planes_pensiones    PlanPensiones[]
   campanas_descuento  CampanaDescuento[]
@@ -416,12 +418,13 @@ model Estudiante {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  apoderados      ApoderadoEstudiante[]
-  matriculas      Matricula[]
-  registrosNFC    RegistroNFC[]
-  codigos_colegio EstudianteCodigoColegio[]
-  ordenes_pago    OrdenPago[]
-  pagos_recibidos PagoRecibido[]
+  apoderados        ApoderadoEstudiante[]
+  matriculas        Matricula[]
+  registrosNFC      RegistroNFC[]
+  codigos_colegio   EstudianteCodigoColegio[]
+  historial_estados EstudianteEstadoHistorial[]
+  ordenes_pago      OrdenPago[]
+  pagos_recibidos   PagoRecibido[]
 }
 
 model ApoderadoEstudiante {
@@ -1362,6 +1365,26 @@ model EstudianteCodigoColegio {
   @@unique([id_colegio, codigo])
   @@index([codigo])
   @@index([id_colegio, estado_institucional])
+}
+
+model EstudianteEstadoHistorial {
+  id_historial    Int      @id @default(autoincrement())
+  id_estudiante   Int
+  id_colegio      Int
+  estado_anterior String?  @db.VarChar(20)
+  estado_nuevo    String   @db.VarChar(20)
+  accion          String   @db.VarChar(60)
+  motivo          String?  @db.VarChar(500)
+  id_usuario      Int?
+  fecha_evento    DateTime @default(now())
+
+  estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona], onDelete: Cascade)
+  colegio    Colegio    @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+  usuario    Usuario?   @relation("UsuarioEstadoInstitucionalHistorial", fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_estudiante, id_colegio, fecha_evento])
+  @@index([id_colegio, fecha_evento])
+  @@index([id_usuario])
 }
 
 model DatosCobroColegio {
