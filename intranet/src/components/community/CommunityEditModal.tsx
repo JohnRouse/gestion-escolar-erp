@@ -10,6 +10,7 @@ type CommunityEditModalProps = {
   children: ReactNode;
   message?: string | null;
   saving?: boolean;
+  submitDisabled?: boolean;
   submitLabel?: string;
   cancelLabel?: string;
   maxWidthClassName?: string;
@@ -25,6 +26,7 @@ export default function CommunityEditModal({
   children,
   message,
   saving = false,
+  submitDisabled = false,
   submitLabel = 'Guardar cambios',
   cancelLabel = 'Cancelar',
   maxWidthClassName = 'max-w-5xl',
@@ -88,7 +90,7 @@ export default function CommunityEditModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={saving}
+            disabled={saving || submitDisabled}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 text-sm font-bold text-white transition hover:bg-accent-600 disabled:opacity-50"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}

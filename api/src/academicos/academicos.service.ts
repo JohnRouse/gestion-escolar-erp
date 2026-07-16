@@ -7078,6 +7078,27 @@ const existente = await this.prisma.persona.findUnique({
           include: {
             colegio: true,
             anio: true,
+
+            anio_continuidad: {
+              include: {
+                colegio: true,
+              },
+            },
+
+            continuidad_registrada_por: {
+              select: {
+                id_usuario: true,
+                username: true,
+                persona: {
+                  select: {
+                    nombres: true,
+                    apellido_paterno: true,
+                    apellido_materno: true,
+                  },
+                },
+              },
+            },
+
             seccion: {
               include: { grado: { include: { nivel: true } } },
             },
@@ -7103,6 +7124,323 @@ const existente = await this.prisma.persona.findUnique({
     return alumno;
   }
 
+
+  async actualizarContinuidadMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+      continuidad:
+        | 'Pendiente'
+        | 'Continúa'
+        | 'No continúa'
+        | 'Traslado interno'
+        | 'Traslado externo';
+      idAnioContinuidad?: number;
+      motivo?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idMatricula,
+      )
+      || params.idMatricula <= 0
+    ) {
+      throw new BadRequestException(
+        'La matrícula seleccionada no es válida.',
+      );
+    }
+
+    const continuidad =
+      String(
+        params.continuidad || '',
+      ).trim();
+
+    const estadosPermitidos = [
+      'Pendiente',
+      'Continúa',
+      'No continúa',
+      'Traslado interno',
+      'Traslado externo',
+    ];
+
+    if (
+      !estadosPermitidos.includes(
+        continuidad,
+      )
+    ) {
+      throw new BadRequestException(
+        'La decisión de continuidad '
+        + 'seleccionada no es válida.',
+      );
+    }
+
+    const motivo =
+      this.normalizeEmpty(
+        params.motivo,
+      );
+
+    if (
+      [
+        'No continúa',
+        'Traslado externo',
+      ].includes(continuidad)
+      && !motivo
+    ) {
+      throw new BadRequestException(
+        'Indica el motivo de la decisión '
+        + 'de continuidad.',
+      );
+    }
+
+    const matricula =
+      await this.prisma.matricula.findUnique({
+        where: {
+          id_matricula:
+            params.idMatricula,
+        },
+        include: {
+          colegio: true,
+          anio: true,
+          anio_continuidad: true,
+          estudiante: {
+            include: {
+              persona: true,
+            },
+          },
+        },
+      });
+
+    if (!matricula) {
+      throw new NotFoundException(
+        'No se encontró la matrícula '
+        + 'seleccionada.',
+      );
+    }
+
+    if (!matricula.id_colegio) {
+      throw new BadRequestException(
+        'La matrícula no tiene una '
+        + 'institución asociada.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope({
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId: params.colegioId,
+      });
+
+    if (
+      !scope.colegioIds.includes(
+        matricula.id_colegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la institución '
+        + 'de esta matrícula.',
+      );
+    }
+
+    const tieneAnioDestino =
+      Number.isInteger(
+        params.idAnioContinuidad,
+      )
+      && (
+        params.idAnioContinuidad
+        || 0
+      ) > 0;
+
+    let anioDestino:
+      | {
+          id_anio: number;
+          id_colegio: number | null;
+          nombre_anio: string;
+          fecha_inicio: Date;
+          fecha_fin: Date;
+        }
+      | null = null;
+
+    if (tieneAnioDestino) {
+      if (
+        !Number.isInteger(
+          params.idAnioContinuidad,
+        )
+        || (
+          params.idAnioContinuidad
+          || 0
+        ) <= 0
+      ) {
+        throw new BadRequestException(
+          'Selecciona el año lectivo '
+          + 'de destino.',
+        );
+      }
+
+      anioDestino =
+        await this.prisma
+          .anioLectivo.findUnique({
+            where: {
+              id_anio:
+                params.idAnioContinuidad,
+            },
+            select: {
+              id_anio: true,
+              id_colegio: true,
+              nombre_anio: true,
+              fecha_inicio: true,
+              fecha_fin: true,
+            },
+          });
+
+      if (!anioDestino) {
+        throw new NotFoundException(
+          'No se encontró el año lectivo '
+          + 'de destino.',
+        );
+      }
+
+      if (!anioDestino.id_colegio) {
+        throw new BadRequestException(
+          'El año de destino no tiene una '
+          + 'institución asociada.',
+        );
+      }
+
+      if (
+        !scope.colegioIds.includes(
+          anioDestino.id_colegio,
+        )
+      ) {
+        throw new UnauthorizedException(
+          'No tienes acceso a la institución '
+          + 'del año de destino.',
+        );
+      }
+
+      if (
+        anioDestino.id_anio
+        === matricula.id_anio
+      ) {
+        throw new BadRequestException(
+          'El año de destino debe ser '
+          + 'posterior al año actual.',
+        );
+      }
+
+      if (
+        anioDestino.fecha_inicio.getTime()
+        <= matricula.anio
+          .fecha_inicio
+          .getTime()
+      ) {
+        throw new BadRequestException(
+          'El año de destino debe ser '
+          + 'posterior al año actual.',
+        );
+      }
+
+      if (
+        continuidad === 'Continúa'
+        && anioDestino.id_colegio
+          !== matricula.id_colegio
+      ) {
+        throw new BadRequestException(
+          'Para marcar Continúa, el año '
+          + 'de destino debe pertenecer '
+          + 'a la misma institución.',
+        );
+      }
+
+      if (
+        continuidad === 'Traslado interno'
+        && anioDestino.id_colegio
+          === matricula.id_colegio
+      ) {
+        throw new BadRequestException(
+          'Para un traslado interno, el año '
+          + 'de destino debe pertenecer '
+          + 'a otra institución del grupo.',
+        );
+      }
+    }
+
+    const actualizado =
+      await this.prisma.matricula.update({
+        where: {
+          id_matricula:
+            params.idMatricula,
+        },
+        data: {
+          continuidad_siguiente_anio:
+            continuidad,
+
+          id_anio_continuidad:
+            tieneAnioDestino
+              ? anioDestino?.id_anio
+              : null,
+
+          fecha_continuidad:
+            new Date(),
+
+          motivo_continuidad:
+            motivo,
+
+          id_usuario_continuidad:
+            params.userId,
+        },
+        include: {
+          colegio: true,
+          anio: true,
+          anio_continuidad: {
+            include: {
+              colegio: true,
+            },
+          },
+          continuidad_registrada_por: {
+            select: {
+              id_usuario: true,
+              username: true,
+              persona: {
+                select: {
+                  nombres: true,
+                  apellido_paterno: true,
+                  apellido_materno: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+    const nombreAlumno = [
+      matricula.estudiante
+        .persona.nombres,
+
+      matricula.estudiante
+        .persona.apellido_paterno,
+
+      matricula.estudiante
+        .persona.apellido_materno,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return {
+      message:
+        continuidad === 'Pendiente'
+          ? 'La decisión de continuidad '
+            + 'volvió a estado pendiente.'
+          : `Continuidad registrada como ${continuidad}.`,
+
+      alumno:
+        nombreAlumno,
+
+      matricula:
+        actualizado,
+    };
+  }
 
   async cambiarEstadoAlumnoInstitucional(
     params: ScopeParams & {
@@ -7296,7 +7634,7 @@ const existente = await this.prisma.persona.findUnique({
 
               const estadoNuevo =
                 esFutura
-                  ? 'No continúa'
+                  ? 'Anulado'
                   : 'Retirado';
 
               await tx.matricula.update({
@@ -7316,6 +7654,22 @@ const existente = await this.prisma.persona.findUnique({
 
                   id_usuario_cierre:
                     params.userId,
+
+                  ...(esFutura
+                    ? {
+                        continuidad_siguiente_anio:
+                          'No continúa',
+
+                        fecha_continuidad:
+                          new Date(),
+
+                        motivo_continuidad:
+                          motivo,
+
+                        id_usuario_continuidad:
+                          params.userId,
+                      }
+                    : {}),
                 },
               });
 

@@ -588,6 +588,46 @@ async deleteGrado(
   }
 
 
+  @Patch('matriculas/:id/continuidad')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  actualizarContinuidadMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      continuidad:
+        | 'Pendiente'
+        | 'Continúa'
+        | 'No continúa'
+        | 'Traslado interno'
+        | 'Traslado externo';
+      id_anio_continuidad?: number;
+      motivo?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .actualizarContinuidadMatricula({
+        idMatricula: Number(id),
+        continuidad: body.continuidad,
+        idAnioContinuidad:
+          body.id_anio_continuidad
+            ? Number(
+                body.id_anio_continuidad,
+              )
+            : undefined,
+        motivo: body.motivo,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
   @Patch('alumnos/:id/estado-institucional')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')

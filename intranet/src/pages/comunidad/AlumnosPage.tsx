@@ -20,6 +20,7 @@ import {
   School,
   History,
   ArrowRight,
+  CalendarClock,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -29,6 +30,7 @@ import { useToast } from '../../contexts/ToastContext';
 import PersonAvatar from '../../components/PersonAvatar';
 import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
+import ContinuidadMatriculaModal from '../../components/community/ContinuidadMatriculaModal';
 import CommunityDetailModal from '../../components/community/CommunityDetailModal';
 import {
   CommunityEmptyState,
@@ -235,6 +237,10 @@ const estadoBadge: Record<string, string> = {
   Borrador: 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
   Retirado: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
   'No continúa': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+  Pendiente: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  'Continúa': 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  'Traslado interno': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
+  'Traslado externo': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
   Finalizado: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
   Promocionado: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
   Egresado: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
@@ -326,6 +332,11 @@ export default function AlumnosPage() {
     changingEstadoInstitucional,
     setChangingEstadoInstitucional,
   ] = useState(false);
+
+  const [
+    continuidadMatricula,
+    setContinuidadMatricula,
+  ] = useState<any | null>(null);
 
   useEffect(() => {
     const search =
@@ -1208,10 +1219,6 @@ export default function AlumnosPage() {
                   Retirado
                 </option>
 
-                <option value="No continúa">
-                  No continúa
-                </option>
-
                 <option value="Anulado">
                   Anulado
                 </option>
@@ -1703,28 +1710,87 @@ export default function AlumnosPage() {
             <Section title="Matrículas">
               {detalle.matriculas?.length ? (
                 <div className="space-y-2">
-                  {detalle.matriculas.map((m) => (
-                    <div
-                      key={m.id_matricula}
-                      className="flex items-center justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">
-                          {m.colegio?.nombre || 'Colegio'} ·{' '}
-                          {m.seccion?.grado?.nombre_grado || 'Grado'} &quot;
-                          {m.seccion?.letra || '-'}&quot;
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {m.anio?.nombre_anio || 'Año'} · {fecha(m.fecha_matricula)}
-                        </p>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(m.estado_matricula)}`}
+                  {detalle.matriculas.map((m) => {
+                    const continuidad =
+                      m.continuidad_siguiente_anio
+                      || 'Pendiente';
+
+                    return (
+                      <div
+                        key={m.id_matricula}
+                        className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
                       >
-                        {m.estado_matricula}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800">
+                              {m.colegio?.nombre || 'Colegio'} ·{' '}
+                              {m.seccion?.grado?.nombre_grado || 'Grado'} &quot;
+                              {m.seccion?.letra || '-'}&quot;
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {m.anio?.nombre_anio || 'Año'} ·{' '}
+                              {fecha(m.fecha_matricula)}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(
+                              m.estado_matricula,
+                            )}`}
+                          >
+                            {m.estado_matricula}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                Próximo año
+                              </span>
+
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(
+                                  continuidad,
+                                )}`}
+                              >
+                                {continuidad}
+                              </span>
+                            </div>
+
+                            {m.anio_continuidad && (
+                              <p className="mt-2 text-xs font-semibold text-slate-600">
+                                Destino:{' '}
+                                {m.anio_continuidad.nombre_anio}
+                                {' · '}
+                                {m.anio_continuidad.colegio?.nombre
+                                  || m.anio_continuidad.colegio?.nombre_corto
+                                  || 'Institución'}
+                              </p>
+                            )}
+
+                            {m.motivo_continuidad && (
+                              <p className="mt-1 text-xs text-slate-500">
+                                {m.motivo_continuidad}
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setContinuidadMatricula(m)
+                            }
+                            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                          >
+                            <CalendarClock size={14} />
+                            Gestionar continuidad
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">Sin matrículas visibles.</p>
@@ -1837,6 +1903,28 @@ export default function AlumnosPage() {
           </div>
         )}
       </CommunityEditModal>
+
+      <ContinuidadMatriculaModal
+        open={Boolean(
+          continuidadMatricula,
+        )}
+        matricula={continuidadMatricula}
+        onClose={() =>
+          setContinuidadMatricula(null)
+        }
+        onSaved={async () => {
+          const idEstudiante =
+            detalle?.id_persona;
+
+          if (!idEstudiante) return;
+
+          await abrirDetalle(
+            idEstudiante,
+          );
+
+          await fetchAlumnos();
+        }}
+      />
 
       {/* ── Modal de visualización de foto (Visor) ── */}
       {avatarViewOpen && detalle?.avatar_url && createPortal(

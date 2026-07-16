@@ -78,6 +78,7 @@ model Usuario {
   comentarios_bimestrales_registrados ComentarioBimestral[]       @relation("UsuarioComentariosBimestrales")
   calificaciones_tutoria              CalificacionTutoria[]       @relation("UsuarioCalificacionesTutoria")
   historial_estados_institucionales   EstudianteEstadoHistorial[] @relation("UsuarioEstadoInstitucionalHistorial")
+  continuidades_matricula             Matricula[]                 @relation("UsuarioContinuidadMatricula")
 }
 
 model Tenant {
@@ -330,14 +331,15 @@ model AnioLectivo {
   tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
 
-  bimestres          Bimestre[]
-  matriculas         Matricula[]
-  conceptos          ConceptoPago[]
-  asignaciones       AsignacionDocente[]
-  eventos            Evento[]
-  campanas_matricula CampanaMatricula[]
-  planes_pensiones   PlanPensiones[]
-  campanas_descuento CampanaDescuento[]
+  bimestres                      Bimestre[]
+  matriculas                     Matricula[]         @relation("MatriculaAnioLectivo")
+  matriculas_continuidad_destino Matricula[]         @relation("AnioDestinoContinuidad")
+  conceptos                      ConceptoPago[]
+  asignaciones                   AsignacionDocente[]
+  eventos                        Evento[]
+  campanas_matricula             CampanaMatricula[]
+  planes_pensiones               PlanPensiones[]
+  campanas_descuento             CampanaDescuento[]
 
   horarios Horario[]
 
@@ -481,13 +483,21 @@ model Matricula {
   motivo_cierre              String?   @db.VarChar(500)
   id_usuario_cierre          Int?
 
-  tenant         Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
-  colegio        Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
-  estudiante     Estudiante  @relation(fields: [id_estudiante], references: [id_persona])
-  seccion        Seccion     @relation(fields: [id_seccion], references: [id_seccion])
-  anio           AnioLectivo @relation(fields: [id_anio], references: [id_anio])
-  registrado_por Usuario?    @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
-  revisado_por   Usuario?    @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
+  continuidad_siguiente_anio String    @default("Pendiente") @db.VarChar(30)
+  id_anio_continuidad        Int?
+  fecha_continuidad          DateTime?
+  motivo_continuidad         String?   @db.VarChar(500)
+  id_usuario_continuidad     Int?
+
+  tenant                     Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
+  colegio                    Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
+  estudiante                 Estudiante   @relation(fields: [id_estudiante], references: [id_persona])
+  seccion                    Seccion      @relation(fields: [id_seccion], references: [id_seccion])
+  anio                       AnioLectivo  @relation("MatriculaAnioLectivo", fields: [id_anio], references: [id_anio])
+  anio_continuidad           AnioLectivo? @relation("AnioDestinoContinuidad", fields: [id_anio_continuidad], references: [id_anio])
+  registrado_por             Usuario?     @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
+  revisado_por               Usuario?     @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
+  continuidad_registrada_por Usuario?     @relation("UsuarioContinuidadMatricula", fields: [id_usuario_continuidad], references: [id_usuario])
 
   notas                  NotaAlumno[]
   asistencias            Asistencia[]
@@ -510,6 +520,9 @@ model Matricula {
   @@index([id_colegio_origen, id_anio_origen])
   @@index([tipo_proceso_matricula])
   @@index([estado_matricula])
+  @@index([continuidad_siguiente_anio])
+  @@index([id_anio_continuidad])
+  @@index([id_usuario_continuidad])
 }
 
 // ======================================================
