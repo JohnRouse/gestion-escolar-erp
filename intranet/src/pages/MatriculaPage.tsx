@@ -263,6 +263,11 @@ export default function MatriculaPage() {
 
   const [colegioDestinoId, setColegioDestinoId] = useState<number | ''>('');
   const [dni, setDni] = useState(dniInicial);
+
+  const [
+    autoSearchKey,
+    setAutoSearchKey,
+  ] = useState('');
   const [alumno, setAlumno] = useState<Alumno | null>(null);
   const [anios, setAnios] = useState<Anio[]>([]);
   const [anioId, setAnioId] = useState<number | ''>('');
@@ -472,7 +477,44 @@ export default function MatriculaPage() {
 
   const mensajeValidacionMatricula = useMemo(() => { if (colegioDestinoRequerido) return { tipo: 'info' as const, texto: 'Selecciona el colegio destino. Estás trabajando con todos los colegios.' }; if (!alumno) return { tipo: 'info' as const, texto: 'Busca o registra primero al alumno que deseas matricular.' }; if (!apoderados.length) return { tipo: 'warning' as const, texto: 'El alumno debe tener al menos un apoderado vinculado antes de registrar la matrícula.' }; if (!anioId) return { tipo: 'info' as const, texto: 'Selecciona el año lectivo de la matrícula.' }; if (!seccionId) return { tipo: 'info' as const, texto: 'Selecciona el grado y sección donde se registrará al alumno.' }; if (avisoPeriodoMatricula?.bloquea) return { tipo: avisoPeriodoMatricula.tipo as 'error'|'warning'|'info', texto: avisoPeriodoMatricula.texto }; if (errorEdadNormativa) return { tipo: 'error' as const, texto: errorEdadNormativa }; if (avisoPeriodoMatricula) return { tipo: avisoPeriodoMatricula.tipo as 'error'|'warning'|'info', texto: avisoPeriodoMatricula.texto }; return null; }, [colegioDestinoRequerido, alumno, apoderados.length, anioId, seccionId, avisoPeriodoMatricula, errorEdadNormativa]);
 
-  useEffect(() => { if (activeScope.tipo === 'colegio' && activeScope.id_colegio) setColegioDestinoId(activeScope.id_colegio); if (activeScope.tipo === 'todos') setColegioDestinoId(''); setAlumno(null); setApoderados([]); setSeccionId(''); setAnioId(''); setMensaje(null); }, [activeScope.tipo, activeScope.id_colegio]);
+  useEffect(() => {
+    if (
+      activeScope.tipo === 'colegio'
+      && activeScope.id_colegio
+    ) {
+      setColegioDestinoId(
+        activeScope.id_colegio,
+      );
+    }
+
+    if (
+      activeScope.tipo === 'todos'
+    ) {
+      const colegioUrl =
+        Number(
+          matriculaSearchParams.get(
+            'colegio_id',
+          )
+          || 0,
+        );
+
+      setColegioDestinoId(
+        colegioUrl > 0
+          ? colegioUrl
+          : '',
+      );
+    }
+
+    setAlumno(null);
+    setApoderados([]);
+    setSeccionId('');
+    setAnioId('');
+    setMensaje(null);
+  }, [
+    activeScope.tipo,
+    activeScope.id_colegio,
+    matriculaSearchParams,
+  ]);
   useEffect(() => { if (token) fetchBase(); }, [token, colegioDestinoId, queryString]);
   useEffect(() => { if (token && anioId) fetchSecciones(Number(anioId)); }, [token, anioId, colegioDestinoId, queryString]);
 
@@ -514,6 +556,88 @@ export default function MatriculaPage() {
 
   const buscarAlumnoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoAlumno(true); setMensaje(null); setApoderados([]); try { const query = puedeVerConsolidado ? '&scope=all' : colegioDestinoQuery ? `&${colegioDestinoQuery.replace('?','')}` : ''; const res = await axios.get(`/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setMensaje(null); } catch (err: any) { setAlumno(null); setMensaje(err.response?.data?.message || 'No se encontró el alumno.'); } finally { setBuscandoAlumno(false); } };
   const buscarAlumno = () => buscarAlumnoPorDni(dni);
+
+  /*
+   * Cuando se llega desde Comunidad escolar
+   * mediante Continuar matrícula, se reciben
+   * DNI y colegio por URL. Al estar listo el
+   * contexto institucional, se busca al alumno
+   * automáticamente una sola vez.
+   */
+  useEffect(() => {
+    const dniUrl =
+      matriculaSearchParams
+        .get('dni')
+        ?.trim()
+      || '';
+
+    const colegioUrl =
+      Number(
+        matriculaSearchParams
+          .get('colegio_id')
+        || 0,
+      );
+
+    if (
+      !token
+      || !dniUrl
+      || buscandoAlumno
+    ) {
+      return;
+    }
+
+    if (
+      activeScope.tipo === 'todos'
+      && (
+        colegioUrl <= 0
+        || Number(
+          colegioDestinoId,
+        ) !== colegioUrl
+      )
+    ) {
+      return;
+    }
+
+    if (
+      activeScope.tipo === 'colegio'
+      && !colegioDestinoDefinido
+    ) {
+      return;
+    }
+
+    const colegioBusqueda =
+      activeScope.tipo === 'todos'
+        ? colegioUrl
+        : activeScope.id_colegio
+          || '';
+
+    const searchKey =
+      `${dniUrl}:${colegioBusqueda}`;
+
+    if (
+      autoSearchKey === searchKey
+    ) {
+      return;
+    }
+
+    setAutoSearchKey(
+      searchKey,
+    );
+
+    void buscarAlumnoPorDni(
+      dniUrl,
+    );
+  }, [
+    token,
+    matriculaSearchParams,
+    activeScope.tipo,
+    activeScope.id_colegio,
+    colegioDestinoId,
+    colegioDestinoDefinido,
+    buscandoAlumno,
+    autoSearchKey,
+  ]);
+
   const buscarApoderadoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoApoderado(true); setMensaje(null); try { const res = await axios.get(`/api/academicos/apoderados/buscar?dni=${dniBusqueda.trim()}`, { headers: { Authorization: `Bearer ${token}` } }); setApoderadoEncontrado(res.data); return res.data; } catch (err: any) { setApoderadoEncontrado(null); setMensaje(err.response?.data?.message || 'No se encontró el apoderado.'); return null; } finally { setBuscandoApoderado(false); } };
   const buscarApoderado = () => buscarApoderadoPorDni(apoderadoDni);
 

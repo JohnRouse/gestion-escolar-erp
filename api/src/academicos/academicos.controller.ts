@@ -587,6 +587,41 @@ async deleteGrado(
     });
   }
 
+
+  @Patch('alumnos/:id/estado-institucional')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  cambiarEstadoAlumnoInstitucional(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      id_colegio: number;
+      estado: 'Activo' | 'Inactivo';
+      motivo?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    const idColegio = Number(
+      body.id_colegio
+      || colegioId
+      || 0,
+    );
+
+    return this.academicosService
+      .cambiarEstadoAlumnoInstitucional({
+        idEstudiante: Number(id),
+        idColegio,
+        estado: body.estado,
+        motivo: body.motivo,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: idColegio,
+      });
+  }
+
   @Post('alumnos/:id/avatar')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')

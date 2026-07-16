@@ -13,6 +13,11 @@ import {
   SlidersHorizontal,
   Camera,
   UploadCloud,
+  PlayCircle,
+  ArchiveX,
+  Power,
+  RotateCcw,
+  School,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -44,6 +49,9 @@ type CodigoColegio = {
   id_colegio: number;
   codigo: string;
   estado_institucional?: string | null;
+  fecha_estado?: string | null;
+  motivo_estado?: string | null;
+  id_usuario_estado?: number | null;
   colegio?: {
     nombre?: string | null;
     nombre_corto?: string | null;
@@ -106,6 +114,16 @@ type AlumnoForm = {
   pais: string; departamento: string; provincia: string; distrito: string;
 };
 
+type EstadoInstitucionalModo =
+  | 'baja'
+  | 'descarte'
+  | 'reactivar';
+
+type EstadoInstitucionalAction = {
+  registro: CodigoColegio;
+  modo: EstadoInstitucionalModo;
+};
+
 const inputClass = communityInputClass;
 
 const fullName = (p: AlumnoItem['persona']) =>
@@ -133,6 +151,7 @@ const estadoBadge: Record<string, string> = {
   'Pre-matriculado': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
   Inactivo: 'bg-slate-100 text-slate-600 ring-1 ring-slate-300',
   'Registro incompleto': 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
+  Borrador: 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
   Retirado: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
   'No continúa': 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
   Finalizado: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
@@ -209,6 +228,23 @@ export default function AlumnosPage() {
   const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [confirmApoderadoDestino, setConfirmApoderadoDestino] = useState<{ id: number; nombre: string } | null>(null);
+
+  const [
+    estadoInstitucionalAction,
+    setEstadoInstitucionalAction,
+  ] = useState<EstadoInstitucionalAction | null>(
+    null,
+  );
+
+  const [
+    estadoInstitucionalMotivo,
+    setEstadoInstitucionalMotivo,
+  ] = useState('');
+
+  const [
+    changingEstadoInstitucional,
+    setChangingEstadoInstitucional,
+  ] = useState(false);
 
   useEffect(() => {
     const search =
@@ -724,8 +760,185 @@ export default function AlumnosPage() {
     }
   };
 
+  const continuarMatricula = (
+    registro: CodigoColegio,
+  ) => {
+    if (!detalle) return;
+
+    const params =
+      new URLSearchParams();
+
+    params.set(
+      'dni',
+      detalle.persona.dni,
+    );
+
+    params.set(
+      'colegio_id',
+      String(
+        registro.id_colegio,
+      ),
+    );
+
+    setDetalleOpen(false);
+
+    navigate(
+      `/matricula?${params.toString()}`,
+    );
+  };
+
+  const abrirEstadoInstitucional = (
+    registro: CodigoColegio,
+    modo: EstadoInstitucionalModo,
+  ) => {
+    setEstadoInstitucionalAction({
+      registro,
+      modo,
+    });
+
+    setEstadoInstitucionalMotivo('');
+    setMensaje(null);
+  };
+
+  const cerrarEstadoInstitucional = () => {
+    if (
+      changingEstadoInstitucional
+    ) {
+      return;
+    }
+
+    setEstadoInstitucionalAction(null);
+    setEstadoInstitucionalMotivo('');
+    setMensaje(null);
+  };
+
+  const cambiarEstadoInstitucional =
+    async () => {
+      if (
+        !token
+        || !detalle
+        || !estadoInstitucionalAction
+      ) {
+        return;
+      }
+
+      const {
+        registro,
+        modo,
+      } = estadoInstitucionalAction;
+
+      const esReactivacion =
+        modo === 'reactivar';
+
+      const nuevoEstado =
+        esReactivacion
+          ? 'Activo'
+          : 'Inactivo';
+
+      const motivo =
+        estadoInstitucionalMotivo.trim();
+
+      if (
+        !esReactivacion
+        && !motivo
+      ) {
+        const errorMessage =
+          modo === 'descarte'
+            ? 'Indica por qué se descartará el registro incompleto.'
+            : 'Indica el motivo de la baja institucional.';
+
+        setMensaje(errorMessage);
+
+        showToast({
+          type: 'error',
+          title: 'Motivo obligatorio',
+          message: errorMessage,
+        });
+
+        return;
+      }
+
+      setChangingEstadoInstitucional(true);
+      setMensaje(null);
+
+      try {
+        const response =
+          await axios.patch(
+            `/api/academicos/alumnos/${detalle.id_persona}/estado-institucional${queryString}`,
+            {
+              id_colegio:
+                registro.id_colegio,
+
+              estado:
+                nuevoEstado,
+
+              motivo:
+                motivo || undefined,
+            },
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            },
+          );
+
+        const message =
+          response.data?.message
+          || (
+            esReactivacion
+              ? 'Ficha institucional reactivada.'
+              : 'Ficha institucional inactivada.'
+          );
+
+        const idEstudiante =
+          detalle.id_persona;
+
+        setEstadoInstitucionalAction(null);
+        setEstadoInstitucionalMotivo('');
+
+        await abrirDetalle(
+          idEstudiante,
+        );
+
+        await fetchAlumnos();
+
+        setMensaje(message);
+
+        showToast({
+          type: 'success',
+
+          title:
+            esReactivacion
+              ? 'Alumno reactivado'
+              : modo === 'descarte'
+                ? 'Registro descartado'
+                : 'Alumno dado de baja',
+
+          message,
+        });
+      } catch (error: any) {
+        const errorMessage =
+          error.response?.data?.message
+          || 'No se pudo cambiar el estado institucional.';
+
+        setMensaje(errorMessage);
+
+        showToast({
+          type: 'error',
+          title: 'No se pudo completar',
+          message: errorMessage,
+        });
+      } finally {
+        setChangingEstadoInstitucional(false);
+      }
+    };
+
   const hasFilters =
     q.trim() !== ''
+
+
+
     || estado !== 'Todos'
     || Boolean(nivelId)
     || Boolean(gradoId)
@@ -1105,6 +1318,171 @@ export default function AlumnosPage() {
               <Info label="Dirección" value={detalle.persona.direccion || '—'} />
             </div>
 
+            <Section title="Estado institucional">
+              {detalle.codigos_colegio?.length ? (
+                <div className="space-y-3">
+                  {detalle.codigos_colegio.map(
+                    (registro) => {
+                      const tieneMatriculaInstitucion =
+                        Boolean(
+                          detalle.matriculas?.some(
+                            (matricula) =>
+                              matricula.id_colegio
+                              === registro.id_colegio,
+                          ),
+                        );
+
+                      const estadoRegistroBase =
+                        registro.estado_institucional
+                        || 'Activo';
+
+                      /*
+                       * También corrige visualmente
+                       * registros antiguos que fueron
+                       * reactivados como Activo aunque
+                       * nunca tuvieron matrícula.
+                       */
+                      const estadoRegistro =
+                        estadoRegistroBase === 'Activo'
+                        && !tieneMatriculaInstitucion
+                          ? 'Borrador'
+                          : estadoRegistroBase;
+
+                      const nombreColegio =
+                        registro.colegio?.nombre
+                        || registro.colegio?.nombre_corto
+                        || `Institución ${registro.id_colegio}`;
+
+                      return (
+                        <div
+                          key={registro.id_colegio}
+                          className="rounded-2xl border border-slate-200 bg-white p-4"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                  <School size={15} />
+                                </span>
+
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900">
+                                    {nombreColegio}
+                                  </p>
+
+                                  <p className="mt-0.5 text-xs text-slate-500">
+                                    Código institucional:{' '}
+                                    {registro.codigo}
+                                  </p>
+                                </div>
+
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getEstadoBadge(
+                                    estadoRegistro,
+                                  )}`}
+                                >
+                                  {estadoRegistro === 'Borrador'
+                                    ? 'Registro incompleto'
+                                    : estadoRegistro}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 space-y-1 text-xs text-slate-500">
+                                <p>
+                                  Último cambio:{' '}
+                                  {registro.fecha_estado
+                                    ? fecha(registro.fecha_estado)
+                                    : 'Sin fecha registrada'}
+                                </p>
+
+                                {registro.motivo_estado && (
+                                  <p>
+                                    Motivo:{' '}
+                                    <span className="font-semibold text-slate-700">
+                                      {registro.motivo_estado}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {estadoRegistro === 'Borrador' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      continuarMatricula(
+                                        registro,
+                                      )
+                                    }
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white transition hover:bg-blue-700"
+                                  >
+                                    <PlayCircle size={14} />
+                                    Continuar matrícula
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      abrirEstadoInstitucional(
+                                        registro,
+                                        'descarte',
+                                      )
+                                    }
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                                  >
+                                    <ArchiveX size={14} />
+                                    Descartar registro
+                                  </button>
+                                </>
+                              )}
+
+                              {estadoRegistro === 'Activo' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    abrirEstadoInstitucional(
+                                      registro,
+                                      'baja',
+                                    )
+                                  }
+                                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                                >
+                                  <Power size={14} />
+                                  Dar de baja
+                                </button>
+                              )}
+
+                              {estadoRegistro === 'Inactivo' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    abrirEstadoInstitucional(
+                                      registro,
+                                      'reactivar',
+                                    )
+                                  }
+                                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                                >
+                                  <RotateCcw size={14} />
+                                  Reactivar ficha
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No existe información institucional visible.
+                </p>
+              )}
+            </Section>
+
             <Section title="Apoderados vinculados">
               <LinkedGuardianCards
                 items={detalle.apoderados || []}
@@ -1145,6 +1523,110 @@ export default function AlumnosPage() {
           </div>
         ) : null}
       </CommunityDetailModal>
+
+      <CommunityEditModal
+        open={Boolean(
+          estadoInstitucionalAction,
+        )}
+        eyebrow="Estado institucional"
+        title={
+          estadoInstitucionalAction?.modo
+            === 'reactivar'
+            ? 'Reactivar ficha del alumno'
+            : estadoInstitucionalAction?.modo
+                === 'descarte'
+              ? 'Descartar registro incompleto'
+              : 'Dar de baja al alumno'
+        }
+        description={
+          estadoInstitucionalAction?.modo
+            === 'reactivar'
+            ? 'La ficha volverá a estar disponible. Las matrículas cerradas no se reabrirán.'
+            : estadoInstitucionalAction?.modo
+                === 'descarte'
+              ? 'El borrador dejará de aparecer como registro pendiente, pero se conservará para auditoría.'
+              : 'La baja se aplicará únicamente a la institución seleccionada y conservará todo el historial.'
+        }
+        message={mensaje}
+        saving={
+          changingEstadoInstitucional
+        }
+        onClose={
+          cerrarEstadoInstitucional
+        }
+        onSubmit={
+          cambiarEstadoInstitucional
+        }
+      >
+        {estadoInstitucionalAction && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                Institución
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                {estadoInstitucionalAction
+                  .registro
+                  .colegio
+                  ?.nombre
+                  || estadoInstitucionalAction
+                    .registro
+                    .colegio
+                    ?.nombre_corto
+                  || `Institución ${estadoInstitucionalAction.registro.id_colegio}`}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Código:{' '}
+                {estadoInstitucionalAction
+                  .registro
+                  .codigo}
+              </p>
+            </div>
+
+            {estadoInstitucionalAction.modo
+              !== 'reactivar' && (
+                <Textarea
+                  label={
+                    estadoInstitucionalAction
+                      .modo === 'descarte'
+                      ? 'Motivo del descarte'
+                      : 'Motivo de la baja'
+                  }
+                  value={
+                    estadoInstitucionalMotivo
+                  }
+                  rows={4}
+                  placeholder={
+                    estadoInstitucionalAction
+                      .modo === 'descarte'
+                      ? 'Ejemplo: registro duplicado o proceso abandonado.'
+                      : 'Ejemplo: retiro del alumno, traslado o decisión familiar.'
+                  }
+                  onChange={
+                    setEstadoInstitucionalMotivo
+                  }
+                />
+              )}
+
+            {estadoInstitucionalAction.modo
+              === 'reactivar' && (
+                <Textarea
+                  label="Observación de reactivación"
+                  value={
+                    estadoInstitucionalMotivo
+                  }
+                  rows={3}
+                  placeholder="Observación opcional"
+                  onChange={
+                    setEstadoInstitucionalMotivo
+                  }
+                />
+              )}
+          </div>
+        )}
+      </CommunityEditModal>
 
       {/* ── Modal de visualización de foto (Visor) ── */}
       {avatarViewOpen && detalle?.avatar_url && createPortal(

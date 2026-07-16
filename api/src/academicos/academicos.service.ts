@@ -6983,6 +6983,388 @@ const existente = await this.prisma.persona.findUnique({
     return alumno;
   }
 
+
+  async cambiarEstadoAlumnoInstitucional(
+    params: ScopeParams & {
+      idEstudiante: number;
+      idColegio: number;
+      estado: 'Activo' | 'Inactivo';
+      motivo?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idEstudiante,
+      )
+      || params.idEstudiante <= 0
+    ) {
+      throw new BadRequestException(
+        'El alumno seleccionado no es válido.',
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        params.idColegio,
+      )
+      || params.idColegio <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona la institución donde '
+        + 'se cambiará el estado del alumno.',
+      );
+    }
+
+    const estado =
+      String(
+        params.estado || '',
+      ).trim();
+
+    if (
+      ![
+        'Activo',
+        'Inactivo',
+      ].includes(estado)
+    ) {
+      throw new BadRequestException(
+        'El estado institucional debe ser '
+        + 'Activo o Inactivo.',
+      );
+    }
+
+    const motivo =
+      this.normalizeEmpty(
+        params.motivo,
+      );
+
+    if (
+      estado === 'Inactivo'
+      && !motivo
+    ) {
+      throw new BadRequestException(
+        'Indica el motivo de la baja '
+        + 'o descarte del alumno.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope({
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId:
+          params.idColegio,
+      });
+
+    if (
+      !scope.colegioIds.includes(
+        params.idColegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la institución '
+        + 'seleccionada.',
+      );
+    }
+
+    const registro =
+      await this.prisma
+        .estudianteCodigoColegio.findUnique({
+          where: {
+            id_estudiante_id_colegio: {
+              id_estudiante:
+                params.idEstudiante,
+
+              id_colegio:
+                params.idColegio,
+            },
+          },
+          include: {
+            colegio: true,
+            estudiante: {
+              include: {
+                persona: true,
+              },
+            },
+          },
+        });
+
+    if (!registro) {
+      throw new NotFoundException(
+        'El alumno no tiene un vínculo '
+        + 'con la institución seleccionada.',
+      );
+    }
+
+    if (
+      registro.estado_institucional
+      === estado
+    ) {
+      return {
+        message:
+          estado === 'Activo'
+            ? 'La ficha ya se encuentra activa.'
+            : 'La ficha ya se encuentra inactiva.',
+
+        estado_institucional:
+          registro.estado_institucional,
+
+        colegio:
+          registro.colegio,
+
+        matriculas_actualizadas: [],
+      };
+    }
+
+    const resultado =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const matriculasActualizadas:
+            Array<{
+              id_matricula: number;
+              estado_anterior: string;
+              estado_nuevo: string;
+            }> = [];
+
+          if (estado === 'Inactivo') {
+            const matriculasAbiertas =
+              await tx.matricula.findMany({
+                where: {
+                  id_estudiante:
+                    params.idEstudiante,
+
+                  id_colegio:
+                    params.idColegio,
+
+                  estado_matricula: {
+                    notIn:
+                      this.estadosMatriculaFinales,
+                  },
+                },
+                include: {
+                  anio: true,
+                },
+                orderBy: {
+                  fecha_matricula:
+                    'desc',
+                },
+              });
+
+            const hoy = new Date();
+
+            for (
+              const matricula
+              of matriculasAbiertas
+            ) {
+              const fechaInicio =
+                matricula.anio
+                  ?.fecha_inicio
+                  ? new Date(
+                      matricula
+                        .anio
+                        .fecha_inicio,
+                    )
+                  : null;
+
+              const esFutura =
+                fechaInicio instanceof Date
+                && !Number.isNaN(
+                  fechaInicio.getTime(),
+                )
+                && fechaInicio.getTime()
+                  > hoy.getTime();
+
+              const estadoNuevo =
+                esFutura
+                  ? 'No continúa'
+                  : 'Retirado';
+
+              await tx.matricula.update({
+                where: {
+                  id_matricula:
+                    matricula.id_matricula,
+                },
+                data: {
+                  estado_matricula:
+                    estadoNuevo,
+
+                  fecha_cierre:
+                    new Date(),
+
+                  motivo_cierre:
+                    motivo,
+
+                  id_usuario_cierre:
+                    params.userId,
+                },
+              });
+
+              matriculasActualizadas.push({
+                id_matricula:
+                  matricula.id_matricula,
+
+                estado_anterior:
+                  matricula
+                    .estado_matricula,
+
+                estado_nuevo:
+                  estadoNuevo,
+              });
+            }
+
+            /*
+             * Se desactiva únicamente una posible
+             * credencial del propio alumno.
+             *
+             * Las credenciales de sus apoderados
+             * permanecen sin cambios.
+             */
+            const rolesAlumno =
+              await tx.rol.findMany({
+                where: {
+                  nombre_rol: {
+                    in: [
+                      'Alumno',
+                      'Estudiante',
+                    ],
+                  },
+                },
+                select: {
+                  id_rol: true,
+                },
+              });
+
+            if (rolesAlumno.length) {
+              await tx.usuario.updateMany({
+                where: {
+                  id_persona:
+                    params.idEstudiante,
+
+                  id_rol: {
+                    in:
+                      rolesAlumno.map(
+                        (item) =>
+                          item.id_rol,
+                      ),
+                  },
+                },
+                data: {
+                  estado: false,
+                },
+              });
+            }
+          }
+
+          const totalMatriculasInstitucion =
+            estado === 'Activo'
+              ? await tx.matricula.count({
+                  where: {
+                    id_estudiante:
+                      params.idEstudiante,
+
+                    id_colegio:
+                      params.idColegio,
+                  },
+                })
+              : 0;
+
+          /*
+           * Un registro descartado que nunca
+           * llegó a tener una matrícula debe
+           * regresar a Borrador, no a Activo.
+           */
+          const estadoDestino =
+            estado === 'Activo'
+            && totalMatriculasInstitucion === 0
+              ? 'Borrador'
+              : estado;
+
+          const actualizado =
+            await tx
+              .estudianteCodigoColegio.update({
+                where: {
+                  id_estudiante_id_colegio: {
+                    id_estudiante:
+                      params.idEstudiante,
+
+                    id_colegio:
+                      params.idColegio,
+                  },
+                },
+                data: {
+                  estado_institucional:
+                    estadoDestino,
+
+                  fecha_estado:
+                    new Date(),
+
+                  motivo_estado:
+                    estado === 'Inactivo'
+                      ? motivo
+                      : motivo,
+
+                  id_usuario_estado:
+                    params.userId,
+                },
+                include: {
+                  colegio: true,
+                },
+              });
+
+          return {
+            actualizado,
+            matriculasActualizadas,
+          };
+        },
+      );
+
+    return {
+      message:
+        estado === 'Inactivo'
+          ? resultado
+              .matriculasActualizadas
+              .length
+            ? 'Alumno dado de baja. '
+              + 'Sus matrículas abiertas fueron '
+              + 'cerradas y el historial se conservó.'
+            : 'Ficha institucional inactivada. '
+              + 'No existían matrículas abiertas.'
+          : resultado
+              .actualizado
+              .estado_institucional
+              === 'Borrador'
+            ? 'Registro incompleto reactivado. '
+              + 'Puedes continuar el proceso de matrícula.'
+            : 'Ficha institucional reactivada. '
+              + 'Las matrículas cerradas permanecen '
+              + 'sin cambios.',
+
+      estado_institucional:
+        resultado
+          .actualizado
+          .estado_institucional,
+
+      motivo:
+        resultado
+          .actualizado
+          .motivo_estado,
+
+      fecha_estado:
+        resultado
+          .actualizado
+          .fecha_estado,
+
+      colegio:
+        resultado
+          .actualizado
+          .colegio,
+
+      matriculas_actualizadas:
+        resultado
+          .matriculasActualizadas,
+    };
+  }
+
   async listarApoderados(
     params: ScopeParams & {
       q?: string;
