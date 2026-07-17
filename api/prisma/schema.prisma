@@ -91,6 +91,8 @@ model Usuario {
   lotes_promocion_creados             LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
   lotes_promocion_ejecutados          LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
   lotes_promocion_revertidos          LotePromocion[]               @relation("UsuarioLotePromocionReversion")
+  ejecuciones_promocion_registradas   LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionRegistro")
+  ejecuciones_promocion_revertidas    LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionReversion")
 }
 
 model Tenant {
@@ -563,11 +565,12 @@ model Matricula {
   pagos_recibidos        PagoRecibido[]
   calificaciones_tutoria CalificacionTutoria[]
 
-  historial_situacion    MatriculaSituacionHistorial[]
-  recuperaciones         RecuperacionAlumno[]
-  movimientos            MovimientoEstudiante[]
-  detalles_lote_origen   LotePromocionDetalle[]        @relation("LoteDetalleMatriculaOrigen")
-  detalles_lote_generada LotePromocionDetalle[]        @relation("LoteDetalleMatriculaGenerada")
+  historial_situacion            MatriculaSituacionHistorial[]
+  recuperaciones                 RecuperacionAlumno[]
+  movimientos                    MovimientoEstudiante[]
+  detalles_lote_origen           LotePromocionDetalle[]          @relation("LoteDetalleMatriculaOrigen")
+  detalles_lote_generada         LotePromocionDetalle[]          @relation("LoteDetalleMatriculaGenerada")
+  ejecuciones_promocion_generada LotePromocionEjecucionDetalle[] @relation("EjecucionDetalleMatriculaGenerada")
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -1748,12 +1751,76 @@ model LotePromocion {
 
   revertido_por Usuario? @relation("UsuarioLotePromocionReversion", fields: [id_usuario_reversion], references: [id_usuario], onDelete: SetNull)
 
-  detalles LotePromocionDetalle[]
+  detalles    LotePromocionDetalle[]
+  ejecuciones LotePromocionEjecucion[]
 
   @@index([id_colegio, id_anio_origen])
   @@index([id_anio_destino])
   @@index([id_seccion_origen])
   @@index([estado])
+}
+
+model LotePromocionEjecucion {
+  id_ejecucion         Int      @id @default(autoincrement())
+  id_lote              Int
+  numero_ejecucion     Int
+  etapa                String   @db.VarChar(30)
+  estado               String   @default("Ejecutada") @db.VarChar(20)
+  fecha_ejecucion      DateTime @default(now())
+  id_usuario_ejecucion Int?
+
+  total_evaluados  Int @default(0)
+  total_procesados Int @default(0)
+  total_pendientes Int @default(0)
+  total_omitidos   Int @default(0)
+  total_bloqueados Int @default(0)
+
+  observacion          String?   @db.VarChar(500)
+  snapshot_json        Json?
+  fecha_reversion      DateTime?
+  id_usuario_reversion Int?
+  motivo_reversion     String?   @db.VarChar(500)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  lote LotePromocion @relation(fields: [id_lote], references: [id_lote], onDelete: Cascade)
+
+  ejecutado_por Usuario? @relation("UsuarioLotePromocionEjecucionRegistro", fields: [id_usuario_ejecucion], references: [id_usuario], onDelete: SetNull)
+
+  revertido_por Usuario? @relation("UsuarioLotePromocionEjecucionReversion", fields: [id_usuario_reversion], references: [id_usuario], onDelete: SetNull)
+
+  detalles LotePromocionEjecucionDetalle[]
+
+  @@unique([id_lote, numero_ejecucion])
+  @@index([id_lote, fecha_ejecucion])
+  @@index([etapa])
+  @@index([estado])
+  @@index([id_usuario_ejecucion])
+  @@index([id_usuario_reversion])
+}
+
+model LotePromocionEjecucionDetalle {
+  id_ejecucion_detalle  Int  @id @default(autoincrement())
+  id_ejecucion          Int
+  id_detalle            Int
+  id_matricula_generada Int?
+
+  accion           String   @db.VarChar(30)
+  estado_resultado String   @db.VarChar(30)
+  snapshot_json    Json?
+  created_at       DateTime @default(now())
+
+  ejecucion LotePromocionEjecucion @relation(fields: [id_ejecucion], references: [id_ejecucion], onDelete: Cascade)
+
+  detalle LotePromocionDetalle @relation(fields: [id_detalle], references: [id_detalle], onDelete: Restrict)
+
+  matricula_generada Matricula? @relation("EjecucionDetalleMatriculaGenerada", fields: [id_matricula_generada], references: [id_matricula], onDelete: SetNull)
+
+  @@unique([id_ejecucion, id_detalle])
+  @@index([id_detalle])
+  @@index([id_matricula_generada])
+  @@index([estado_resultado])
 }
 
 model LotePromocionDetalle {
@@ -1789,6 +1856,8 @@ model LotePromocionDetalle {
   seccion_origen Seccion @relation("LoteDetalleSeccionOrigen", fields: [id_seccion_origen], references: [id_seccion])
 
   seccion_destino Seccion? @relation("LoteDetalleSeccionDestino", fields: [id_seccion_destino], references: [id_seccion])
+
+  ejecuciones LotePromocionEjecucionDetalle[]
 
   @@unique([id_lote, id_estudiante])
   @@index([id_matricula_origen])
