@@ -681,6 +681,87 @@ async deleteGrado(
   }
 
 
+  // ── CIERRE ACADÉMICO ─────────────────────────────────
+  @Get('cierres-academicos')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarCierresAcademicos(
+    @Request() req,
+    @Query('anio_id') anioId?: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .listarCierresAcademicos({
+        idAnio: anioId
+          ? Number(anioId)
+          : undefined,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post('cierres-academicos/ordinario')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  abrirCierreAcademicoOrdinario(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio: number;
+      id_colegio?: number;
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .abrirCierreAcademicoOrdinario({
+        idAnio: Number(body.id_anio),
+        idColegio: body.id_colegio
+          ? Number(body.id_colegio)
+          : undefined,
+        observacion: body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post('cierres-academicos/:id/cerrar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  cerrarCierreAcademicoOrdinario(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .cerrarCierreAcademicoOrdinario({
+        idCierre: Number(id),
+        observacion: body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   @Patch('matriculas/:id/situacion-final')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')

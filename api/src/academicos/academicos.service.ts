@@ -7579,6 +7579,570 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarCierresAcademicos(
+    params: ScopeParams & {
+      idAnio?: number;
+    },
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    return this.prisma
+      .cierreAcademico.findMany({
+        where: {
+          id_colegio: {
+            in: scope.colegioIds,
+          },
+
+          ...(params.idAnio
+            ? {
+                id_anio:
+                  params.idAnio,
+              }
+            : {}),
+        },
+
+        include: {
+          colegio: true,
+          anio: true,
+
+          iniciado_por: {
+            select:
+              this.usuarioPublicoSelect(),
+          },
+
+          cerrado_por: {
+            select:
+              this.usuarioPublicoSelect(),
+          },
+
+          _count: {
+            select: {
+              historial_situaciones:
+                true,
+            },
+          },
+        },
+
+        orderBy: [
+          {
+            id_anio: 'desc',
+          },
+          {
+            created_at: 'desc',
+          },
+        ],
+      });
+  }
+
+  async abrirCierreAcademicoOrdinario(
+    params: ScopeParams & {
+      idAnio: number;
+      idColegio?: number;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idAnio)
+      || params.idAnio <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona un año lectivo válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const anio =
+      await this.prisma
+        .anioLectivo.findUnique({
+          where: {
+            id_anio: params.idAnio,
+          },
+
+          include: {
+            colegio: true,
+          },
+        });
+
+    if (!anio) {
+      throw new NotFoundException(
+        'No se encontró el año lectivo.',
+      );
+    }
+
+    const idColegio =
+      Number(
+        params.idColegio
+        || anio.id_colegio
+        || params.colegioId
+        || 0,
+      );
+
+    if (
+      !Number.isInteger(idColegio)
+      || idColegio <= 0
+    ) {
+      throw new BadRequestException(
+        'El año lectivo no tiene una '
+        + 'institución asociada.',
+      );
+    }
+
+    if (
+      anio.id_colegio
+      && anio.id_colegio !== idColegio
+    ) {
+      throw new BadRequestException(
+        'El año lectivo no pertenece '
+        + 'a la institución seleccionada.',
+      );
+    }
+
+    if (
+      !scope.colegioIds.includes(
+        idColegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la '
+        + 'institución seleccionada.',
+      );
+    }
+
+    const existente =
+      await this.prisma
+        .cierreAcademico.findFirst({
+          where: {
+            id_colegio: idColegio,
+            id_anio: params.idAnio,
+            tipo: 'ORDINARIO',
+          },
+        });
+
+    if (
+      existente?.estado === 'Cerrado'
+    ) {
+      throw new BadRequestException(
+        'El cierre académico ordinario '
+        + 'ya fue concluido.',
+      );
+    }
+
+    const fecha =
+      new Date();
+
+    const observacion =
+      this.normalizeEmpty(
+        params.observacion,
+      );
+
+    const cierre =
+      existente
+        ? await this.prisma
+            .cierreAcademico.update({
+              where: {
+                id_cierre:
+                  existente.id_cierre,
+              },
+
+              data: {
+                estado: 'Abierto',
+
+                fecha_inicio:
+                  existente.fecha_inicio
+                  || fecha,
+
+                id_usuario_inicio:
+                  existente.id_usuario_inicio
+                  || params.userId,
+
+                observacion:
+                  observacion
+                  || existente.observacion,
+              },
+
+              include: {
+                colegio: true,
+                anio: true,
+              },
+            })
+        : await this.prisma
+            .cierreAcademico.create({
+              data: {
+                id_tenant:
+                  anio.id_tenant,
+
+                id_colegio:
+                  idColegio,
+
+                id_anio:
+                  params.idAnio,
+
+                tipo:
+                  'ORDINARIO',
+
+                estado:
+                  'Abierto',
+
+                estado_siagie:
+                  'Pendiente de revisión',
+
+                fecha_inicio:
+                  fecha,
+
+                id_usuario_inicio:
+                  params.userId,
+
+                observacion,
+              },
+
+              include: {
+                colegio: true,
+                anio: true,
+              },
+            });
+
+    return {
+      message:
+        existente
+          ? 'El cierre académico ordinario '
+            + 'continúa abierto.'
+          : 'Cierre académico ordinario '
+            + 'abierto correctamente.',
+
+      cierre,
+    };
+  }
+
+
+  async cerrarCierreAcademicoOrdinario(
+    params: ScopeParams & {
+      idCierre: number;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idCierre)
+      || params.idCierre <= 0
+    ) {
+      throw new BadRequestException(
+        'El cierre seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const cierre =
+      await this.prisma
+        .cierreAcademico.findUnique({
+          where: {
+            id_cierre:
+              params.idCierre,
+          },
+
+          include: {
+            colegio: true,
+            anio: true,
+          },
+        });
+
+    if (!cierre) {
+      throw new NotFoundException(
+        'No se encontró el cierre '
+        + 'académico seleccionado.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    if (
+      !scope.colegioIds.includes(
+        cierre.id_colegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la '
+        + 'institución de este cierre.',
+      );
+    }
+
+    if (
+      cierre.tipo !== 'ORDINARIO'
+    ) {
+      throw new BadRequestException(
+        'El proceso seleccionado no es '
+        + 'un cierre académico ordinario.',
+      );
+    }
+
+    if (
+      cierre.estado === 'Cerrado'
+    ) {
+      return {
+        message:
+          'El cierre académico ordinario '
+          + 'ya estaba concluido.',
+
+        cierre,
+      };
+    }
+
+    if (
+      cierre.estado !== 'Abierto'
+    ) {
+      throw new BadRequestException(
+        'Primero debes abrir el cierre '
+        + 'académico ordinario.',
+      );
+    }
+
+    const matriculas =
+      await this.prisma
+        .matricula.findMany({
+          where: {
+            id_colegio:
+              cierre.id_colegio,
+
+            id_anio:
+              cierre.id_anio,
+
+            estado_matricula: {
+              in: [
+                'Matriculado',
+                'Activo',
+              ],
+            },
+          },
+
+          select: {
+            id_matricula: true,
+            situacion_final: true,
+            es_egresado: true,
+
+            estudiante: {
+              select: {
+                persona: {
+                  select: {
+                    nombres: true,
+                    apellido_paterno: true,
+                    apellido_materno: true,
+                  },
+                },
+              },
+            },
+
+            seccion: {
+              select: {
+                letra: true,
+
+                grado: {
+                  select: {
+                    nombre_grado: true,
+                  },
+                },
+              },
+            },
+          },
+
+          orderBy: {
+            id_matricula: 'asc',
+          },
+        });
+
+    if (matriculas.length === 0) {
+      throw new BadRequestException(
+        'No existen matrículas activas '
+        + 'para cerrar en este año.',
+      );
+    }
+
+    const permitidas = [
+      'PRO',
+      'PER',
+      'RR',
+    ];
+
+    const pendientes =
+      matriculas.filter(
+        (matricula) =>
+          !permitidas.includes(
+            String(
+              matricula.situacion_final
+              || 'PENDIENTE',
+            ).toUpperCase(),
+          ),
+      );
+
+    if (pendientes.length > 0) {
+      const ejemplos =
+        pendientes
+          .slice(0, 5)
+          .map((matricula) => {
+            const persona =
+              matricula.estudiante
+                .persona;
+
+            return [
+              persona.nombres,
+              persona.apellido_paterno,
+              persona.apellido_materno,
+            ]
+              .filter(Boolean)
+              .join(' ');
+          })
+          .join(', ');
+
+      throw new BadRequestException(
+        `No se puede cerrar el año. `
+        + `${pendientes.length} matrícula(s) `
+        + `continúan en situación PENDIENTE. `
+        + `Ejemplos: ${ejemplos}.`,
+      );
+    }
+
+    const egresosInvalidos =
+      matriculas.filter(
+        (matricula) =>
+          matricula.es_egresado
+          && matricula.situacion_final
+            !== 'PRO',
+      );
+
+    if (egresosInvalidos.length > 0) {
+      throw new BadRequestException(
+        'Existen alumnos marcados como '
+        + 'egresados sin situación PRO.',
+      );
+    }
+
+    const fecha =
+      new Date();
+
+    const observacion =
+      this.normalizeEmpty(
+        params.observacion,
+      );
+
+    const resultado =
+      await this.prisma.$transaction(
+        async (tx) => {
+          await tx
+            .matriculaSituacionHistorial
+            .createMany({
+              data:
+                matriculas.map(
+                  (matricula) => ({
+                    id_matricula:
+                      matricula.id_matricula,
+
+                    id_cierre:
+                      cierre.id_cierre,
+
+                    situacion_anterior:
+                      matricula.situacion_final,
+
+                    situacion_nueva:
+                      matricula.situacion_final,
+
+                    es_egresado:
+                      matricula.es_egresado,
+
+                    observacion:
+                      'Incluido en el cierre '
+                      + 'académico ordinario.',
+
+                    id_usuario:
+                      params.userId,
+
+                    fecha_evento:
+                      fecha,
+                  }),
+                ),
+            });
+
+          return tx
+            .cierreAcademico.update({
+              where: {
+                id_cierre:
+                  cierre.id_cierre,
+              },
+
+              data: {
+                estado:
+                  'Cerrado',
+
+                fecha_cierre:
+                  fecha,
+
+                id_usuario_cierre:
+                  params.userId,
+
+                estado_siagie:
+                  'Pendiente de revisión',
+
+                observacion:
+                  observacion
+                  || cierre.observacion,
+              },
+
+              include: {
+                colegio: true,
+                anio: true,
+
+                cerrado_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+              },
+            });
+        },
+      );
+
+    const resumen = {
+      total:
+        matriculas.length,
+
+      promovidos:
+        matriculas.filter(
+          (item) =>
+            item.situacion_final
+            === 'PRO',
+        ).length,
+
+      permanecen:
+        matriculas.filter(
+          (item) =>
+            item.situacion_final
+            === 'PER',
+        ).length,
+
+      recuperacion:
+        matriculas.filter(
+          (item) =>
+            item.situacion_final
+            === 'RR',
+        ).length,
+
+      egresados:
+        matriculas.filter(
+          (item) =>
+            item.es_egresado,
+        ).length,
+    };
+
+    return {
+      message:
+        'Cierre académico ordinario '
+        + 'concluido correctamente.',
+
+      resumen,
+      cierre: resultado,
+    };
+  }
+
+
   async actualizarSituacionFinalMatricula(
     params: ScopeParams & {
       idMatricula: number;
