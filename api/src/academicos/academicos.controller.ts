@@ -681,6 +681,125 @@ async deleteGrado(
   }
 
 
+  // ── MOVIMIENTOS DEL ESTUDIANTE ───────────────────────
+  @Get('movimientos-estudiante')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarMovimientosEstudiante(
+    @Request() req,
+    @Query('estudiante_id')
+    estudianteId?: string,
+    @Query('matricula_id')
+    matriculaId?: string,
+    @Query('tipo')
+    tipo?: string,
+    @Query('estado')
+    estado?: string,
+    @Query('scope')
+    scope?: string,
+    @Query('colegio_id')
+    colegioId?: string,
+  ) {
+    return this.academicosService
+      .listarMovimientosEstudiante({
+        idEstudiante: estudianteId
+          ? Number(estudianteId)
+          : undefined,
+
+        idMatricula: matriculaId
+          ? Number(matriculaId)
+          : undefined,
+
+        tipo,
+        estado,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post('movimientos-estudiante')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  registrarMovimientoEstudiante(
+    @Request() req,
+    @Body()
+    body: {
+      id_estudiante: number;
+      id_matricula?: number;
+      id_colegio_origen?: number;
+      id_colegio_destino?: number;
+      tipo:
+        | 'RETIRO_DURANTE_ANIO'
+        | 'TRASLADO_INTERNO'
+        | 'TRASLADO_EXTERNO'
+        | 'FALLECIMIENTO'
+        | 'REINGRESO'
+        | 'RECTIFICACION';
+      fecha_efectiva: string;
+      motivo: string;
+      institucion_destino?: string;
+      documento_url?: string;
+      documento_nombre?: string;
+    },
+    @Query('scope')
+    scope?: string,
+    @Query('colegio_id')
+    colegioId?: string,
+  ) {
+    return this.academicosService
+      .registrarMovimientoEstudiante({
+        idEstudiante:
+          Number(body.id_estudiante),
+
+        idMatricula: body.id_matricula
+          ? Number(body.id_matricula)
+          : undefined,
+
+        idColegioOrigen:
+          body.id_colegio_origen
+            ? Number(body.id_colegio_origen)
+            : undefined,
+
+        idColegioDestino:
+          body.id_colegio_destino
+            ? Number(body.id_colegio_destino)
+            : undefined,
+
+        tipo:
+          body.tipo,
+
+        fechaEfectiva:
+          body.fecha_efectiva,
+
+        motivo:
+          body.motivo,
+
+        institucionDestino:
+          body.institucion_destino,
+
+        documentoUrl:
+          body.documento_url,
+
+        documentoNombre:
+          body.documento_nombre,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── RECUPERACIÓN PEDAGÓGICA ──────────────────────────
   @Get('procesos-recuperacion')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

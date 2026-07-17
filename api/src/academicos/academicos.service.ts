@@ -7579,6 +7579,693 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarMovimientosEstudiante(
+    params: ScopeParams & {
+      idEstudiante?: number;
+      idMatricula?: number;
+      tipo?: string;
+      estado?: string;
+    },
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    if (
+      params.idEstudiante !== undefined
+      && (
+        !Number.isInteger(
+          params.idEstudiante,
+        )
+        || params.idEstudiante <= 0
+      )
+    ) {
+      throw new BadRequestException(
+        'El alumno seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    if (
+      params.idMatricula !== undefined
+      && (
+        !Number.isInteger(
+          params.idMatricula,
+        )
+        || params.idMatricula <= 0
+      )
+    ) {
+      throw new BadRequestException(
+        'La matrícula seleccionada '
+        + 'no es válida.',
+      );
+    }
+
+    const tipo =
+      this.normalizeEmpty(
+        params.tipo,
+      );
+
+    const estado =
+      this.normalizeEmpty(
+        params.estado,
+      );
+
+    return this.prisma
+      .movimientoEstudiante.findMany({
+        where: {
+          id_colegio_origen: {
+            in: scope.colegioIds,
+          },
+
+          ...(params.idEstudiante
+            ? {
+                id_estudiante:
+                  params.idEstudiante,
+              }
+            : {}),
+
+          ...(params.idMatricula
+            ? {
+                id_matricula:
+                  params.idMatricula,
+              }
+            : {}),
+
+          ...(tipo
+            ? { tipo }
+            : {}),
+
+          ...(estado
+            ? { estado }
+            : {}),
+        },
+
+        include: {
+          estudiante: {
+            include: {
+              persona: true,
+            },
+          },
+
+          matricula: {
+            include: {
+              anio: true,
+
+              seccion: {
+                include: {
+                  grado: {
+                    include: {
+                      nivel: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+
+          origen: true,
+          destino: true,
+
+          registrado_por: {
+            select:
+              this.usuarioPublicoSelect(),
+          },
+        },
+
+        orderBy: [
+          {
+            fecha_efectiva: 'desc',
+          },
+          {
+            id_movimiento: 'desc',
+          },
+        ],
+
+        take: 200,
+      });
+  }
+
+
+  async registrarMovimientoEstudiante(
+    params: ScopeParams & {
+      idEstudiante: number;
+      idMatricula?: number;
+      idColegioOrigen?: number;
+      idColegioDestino?: number;
+      tipo:
+        | 'RETIRO_DURANTE_ANIO'
+        | 'TRASLADO_INTERNO'
+        | 'TRASLADO_EXTERNO'
+        | 'FALLECIMIENTO'
+        | 'REINGRESO'
+        | 'RECTIFICACION';
+      fechaEfectiva: string;
+      motivo: string;
+      institucionDestino?: string;
+      documentoUrl?: string;
+      documentoNombre?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idEstudiante,
+      )
+      || params.idEstudiante <= 0
+    ) {
+      throw new BadRequestException(
+        'El alumno seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const tiposPermitidos = [
+      'RETIRO_DURANTE_ANIO',
+      'TRASLADO_INTERNO',
+      'TRASLADO_EXTERNO',
+      'FALLECIMIENTO',
+      'REINGRESO',
+      'RECTIFICACION',
+    ];
+
+    const tipo =
+      String(params.tipo || '')
+        .trim()
+        .toUpperCase();
+
+    if (
+      !tiposPermitidos.includes(tipo)
+    ) {
+      throw new BadRequestException(
+        'El tipo de movimiento '
+        + 'no es válido.',
+      );
+    }
+
+    if (
+      [
+        'REINGRESO',
+        'RECTIFICACION',
+      ].includes(tipo)
+      && ![
+        'Admin',
+        'Director',
+      ].includes(params.rol)
+    ) {
+      throw new UnauthorizedException(
+        'El reingreso y la rectificación '
+        + 'requieren autorización de '
+        + 'Administración o Dirección.',
+      );
+    }
+
+    const motivo =
+      this.normalizeEmpty(
+        params.motivo,
+      );
+
+    if (!motivo) {
+      throw new BadRequestException(
+        'Indica el motivo del movimiento.',
+      );
+    }
+
+    if (!params.fechaEfectiva) {
+      throw new BadRequestException(
+        'Indica la fecha efectiva '
+        + 'del movimiento.',
+      );
+    }
+
+    const fechaEfectiva =
+      new Date(
+        params.fechaEfectiva
+        + 'T00:00:00.000-05:00',
+      );
+
+    if (
+      Number.isNaN(
+        fechaEfectiva.getTime(),
+      )
+    ) {
+      throw new BadRequestException(
+        'La fecha efectiva '
+        + 'no es válida.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const estudiante =
+      await this.prisma
+        .estudiante.findUnique({
+          where: {
+            id_persona:
+              params.idEstudiante,
+          },
+
+          include: {
+            persona: true,
+          },
+        });
+
+    if (!estudiante) {
+      throw new NotFoundException(
+        'No se encontró el alumno.',
+      );
+    }
+
+    let matricula:
+      | Awaited<
+          ReturnType<
+            typeof this.prisma.matricula.findUnique
+          >
+        >
+      | null = null;
+
+    if (params.idMatricula) {
+      matricula =
+        await this.prisma
+          .matricula.findUnique({
+            where: {
+              id_matricula:
+                params.idMatricula,
+            },
+          });
+
+      if (!matricula) {
+        throw new NotFoundException(
+          'No se encontró la matrícula.',
+        );
+      }
+
+      if (
+        matricula.id_estudiante
+        !== params.idEstudiante
+      ) {
+        throw new BadRequestException(
+          'La matrícula no pertenece '
+          + 'al alumno seleccionado.',
+        );
+      }
+    }
+
+    const tiposConMatricula = [
+      'RETIRO_DURANTE_ANIO',
+      'TRASLADO_INTERNO',
+      'TRASLADO_EXTERNO',
+      'FALLECIMIENTO',
+      'REINGRESO',
+    ];
+
+    if (
+      tiposConMatricula.includes(tipo)
+      && !matricula
+    ) {
+      throw new BadRequestException(
+        'Selecciona la matrícula '
+        + 'afectada por el movimiento.',
+      );
+    }
+
+    const idColegioOrigen =
+      Number(
+        params.idColegioOrigen
+        || matricula?.id_colegio
+        || params.colegioId
+        || 0,
+      );
+
+    if (
+      !Number.isInteger(idColegioOrigen)
+      || idColegioOrigen <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona la institución '
+        + 'de origen.',
+      );
+    }
+
+    if (
+      matricula?.id_colegio
+      && matricula.id_colegio
+        !== idColegioOrigen
+    ) {
+      throw new BadRequestException(
+        'La matrícula no pertenece '
+        + 'a la institución de origen.',
+      );
+    }
+
+    if (
+      !scope.colegioIds.includes(
+        idColegioOrigen,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la '
+        + 'institución de origen.',
+      );
+    }
+
+    const colegioOrigen =
+      await this.prisma
+        .colegio.findUnique({
+          where: {
+            id_colegio:
+              idColegioOrigen,
+          },
+        });
+
+    if (!colegioOrigen) {
+      throw new NotFoundException(
+        'No se encontró la institución '
+        + 'de origen.',
+      );
+    }
+
+    let idColegioDestino:
+      number | null = null;
+
+    if (
+      tipo === 'TRASLADO_INTERNO'
+    ) {
+      idColegioDestino =
+        Number(
+          params.idColegioDestino
+          || 0,
+        );
+
+      if (
+        !Number.isInteger(
+          idColegioDestino,
+        )
+        || idColegioDestino <= 0
+      ) {
+        throw new BadRequestException(
+          'Selecciona la institución '
+          + 'de destino.',
+        );
+      }
+
+      if (
+        idColegioDestino
+        === idColegioOrigen
+      ) {
+        throw new BadRequestException(
+          'La institución de destino '
+          + 'debe ser diferente.',
+        );
+      }
+
+      if (
+        !scope.colegioIds.includes(
+          idColegioDestino,
+        )
+      ) {
+        throw new UnauthorizedException(
+          'No tienes acceso a la '
+          + 'institución de destino.',
+        );
+      }
+
+      const colegioDestino =
+        await this.prisma
+          .colegio.findUnique({
+            where: {
+              id_colegio:
+                idColegioDestino,
+            },
+          });
+
+      if (!colegioDestino) {
+        throw new NotFoundException(
+          'No se encontró la institución '
+          + 'de destino.',
+        );
+      }
+
+      if (
+        colegioDestino.id_tenant
+        !== colegioOrigen.id_tenant
+      ) {
+        throw new BadRequestException(
+          'Un traslado interno solo '
+          + 'puede realizarse entre '
+          + 'instituciones del mismo grupo.',
+        );
+      }
+    }
+
+    const institucionDestino =
+      this.normalizeEmpty(
+        params.institucionDestino,
+      );
+
+    if (
+      tipo === 'TRASLADO_EXTERNO'
+      && !institucionDestino
+    ) {
+      throw new BadRequestException(
+        'Indica la institución externa '
+        + 'de destino.',
+      );
+    }
+
+    if (
+      tipo !== 'TRASLADO_EXTERNO'
+      && institucionDestino
+    ) {
+      throw new BadRequestException(
+        'La institución externa solo '
+        + 'corresponde a un traslado '
+        + 'externo.',
+      );
+    }
+
+    const tiposSalida = [
+      'RETIRO_DURANTE_ANIO',
+      'TRASLADO_INTERNO',
+      'TRASLADO_EXTERNO',
+      'FALLECIMIENTO',
+    ];
+
+    if (
+      matricula
+      && tiposSalida.includes(tipo)
+    ) {
+      this.asegurarMatriculaNoFinal(
+        matricula,
+        'registrar el movimiento',
+      );
+    }
+
+    if (
+      tipo === 'REINGRESO'
+      && matricula?.estado_matricula
+        !== 'Retirado'
+    ) {
+      throw new BadRequestException(
+        'El reingreso solo puede '
+        + 'aplicarse a una matrícula '
+        + 'retirada.',
+      );
+    }
+
+    const duplicado =
+      await this.prisma
+        .movimientoEstudiante.findFirst({
+          where: {
+            id_estudiante:
+              params.idEstudiante,
+
+            id_matricula:
+              matricula?.id_matricula
+              || null,
+
+            tipo,
+            estado: 'Registrado',
+            fecha_efectiva:
+              fechaEfectiva,
+          },
+        });
+
+    if (duplicado) {
+      throw new BadRequestException(
+        'Este movimiento ya fue '
+        + 'registrado.',
+      );
+    }
+
+    const documentoUrl =
+      this.normalizeEmpty(
+        params.documentoUrl,
+      );
+
+    const documentoNombre =
+      this.normalizeEmpty(
+        params.documentoNombre,
+      );
+
+    const movimiento =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const creado =
+            await tx
+              .movimientoEstudiante
+              .create({
+                data: {
+                  id_tenant:
+                    colegioOrigen.id_tenant,
+
+                  id_estudiante:
+                    params.idEstudiante,
+
+                  id_matricula:
+                    matricula?.id_matricula
+                    || null,
+
+                  id_colegio_origen:
+                    idColegioOrigen,
+
+                  id_colegio_destino:
+                    idColegioDestino,
+
+                  tipo,
+                  estado: 'Registrado',
+
+                  fecha_efectiva:
+                    fechaEfectiva,
+
+                  motivo,
+
+                  institucion_destino:
+                    tipo === 'TRASLADO_EXTERNO'
+                      ? institucionDestino
+                      : null,
+
+                  documento_url:
+                    documentoUrl,
+
+                  documento_nombre:
+                    documentoNombre,
+
+                  id_usuario_registro:
+                    params.userId,
+                },
+              });
+
+          if (
+            matricula
+            && tiposSalida.includes(tipo)
+          ) {
+            await tx.matricula.update({
+              where: {
+                id_matricula:
+                  matricula.id_matricula,
+              },
+
+              data: {
+                estado_matricula:
+                  'Retirado',
+
+                fecha_cierre:
+                  fechaEfectiva,
+
+                motivo_cierre:
+                  `${tipo}: ${motivo}`,
+
+                id_usuario_cierre:
+                  params.userId,
+              },
+            });
+          }
+
+          if (
+            matricula
+            && tipo === 'REINGRESO'
+          ) {
+            await tx.matricula.update({
+              where: {
+                id_matricula:
+                  matricula.id_matricula,
+              },
+
+              data: {
+                estado_matricula:
+                  'Matriculado',
+
+                fecha_cierre:
+                  null,
+
+                motivo_cierre:
+                  null,
+
+                id_usuario_cierre:
+                  null,
+              },
+            });
+          }
+
+          return tx
+            .movimientoEstudiante
+            .findUnique({
+              where: {
+                id_movimiento:
+                  creado.id_movimiento,
+              },
+
+              include: {
+                estudiante: {
+                  include: {
+                    persona: true,
+                  },
+                },
+
+                matricula: {
+                  include: {
+                    anio: true,
+
+                    seccion: {
+                      include: {
+                        grado: {
+                          include: {
+                            nivel: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+
+                origen: true,
+                destino: true,
+
+                registrado_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+              },
+            });
+        },
+      );
+
+    return {
+      message:
+        tipo === 'REINGRESO'
+          ? 'Reingreso registrado y '
+            + 'matrícula reactivada.'
+          : tiposSalida.includes(tipo)
+            ? 'Movimiento registrado y '
+              + 'matrícula retirada.'
+            : 'Movimiento registrado '
+              + 'correctamente.',
+
+      movimiento,
+    };
+  }
+
+
   async listarProcesosRecuperacion(
     params: ScopeParams & {
       idAnio?: number;
