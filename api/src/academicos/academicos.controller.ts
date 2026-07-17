@@ -681,6 +681,86 @@ async deleteGrado(
   }
 
 
+  // ── SECCIONES POR AÑO LECTIVO ────────────────────────
+  @Get('secciones-anio')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarSeccionesAnio(
+    @Request() req,
+    @Query('anio_id')
+    anioId: string,
+    @Query('grado_id')
+    gradoId?: string,
+    @Query('estado')
+    estado?: string,
+    @Query('scope')
+    scope?: string,
+    @Query('colegio_id')
+    colegioId?: string,
+  ) {
+    return this.academicosService
+      .listarSeccionesAnio({
+        idAnio:
+          Number(anioId),
+
+        idGrado: gradoId
+          ? Number(gradoId)
+          : undefined,
+
+        estado,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Put('secciones-anio/configurar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  guardarSeccionAnio(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio: number;
+      id_seccion: number;
+      estado?: 'Activo' | 'Inactivo';
+      capacidad_override?: number | null;
+    },
+    @Query('scope')
+    scope?: string,
+    @Query('colegio_id')
+    colegioId?: string,
+  ) {
+    return this.academicosService
+      .guardarSeccionAnio({
+        idAnio:
+          Number(body.id_anio),
+
+        idSeccion:
+          Number(body.id_seccion),
+
+        estado:
+          body.estado,
+
+        capacidadOverride:
+          body.capacidad_override,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── MOVIMIENTOS DEL ESTUDIANTE ───────────────────────
   @Get('movimientos-estudiante')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

@@ -7579,6 +7579,544 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarSeccionesAnio(
+    params: ScopeParams & {
+      idAnio: number;
+      idGrado?: number;
+      estado?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idAnio)
+      || params.idAnio <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona un año lectivo válido.',
+      );
+    }
+
+    if (
+      params.idGrado !== undefined
+      && (
+        !Number.isInteger(params.idGrado)
+        || params.idGrado <= 0
+      )
+    ) {
+      throw new BadRequestException(
+        'El grado seleccionado no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const anio =
+      await this.prisma
+        .anioLectivo.findFirst({
+          where: {
+            id_anio:
+              params.idAnio,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+          },
+        });
+
+    if (!anio || !anio.id_colegio) {
+      throw new NotFoundException(
+        'No se encontró el año lectivo '
+        + 'dentro de tu institución.',
+      );
+    }
+
+    const estado =
+      this.normalizeEmpty(
+        params.estado,
+      );
+
+    if (
+      estado
+      && ![
+        'Activo',
+        'Inactivo',
+      ].includes(estado)
+    ) {
+      throw new BadRequestException(
+        'El estado de la sección '
+        + 'no es válido.',
+      );
+    }
+
+    const configuraciones =
+      await this.prisma
+        .seccionAnio.findMany({
+          where: {
+            id_anio:
+              anio.id_anio,
+
+            id_colegio:
+              anio.id_colegio,
+
+            ...(estado
+              ? { estado }
+              : {}),
+
+            ...(params.idGrado
+              ? {
+                  seccion: {
+                    id_grado:
+                      params.idGrado,
+                  },
+                }
+              : {}),
+          },
+
+          include: {
+            seccion: {
+              include: {
+                aula: true,
+
+                grado: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            },
+          },
+
+          orderBy: [
+            {
+              seccion: {
+                id_grado: 'asc',
+              },
+            },
+            {
+              seccion: {
+                letra: 'asc',
+              },
+            },
+          ],
+        });
+
+    const idsSeccion =
+      configuraciones.map(
+        (item) =>
+          item.id_seccion,
+      );
+
+    const ocupacion =
+      idsSeccion.length > 0
+        ? await this.prisma
+            .matricula.groupBy({
+              by: [
+                'id_seccion',
+              ],
+
+              where: {
+                id_anio:
+                  anio.id_anio,
+
+                id_colegio:
+                  anio.id_colegio,
+
+                id_seccion: {
+                  in: idsSeccion,
+                },
+
+                estado_matricula: {
+                  in: [
+                    'Reserva',
+                    'Pre-matriculado',
+                    'Matriculado',
+                    'Activo',
+                  ],
+                },
+              },
+
+              _count: {
+                _all: true,
+              },
+            })
+        : [];
+
+    const ocupadosPorSeccion =
+      new Map(
+        ocupacion.map(
+          (item) => [
+            item.id_seccion,
+            item._count._all,
+          ],
+        ),
+      );
+
+    const data =
+      configuraciones.map(
+        (configuracion) => {
+          const capacidad =
+            configuracion
+              .capacidad_override
+            ?? configuracion
+              .seccion
+              .aula
+              .capacidad;
+
+          const ocupados =
+            ocupadosPorSeccion.get(
+              configuracion.id_seccion,
+            )
+            || 0;
+
+          return {
+            ...configuracion,
+
+            capacidad_efectiva:
+              capacidad,
+
+            ocupados,
+
+            disponibles:
+              Math.max(
+                capacidad - ocupados,
+                0,
+              ),
+
+            sobrecupo:
+              ocupados > capacidad,
+          };
+        },
+      );
+
+    return {
+      anio,
+      total: data.length,
+      data,
+    };
+  }
+
+
+  async guardarSeccionAnio(
+    params: ScopeParams & {
+      idAnio: number;
+      idSeccion: number;
+      estado?: 'Activo' | 'Inactivo';
+      capacidadOverride?:
+        | number
+        | null;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idAnio)
+      || params.idAnio <= 0
+      || !Number.isInteger(params.idSeccion)
+      || params.idSeccion <= 0
+    ) {
+      throw new BadRequestException(
+        'El año o la sección '
+        + 'seleccionada no es válida.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const [anio, seccion] =
+      await Promise.all([
+        this.prisma
+          .anioLectivo.findFirst({
+            where: {
+              id_anio:
+                params.idAnio,
+
+              id_colegio: {
+                in: scope.colegioIds,
+              },
+            },
+
+            include: {
+              colegio: true,
+            },
+          }),
+
+        this.prisma
+          .seccion.findFirst({
+            where: {
+              id_seccion:
+                params.idSeccion,
+
+              id_colegio: {
+                in: scope.colegioIds,
+              },
+            },
+
+            include: {
+              aula: true,
+
+              grado: {
+                include: {
+                  nivel: true,
+                },
+              },
+            },
+          }),
+      ]);
+
+    if (!anio || !anio.id_colegio) {
+      throw new NotFoundException(
+        'No se encontró el año lectivo.',
+      );
+    }
+
+    if (!seccion || !seccion.id_colegio) {
+      throw new NotFoundException(
+        'No se encontró la sección.',
+      );
+    }
+
+    if (
+      anio.id_colegio
+      !== seccion.id_colegio
+    ) {
+      throw new BadRequestException(
+        'La sección y el año lectivo '
+        + 'pertenecen a instituciones '
+        + 'diferentes.',
+      );
+    }
+
+    const estado =
+      params.estado
+      || 'Activo';
+
+    if (
+      ![
+        'Activo',
+        'Inactivo',
+      ].includes(estado)
+    ) {
+      throw new BadRequestException(
+        'El estado seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const capacidadOverride =
+      params.capacidadOverride === null
+      || params.capacidadOverride
+        === undefined
+        ? null
+        : Number(
+            params.capacidadOverride,
+          );
+
+    if (
+      capacidadOverride !== null
+      && (
+        !Number.isInteger(
+          capacidadOverride,
+        )
+        || capacidadOverride < 1
+        || capacidadOverride > 127
+      )
+    ) {
+      throw new BadRequestException(
+        'La capacidad debe ser un número '
+        + 'entero entre 1 y 127.',
+      );
+    }
+
+    const ocupados =
+      await this.prisma
+        .matricula.count({
+          where: {
+            id_anio:
+              anio.id_anio,
+
+            id_colegio:
+              anio.id_colegio,
+
+            id_seccion:
+              seccion.id_seccion,
+
+            estado_matricula: {
+              in: [
+                'Reserva',
+                'Pre-matriculado',
+                'Matriculado',
+                'Activo',
+              ],
+            },
+          },
+        });
+
+    const capacidadEfectiva =
+      capacidadOverride
+      ?? seccion.aula.capacidad;
+
+    if (
+      capacidadEfectiva < ocupados
+    ) {
+      throw new BadRequestException(
+        `La capacidad no puede ser menor `
+        + `a los ${ocupados} alumno(s) `
+        + `que ya ocupan la sección.`,
+      );
+    }
+
+    if (
+      estado === 'Inactivo'
+      && ocupados > 0
+    ) {
+      throw new BadRequestException(
+        'No se puede desactivar una '
+        + 'sección que ya tiene alumnos '
+        + 'asignados en este año.',
+      );
+    }
+
+    const existente =
+      await this.prisma
+        .seccionAnio.findUnique({
+          where: {
+            id_anio_id_seccion: {
+              id_anio:
+                anio.id_anio,
+
+              id_seccion:
+                seccion.id_seccion,
+            },
+          },
+        });
+
+    if (
+      existente
+      && existente.estado === estado
+      && existente.capacidad_override
+        === capacidadOverride
+    ) {
+      return {
+        message:
+          'La configuración ya estaba '
+          + 'actualizada.',
+
+        configuracion:
+          existente,
+
+        capacidad_efectiva:
+          capacidadEfectiva,
+
+        ocupados,
+
+        disponibles:
+          capacidadEfectiva - ocupados,
+      };
+    }
+
+    const configuracion =
+      existente
+        ? await this.prisma
+            .seccionAnio.update({
+              where: {
+                id_seccion_anio:
+                  existente
+                    .id_seccion_anio,
+              },
+
+              data: {
+                estado,
+
+                capacidad_override:
+                  capacidadOverride,
+
+                version: {
+                  increment: 1,
+                },
+              },
+
+              include: {
+                anio: true,
+
+                seccion: {
+                  include: {
+                    aula: true,
+
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
+                  },
+                },
+              },
+            })
+        : await this.prisma
+            .seccionAnio.create({
+              data: {
+                id_tenant:
+                  seccion.id_tenant
+                  ?? anio.id_tenant,
+
+                id_colegio:
+                  anio.id_colegio,
+
+                id_anio:
+                  anio.id_anio,
+
+                id_seccion:
+                  seccion.id_seccion,
+
+                estado,
+
+                capacidad_override:
+                  capacidadOverride,
+
+                version:
+                  0,
+              },
+
+              include: {
+                anio: true,
+
+                seccion: {
+                  include: {
+                    aula: true,
+
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+    return {
+      message:
+        existente
+          ? 'Configuración anual '
+            + 'actualizada.'
+          : 'Sección habilitada '
+            + 'para el año lectivo.',
+
+      configuracion,
+
+      capacidad_efectiva:
+        capacidadEfectiva,
+
+      ocupados,
+
+      disponibles:
+        capacidadEfectiva - ocupados,
+    };
+  }
+
+
   async listarMovimientosEstudiante(
     params: ScopeParams & {
       idEstudiante?: number;

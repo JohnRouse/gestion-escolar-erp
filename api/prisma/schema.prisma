@@ -1713,24 +1713,25 @@ model RecuperacionCompetencia {
 // ======================================================
 
 model LotePromocion {
-  id_lote              Int       @id @default(autoincrement())
-  id_tenant            Int?
-  id_colegio           Int
-  id_anio_origen       Int
-  id_anio_destino      Int
-  id_seccion_origen    Int
-  estado               String    @default("Borrador") @db.VarChar(20)
-  snapshot_json        Json?
-  fecha_vista_previa   DateTime?
-  fecha_ejecucion      DateTime?
-  fecha_reversion      DateTime?
-  id_usuario_creacion  Int?
-  id_usuario_ejecucion Int?
-  id_usuario_reversion Int?
-  motivo_reversion     String?   @db.VarChar(500)
-  observacion          String?   @db.VarChar(500)
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
+  id_lote                  Int       @id @default(autoincrement())
+  id_tenant                Int?
+  id_colegio               Int
+  id_anio_origen           Int
+  id_anio_destino          Int
+  id_seccion_origen        Int
+  estado                   String    @default("Borrador") @db.VarChar(20)
+  estado_matricula_destino String    @default("Reserva") @db.VarChar(20)
+  snapshot_json            Json?
+  fecha_vista_previa       DateTime?
+  fecha_ejecucion          DateTime?
+  fecha_reversion          DateTime?
+  id_usuario_creacion      Int?
+  id_usuario_ejecucion     Int?
+  id_usuario_reversion     Int?
+  motivo_reversion         String?   @db.VarChar(500)
+  observacion              String?   @db.VarChar(500)
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
 
   tenant  Tenant? @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio @relation(fields: [id_colegio], references: [id_colegio])
