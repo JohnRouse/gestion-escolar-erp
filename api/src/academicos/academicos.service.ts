@@ -7705,6 +7705,406 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async validarReversionLotePromocion(
+    params: ScopeParams & {
+      idLote: number;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idLote)
+      || params.idLote <= 0
+    ) {
+      throw new BadRequestException(
+        'El lote seleccionado no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const lote =
+      await this.prisma
+        .lotePromocion.findFirst({
+          where: {
+            id_lote:
+              params.idLote,
+
+            id_colegio: {
+              in:
+                scope.colegioIds,
+            },
+          },
+
+          include: {
+            detalles: {
+              include: {
+                matricula_origen: true,
+
+                matricula_generada: {
+                  include: {
+                    _count: {
+                      select: {
+                        notas: true,
+                        asistencias: true,
+                        cronogramas: true,
+                        comentariosBimestrales:
+                          true,
+                        ordenes_pago: true,
+                        pagos_recibidos: true,
+                        calificaciones_tutoria:
+                          true,
+                        historial_situacion:
+                          true,
+                        recuperaciones: true,
+                        movimientos: true,
+                        detalles_lote_origen:
+                          true,
+                      },
+                    },
+                  },
+                },
+              },
+
+              orderBy: {
+                id_detalle: 'asc',
+              },
+            },
+          },
+        });
+
+    if (!lote) {
+      throw new NotFoundException(
+        'No se encontró el lote '
+        + 'de promoción.',
+      );
+    }
+
+    const bloqueos: {
+      id_detalle?: number;
+      id_estudiante?: number;
+      codigo: string;
+      mensaje: string;
+    }[] = [];
+
+    const agregarBloqueo = (
+      codigo: string,
+      mensaje: string,
+      detalle?: {
+        id_detalle: number;
+        id_estudiante: number;
+      },
+    ) => {
+      bloqueos.push({
+        ...(detalle
+          ? {
+              id_detalle:
+                detalle.id_detalle,
+
+              id_estudiante:
+                detalle.id_estudiante,
+            }
+          : {}),
+        codigo,
+        mensaje,
+      });
+    };
+
+    if (
+      lote.estado !== 'Ejecutado'
+    ) {
+      agregarBloqueo(
+        'LOTE_NO_EJECUTADO',
+        'El lote no se encuentra '
+        + 'en estado Ejecutado.',
+      );
+    }
+
+    const detallesProcesados =
+      lote.detalles.filter(
+        (detalle) =>
+          detalle.estado_resultado
+          === 'PROCESADO',
+      );
+
+    if (
+      detallesProcesados.length === 0
+    ) {
+      agregarBloqueo(
+        'SIN_DETALLES_PROCESADOS',
+        'El lote no contiene '
+        + 'matrículas procesadas.',
+      );
+    }
+
+    for (
+      const detalle
+      of detallesProcesados
+    ) {
+      const referencia = {
+        id_detalle:
+          detalle.id_detalle,
+
+        id_estudiante:
+          detalle.id_estudiante,
+      };
+
+      const origen =
+        detalle.matricula_origen;
+
+      const generada =
+        detalle.matricula_generada;
+
+      if (
+        !detalle.id_matricula_generada
+        || !generada
+      ) {
+        agregarBloqueo(
+          'MATRICULA_GENERADA_AUSENTE',
+          'No se encontró la matrícula '
+          + 'generada por el lote.',
+          referencia,
+        );
+
+        continue;
+      }
+
+      const estadoOrigenEsperado =
+        detalle.accion === 'PROMOVER'
+          ? 'Promocionado'
+          : detalle.accion === 'PERMANECER'
+            ? 'Finalizado'
+            : null;
+
+      if (!estadoOrigenEsperado) {
+        agregarBloqueo(
+          'ACCION_NO_REVERSIBLE',
+          'La acción del detalle '
+          + 'no es reversible.',
+          referencia,
+        );
+      } else if (
+        origen.estado_matricula
+        !== estadoOrigenEsperado
+      ) {
+        agregarBloqueo(
+          'ORIGEN_MODIFICADO',
+          'La matrícula de origen '
+          + 'cambió después de ejecutar '
+          + 'el lote.',
+          referencia,
+        );
+      }
+
+      if (
+        origen.id_colegio
+          !== lote.id_colegio
+        || origen.id_anio
+          !== lote.id_anio_origen
+        || origen.id_seccion
+          !== lote.id_seccion_origen
+        || origen.id_estudiante
+          !== detalle.id_estudiante
+      ) {
+        agregarBloqueo(
+          'ORIGEN_NO_COINCIDE',
+          'La matrícula de origen '
+          + 'ya no coincide con el lote.',
+          referencia,
+        );
+      }
+
+      if (
+        generada.id_colegio
+          !== lote.id_colegio
+        || generada.id_anio
+          !== lote.id_anio_destino
+        || generada.id_seccion
+          !== detalle.id_seccion_destino
+        || generada.id_estudiante
+          !== detalle.id_estudiante
+        || generada.id_matricula_origen
+          !== detalle.id_matricula_origen
+      ) {
+        agregarBloqueo(
+          'DESTINO_NO_COINCIDE',
+          'La matrícula generada '
+          + 'ya no coincide con el lote.',
+          referencia,
+        );
+      }
+
+      if (
+        generada.estado_matricula
+          !== lote
+            .estado_matricula_destino
+        || ![
+          'Reserva',
+          'Pre-matriculado',
+        ].includes(
+          generada.estado_matricula,
+        )
+      ) {
+        agregarBloqueo(
+          'DESTINO_CAMBIO_ESTADO',
+          'La matrícula generada '
+          + 'cambió de estado.',
+          referencia,
+        );
+      }
+
+      if (
+        generada.estado_revision
+          !== 'Por revisar'
+        || generada.id_usuario_revision
+          !== null
+        || generada.fecha_revision
+          !== null
+        || generada.situacion_final
+          !== 'PENDIENTE'
+        || generada.codigo_matricula
+          !== null
+        || generada.fecha_cierre
+          !== null
+        || generada.id_usuario_cierre
+          !== null
+      ) {
+        agregarBloqueo(
+          'DESTINO_UTILIZADO',
+          'La matrícula generada '
+          + 'ya fue revisada, cerrada '
+          + 'o utilizada.',
+          referencia,
+        );
+      }
+
+      const dependencias =
+        generada._count.notas
+        + generada._count.asistencias
+        + generada._count.cronogramas
+        + generada._count
+          .comentariosBimestrales
+        + generada._count.ordenes_pago
+        + generada._count.pagos_recibidos
+        + generada._count
+          .calificaciones_tutoria
+        + generada._count
+          .historial_situacion
+        + generada._count.recuperaciones
+        + generada._count.movimientos
+        + generada._count
+          .detalles_lote_origen;
+
+      if (dependencias > 0) {
+        agregarBloqueo(
+          'DESTINO_CON_DEPENDENCIAS',
+          'La matrícula generada '
+          + 'tiene registros asociados.',
+          referencia,
+        );
+      }
+
+      const snapshot =
+        detalle.snapshot_json;
+
+      const snapshotObjeto =
+        snapshot
+        && typeof snapshot === 'object'
+        && !Array.isArray(snapshot)
+          ? snapshot
+          : null;
+
+      const origenAntes =
+        snapshotObjeto?.[
+          'matricula_origen_antes'
+        ];
+
+      const origenAntesObjeto =
+        origenAntes
+        && typeof origenAntes === 'object'
+        && !Array.isArray(origenAntes)
+          ? origenAntes
+          : null;
+
+      const estadoOriginal =
+        String(
+          origenAntesObjeto?.[
+            'estado_matricula'
+          ]
+          || '',
+        ).trim();
+
+      if (
+        ![
+          'Matriculado',
+          'Activo',
+        ].includes(
+          estadoOriginal,
+        )
+      ) {
+        agregarBloqueo(
+          'SNAPSHOT_ORIGEN_INVALIDO',
+          'No existe un estado original '
+          + 'válido para restaurar.',
+          referencia,
+        );
+      }
+    }
+
+    const detallesConBloqueo =
+      new Set(
+        bloqueos
+          .filter(
+            (bloqueo) =>
+              bloqueo.id_detalle
+              !== undefined,
+          )
+          .map(
+            (bloqueo) =>
+              bloqueo.id_detalle,
+          ),
+      ).size;
+
+    return {
+      reversible:
+        lote.estado === 'Ejecutado'
+        && detallesProcesados.length > 0
+        && bloqueos.length === 0,
+
+      resumen: {
+        total_detalles:
+          lote.detalles.length,
+
+        procesados:
+          detallesProcesados.length,
+
+        detalles_con_bloqueo:
+          detallesConBloqueo,
+
+        total_bloqueos:
+          bloqueos.length,
+      },
+
+      lote: {
+        id_lote:
+          lote.id_lote,
+
+        estado:
+          lote.estado,
+
+        estado_matricula_destino:
+          lote.estado_matricula_destino,
+
+        fecha_ejecucion:
+          lote.fecha_ejecucion,
+
+        fecha_reversion:
+          lote.fecha_reversion,
+      },
+
+      bloqueos,
+    };
+  }
+
   async ejecutarLotePromocion(
     params: ScopeParams & {
       idLote: number;

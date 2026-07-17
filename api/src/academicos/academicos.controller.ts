@@ -706,6 +706,35 @@ async deleteGrado(
       });
   }
 
+  @Get('lotes-promocion/:id/reversion/validar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  validarReversionLotePromocion(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .validarReversionLotePromocion({
+        idLote:
+          Number(id),
+
+        userId:
+          req.user.userId,
+
+        rol:
+          req.user.rol,
+
+        scope,
+
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+      });
+  }
+
   @Post('lotes-promocion/:id/ejecutar')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
