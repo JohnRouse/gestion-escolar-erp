@@ -681,6 +681,139 @@ async deleteGrado(
   }
 
 
+  // ── RECUPERACIÓN PEDAGÓGICA ──────────────────────────
+  @Get('procesos-recuperacion')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarProcesosRecuperacion(
+    @Request() req,
+    @Query('anio_id') anioId?: string,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .listarProcesosRecuperacion({
+        idAnio: anioId
+          ? Number(anioId)
+          : undefined,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Get('procesos-recuperacion/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  getProcesoRecuperacion(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .getProcesoRecuperacion({
+        idProceso: Number(id),
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post('procesos-recuperacion')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  abrirProcesoRecuperacion(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio: number;
+      id_colegio?: number;
+      fecha_inicio: string;
+      fecha_fin_ordinaria: string;
+      permite_extraordinario?: boolean;
+      fecha_fin_extraordinaria?: string;
+      motivo_extraordinario?: string;
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .abrirProcesoRecuperacion({
+        idAnio:
+          Number(body.id_anio),
+
+        idColegio:
+          body.id_colegio
+            ? Number(body.id_colegio)
+            : undefined,
+
+        fechaInicio:
+          body.fecha_inicio,
+
+        fechaFinOrdinaria:
+          body.fecha_fin_ordinaria,
+
+        permiteExtraordinario:
+          body.permite_extraordinario,
+
+        fechaFinExtraordinaria:
+          body.fecha_fin_extraordinaria,
+
+        motivoExtraordinario:
+          body.motivo_extraordinario,
+
+        observacion:
+          body.observacion,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post(
+    'procesos-recuperacion/:id/'
+    + 'sincronizar-alumnos',
+  )
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  sincronizarAlumnosRecuperacion(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .sincronizarAlumnosRecuperacion({
+        idProceso: Number(id),
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── CIERRE ACADÉMICO ─────────────────────────────────
   @Get('cierres-academicos')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

@@ -7579,6 +7579,588 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarProcesosRecuperacion(
+    params: ScopeParams & {
+      idAnio?: number;
+    },
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    return this.prisma
+      .procesoRecuperacion.findMany({
+        where: {
+          id_colegio: {
+            in: scope.colegioIds,
+          },
+
+          ...(params.idAnio
+            ? {
+                id_anio:
+                  params.idAnio,
+              }
+            : {}),
+        },
+
+        include: {
+          colegio: true,
+          anio: true,
+
+          abierto_por: {
+            select:
+              this.usuarioPublicoSelect(),
+          },
+
+          cerrado_por: {
+            select:
+              this.usuarioPublicoSelect(),
+          },
+
+          _count: {
+            select: {
+              alumnos: true,
+            },
+          },
+        },
+
+        orderBy: [
+          {
+            id_anio: 'desc',
+          },
+          {
+            created_at: 'desc',
+          },
+        ],
+      });
+  }
+
+  async getProcesoRecuperacion(
+    params: ScopeParams & {
+      idProceso: number;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idProceso,
+      )
+      || params.idProceso <= 0
+    ) {
+      throw new BadRequestException(
+        'El proceso seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const proceso =
+      await this.prisma
+        .procesoRecuperacion.findFirst({
+          where: {
+            id_proceso:
+              params.idProceso,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+            anio: true,
+
+            abierto_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            cerrado_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            alumnos: {
+              include: {
+                matricula: {
+                  include: {
+                    estudiante: {
+                      include: {
+                        persona: true,
+                      },
+                    },
+
+                    seccion: {
+                      include: {
+                        grado: {
+                          include: {
+                            nivel: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+
+                competencias: {
+                  include: {
+                    curso: true,
+
+                    docente_evaluador: {
+                      include: {
+                        persona: true,
+                      },
+                    },
+                  },
+
+                  orderBy: {
+                    id_recuperacion_competencia:
+                      'asc',
+                  },
+                },
+              },
+
+              orderBy: {
+                id_recuperacion_alumno:
+                  'asc',
+              },
+            },
+          },
+        });
+
+    if (!proceso) {
+      throw new NotFoundException(
+        'No se encontró el proceso '
+        + 'de recuperación.',
+      );
+    }
+
+    return proceso;
+  }
+
+
+  async abrirProcesoRecuperacion(
+    params: ScopeParams & {
+      idAnio: number;
+      idColegio?: number;
+      fechaInicio: string;
+      fechaFinOrdinaria: string;
+      permiteExtraordinario?: boolean;
+      fechaFinExtraordinaria?: string;
+      motivoExtraordinario?: string;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idAnio)
+      || params.idAnio <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona un año lectivo válido.',
+      );
+    }
+
+    const parseFecha = (
+      value: string | undefined,
+      nombre: string,
+    ) => {
+      if (!value) {
+        throw new BadRequestException(
+          `Indica ${nombre}.`,
+        );
+      }
+
+      const fecha =
+        new Date(
+          `${value}T00:00:00.000-05:00`,
+        );
+
+      if (
+        Number.isNaN(
+          fecha.getTime(),
+        )
+      ) {
+        throw new BadRequestException(
+          `${nombre} no es válida.`,
+        );
+      }
+
+      return fecha;
+    };
+
+    const fechaInicio =
+      parseFecha(
+        params.fechaInicio,
+        'la fecha de inicio',
+      );
+
+    const fechaFinOrdinaria =
+      parseFecha(
+        params.fechaFinOrdinaria,
+        'la fecha de cierre ordinario',
+      );
+
+    if (
+      fechaFinOrdinaria.getTime()
+      < fechaInicio.getTime()
+    ) {
+      throw new BadRequestException(
+        'La fecha de cierre ordinario '
+        + 'no puede ser anterior al inicio.',
+      );
+    }
+
+    const permiteExtraordinario =
+      params.permiteExtraordinario
+      === true;
+
+    let fechaFinExtraordinaria:
+      Date | null = null;
+
+    if (permiteExtraordinario) {
+      fechaFinExtraordinaria =
+        parseFecha(
+          params.fechaFinExtraordinaria,
+          'la fecha de cierre '
+          + 'extraordinario',
+        );
+
+      if (
+        fechaFinExtraordinaria.getTime()
+        <= fechaFinOrdinaria.getTime()
+      ) {
+        throw new BadRequestException(
+          'La fecha extraordinaria debe '
+          + 'ser posterior al cierre '
+          + 'ordinario.',
+        );
+      }
+    }
+
+    const motivoExtraordinario =
+      this.normalizeEmpty(
+        params.motivoExtraordinario,
+      );
+
+    if (
+      permiteExtraordinario
+      && !motivoExtraordinario
+    ) {
+      throw new BadRequestException(
+        'Indica el motivo del periodo '
+        + 'extraordinario.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const anio =
+      await this.prisma
+        .anioLectivo.findUnique({
+          where: {
+            id_anio: params.idAnio,
+          },
+        });
+
+    if (!anio) {
+      throw new NotFoundException(
+        'No se encontró el año lectivo.',
+      );
+    }
+
+    const idColegio =
+      Number(
+        params.idColegio
+        || anio.id_colegio
+        || params.colegioId
+        || 0,
+      );
+
+    if (
+      !Number.isInteger(idColegio)
+      || idColegio <= 0
+    ) {
+      throw new BadRequestException(
+        'El año lectivo no tiene una '
+        + 'institución asociada.',
+      );
+    }
+
+    if (
+      anio.id_colegio
+      && anio.id_colegio !== idColegio
+    ) {
+      throw new BadRequestException(
+        'El año lectivo no pertenece '
+        + 'a la institución seleccionada.',
+      );
+    }
+
+    if (
+      !scope.colegioIds.includes(
+        idColegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la '
+        + 'institución seleccionada.',
+      );
+    }
+
+    const existente =
+      await this.prisma
+        .procesoRecuperacion.findFirst({
+          where: {
+            id_colegio: idColegio,
+            id_anio: params.idAnio,
+
+            tipo:
+              'Recuperación pedagógica',
+          },
+        });
+
+    if (
+      existente?.estado === 'Cerrado'
+    ) {
+      throw new BadRequestException(
+        'El proceso de recuperación '
+        + 'ya fue cerrado.',
+      );
+    }
+
+    const fechaApertura =
+      new Date();
+
+    const data = {
+      id_tenant:
+        anio.id_tenant,
+
+      id_colegio:
+        idColegio,
+
+      id_anio:
+        params.idAnio,
+
+      tipo:
+        'Recuperación pedagógica',
+
+      estado:
+        'Abierto',
+
+      fecha_inicio:
+        fechaInicio,
+
+      fecha_fin_ordinaria:
+        fechaFinOrdinaria,
+
+      permite_extraordinario:
+        permiteExtraordinario,
+
+      fecha_fin_extraordinaria:
+        permiteExtraordinario
+          ? fechaFinExtraordinaria
+          : null,
+
+      motivo_extraordinario:
+        permiteExtraordinario
+          ? motivoExtraordinario
+          : null,
+
+      fecha_apertura:
+        existente?.fecha_apertura
+        || fechaApertura,
+
+      id_usuario_apertura:
+        existente?.id_usuario_apertura
+        || params.userId,
+
+      observacion:
+        this.normalizeEmpty(
+          params.observacion,
+        ),
+    };
+
+    const proceso =
+      existente
+        ? await this.prisma
+            .procesoRecuperacion.update({
+              where: {
+                id_proceso:
+                  existente.id_proceso,
+              },
+
+              data,
+
+              include: {
+                colegio: true,
+                anio: true,
+              },
+            })
+        : await this.prisma
+            .procesoRecuperacion.create({
+              data,
+
+              include: {
+                colegio: true,
+                anio: true,
+              },
+            });
+
+    return {
+      message:
+        existente
+          ? 'Proceso de recuperación '
+            + 'actualizado y abierto.'
+          : 'Proceso de recuperación '
+            + 'abierto correctamente.',
+
+      proceso,
+    };
+  }
+
+
+  async sincronizarAlumnosRecuperacion(
+    params: ScopeParams & {
+      idProceso: number;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idProceso,
+      )
+      || params.idProceso <= 0
+    ) {
+      throw new BadRequestException(
+        'El proceso seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const proceso =
+      await this.prisma
+        .procesoRecuperacion.findFirst({
+          where: {
+            id_proceso:
+              params.idProceso,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+        });
+
+    if (!proceso) {
+      throw new NotFoundException(
+        'No se encontró el proceso '
+        + 'de recuperación.',
+      );
+    }
+
+    if (
+      proceso.estado !== 'Abierto'
+    ) {
+      throw new BadRequestException(
+        'El proceso de recuperación '
+        + 'debe estar abierto.',
+      );
+    }
+
+    const matriculasRR =
+      await this.prisma
+        .matricula.findMany({
+          where: {
+            id_colegio:
+              proceso.id_colegio,
+
+            id_anio:
+              proceso.id_anio,
+
+            situacion_final:
+              'RR',
+
+            estado_matricula: {
+              in: [
+                'Matriculado',
+                'Activo',
+              ],
+            },
+          },
+
+          select: {
+            id_matricula: true,
+          },
+
+          orderBy: {
+            id_matricula: 'asc',
+          },
+        });
+
+    if (
+      matriculasRR.length === 0
+    ) {
+      return {
+        message:
+          'No existen alumnos con '
+          + 'situación RR para cargar.',
+
+        agregados: 0,
+        total: 0,
+      };
+    }
+
+    const resultado =
+      await this.prisma
+        .recuperacionAlumno.createMany({
+          data:
+            matriculasRR.map(
+              (matricula) => ({
+                id_proceso:
+                  proceso.id_proceso,
+
+                id_matricula:
+                  matricula.id_matricula,
+
+                situacion_inicial:
+                  'RR',
+
+                resultado_final:
+                  'PENDIENTE',
+              }),
+            ),
+
+          skipDuplicates:
+            true,
+        });
+
+    const total =
+      await this.prisma
+        .recuperacionAlumno.count({
+          where: {
+            id_proceso:
+              proceso.id_proceso,
+          },
+        });
+
+    return {
+      message:
+        resultado.count > 0
+          ? `${resultado.count} alumno(s) `
+            + 'agregado(s) al proceso.'
+          : 'Los alumnos RR ya estaban '
+            + 'sincronizados.',
+
+      agregados:
+        resultado.count,
+
+      total,
+    };
+  }
+
+
   async listarCierresAcademicos(
     params: ScopeParams & {
       idAnio?: number;
