@@ -7125,6 +7125,460 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarProgresionesGrado(
+    params: ScopeParams,
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    return this.prisma
+      .gradoProgresion.findMany({
+        where: {
+          id_colegio: {
+            in: scope.colegioIds,
+          },
+        },
+
+        include: {
+          colegio: {
+            select: {
+              id_colegio: true,
+              nombre: true,
+              nombre_corto: true,
+            },
+          },
+
+          grado_origen: {
+            include: {
+              nivel: true,
+            },
+          },
+
+          grado_destino: {
+            include: {
+              nivel: true,
+            },
+          },
+        },
+
+        orderBy: [
+          {
+            id_colegio: 'asc',
+          },
+          {
+            id_grado_origen: 'asc',
+          },
+        ],
+      });
+  }
+
+  async guardarProgresionGrado(
+    params: ScopeParams & {
+      idColegio?: number;
+      idGradoOrigen: number;
+      idGradoDestino?: number | null;
+      tipoTransicion?:
+        | 'Regular'
+        | 'Cambio de nivel'
+        | 'Egreso';
+      esTerminal?: boolean;
+      edadNormativaDestino?:
+        | number
+        | null;
+      fechaCorteMes?: number;
+      fechaCorteDia?: number;
+      estado?: 'Activo' | 'Inactivo';
+    },
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    const idColegio =
+      Number(
+        params.idColegio
+        || params.colegioId
+        || 0,
+      );
+
+    if (
+      !Number.isInteger(idColegio)
+      || idColegio <= 0
+    ) {
+      throw new BadRequestException(
+        'Selecciona la institución '
+        + 'de la progresión.',
+      );
+    }
+
+    if (
+      !scope.colegioIds.includes(
+        idColegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la '
+        + 'institución seleccionada.',
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        params.idGradoOrigen,
+      )
+      || params.idGradoOrigen <= 0
+    ) {
+      throw new BadRequestException(
+        'El grado de origen no es válido.',
+      );
+    }
+
+    const gradoOrigen =
+      await this.prisma.grado.findUnique({
+        where: {
+          id_grado:
+            params.idGradoOrigen,
+        },
+
+        include: {
+          nivel: true,
+        },
+      });
+
+    if (!gradoOrigen) {
+      throw new NotFoundException(
+        'No se encontró el grado '
+        + 'de origen.',
+      );
+    }
+
+    const vinculoOrigen =
+      await this.prisma
+        .colegioGrado.findFirst({
+          where: {
+            id_colegio: idColegio,
+            id_grado:
+              params.idGradoOrigen,
+            estado: 'Activo',
+          },
+        });
+
+    if (!vinculoOrigen) {
+      throw new BadRequestException(
+        'El grado de origen no está '
+        + 'habilitado en esta institución.',
+      );
+    }
+
+    const esTerminal =
+      Boolean(params.esTerminal)
+      || params.tipoTransicion
+        === 'Egreso';
+
+    let gradoDestino:
+      | {
+          id_grado: number;
+          nombre_grado: string;
+          id_nivel: number;
+          nivel: {
+            id_nivel: number;
+            nombre_nivel: string;
+          };
+        }
+      | null = null;
+
+    let idGradoDestino:
+      | number
+      | null = null;
+
+    if (!esTerminal) {
+      idGradoDestino =
+        Number(
+          params.idGradoDestino
+          || 0,
+        );
+
+      if (
+        !Number.isInteger(
+          idGradoDestino,
+        )
+        || idGradoDestino <= 0
+      ) {
+        throw new BadRequestException(
+          'Selecciona el grado de destino.',
+        );
+      }
+
+      if (
+        idGradoDestino
+        === params.idGradoOrigen
+      ) {
+        throw new BadRequestException(
+          'El grado de destino debe ser '
+          + 'distinto al grado de origen.',
+        );
+      }
+
+      gradoDestino =
+        await this.prisma.grado
+          .findUnique({
+            where: {
+              id_grado:
+                idGradoDestino,
+            },
+
+            include: {
+              nivel: true,
+            },
+          });
+
+      if (!gradoDestino) {
+        throw new NotFoundException(
+          'No se encontró el grado '
+          + 'de destino.',
+        );
+      }
+
+      const vinculoDestino =
+        await this.prisma
+          .colegioGrado.findFirst({
+            where: {
+              id_colegio: idColegio,
+              id_grado:
+                idGradoDestino,
+              estado: 'Activo',
+            },
+          });
+
+      if (!vinculoDestino) {
+        throw new BadRequestException(
+          'El grado de destino no está '
+          + 'habilitado en esta institución.',
+        );
+      }
+    }
+
+    const tipoCalculado =
+      esTerminal
+        ? 'Egreso'
+        : gradoOrigen.id_nivel
+            === gradoDestino?.id_nivel
+          ? 'Regular'
+          : 'Cambio de nivel';
+
+    const tipoTransicion =
+      params.tipoTransicion
+      || tipoCalculado;
+
+    const tiposPermitidos = [
+      'Regular',
+      'Cambio de nivel',
+      'Egreso',
+    ];
+
+    if (
+      !tiposPermitidos.includes(
+        tipoTransicion,
+      )
+    ) {
+      throw new BadRequestException(
+        'El tipo de transición '
+        + 'no es válido.',
+      );
+    }
+
+    if (
+      tipoTransicion
+      !== tipoCalculado
+    ) {
+      throw new BadRequestException(
+        `La transición debe registrarse `
+        + `como ${tipoCalculado}.`,
+      );
+    }
+
+    const edadNormativa =
+      params.edadNormativaDestino
+        === null
+        || params.edadNormativaDestino
+          === undefined
+        ? null
+        : Number(
+            params.edadNormativaDestino,
+          );
+
+    if (
+      edadNormativa !== null
+      && (
+        !Number.isInteger(
+          edadNormativa,
+        )
+        || edadNormativa < 2
+        || edadNormativa > 25
+      )
+    ) {
+      throw new BadRequestException(
+        'La edad normativa debe ser '
+        + 'un número entero válido.',
+      );
+    }
+
+    const fechaCorteMes =
+      Number(
+        params.fechaCorteMes
+        ?? 3,
+      );
+
+    if (
+      !Number.isInteger(fechaCorteMes)
+      || fechaCorteMes < 1
+      || fechaCorteMes > 12
+    ) {
+      throw new BadRequestException(
+        'El mes de corte no es válido.',
+      );
+    }
+
+    const fechaCorteDia =
+      Number(
+        params.fechaCorteDia
+        ?? 31,
+      );
+
+    const maximoDiaMes =
+      new Date(
+        2024,
+        fechaCorteMes,
+        0,
+      ).getDate();
+
+    if (
+      !Number.isInteger(fechaCorteDia)
+      || fechaCorteDia < 1
+      || fechaCorteDia > maximoDiaMes
+    ) {
+      throw new BadRequestException(
+        'El día de corte no es válido '
+        + 'para el mes seleccionado.',
+      );
+    }
+
+    const estado =
+      params.estado
+      || 'Activo';
+
+    if (
+      ![
+        'Activo',
+        'Inactivo',
+      ].includes(estado)
+    ) {
+      throw new BadRequestException(
+        'El estado de la progresión '
+        + 'no es válido.',
+      );
+    }
+
+    const existente =
+      await this.prisma
+        .gradoProgresion.findFirst({
+          where: {
+            id_colegio: idColegio,
+            id_grado_origen:
+              params.idGradoOrigen,
+          },
+        });
+
+    const data = {
+      id_colegio:
+        idColegio,
+
+      id_grado_origen:
+        params.idGradoOrigen,
+
+      id_grado_destino:
+        esTerminal
+          ? null
+          : idGradoDestino,
+
+      tipo_transicion:
+        tipoTransicion,
+
+      es_terminal:
+        esTerminal,
+
+      edad_normativa_destino:
+        esTerminal
+          ? null
+          : edadNormativa,
+
+      fecha_corte_mes:
+        fechaCorteMes,
+
+      fecha_corte_dia:
+        fechaCorteDia,
+
+      estado,
+    };
+
+    const progresion =
+      existente
+        ? await this.prisma
+            .gradoProgresion.update({
+              where: {
+                id_progresion:
+                  existente.id_progresion,
+              },
+
+              data,
+
+              include: {
+                colegio: true,
+
+                grado_origen: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+
+                grado_destino: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            })
+        : await this.prisma
+            .gradoProgresion.create({
+              data,
+
+              include: {
+                colegio: true,
+
+                grado_origen: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+
+                grado_destino: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            });
+
+    return {
+      message:
+        existente
+          ? 'Progresión de grado actualizada.'
+          : 'Progresión de grado creada.',
+
+      progresion,
+    };
+  }
+
+
   async actualizarContinuidadMatricula(
     params: ScopeParams & {
       idMatricula: number;

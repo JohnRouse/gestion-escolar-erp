@@ -200,6 +200,99 @@ async deleteGrado(
   });
 }
 
+  // ── PROGRESIÓN DE GRADOS ─────────────────────────────
+  @Get('progresiones-grado')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  listarProgresionesGrado(
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .listarProgresionesGrado({
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Put('progresiones-grado/:idGradoOrigen')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  guardarProgresionGrado(
+    @Param('idGradoOrigen')
+    idGradoOrigen: string,
+    @Request() req,
+    @Body()
+    body: {
+      id_colegio?: number;
+      id_grado_destino?: number | null;
+      tipo_transicion?:
+        | 'Regular'
+        | 'Cambio de nivel'
+        | 'Egreso';
+      es_terminal?: boolean;
+      edad_normativa_destino?: number | null;
+      fecha_corte_mes?: number;
+      fecha_corte_dia?: number;
+      estado?: 'Activo' | 'Inactivo';
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .guardarProgresionGrado({
+        idGradoOrigen:
+          Number(idGradoOrigen),
+
+        idGradoDestino:
+          body.id_grado_destino === null
+            || body.id_grado_destino
+              === undefined
+            ? null
+            : Number(
+                body.id_grado_destino,
+              ),
+
+        idColegio:
+          body.id_colegio
+            ? Number(body.id_colegio)
+            : colegioId
+              ? Number(colegioId)
+              : undefined,
+
+        tipoTransicion:
+          body.tipo_transicion,
+
+        esTerminal:
+          body.es_terminal,
+
+        edadNormativaDestino:
+          body.edad_normativa_destino,
+
+        fechaCorteMes:
+          body.fecha_corte_mes,
+
+        fechaCorteDia:
+          body.fecha_corte_dia,
+
+        estado:
+          body.estado,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── SECCIONES ────────────────────────────────────────
   @Get('secciones')
   @UseGuards(AuthGuard('jwt'))
