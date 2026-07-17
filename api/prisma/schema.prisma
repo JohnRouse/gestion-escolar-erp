@@ -130,6 +130,7 @@ model Tenant {
   procesos_recuperacion ProcesoRecuperacion[]
   movimientos_alumnos   MovimientoEstudiante[]
   lotes_promocion       LotePromocion[]
+  secciones_anio        SeccionAnio[]
 }
 
 model Colegio {
@@ -182,6 +183,8 @@ model Colegio {
   movimientos_origen    MovimientoEstudiante[] @relation("MovimientoColegioOrigen")
   movimientos_destino   MovimientoEstudiante[] @relation("MovimientoColegioDestino")
   lotes_promocion       LotePromocion[]
+
+  secciones_anio SeccionAnio[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -305,6 +308,8 @@ model Seccion {
   detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleSeccionOrigen")
   detalles_promocion_destino LotePromocionDetalle[] @relation("LoteDetalleSeccionDestino")
 
+  configuraciones_anio SeccionAnio[]
+
   @@index([id_tenant])
   @@index([id_colegio])
   @@index([id_grado])
@@ -381,6 +386,8 @@ model AnioLectivo {
   procesos_recuperacion   ProcesoRecuperacion[]
   lotes_promocion_origen  LotePromocion[]       @relation("LotePromocionAnioOrigen")
   lotes_promocion_destino LotePromocion[]       @relation("LotePromocionAnioDestino")
+
+  secciones_anio SeccionAnio[]
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -1787,4 +1794,31 @@ model LotePromocionDetalle {
   @@index([id_matricula_generada])
   @@index([id_seccion_destino])
   @@index([estado_resultado])
+}
+
+// ======================================================
+// CONFIGURACIÓN DE SECCIONES POR AÑO
+// ======================================================
+
+model SeccionAnio {
+  id_seccion_anio    Int      @id @default(autoincrement())
+  id_tenant          Int?
+  id_colegio         Int
+  id_anio            Int
+  id_seccion         Int
+  estado             String   @default("Activo") @db.VarChar(20)
+  capacidad_override Int?     @db.TinyInt
+  version            Int      @default(0)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant], onDelete: SetNull)
+  colegio Colegio     @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio], onDelete: Cascade)
+  seccion Seccion     @relation(fields: [id_seccion], references: [id_seccion], onDelete: Cascade)
+
+  @@unique([id_anio, id_seccion])
+  @@index([id_colegio, id_anio, estado])
+  @@index([id_seccion])
+  @@index([version])
 }
