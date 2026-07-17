@@ -9411,6 +9411,23 @@ const existente = await this.prisma.persona.findUnique({
             snapshot: {
               motivo,
 
+              matricula_origen_antes: {
+                estado_matricula:
+                  matricula.estado_matricula,
+
+                fecha_cierre:
+                  matricula.fecha_cierre
+                    ? matricula.fecha_cierre
+                        .toISOString()
+                    : null,
+
+                motivo_cierre:
+                  matricula.motivo_cierre,
+
+                id_usuario_cierre:
+                  matricula.id_usuario_cierre,
+              },
+
               estado_matricula_destino:
                 estadoMatriculaDestino,
 
