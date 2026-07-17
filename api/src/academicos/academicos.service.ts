@@ -7640,6 +7640,69 @@ const existente = await this.prisma.persona.findUnique({
                 this.usuarioPublicoSelect(),
             },
 
+            ejecuciones: {
+              include: {
+                ejecutado_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+
+                revertido_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+
+                detalles: {
+                  include: {
+                    matricula_generada:
+                      true,
+
+                    detalle: {
+                      include: {
+                        estudiante: {
+                          include: {
+                            persona:
+                              true,
+                          },
+                        },
+
+                        grado_origen: {
+                          include: {
+                            nivel:
+                              true,
+                          },
+                        },
+
+                        grado_destino: {
+                          include: {
+                            nivel:
+                              true,
+                          },
+                        },
+
+                        seccion_destino: {
+                          include: {
+                            aula:
+                              true,
+                          },
+                        },
+                      },
+                    },
+                  },
+
+                  orderBy: {
+                    id_ejecucion_detalle:
+                      'asc',
+                  },
+                },
+              },
+
+              orderBy: {
+                numero_ejecucion:
+                  'asc',
+              },
+            },
+
             detalles: {
               include: {
                 estudiante: {
@@ -10447,6 +10510,12 @@ const existente = await this.prisma.persona.findUnique({
           } else if (
             situacion === 'RR'
           ) {
+            accion =
+              'ESPERAR_RECUPERACION';
+
+            estadoResultado =
+              'PENDIENTE_RECUPERACION';
+
             motivo =
               'El estudiante debe concluir '
               + 'el proceso de recuperación.';
@@ -10738,6 +10807,13 @@ const existente = await this.prisma.persona.findUnique({
             === 'OMITIDO',
         ).length,
 
+      pendientes_recuperacion:
+        detalles.filter(
+          (item) =>
+            item.estado_resultado
+            === 'PENDIENTE_RECUPERACION',
+        ).length,
+
       promover:
         detalles.filter(
           (item) =>
@@ -11024,8 +11100,13 @@ const existente = await this.prisma.persona.findUnique({
           ? 'Vista previa generada con '
             + `${resumen.bloqueados} `
             + 'estudiante(s) bloqueado(s).'
-          : 'Vista previa generada '
-            + 'correctamente.',
+          : resumen.pendientes_recuperacion > 0
+            ? 'Vista previa generada con '
+              + `${resumen.pendientes_recuperacion} `
+              + 'estudiante(s) pendiente(s) '
+              + 'de recuperación.'
+            : 'Vista previa generada '
+              + 'correctamente.',
 
       resumen,
       lote,
