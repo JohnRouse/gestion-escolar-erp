@@ -24,6 +24,7 @@ import { SchoolProvider } from './contexts/SchoolContext';
 import { ToastProvider } from './contexts/ToastContext';
 import MatriculasHistorialPage from './pages/matricula/MatriculasHistorialPage';
 import RenovacionMatriculaPage from './pages/matricula/RenovacionMatriculaPage';
+import PromocionMasivaPage from './pages/matricula/PromocionMasivaPage';
 import AlumnosPage from './pages/comunidad/AlumnosPage';
 import ApoderadosPage from './pages/comunidad/ApoderadosPage';
 import TesoreriaConfiguracionPage from './pages/tesoreria/TesoreriaConfiguracionPage';
@@ -161,6 +162,7 @@ function AppRoutes() {
         <Route path="/tesoreria/cobranzas" element={<CobranzasPage />} />
         <Route path="/tesoreria/agenda-cobranzas" element={<AgendaCobranzasPage />} />
         <Route path="/matricula/renovacion" element={<RenovacionMatriculaPage />} />
+        <Route path="/matricula/promocion-masiva" element={<PromocionMasivaPage />} />
         <Route path="/comunidad/alumnos" element={<AlumnosPage />} />
         <Route path="/comunidad/apoderados" element={<ApoderadosPage />} />
       </Route>
