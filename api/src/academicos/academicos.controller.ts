@@ -706,6 +706,43 @@ async deleteGrado(
       });
   }
 
+  @Post('lotes-promocion/:id/ejecutar')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  ejecutarLotePromocion(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      confirmacion: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .ejecutarLotePromocion({
+        idLote:
+          Number(id),
+
+        confirmacion:
+          body.confirmacion,
+
+        userId:
+          req.user.userId,
+
+        rol:
+          req.user.rol,
+
+        scope,
+
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+      });
+  }
+
+
   @Post('lotes-promocion/vista-previa')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')

@@ -7705,6 +7705,887 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async ejecutarLotePromocion(
+    params: ScopeParams & {
+      idLote: number;
+      confirmacion: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idLote)
+      || params.idLote <= 0
+    ) {
+      throw new BadRequestException(
+        'El lote seleccionado no es válido.',
+      );
+    }
+
+    if (
+      String(params.confirmacion || '')
+        .trim()
+        .toUpperCase()
+      !== 'EJECUTAR'
+    ) {
+      throw new BadRequestException(
+        'Escribe EJECUTAR para confirmar '
+        + 'la promoción masiva.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const loteActual =
+      await this.prisma
+        .lotePromocion.findFirst({
+          where: {
+            id_lote:
+              params.idLote,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            detalles: true,
+          },
+        });
+
+    if (!loteActual) {
+      throw new NotFoundException(
+        'No se encontró el lote '
+        + 'de promoción.',
+      );
+    }
+
+    if (
+      loteActual.estado
+      !== 'Vista previa'
+    ) {
+      throw new BadRequestException(
+        'El lote ya no se encuentra '
+        + 'en estado de vista previa.',
+      );
+    }
+
+    const bloqueados =
+      loteActual.detalles.filter(
+        (detalle) =>
+          detalle.estado_resultado
+          === 'BLOQUEADO',
+      );
+
+    if (bloqueados.length > 0) {
+      throw new BadRequestException(
+        'No se puede ejecutar el lote '
+        + `porque contiene ${bloqueados.length} `
+        + 'estudiante(s) bloqueado(s). '
+        + 'Genera nuevamente la vista previa.',
+      );
+    }
+
+    const listos =
+      loteActual.detalles.filter(
+        (detalle) =>
+          detalle.estado_resultado
+            === 'LISTO'
+          && (
+            detalle.accion
+              === 'PROMOVER'
+            || detalle.accion
+              === 'PERMANECER'
+          ),
+      );
+
+    if (listos.length === 0) {
+      throw new BadRequestException(
+        'El lote no contiene estudiantes '
+        + 'listos para generar matrícula.',
+      );
+    }
+
+    let resultadoOperacion: {
+      procesados: number;
+      secciones_actualizadas: number;
+    };
+
+    try {
+      resultadoOperacion =
+        await this.prisma.$transaction(
+          async (tx) => {
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_lote
+                FROM LotePromocion
+                WHERE id_lote = ${params.idLote}
+                FOR UPDATE
+              `,
+            );
+
+            const lote =
+              await tx
+                .lotePromocion.findUnique({
+                  where: {
+                    id_lote:
+                      params.idLote,
+                  },
+
+                  include: {
+                    detalles: true,
+                  },
+                });
+
+            if (!lote) {
+              throw new NotFoundException(
+                'No se encontró el lote '
+                + 'de promoción.',
+              );
+            }
+
+            if (
+              lote.estado
+              !== 'Vista previa'
+            ) {
+              throw new BadRequestException(
+                'El lote fue modificado '
+                + 'por otro proceso.',
+              );
+            }
+
+            if (
+              ![
+                'Reserva',
+                'Pre-matriculado',
+              ].includes(
+                lote
+                  .estado_matricula_destino,
+              )
+            ) {
+              throw new BadRequestException(
+                'El estado de matrícula '
+                + 'del lote no es válido.',
+              );
+            }
+
+            const detallesListos =
+              lote.detalles
+                .filter(
+                  (detalle) =>
+                    detalle.estado_resultado
+                      === 'LISTO'
+                    && (
+                      detalle.accion
+                        === 'PROMOVER'
+                      || detalle.accion
+                        === 'PERMANECER'
+                    ),
+                )
+                .sort(
+                  (a, b) =>
+                    a.id_detalle
+                    - b.id_detalle,
+                );
+
+            const detallesBloqueados =
+              lote.detalles.filter(
+                (detalle) =>
+                  detalle.estado_resultado
+                  === 'BLOQUEADO',
+              );
+
+            if (
+              detallesBloqueados.length > 0
+            ) {
+              throw new BadRequestException(
+                'El lote contiene estudiantes '
+                + 'bloqueados y debe volver '
+                + 'a calcularse.',
+              );
+            }
+
+            if (
+              detallesListos.length === 0
+            ) {
+              throw new BadRequestException(
+                'El lote ya no contiene '
+                + 'estudiantes listos.',
+              );
+            }
+
+            for (
+              const detalle
+              of detallesListos
+            ) {
+              if (
+                !detalle.id_grado_destino
+                || !detalle.id_seccion_destino
+                || detalle
+                  .version_seccion_destino
+                  === null
+              ) {
+                throw new BadRequestException(
+                  'Existe un detalle sin '
+                  + 'destino o versión válida.',
+                );
+              }
+            }
+
+            const idsSeccionDestino =
+              Array.from(
+                new Set(
+                  detallesListos.map(
+                    (detalle) =>
+                      detalle
+                        .id_seccion_destino!,
+                  ),
+                ),
+              ).sort(
+                (a, b) => a - b,
+              );
+
+            type SeccionBloqueada = {
+              id_seccion_anio: number;
+              id_seccion: number;
+              version: number;
+              estado: string;
+              capacidad_override:
+                | number
+                | null;
+              capacidad_aula: number;
+            };
+
+            const seccionesBloqueadas =
+              await tx.$queryRaw<
+                SeccionBloqueada[]
+              >(
+                Prisma.sql`
+                  SELECT
+                    sa.id_seccion_anio,
+                    sa.id_seccion,
+                    sa.version,
+                    sa.estado,
+                    sa.capacidad_override,
+                    a.capacidad
+                      AS capacidad_aula
+                  FROM SeccionAnio sa
+                  INNER JOIN Seccion s
+                    ON s.id_seccion
+                      = sa.id_seccion
+                  INNER JOIN Aula a
+                    ON a.id_aula
+                      = s.id_aula
+                  WHERE sa.id_colegio
+                    = ${lote.id_colegio}
+                    AND sa.id_anio
+                      = ${lote.id_anio_destino}
+                    AND sa.id_seccion IN (
+                      ${Prisma.join(
+                        idsSeccionDestino,
+                      )}
+                    )
+                  ORDER BY sa.id_seccion ASC
+                  FOR UPDATE
+                `,
+              );
+
+            if (
+              seccionesBloqueadas.length
+              !== idsSeccionDestino.length
+            ) {
+              throw new BadRequestException(
+                'Una de las secciones de '
+                + 'destino ya no está '
+                + 'configurada.',
+              );
+            }
+
+            const idsMatriculaOrigen =
+              detallesListos
+                .map(
+                  (detalle) =>
+                    detalle
+                      .id_matricula_origen,
+                )
+                .sort(
+                  (a, b) => a - b,
+                );
+
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_matricula
+                FROM Matricula
+                WHERE id_matricula IN (
+                  ${Prisma.join(
+                    idsMatriculaOrigen,
+                  )}
+                )
+                ORDER BY id_matricula ASC
+                FOR UPDATE
+              `,
+            );
+
+            const matriculasOrigen =
+              await tx.matricula.findMany({
+                where: {
+                  id_matricula: {
+                    in:
+                      idsMatriculaOrigen,
+                  },
+                },
+              });
+
+            if (
+              matriculasOrigen.length
+              !== detallesListos.length
+            ) {
+              throw new BadRequestException(
+                'Una matrícula de origen '
+                + 'ya no existe.',
+              );
+            }
+
+            const matriculaOrigenPorId =
+              new Map(
+                matriculasOrigen.map(
+                  (matricula) => [
+                    matricula.id_matricula,
+                    matricula,
+                  ],
+                ),
+              );
+
+            for (
+              const detalle
+              of detallesListos
+            ) {
+              const matricula =
+                matriculaOrigenPorId.get(
+                  detalle
+                    .id_matricula_origen,
+                );
+
+              if (!matricula) {
+                throw new BadRequestException(
+                  'No se encontró una '
+                  + 'matrícula de origen.',
+                );
+              }
+
+              if (
+                matricula.id_colegio
+                  !== lote.id_colegio
+                || matricula.id_anio
+                  !== lote.id_anio_origen
+                || matricula.id_seccion
+                  !== lote.id_seccion_origen
+                || matricula.id_estudiante
+                  !== detalle.id_estudiante
+              ) {
+                throw new BadRequestException(
+                  'Los datos de una matrícula '
+                  + 'cambiaron desde la '
+                  + 'vista previa.',
+                );
+              }
+
+              if (
+                ![
+                  'Matriculado',
+                  'Activo',
+                ].includes(
+                  matricula
+                    .estado_matricula,
+                )
+              ) {
+                throw new BadRequestException(
+                  'Una matrícula de origen '
+                  + 'ya no está activa.',
+                );
+              }
+
+              if (
+                matricula
+                  .continuidad_siguiente_anio
+                !== 'Continúa'
+              ) {
+                throw new BadRequestException(
+                  'La continuidad de un '
+                  + 'estudiante cambió desde '
+                  + 'la vista previa.',
+                );
+              }
+
+              const situacionActual =
+                String(
+                  matricula.situacion_final,
+                )
+                  .trim()
+                  .toUpperCase();
+
+              if (
+                detalle.accion
+                  === 'PROMOVER'
+                && situacionActual !== 'PRO'
+              ) {
+                throw new BadRequestException(
+                  'Un estudiante ya no tiene '
+                  + 'situación final PRO.',
+                );
+              }
+
+              if (
+                detalle.accion
+                  === 'PERMANECER'
+                && situacionActual !== 'PER'
+              ) {
+                throw new BadRequestException(
+                  'Un estudiante ya no tiene '
+                  + 'situación final PER.',
+                );
+              }
+            }
+
+            const idsEstudiantes =
+              detallesListos.map(
+                (detalle) =>
+                  detalle.id_estudiante,
+              );
+
+            const matriculasDestinoExistentes =
+              await tx.matricula.findMany({
+                where: {
+                  id_colegio:
+                    lote.id_colegio,
+
+                  id_anio:
+                    lote.id_anio_destino,
+
+                  id_estudiante: {
+                    in:
+                      idsEstudiantes,
+                  },
+
+                  estado_matricula: {
+                    not:
+                      'Anulado',
+                  },
+                },
+
+                select: {
+                  id_matricula: true,
+                  id_estudiante: true,
+                },
+              });
+
+            if (
+              matriculasDestinoExistentes
+                .length > 0
+            ) {
+              throw new BadRequestException(
+                'Uno o más estudiantes ya '
+                + 'tienen matrícula en el '
+                + 'año de destino.',
+              );
+            }
+
+            const ocupacion =
+              await tx.matricula.groupBy({
+                by: [
+                  'id_seccion',
+                ],
+
+                where: {
+                  id_colegio:
+                    lote.id_colegio,
+
+                  id_anio:
+                    lote.id_anio_destino,
+
+                  id_seccion: {
+                    in:
+                      idsSeccionDestino,
+                  },
+
+                  estado_matricula: {
+                    in: [
+                      'Reserva',
+                      'Pre-matriculado',
+                      'Matriculado',
+                      'Activo',
+                    ],
+                  },
+                },
+
+                _count: {
+                  _all: true,
+                },
+              });
+
+            const ocupadosPorSeccion =
+              new Map(
+                ocupacion.map(
+                  (item) => [
+                    item.id_seccion,
+                    item._count._all,
+                  ],
+                ),
+              );
+
+            const requeridosPorSeccion =
+              new Map<number, number>();
+
+            for (
+              const detalle
+              of detallesListos
+            ) {
+              const idSeccion =
+                detalle
+                  .id_seccion_destino!;
+
+              requeridosPorSeccion.set(
+                idSeccion,
+                (
+                  requeridosPorSeccion.get(
+                    idSeccion,
+                  )
+                  || 0
+                ) + 1,
+              );
+            }
+
+            const seccionBloqueadaPorId =
+              new Map(
+                seccionesBloqueadas.map(
+                  (seccion) => [
+                    seccion.id_seccion,
+                    seccion,
+                  ],
+                ),
+              );
+
+            for (
+              const idSeccion
+              of idsSeccionDestino
+            ) {
+              const seccion =
+                seccionBloqueadaPorId.get(
+                  idSeccion,
+                );
+
+              if (!seccion) {
+                throw new BadRequestException(
+                  'No se pudo bloquear una '
+                  + 'sección de destino.',
+                );
+              }
+
+              if (
+                seccion.estado
+                !== 'Activo'
+              ) {
+                throw new BadRequestException(
+                  'Una sección de destino '
+                  + 'ya no está activa.',
+                );
+              }
+
+              const versionesEsperadas =
+                new Set(
+                  detallesListos
+                    .filter(
+                      (detalle) =>
+                        detalle
+                          .id_seccion_destino
+                        === idSeccion,
+                    )
+                    .map(
+                      (detalle) =>
+                        detalle
+                          .version_seccion_destino,
+                    ),
+                );
+
+              if (
+                versionesEsperadas.size !== 1
+                || !versionesEsperadas.has(
+                  seccion.version,
+                )
+              ) {
+                throw new BadRequestException(
+                  'Los cupos de una sección '
+                  + 'cambiaron desde la '
+                  + 'vista previa. Vuelve '
+                  + 'a calcular el lote.',
+                );
+              }
+
+              const capacidad =
+                seccion.capacidad_override
+                ?? seccion.capacidad_aula;
+
+              const ocupados =
+                ocupadosPorSeccion.get(
+                  idSeccion,
+                )
+                || 0;
+
+              const requeridos =
+                requeridosPorSeccion.get(
+                  idSeccion,
+                )
+                || 0;
+
+              if (
+                ocupados + requeridos
+                > capacidad
+              ) {
+                throw new BadRequestException(
+                  'No existen cupos suficientes '
+                  + `en la sección ${idSeccion}.`,
+                );
+              }
+            }
+
+            const fechaEjecucion =
+              new Date();
+
+            let procesados =
+              0;
+
+            for (
+              const detalle
+              of detallesListos
+            ) {
+              const matriculaGenerada =
+                await tx.matricula.create({
+                  data: {
+                    id_tenant:
+                      lote.id_tenant,
+
+                    id_colegio:
+                      lote.id_colegio,
+
+                    id_estudiante:
+                      detalle
+                        .id_estudiante,
+
+                    id_seccion:
+                      detalle
+                        .id_seccion_destino!,
+
+                    id_anio:
+                      lote.id_anio_destino,
+
+                    fecha_matricula:
+                      fechaEjecucion,
+
+                    estado_matricula:
+                      lote
+                        .estado_matricula_destino,
+
+                    id_usuario_registro:
+                      params.userId,
+
+                    tipo_ingreso:
+                      'Renovación',
+
+                    id_matricula_origen:
+                      detalle
+                        .id_matricula_origen,
+
+                    id_colegio_origen:
+                      lote.id_colegio,
+
+                    id_anio_origen:
+                      lote.id_anio_origen,
+
+                    tipo_proceso_matricula:
+                      'Promoción masiva',
+
+                    estado_revision:
+                      'Por revisar',
+
+                    situacion_final:
+                      'PENDIENTE',
+
+                    es_egresado:
+                      false,
+                  },
+                });
+
+              await tx.matricula.update({
+                where: {
+                  id_matricula:
+                    detalle
+                      .id_matricula_origen,
+                },
+
+                data: {
+                  estado_matricula:
+                    detalle.accion
+                      === 'PROMOVER'
+                      ? 'Promocionado'
+                      : 'Finalizado',
+
+                  fecha_cierre:
+                    fechaEjecucion,
+
+                  motivo_cierre:
+                    detalle.accion
+                      === 'PROMOVER'
+                      ? 'Promoción masiva '
+                        + 'al siguiente grado.'
+                      : 'Finalización del año '
+                        + 'con permanencia '
+                        + 'en el mismo grado.',
+
+                  id_usuario_cierre:
+                    params.userId,
+                },
+              });
+
+              await tx
+                .lotePromocionDetalle
+                .update({
+                  where: {
+                    id_detalle:
+                      detalle.id_detalle,
+                  },
+
+                  data: {
+                    id_matricula_generada:
+                      matriculaGenerada
+                        .id_matricula,
+
+                    estado_resultado:
+                      'PROCESADO',
+
+                    error_observacion:
+                      null,
+
+                    fecha_procesado:
+                      fechaEjecucion,
+                  },
+                });
+
+              procesados++;
+            }
+
+            for (
+              const seccion
+              of seccionesBloqueadas
+            ) {
+              await tx.seccionAnio.update({
+                where: {
+                  id_seccion_anio:
+                    seccion
+                      .id_seccion_anio,
+                },
+
+                data: {
+                  version: {
+                    increment: 1,
+                  },
+                },
+              });
+            }
+
+            await tx.lotePromocion.update({
+              where: {
+                id_lote:
+                  lote.id_lote,
+              },
+
+              data: {
+                estado:
+                  'Ejecutado',
+
+                fecha_ejecucion:
+                  fechaEjecucion,
+
+                id_usuario_ejecucion:
+                  params.userId,
+              },
+            });
+
+            return {
+              procesados,
+
+              secciones_actualizadas:
+                seccionesBloqueadas.length,
+            };
+          },
+          {
+            maxWait:
+              5000,
+
+            timeout:
+              30000,
+
+            isolationLevel:
+              Prisma
+                .TransactionIsolationLevel
+                .Serializable,
+          },
+        );
+    } catch (error) {
+      if (
+        error
+          instanceof
+            Prisma
+              .PrismaClientKnownRequestError
+        && error.code === 'P2034'
+      ) {
+        throw new BadRequestException(
+          'Otro proceso modificó los cupos '
+          + 'al mismo tiempo. Genera '
+          + 'nuevamente la vista previa.',
+        );
+      }
+
+      throw error;
+    }
+
+    const lote =
+      await this.getLotePromocion({
+        idLote:
+          params.idLote,
+
+        userId:
+          params.userId,
+
+        rol:
+          params.rol,
+
+        scope:
+          params.scope,
+
+        colegioId:
+          params.colegioId,
+      });
+
+    return {
+      message:
+        'Lote ejecutado correctamente.',
+
+      resumen: {
+        procesados:
+          resultadoOperacion.procesados,
+
+        secciones_actualizadas:
+          resultadoOperacion
+            .secciones_actualizadas,
+
+        estado_matricula_destino:
+          lote.estado_matricula_destino,
+      },
+
+      lote,
+    };
+  }
+
+
   async generarVistaPreviaPromocion(
     params: ScopeParams & {
       idAnioOrigen: number;
