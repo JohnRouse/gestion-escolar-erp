@@ -8105,6 +8105,842 @@ const existente = await this.prisma.persona.findUnique({
     };
   }
 
+  async revertirLotePromocion(
+    params: ScopeParams & {
+      idLote: number;
+      confirmacion?: string;
+      motivo?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idLote)
+      || params.idLote <= 0
+    ) {
+      throw new BadRequestException(
+        'El lote seleccionado no es válido.',
+      );
+    }
+
+    if (
+      String(params.confirmacion || '')
+        .trim()
+        .toUpperCase()
+      !== 'REVERTIR'
+    ) {
+      throw new BadRequestException(
+        'Escribe REVERTIR para confirmar '
+        + 'la reversión.',
+      );
+    }
+
+    const motivoReversion =
+      String(params.motivo || '').trim();
+
+    if (motivoReversion.length < 5) {
+      throw new BadRequestException(
+        'Registra un motivo de reversión válido.',
+      );
+    }
+
+    if (motivoReversion.length > 500) {
+      throw new BadRequestException(
+        'El motivo no puede superar '
+        + 'los 500 caracteres.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const validacion =
+      await this.validarReversionLotePromocion({
+        idLote: params.idLote,
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId: params.colegioId,
+      });
+
+    if (!validacion.reversible) {
+      throw new BadRequestException(
+        validacion.bloqueos[0]?.mensaje
+        || 'El lote no puede revertirse.',
+      );
+    }
+
+    let resultadoOperacion: {
+      revertidos: number;
+      matriculas_anuladas: number;
+      matriculas_restauradas: number;
+      secciones_actualizadas: number;
+    };
+
+    try {
+      resultadoOperacion =
+        await this.prisma.$transaction(
+          async (tx) => {
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_lote
+                FROM LotePromocion
+                WHERE id_lote = ${params.idLote}
+                  AND id_colegio IN (
+                    ${Prisma.join(scope.colegioIds)}
+                  )
+                FOR UPDATE
+              `,
+            );
+
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_detalle
+                FROM LotePromocionDetalle
+                WHERE id_lote = ${params.idLote}
+                ORDER BY id_detalle ASC
+                FOR UPDATE
+              `,
+            );
+
+            const lote =
+              await tx.lotePromocion.findFirst({
+                where: {
+                  id_lote: params.idLote,
+                  id_colegio: {
+                    in: scope.colegioIds,
+                  },
+                },
+
+                include: {
+                  detalles: {
+                    orderBy: {
+                      id_detalle: 'asc',
+                    },
+                  },
+                },
+              });
+
+            if (!lote) {
+              throw new NotFoundException(
+                'No se encontró el lote '
+                + 'de promoción.',
+              );
+            }
+
+            if (lote.estado !== 'Ejecutado') {
+              throw new BadRequestException(
+                'El lote fue modificado '
+                + 'por otro proceso.',
+              );
+            }
+
+            if (!lote.fecha_ejecucion) {
+              throw new BadRequestException(
+                'El lote no tiene una fecha '
+                + 'de ejecución válida.',
+              );
+            }
+
+            const detallesProcesados =
+              lote.detalles.filter(
+                (detalle) =>
+                  detalle.estado_resultado
+                  === 'PROCESADO',
+              );
+
+            const inconsistentes =
+              lote.detalles.filter(
+                (detalle) =>
+                  (
+                    detalle.accion === 'PROMOVER'
+                    || detalle.accion === 'PERMANECER'
+                  )
+                  && (
+                    detalle.estado_resultado
+                    !== 'PROCESADO'
+                    || !detalle.id_matricula_generada
+                  ),
+              );
+
+            if (inconsistentes.length > 0) {
+              throw new BadRequestException(
+                'El lote contiene detalles '
+                + 'inconsistentes.',
+              );
+            }
+
+            if (detallesProcesados.length === 0) {
+              throw new BadRequestException(
+                'El lote no contiene matrículas '
+                + 'procesadas para revertir.',
+              );
+            }
+
+            for (const detalle of detallesProcesados) {
+              if (
+                ![
+                  'PROMOVER',
+                  'PERMANECER',
+                ].includes(detalle.accion)
+                || !detalle.id_matricula_generada
+                || !detalle.id_seccion_destino
+              ) {
+                throw new BadRequestException(
+                  'Existe un detalle que '
+                  + 'no puede revertirse.',
+                );
+              }
+            }
+
+            const idsSecciones =
+              Array.from(
+                new Set(
+                  detallesProcesados.map(
+                    (detalle) =>
+                      detalle.id_seccion_destino!,
+                  ),
+                ),
+              ).sort((a, b) => a - b);
+
+            type SeccionBloqueada = {
+              id_seccion_anio: number;
+              id_seccion: number;
+              version: number;
+            };
+
+            const secciones =
+              await tx.$queryRaw<
+                SeccionBloqueada[]
+              >(
+                Prisma.sql`
+                  SELECT
+                    id_seccion_anio,
+                    id_seccion,
+                    version
+                  FROM SeccionAnio
+                  WHERE id_colegio
+                    = ${lote.id_colegio}
+                    AND id_anio
+                      = ${lote.id_anio_destino}
+                    AND id_seccion IN (
+                      ${Prisma.join(idsSecciones)}
+                    )
+                  ORDER BY id_seccion ASC
+                  FOR UPDATE
+                `,
+              );
+
+            if (
+              secciones.length
+              !== idsSecciones.length
+            ) {
+              throw new BadRequestException(
+                'Una sección de destino '
+                + 'ya no está configurada.',
+              );
+            }
+
+            const idsMatriculas =
+              Array.from(
+                new Set(
+                  detallesProcesados.flatMap(
+                    (detalle) => [
+                      detalle.id_matricula_origen,
+                      detalle.id_matricula_generada!,
+                    ],
+                  ),
+                ),
+              ).sort((a, b) => a - b);
+
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_matricula
+                FROM Matricula
+                WHERE id_matricula IN (
+                  ${Prisma.join(idsMatriculas)}
+                )
+                ORDER BY id_matricula ASC
+                FOR UPDATE
+              `,
+            );
+
+            const matriculas =
+              await tx.matricula.findMany({
+                where: {
+                  id_matricula: {
+                    in: idsMatriculas,
+                  },
+                },
+
+                include: {
+                  _count: {
+                    select: {
+                      notas: true,
+                      asistencias: true,
+                      cronogramas: true,
+                      comentariosBimestrales: true,
+                      ordenes_pago: true,
+                      pagos_recibidos: true,
+                      calificaciones_tutoria: true,
+                      historial_situacion: true,
+                      recuperaciones: true,
+                      movimientos: true,
+                      detalles_lote_origen: true,
+                    },
+                  },
+                },
+              });
+
+            if (
+              matriculas.length
+              !== idsMatriculas.length
+            ) {
+              throw new BadRequestException(
+                'Una matrícula del lote '
+                + 'ya no existe.',
+              );
+            }
+
+            const matriculaPorId =
+              new Map(
+                matriculas.map(
+                  (matricula) => [
+                    matricula.id_matricula,
+                    matricula,
+                  ],
+                ),
+              );
+
+            const restauraciones: any[] = [];
+
+            for (
+              const detalle
+              of detallesProcesados
+            ) {
+              const origen =
+                matriculaPorId.get(
+                  detalle.id_matricula_origen,
+                );
+
+              const generada =
+                matriculaPorId.get(
+                  detalle.id_matricula_generada!,
+                );
+
+              if (!origen || !generada) {
+                throw new BadRequestException(
+                  'No se pudieron recuperar '
+                  + 'las matrículas del lote.',
+                );
+              }
+
+              const estadoOrigenEsperado =
+                detalle.accion === 'PROMOVER'
+                  ? 'Promocionado'
+                  : 'Finalizado';
+
+              const motivoOrigenEsperado =
+                detalle.accion === 'PROMOVER'
+                  ? 'Promoción masiva '
+                    + 'al siguiente grado.'
+                  : 'Finalización del año '
+                    + 'con permanencia '
+                    + 'en el mismo grado.';
+
+              if (
+                origen.estado_matricula
+                  !== estadoOrigenEsperado
+                || !origen.fecha_cierre
+                || origen.fecha_cierre.getTime()
+                  !== lote.fecha_ejecucion.getTime()
+                || origen.motivo_cierre
+                  !== motivoOrigenEsperado
+                || origen.id_usuario_cierre
+                  !== lote.id_usuario_ejecucion
+              ) {
+                throw new BadRequestException(
+                  'Una matrícula de origen '
+                  + 'cambió después de ejecutar '
+                  + 'el lote.',
+                );
+              }
+
+              if (
+                origen.id_colegio
+                  !== lote.id_colegio
+                || origen.id_anio
+                  !== lote.id_anio_origen
+                || origen.id_seccion
+                  !== lote.id_seccion_origen
+                || origen.id_estudiante
+                  !== detalle.id_estudiante
+                || origen.situacion_final
+                  !== detalle.situacion_final
+                || origen
+                  .continuidad_siguiente_anio
+                  !== detalle.continuidad
+              ) {
+                throw new BadRequestException(
+                  'La matrícula de origen '
+                  + 'ya no coincide con '
+                  + 'el detalle del lote.',
+                );
+              }
+
+              if (
+                generada.id_colegio
+                  !== lote.id_colegio
+                || generada.id_anio
+                  !== lote.id_anio_destino
+                || generada.id_seccion
+                  !== detalle.id_seccion_destino
+                || generada.id_estudiante
+                  !== detalle.id_estudiante
+                || generada.id_matricula_origen
+                  !== origen.id_matricula
+              ) {
+                throw new BadRequestException(
+                  'La matrícula generada '
+                  + 'ya no coincide con el lote.',
+                );
+              }
+
+              if (
+                generada.estado_matricula
+                  !== lote
+                    .estado_matricula_destino
+                || ![
+                  'Reserva',
+                  'Pre-matriculado',
+                ].includes(
+                  generada.estado_matricula,
+                )
+              ) {
+                throw new BadRequestException(
+                  'Una matrícula generada '
+                  + 'cambió de estado.',
+                );
+              }
+
+              if (
+                generada.tipo_ingreso
+                  !== 'Renovación'
+                || generada
+                  .tipo_proceso_matricula
+                  !== 'Promoción masiva'
+                || generada.id_colegio_origen
+                  !== lote.id_colegio
+                || generada.id_anio_origen
+                  !== lote.id_anio_origen
+                || generada.id_usuario_registro
+                  !== lote.id_usuario_ejecucion
+              ) {
+                throw new BadRequestException(
+                  'Una matrícula generada '
+                  + 'ya no conserva los datos '
+                  + 'de promoción masiva.',
+                );
+              }
+
+              if (
+                generada.estado_revision
+                  !== 'Por revisar'
+                || generada.id_usuario_revision
+                  !== null
+                || generada.fecha_revision
+                  !== null
+                || generada.observacion_revision
+                  !== null
+                || generada.situacion_final
+                  !== 'PENDIENTE'
+                || generada.es_egresado
+                  !== false
+                || generada.fecha_situacion_final
+                  !== null
+                || generada
+                  .observacion_situacion_final
+                  !== null
+                || generada
+                  .id_usuario_situacion_final
+                  !== null
+                || generada
+                  .continuidad_siguiente_anio
+                  !== 'Pendiente'
+                || generada.id_anio_continuidad
+                  !== null
+                || generada.fecha_continuidad
+                  !== null
+                || generada.motivo_continuidad
+                  !== null
+                || generada
+                  .id_usuario_continuidad
+                  !== null
+                || generada.codigo_matricula
+                  !== null
+                || generada.fecha_cierre
+                  !== null
+                || generada.motivo_cierre
+                  !== null
+                || generada.id_usuario_cierre
+                  !== null
+              ) {
+                throw new BadRequestException(
+                  'Una matrícula generada '
+                  + 'ya fue modificada '
+                  + 'o utilizada.',
+                );
+              }
+
+              const dependencias =
+                generada._count.notas
+                + generada._count.asistencias
+                + generada._count.cronogramas
+                + generada._count
+                  .comentariosBimestrales
+                + generada._count.ordenes_pago
+                + generada._count.pagos_recibidos
+                + generada._count
+                  .calificaciones_tutoria
+                + generada._count
+                  .historial_situacion
+                + generada._count.recuperaciones
+                + generada._count.movimientos
+                + generada._count
+                  .detalles_lote_origen;
+
+              if (dependencias > 0) {
+                throw new BadRequestException(
+                  'Una matrícula generada '
+                  + 'tiene registros asociados.',
+                );
+              }
+
+              const snapshot: any =
+                detalle.snapshot_json;
+
+              const origenAntes =
+                snapshot
+                && typeof snapshot === 'object'
+                && !Array.isArray(snapshot)
+                  ? snapshot
+                      .matricula_origen_antes
+                  : null;
+
+              if (
+                !origenAntes
+                || typeof origenAntes
+                  !== 'object'
+                || Array.isArray(origenAntes)
+              ) {
+                throw new BadRequestException(
+                  'No existe información '
+                  + 'original para restaurar.',
+                );
+              }
+
+              const estadoOriginal =
+                String(
+                  origenAntes.estado_matricula
+                  || '',
+                ).trim();
+
+              if (
+                ![
+                  'Matriculado',
+                  'Activo',
+                ].includes(estadoOriginal)
+              ) {
+                throw new BadRequestException(
+                  'El estado original '
+                  + 'no es válido.',
+                );
+              }
+
+              let fechaCierreOriginal:
+                Date | null = null;
+
+              if (
+                origenAntes.fecha_cierre
+                !== null
+                && origenAntes.fecha_cierre
+                  !== undefined
+              ) {
+                const fecha =
+                  new Date(
+                    String(
+                      origenAntes.fecha_cierre,
+                    ),
+                  );
+
+                if (
+                  Number.isNaN(fecha.getTime())
+                ) {
+                  throw new BadRequestException(
+                    'La fecha original '
+                    + 'no es válida.',
+                  );
+                }
+
+                fechaCierreOriginal = fecha;
+              }
+
+              const motivoCierreOriginal =
+                origenAntes.motivo_cierre
+                  === null
+                || origenAntes.motivo_cierre
+                  === undefined
+                  ? null
+                  : String(
+                      origenAntes.motivo_cierre,
+                    ).slice(0, 500);
+
+              let usuarioCierreOriginal:
+                number | null = null;
+
+              if (
+                origenAntes.id_usuario_cierre
+                !== null
+                && origenAntes
+                  .id_usuario_cierre
+                  !== undefined
+              ) {
+                const usuario =
+                  Number(
+                    origenAntes
+                      .id_usuario_cierre,
+                  );
+
+                if (
+                  !Number.isInteger(usuario)
+                  || usuario <= 0
+                ) {
+                  throw new BadRequestException(
+                    'El usuario original '
+                    + 'no es válido.',
+                  );
+                }
+
+                usuarioCierreOriginal =
+                  usuario;
+              }
+
+              restauraciones.push({
+                detalle,
+                origen,
+                generada,
+                snapshot,
+                estadoOriginal,
+                fechaCierreOriginal,
+                motivoCierreOriginal,
+                usuarioCierreOriginal,
+              });
+            }
+
+            const fechaReversion =
+              new Date();
+
+            const motivoAnulacion =
+              (
+                'Reversión del lote '
+                + `${lote.id_lote}: `
+                + motivoReversion
+              ).slice(0, 500);
+
+            for (
+              const restauracion
+              of restauraciones
+            ) {
+              const {
+                detalle,
+                origen,
+                generada,
+                snapshot,
+                estadoOriginal,
+                fechaCierreOriginal,
+                motivoCierreOriginal,
+                usuarioCierreOriginal,
+              } = restauracion;
+
+              await tx.matricula.update({
+                where: {
+                  id_matricula:
+                    generada.id_matricula,
+                },
+
+                data: {
+                  estado_matricula:
+                    'Anulado',
+                  fecha_cierre:
+                    fechaReversion,
+                  motivo_cierre:
+                    motivoAnulacion,
+                  id_usuario_cierre:
+                    params.userId,
+                },
+              });
+
+              await tx.matricula.update({
+                where: {
+                  id_matricula:
+                    origen.id_matricula,
+                },
+
+                data: {
+                  estado_matricula:
+                    estadoOriginal,
+                  fecha_cierre:
+                    fechaCierreOriginal,
+                  motivo_cierre:
+                    motivoCierreOriginal,
+                  id_usuario_cierre:
+                    usuarioCierreOriginal,
+                },
+              });
+
+              const snapshotNuevo = {
+                ...snapshot,
+
+                reversion: {
+                  fecha:
+                    fechaReversion.toISOString(),
+                  id_usuario:
+                    params.userId,
+                  motivo:
+                    motivoReversion,
+
+                  matricula_generada_antes: {
+                    id_matricula:
+                      generada.id_matricula,
+                    estado_matricula:
+                      generada.estado_matricula,
+                    estado_revision:
+                      generada.estado_revision,
+                    situacion_final:
+                      generada.situacion_final,
+                  },
+
+                  matricula_origen_restaurada: {
+                    id_matricula:
+                      origen.id_matricula,
+                    estado_matricula:
+                      estadoOriginal,
+                    fecha_cierre:
+                      fechaCierreOriginal
+                        ? fechaCierreOriginal
+                            .toISOString()
+                        : null,
+                    motivo_cierre:
+                      motivoCierreOriginal,
+                    id_usuario_cierre:
+                      usuarioCierreOriginal,
+                  },
+                },
+              };
+
+              await tx
+                .lotePromocionDetalle.update({
+                  where: {
+                    id_detalle:
+                      detalle.id_detalle,
+                  },
+
+                  data: {
+                    estado_resultado:
+                      'REVERTIDO',
+                    snapshot_json:
+                      snapshotNuevo,
+                    error_observacion:
+                      null,
+                  },
+                });
+            }
+
+            for (const seccion of secciones) {
+              await tx.seccionAnio.update({
+                where: {
+                  id_seccion_anio:
+                    seccion.id_seccion_anio,
+                },
+
+                data: {
+                  version: {
+                    increment: 1,
+                  },
+                },
+              });
+            }
+
+            await tx.lotePromocion.update({
+              where: {
+                id_lote: lote.id_lote,
+              },
+
+              data: {
+                estado: 'Revertido',
+                fecha_reversion:
+                  fechaReversion,
+                id_usuario_reversion:
+                  params.userId,
+                motivo_reversion:
+                  motivoReversion,
+              },
+            });
+
+            return {
+              revertidos:
+                restauraciones.length,
+              matriculas_anuladas:
+                restauraciones.length,
+              matriculas_restauradas:
+                restauraciones.length,
+              secciones_actualizadas:
+                secciones.length,
+            };
+          },
+          {
+            maxWait: 5000,
+            timeout: 30000,
+            isolationLevel:
+              Prisma
+                .TransactionIsolationLevel
+                .Serializable,
+          },
+        );
+    } catch (error) {
+      if (
+        error
+          instanceof
+            Prisma
+              .PrismaClientKnownRequestError
+        && error.code === 'P2034'
+      ) {
+        throw new BadRequestException(
+          'Otro proceso modificó el lote '
+          + 'al mismo tiempo. Vuelve '
+          + 'a consultar su estado.',
+        );
+      }
+
+      throw error;
+    }
+
+    const lote =
+      await this.getLotePromocion({
+        idLote: params.idLote,
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId: params.colegioId,
+      });
+
+    return {
+      message:
+        'Lote revertido correctamente.',
+      resumen:
+        resultadoOperacion,
+      lote,
+    };
+  }
+
   async ejecutarLotePromocion(
     params: ScopeParams & {
       idLote: number;
