@@ -66,19 +66,31 @@ model Usuario {
   tenants                             UsuarioTenant[]
   colegios                            UsuarioColegio[]
   pagos_cajero                        PagoTransaccion[]
-  matriculas_registradas              Matricula[]                 @relation("UsuarioMatriculasRegistradas")
-  matriculas_revisadas                Matricula[]                 @relation("UsuarioMatriculasRevisadas")
+  matriculas_registradas              Matricula[]                   @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas                Matricula[]                   @relation("UsuarioMatriculasRevisadas")
   circulares                          Circular[]
   notificaciones                      Notificacion[]
   tokensFCM                           TokenFCM[]
-  pagos_recibidos_registrados         PagoRecibido[]              @relation("PagoRecibidoRegistro")
-  pagos_recibidos_validados           PagoRecibido[]              @relation("PagoRecibidoValidacion")
-  pagos_recibidos_historial           PagoRecibidoHistorial[]     @relation("PagoRecibidoHistorialUsuario")
-  gestiones_cobranza                  CobranzaGestion[]           @relation("CobranzaGestionUsuario")
-  comentarios_bimestrales_registrados ComentarioBimestral[]       @relation("UsuarioComentariosBimestrales")
-  calificaciones_tutoria              CalificacionTutoria[]       @relation("UsuarioCalificacionesTutoria")
-  historial_estados_institucionales   EstudianteEstadoHistorial[] @relation("UsuarioEstadoInstitucionalHistorial")
-  continuidades_matricula             Matricula[]                 @relation("UsuarioContinuidadMatricula")
+  pagos_recibidos_registrados         PagoRecibido[]                @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados           PagoRecibido[]                @relation("PagoRecibidoValidacion")
+  pagos_recibidos_historial           PagoRecibidoHistorial[]       @relation("PagoRecibidoHistorialUsuario")
+  gestiones_cobranza                  CobranzaGestion[]             @relation("CobranzaGestionUsuario")
+  comentarios_bimestrales_registrados ComentarioBimestral[]         @relation("UsuarioComentariosBimestrales")
+  calificaciones_tutoria              CalificacionTutoria[]         @relation("UsuarioCalificacionesTutoria")
+  historial_estados_institucionales   EstudianteEstadoHistorial[]   @relation("UsuarioEstadoInstitucionalHistorial")
+  continuidades_matricula             Matricula[]                   @relation("UsuarioContinuidadMatricula")
+  situaciones_matricula               Matricula[]                   @relation("UsuarioSituacionMatricula")
+  cierres_academicos_iniciados        CierreAcademico[]             @relation("UsuarioCierreAcademicoInicio")
+  cierres_academicos_cerrados         CierreAcademico[]             @relation("UsuarioCierreAcademicoCierre")
+  historial_situacion_matriculas      MatriculaSituacionHistorial[] @relation("UsuarioSituacionHistorial")
+  procesos_recuperacion_abiertos      ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionApertura")
+  procesos_recuperacion_cerrados      ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionCierre")
+  resultados_recuperacion             RecuperacionAlumno[]          @relation("UsuarioRecuperacionResultado")
+  competencias_recuperacion           RecuperacionCompetencia[]     @relation("UsuarioRecuperacionCompetencia")
+  movimientos_estudiante              MovimientoEstudiante[]        @relation("UsuarioMovimientoEstudiante")
+  lotes_promocion_creados             LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
+  lotes_promocion_ejecutados          LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
+  lotes_promocion_revertidos          LotePromocion[]               @relation("UsuarioLotePromocionReversion")
 }
 
 model Tenant {
@@ -91,29 +103,33 @@ model Tenant {
   plan       String   @default("basic") @db.VarChar(30)
   created_at DateTime @default(now())
 
-  colegios           Colegio[]
-  usuarios           UsuarioTenant[]
-  anios              AnioLectivo[]
-  aulas              Aula[]
-  secciones          Seccion[]
-  matriculas         Matricula[]
-  asignaciones       AsignacionDocente[]
-  conceptos          ConceptoPago[]
-  circulares         Circular[]
-  eventos            Evento[]
-  staff              Staff[]
-  albumes            Album[]
-  plantillas         PlantillaEvaluacion[]
-  areas              AreaCurricular[]
-  cursos             Curso[]
-  escalas            EscalaCalificacion[]
-  tipos_eval         TipoEvaluacion[]
-  campanas_matricula CampanaMatricula[]
-  planes_pensiones   PlanPensiones[]
-  campanas_descuento CampanaDescuento[]
-  ordenes_pago       OrdenPago[]
-  pagos_recibidos    PagoRecibido[]
-  criterios_tutoria  CriterioTutoria[]
+  colegios              Colegio[]
+  usuarios              UsuarioTenant[]
+  anios                 AnioLectivo[]
+  aulas                 Aula[]
+  secciones             Seccion[]
+  matriculas            Matricula[]
+  asignaciones          AsignacionDocente[]
+  conceptos             ConceptoPago[]
+  circulares            Circular[]
+  eventos               Evento[]
+  staff                 Staff[]
+  albumes               Album[]
+  plantillas            PlantillaEvaluacion[]
+  areas                 AreaCurricular[]
+  cursos                Curso[]
+  escalas               EscalaCalificacion[]
+  tipos_eval            TipoEvaluacion[]
+  campanas_matricula    CampanaMatricula[]
+  planes_pensiones      PlanPensiones[]
+  campanas_descuento    CampanaDescuento[]
+  ordenes_pago          OrdenPago[]
+  pagos_recibidos       PagoRecibido[]
+  criterios_tutoria     CriterioTutoria[]
+  cierres_academicos    CierreAcademico[]
+  procesos_recuperacion ProcesoRecuperacion[]
+  movimientos_alumnos   MovimientoEstudiante[]
+  lotes_promocion       LotePromocion[]
 }
 
 model Colegio {
@@ -159,6 +175,13 @@ model Colegio {
   pagos_recibidos     PagoRecibido[]
   datos_cobro         DatosCobroColegio?
   criterios_tutoria   CriterioTutoria[]
+
+  progresiones_grado    GradoProgresion[]
+  cierres_academicos    CierreAcademico[]
+  procesos_recuperacion ProcesoRecuperacion[]
+  movimientos_origen    MovimientoEstudiante[] @relation("MovimientoColegioOrigen")
+  movimientos_destino   MovimientoEstudiante[] @relation("MovimientoColegioDestino")
+  lotes_promocion       LotePromocion[]
 
   @@unique([id_tenant, codigo])
   @@index([id_tenant])
@@ -232,9 +255,13 @@ model Grado {
   nombre_grado String @db.VarChar(50)
   id_nivel     Int
 
-  nivel     Nivel          @relation(fields: [id_nivel], references: [id_nivel])
-  secciones Seccion[]
-  colegios  ColegioGrado[]
+  nivel                      Nivel                  @relation(fields: [id_nivel], references: [id_nivel])
+  secciones                  Seccion[]
+  colegios                   ColegioGrado[]
+  progresiones_origen        GradoProgresion[]      @relation("GradoProgresionOrigen")
+  progresiones_destino       GradoProgresion[]      @relation("GradoProgresionDestino")
+  detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleGradoOrigen")
+  detalles_promocion_destino LotePromocionDetalle[] @relation("LoteDetalleGradoDestino")
 }
 
 model Aula {
@@ -260,6 +287,7 @@ model Seccion {
   letra      String @db.Char(1)
   id_grado   Int
   id_aula    Int
+  version    Int    @default(0)
 
   tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
@@ -272,6 +300,10 @@ model Seccion {
   horarios     Horario[]
   staff        Staff[]
   albumes      Album[]
+
+  lotes_promocion_origen     LotePromocion[]        @relation("LotePromocionSeccionOrigen")
+  detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleSeccionOrigen")
+  detalles_promocion_destino LotePromocionDetalle[] @relation("LoteDetalleSeccionDestino")
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -310,6 +342,8 @@ model Curso {
   horarios     Horario[]
   plantillas   PlantillaEvaluacion[]
 
+  recuperaciones_competencia RecuperacionCompetencia[]
+
   @@index([id_area])
   @@index([id_tenant])
   @@index([id_colegio])
@@ -342,6 +376,11 @@ model AnioLectivo {
   campanas_descuento             CampanaDescuento[]
 
   horarios Horario[]
+
+  cierres_academicos      CierreAcademico[]
+  procesos_recuperacion   ProcesoRecuperacion[]
+  lotes_promocion_origen  LotePromocion[]       @relation("LotePromocionAnioOrigen")
+  lotes_promocion_destino LotePromocion[]       @relation("LotePromocionAnioDestino")
 
   @@index([id_tenant])
   @@index([id_colegio])
@@ -406,11 +445,12 @@ model Docente {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  especialidades         DocenteEspecialidad[]
-  asignaciones           AsignacionDocente[]
-  horarios               Horario[]
-  albumes                Album[]
-  comentariosBimestrales ComentarioBimestral[]
+  especialidades            DocenteEspecialidad[]
+  asignaciones              AsignacionDocente[]
+  horarios                  Horario[]
+  albumes                   Album[]
+  comentariosBimestrales    ComentarioBimestral[]
+  competencias_recuperacion RecuperacionCompetencia[] @relation("DocenteRecuperacionCompetencia")
 }
 
 model Estudiante {
@@ -420,13 +460,15 @@ model Estudiante {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  apoderados        ApoderadoEstudiante[]
-  matriculas        Matricula[]
-  registrosNFC      RegistroNFC[]
-  codigos_colegio   EstudianteCodigoColegio[]
-  historial_estados EstudianteEstadoHistorial[]
-  ordenes_pago      OrdenPago[]
-  pagos_recibidos   PagoRecibido[]
+  apoderados         ApoderadoEstudiante[]
+  matriculas         Matricula[]
+  registrosNFC       RegistroNFC[]
+  codigos_colegio    EstudianteCodigoColegio[]
+  historial_estados  EstudianteEstadoHistorial[]
+  ordenes_pago       OrdenPago[]
+  pagos_recibidos    PagoRecibido[]
+  movimientos        MovimientoEstudiante[]
+  detalles_promocion LotePromocionDetalle[]
 }
 
 model ApoderadoEstudiante {
@@ -489,6 +531,12 @@ model Matricula {
   motivo_continuidad         String?   @db.VarChar(500)
   id_usuario_continuidad     Int?
 
+  situacion_final             String    @default("PENDIENTE") @db.VarChar(20)
+  es_egresado                 Boolean   @default(false)
+  fecha_situacion_final       DateTime?
+  observacion_situacion_final String?   @db.VarChar(500)
+  id_usuario_situacion_final  Int?
+
   tenant                     Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
   colegio                    Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
   estudiante                 Estudiante   @relation(fields: [id_estudiante], references: [id_persona])
@@ -498,6 +546,7 @@ model Matricula {
   registrado_por             Usuario?     @relation("UsuarioMatriculasRegistradas", fields: [id_usuario_registro], references: [id_usuario])
   revisado_por               Usuario?     @relation("UsuarioMatriculasRevisadas", fields: [id_usuario_revision], references: [id_usuario])
   continuidad_registrada_por Usuario?     @relation("UsuarioContinuidadMatricula", fields: [id_usuario_continuidad], references: [id_usuario])
+  situacion_registrada_por   Usuario?     @relation("UsuarioSituacionMatricula", fields: [id_usuario_situacion_final], references: [id_usuario], onDelete: SetNull)
 
   notas                  NotaAlumno[]
   asistencias            Asistencia[]
@@ -506,6 +555,12 @@ model Matricula {
   ordenes_pago           OrdenPago[]
   pagos_recibidos        PagoRecibido[]
   calificaciones_tutoria CalificacionTutoria[]
+
+  historial_situacion    MatriculaSituacionHistorial[]
+  recuperaciones         RecuperacionAlumno[]
+  movimientos            MovimientoEstudiante[]
+  detalles_lote_origen   LotePromocionDetalle[]        @relation("LoteDetalleMatriculaOrigen")
+  detalles_lote_generada LotePromocionDetalle[]        @relation("LoteDetalleMatriculaGenerada")
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -523,6 +578,8 @@ model Matricula {
   @@index([continuidad_siguiente_anio])
   @@index([id_anio_continuidad])
   @@index([id_usuario_continuidad])
+  @@index([situacion_final])
+  @@index([id_usuario_situacion_final])
 }
 
 // ======================================================
@@ -1428,4 +1485,306 @@ model DatosCobroColegio {
   colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
 
   @@index([activo])
+}
+
+// ======================================================
+// CIERRE ACADÉMICO
+// ======================================================
+
+model CierreAcademico {
+  id_cierre            Int       @id @default(autoincrement())
+  id_tenant            Int?
+  id_colegio           Int
+  id_anio              Int
+  tipo                 String    @db.VarChar(20)
+  estado               String    @default("Borrador") @db.VarChar(20)
+  estado_siagie        String    @default("Pendiente de revisión") @db.VarChar(30)
+  fecha_inicio         DateTime?
+  fecha_cierre         DateTime?
+  fecha_siagie         DateTime?
+  evidencia_siagie_url String?   @db.VarChar(500)
+  observacion          String?   @db.VarChar(500)
+  id_usuario_inicio    Int?
+  id_usuario_cierre    Int?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio     @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  iniciado_por Usuario? @relation("UsuarioCierreAcademicoInicio", fields: [id_usuario_inicio], references: [id_usuario], onDelete: SetNull)
+
+  cerrado_por Usuario? @relation("UsuarioCierreAcademicoCierre", fields: [id_usuario_cierre], references: [id_usuario], onDelete: SetNull)
+
+  historial_situaciones MatriculaSituacionHistorial[]
+
+  @@unique([id_colegio, id_anio, tipo])
+  @@index([id_anio])
+  @@index([tipo, estado])
+  @@index([estado_siagie])
+}
+
+model MatriculaSituacionHistorial {
+  id_historial       Int      @id @default(autoincrement())
+  id_matricula       Int
+  id_cierre          Int?
+  situacion_anterior String?  @db.VarChar(20)
+  situacion_nueva    String   @db.VarChar(20)
+  es_egresado        Boolean  @default(false)
+  observacion        String?  @db.VarChar(500)
+  id_usuario         Int?
+  fecha_evento       DateTime @default(now())
+
+  matricula Matricula @relation(fields: [id_matricula], references: [id_matricula], onDelete: Cascade)
+
+  cierre CierreAcademico? @relation(fields: [id_cierre], references: [id_cierre], onDelete: SetNull)
+
+  usuario Usuario? @relation("UsuarioSituacionHistorial", fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_matricula, fecha_evento])
+  @@index([id_cierre])
+  @@index([situacion_nueva])
+}
+
+model GradoProgresion {
+  id_progresion          Int      @id @default(autoincrement())
+  id_colegio             Int
+  id_grado_origen        Int
+  id_grado_destino       Int?
+  tipo_transicion        String   @default("Regular") @db.VarChar(30)
+  es_terminal            Boolean  @default(false)
+  edad_normativa_destino Int?     @db.TinyInt
+  fecha_corte_mes        Int      @default(3) @db.TinyInt
+  fecha_corte_dia        Int      @default(31) @db.TinyInt
+  estado                 String   @default("Activo") @db.VarChar(20)
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Cascade)
+
+  grado_origen Grado @relation("GradoProgresionOrigen", fields: [id_grado_origen], references: [id_grado], onDelete: Cascade)
+
+  grado_destino Grado? @relation("GradoProgresionDestino", fields: [id_grado_destino], references: [id_grado], onDelete: SetNull)
+
+  @@unique([id_colegio, id_grado_origen])
+  @@index([id_grado_destino])
+  @@index([tipo_transicion])
+  @@index([estado])
+}
+
+model MovimientoEstudiante {
+  id_movimiento       Int      @id @default(autoincrement())
+  id_tenant           Int?
+  id_estudiante       Int
+  id_matricula        Int?
+  id_colegio_origen   Int
+  id_colegio_destino  Int?
+  tipo                String   @db.VarChar(40)
+  estado              String   @default("Registrado") @db.VarChar(20)
+  fecha_efectiva      DateTime @db.Date
+  motivo              String   @db.VarChar(500)
+  institucion_destino String?  @db.VarChar(200)
+  documento_url       String?  @db.VarChar(500)
+  documento_nombre    String?  @db.VarChar(255)
+  id_usuario_registro Int?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  tenant     Tenant?    @relation(fields: [id_tenant], references: [id_tenant])
+  estudiante Estudiante @relation(fields: [id_estudiante], references: [id_persona])
+  matricula  Matricula? @relation(fields: [id_matricula], references: [id_matricula])
+  origen     Colegio    @relation("MovimientoColegioOrigen", fields: [id_colegio_origen], references: [id_colegio])
+  destino    Colegio?   @relation("MovimientoColegioDestino", fields: [id_colegio_destino], references: [id_colegio])
+
+  registrado_por Usuario? @relation("UsuarioMovimientoEstudiante", fields: [id_usuario_registro], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_estudiante, fecha_efectiva])
+  @@index([id_matricula])
+  @@index([id_colegio_origen])
+  @@index([id_colegio_destino])
+  @@index([tipo, estado])
+}
+
+// ======================================================
+// RECUPERACIÓN PEDAGÓGICA
+// ======================================================
+
+model ProcesoRecuperacion {
+  id_proceso               Int       @id @default(autoincrement())
+  id_tenant                Int?
+  id_colegio               Int
+  id_anio                  Int
+  tipo                     String    @default("Recuperación pedagógica") @db.VarChar(40)
+  estado                   String    @default("Borrador") @db.VarChar(20)
+  fecha_inicio             DateTime  @db.Date
+  fecha_fin_ordinaria      DateTime  @db.Date
+  permite_extraordinario   Boolean   @default(false)
+  fecha_fin_extraordinaria DateTime? @db.Date
+  motivo_extraordinario    String?   @db.VarChar(500)
+  fecha_apertura           DateTime?
+  fecha_cierre             DateTime?
+  id_usuario_apertura      Int?
+  id_usuario_cierre        Int?
+  observacion              String?   @db.VarChar(500)
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+
+  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio     @relation(fields: [id_colegio], references: [id_colegio])
+  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+
+  abierto_por Usuario? @relation("UsuarioProcesoRecuperacionApertura", fields: [id_usuario_apertura], references: [id_usuario], onDelete: SetNull)
+
+  cerrado_por Usuario? @relation("UsuarioProcesoRecuperacionCierre", fields: [id_usuario_cierre], references: [id_usuario], onDelete: SetNull)
+
+  alumnos RecuperacionAlumno[]
+
+  @@unique([id_colegio, id_anio, tipo])
+  @@index([estado])
+  @@index([fecha_inicio, fecha_fin_ordinaria])
+}
+
+model RecuperacionAlumno {
+  id_recuperacion_alumno Int       @id @default(autoincrement())
+  id_proceso             Int
+  id_matricula           Int
+  situacion_inicial      String    @default("RR") @db.VarChar(20)
+  total_competencias     Int       @default(0)
+  competencias_aprobadas Int       @default(0)
+  resultado_final        String    @default("PENDIENTE") @db.VarChar(20)
+  fecha_resultado        DateTime?
+  observacion            String?   @db.VarChar(500)
+  id_usuario_resultado   Int?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  proceso   ProcesoRecuperacion @relation(fields: [id_proceso], references: [id_proceso], onDelete: Cascade)
+  matricula Matricula           @relation(fields: [id_matricula], references: [id_matricula], onDelete: Cascade)
+
+  resultado_registrado_por Usuario? @relation("UsuarioRecuperacionResultado", fields: [id_usuario_resultado], references: [id_usuario], onDelete: SetNull)
+
+  competencias RecuperacionCompetencia[]
+
+  @@unique([id_proceso, id_matricula])
+  @@index([resultado_final])
+}
+
+model RecuperacionCompetencia {
+  id_recuperacion_competencia Int       @id @default(autoincrement())
+  id_recuperacion_alumno      Int
+  id_curso                    Int?
+  competencia_codigo          String?   @db.VarChar(50)
+  competencia_nombre          String    @db.VarChar(200)
+  nivel_previo                String?   @db.VarChar(10)
+  nivel_recuperacion          String?   @db.VarChar(10)
+  resultado                   String    @default("PENDIENTE") @db.VarChar(20)
+  fecha_evaluacion            DateTime? @db.Date
+  id_docente_evaluador        Int?
+  institucion_evaluadora      String?   @db.VarChar(200)
+  documento_sustento_url      String?   @db.VarChar(500)
+  observacion                 String?   @db.VarChar(500)
+  id_usuario_registro         Int?
+  created_at                  DateTime  @default(now())
+  updated_at                  DateTime  @updatedAt
+
+  recuperacion_alumno RecuperacionAlumno @relation(fields: [id_recuperacion_alumno], references: [id_recuperacion_alumno], onDelete: Cascade)
+
+  curso Curso? @relation(fields: [id_curso], references: [id_curso], onDelete: SetNull)
+
+  docente_evaluador Docente? @relation("DocenteRecuperacionCompetencia", fields: [id_docente_evaluador], references: [id_persona], onDelete: SetNull)
+
+  registrado_por Usuario? @relation("UsuarioRecuperacionCompetencia", fields: [id_usuario_registro], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_recuperacion_alumno])
+  @@index([id_curso])
+  @@index([resultado])
+}
+
+// ======================================================
+// PROMOCIÓN Y RENOVACIÓN MASIVA
+// ======================================================
+
+model LotePromocion {
+  id_lote              Int       @id @default(autoincrement())
+  id_tenant            Int?
+  id_colegio           Int
+  id_anio_origen       Int
+  id_anio_destino      Int
+  id_seccion_origen    Int
+  estado               String    @default("Borrador") @db.VarChar(20)
+  snapshot_json        Json?
+  fecha_vista_previa   DateTime?
+  fecha_ejecucion      DateTime?
+  fecha_reversion      DateTime?
+  id_usuario_creacion  Int?
+  id_usuario_ejecucion Int?
+  id_usuario_reversion Int?
+  motivo_reversion     String?   @db.VarChar(500)
+  observacion          String?   @db.VarChar(500)
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  tenant  Tenant? @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio])
+
+  anio_origen AnioLectivo @relation("LotePromocionAnioOrigen", fields: [id_anio_origen], references: [id_anio])
+
+  anio_destino AnioLectivo @relation("LotePromocionAnioDestino", fields: [id_anio_destino], references: [id_anio])
+
+  seccion_origen Seccion @relation("LotePromocionSeccionOrigen", fields: [id_seccion_origen], references: [id_seccion])
+
+  creado_por Usuario? @relation("UsuarioLotePromocionCreacion", fields: [id_usuario_creacion], references: [id_usuario], onDelete: SetNull)
+
+  ejecutado_por Usuario? @relation("UsuarioLotePromocionEjecucion", fields: [id_usuario_ejecucion], references: [id_usuario], onDelete: SetNull)
+
+  revertido_por Usuario? @relation("UsuarioLotePromocionReversion", fields: [id_usuario_reversion], references: [id_usuario], onDelete: SetNull)
+
+  detalles LotePromocionDetalle[]
+
+  @@index([id_colegio, id_anio_origen])
+  @@index([id_anio_destino])
+  @@index([id_seccion_origen])
+  @@index([estado])
+}
+
+model LotePromocionDetalle {
+  id_detalle              Int       @id @default(autoincrement())
+  id_lote                 Int
+  id_estudiante           Int
+  id_matricula_origen     Int
+  id_matricula_generada   Int?
+  id_grado_origen         Int
+  id_seccion_origen       Int
+  id_grado_destino        Int?
+  id_seccion_destino      Int?
+  situacion_final         String    @db.VarChar(20)
+  continuidad             String    @db.VarChar(30)
+  accion                  String    @db.VarChar(30)
+  estado_resultado        String    @default("PENDIENTE") @db.VarChar(20)
+  version_seccion_destino Int?
+  snapshot_json           Json?
+  error_observacion       String?   @db.VarChar(500)
+  fecha_procesado         DateTime?
+
+  lote       LotePromocion @relation(fields: [id_lote], references: [id_lote], onDelete: Cascade)
+  estudiante Estudiante    @relation(fields: [id_estudiante], references: [id_persona])
+
+  matricula_origen Matricula @relation("LoteDetalleMatriculaOrigen", fields: [id_matricula_origen], references: [id_matricula])
+
+  matricula_generada Matricula? @relation("LoteDetalleMatriculaGenerada", fields: [id_matricula_generada], references: [id_matricula])
+
+  grado_origen Grado @relation("LoteDetalleGradoOrigen", fields: [id_grado_origen], references: [id_grado])
+
+  grado_destino Grado? @relation("LoteDetalleGradoDestino", fields: [id_grado_destino], references: [id_grado])
+
+  seccion_origen Seccion @relation("LoteDetalleSeccionOrigen", fields: [id_seccion_origen], references: [id_seccion])
+
+  seccion_destino Seccion? @relation("LoteDetalleSeccionDestino", fields: [id_seccion_destino], references: [id_seccion])
+
+  @@unique([id_lote, id_estudiante])
+  @@index([id_matricula_origen])
+  @@index([id_matricula_generada])
+  @@index([id_seccion_destino])
+  @@index([estado_resultado])
 }
