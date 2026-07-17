@@ -814,6 +814,140 @@ async deleteGrado(
   }
 
 
+  @Post(
+    'procesos-recuperacion/:idProceso/'
+    + 'alumnos/:idAlumno/competencias',
+  )
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  guardarCompetenciaRecuperacion(
+    @Param('idProceso')
+    idProceso: string,
+    @Param('idAlumno')
+    idAlumno: string,
+    @Request() req,
+    @Body()
+    body: {
+      id_recuperacion_competencia?: number;
+      id_curso?: number | null;
+      competencia_codigo?: string;
+      competencia_nombre: string;
+      nivel_previo?: string;
+      nivel_recuperacion?: string;
+      resultado:
+        | 'PENDIENTE'
+        | 'APROBADO'
+        | 'DESAPROBADO';
+      fecha_evaluacion?: string;
+      id_docente_evaluador?: number | null;
+      institucion_evaluadora?: string;
+      documento_sustento_url?: string;
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .guardarCompetenciaRecuperacion({
+        idProceso:
+          Number(idProceso),
+
+        idRecuperacionAlumno:
+          Number(idAlumno),
+
+        idCompetencia:
+          body.id_recuperacion_competencia
+            ? Number(
+                body.id_recuperacion_competencia,
+              )
+            : undefined,
+
+        idCurso:
+          body.id_curso === null
+            || body.id_curso === undefined
+            ? null
+            : Number(body.id_curso),
+
+        competenciaCodigo:
+          body.competencia_codigo,
+
+        competenciaNombre:
+          body.competencia_nombre,
+
+        nivelPrevio:
+          body.nivel_previo,
+
+        nivelRecuperacion:
+          body.nivel_recuperacion,
+
+        resultado:
+          body.resultado,
+
+        fechaEvaluacion:
+          body.fecha_evaluacion,
+
+        idDocenteEvaluador:
+          body.id_docente_evaluador === null
+            || body.id_docente_evaluador
+              === undefined
+            ? null
+            : Number(
+                body.id_docente_evaluador,
+              ),
+
+        institucionEvaluadora:
+          body.institucion_evaluadora,
+
+        documentoSustentoUrl:
+          body.documento_sustento_url,
+
+        observacion:
+          body.observacion,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post(
+    'procesos-recuperacion/:id/cerrar',
+  )
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  cerrarProcesoRecuperacion(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .cerrarProcesoRecuperacion({
+        idProceso:
+          Number(id),
+
+        observacion:
+          body.observacion,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── CIERRE ACADÉMICO ─────────────────────────────────
   @Get('cierres-academicos')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

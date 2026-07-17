@@ -8161,6 +8161,1084 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async guardarCompetenciaRecuperacion(
+    params: ScopeParams & {
+      idProceso: number;
+      idRecuperacionAlumno: number;
+      idCompetencia?: number;
+      idCurso?: number | null;
+      competenciaCodigo?: string;
+      competenciaNombre: string;
+      nivelPrevio?: string;
+      nivelRecuperacion?: string;
+      resultado:
+        | 'PENDIENTE'
+        | 'APROBADO'
+        | 'DESAPROBADO';
+      fechaEvaluacion?: string;
+      idDocenteEvaluador?: number | null;
+      institucionEvaluadora?: string;
+      documentoSustentoUrl?: string;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idProceso,
+      )
+      || params.idProceso <= 0
+      || !Number.isInteger(
+        params.idRecuperacionAlumno,
+      )
+      || params.idRecuperacionAlumno <= 0
+    ) {
+      throw new BadRequestException(
+        'El proceso o el alumno '
+        + 'seleccionado no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const recuperacion =
+      await this.prisma
+        .recuperacionAlumno.findFirst({
+          where: {
+            id_recuperacion_alumno:
+              params.idRecuperacionAlumno,
+
+            id_proceso:
+              params.idProceso,
+
+            proceso: {
+              id_colegio: {
+                in: scope.colegioIds,
+              },
+            },
+          },
+
+          include: {
+            proceso: true,
+
+            matricula: {
+              include: {
+                estudiante: {
+                  include: {
+                    persona: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+    if (!recuperacion) {
+      throw new NotFoundException(
+        'No se encontró al alumno '
+        + 'dentro del proceso.',
+      );
+    }
+
+    if (
+      recuperacion.proceso.estado
+      !== 'Abierto'
+    ) {
+      throw new BadRequestException(
+        'El proceso de recuperación '
+        + 'debe estar abierto.',
+      );
+    }
+
+    const competenciaNombre =
+      this.normalizeEmpty(
+        params.competenciaNombre,
+      );
+
+    if (!competenciaNombre) {
+      throw new BadRequestException(
+        'Indica el nombre de '
+        + 'la competencia.',
+      );
+    }
+
+    const resultado =
+      String(
+        params.resultado || '',
+      )
+        .trim()
+        .toUpperCase();
+
+    const resultadosPermitidos = [
+      'PENDIENTE',
+      'APROBADO',
+      'DESAPROBADO',
+    ];
+
+    if (
+      !resultadosPermitidos.includes(
+        resultado,
+      )
+    ) {
+      throw new BadRequestException(
+        'El resultado de recuperación '
+        + 'no es válido.',
+      );
+    }
+
+    const nivelRecuperacion =
+      this.normalizeEmpty(
+        params.nivelRecuperacion,
+      );
+
+    if (
+      resultado !== 'PENDIENTE'
+      && !nivelRecuperacion
+    ) {
+      throw new BadRequestException(
+        'Indica el nivel obtenido '
+        + 'en recuperación.',
+      );
+    }
+
+    let fechaEvaluacion:
+      Date | null = null;
+
+    if (params.fechaEvaluacion) {
+      fechaEvaluacion =
+        new Date(
+          params.fechaEvaluacion
+          + 'T00:00:00.000-05:00',
+        );
+
+      if (
+        Number.isNaN(
+          fechaEvaluacion.getTime(),
+        )
+      ) {
+        throw new BadRequestException(
+          'La fecha de evaluación '
+          + 'no es válida.',
+        );
+      }
+    }
+
+    if (
+      resultado !== 'PENDIENTE'
+      && !fechaEvaluacion
+    ) {
+      throw new BadRequestException(
+        'Indica la fecha de evaluación.',
+      );
+    }
+
+    const idCurso =
+      params.idCurso === null
+      || params.idCurso === undefined
+        ? null
+        : Number(params.idCurso);
+
+    if (idCurso !== null) {
+      if (
+        !Number.isInteger(idCurso)
+        || idCurso <= 0
+      ) {
+        throw new BadRequestException(
+          'El curso seleccionado '
+          + 'no es válido.',
+        );
+      }
+
+      const curso =
+        await this.prisma
+          .curso.findFirst({
+            where: {
+              id_curso:
+                idCurso,
+
+              OR: [
+                {
+                  id_colegio:
+                    recuperacion
+                      .proceso
+                      .id_colegio,
+                },
+                {
+                  id_colegio:
+                    null,
+                },
+              ],
+            },
+          });
+
+      if (!curso) {
+        throw new NotFoundException(
+          'No se encontró el curso '
+          + 'seleccionado.',
+        );
+      }
+    }
+
+    const idDocente =
+      params.idDocenteEvaluador
+        === null
+        || params.idDocenteEvaluador
+          === undefined
+        ? null
+        : Number(
+            params.idDocenteEvaluador,
+          );
+
+    if (idDocente !== null) {
+      if (
+        !Number.isInteger(idDocente)
+        || idDocente <= 0
+      ) {
+        throw new BadRequestException(
+          'El docente seleccionado '
+          + 'no es válido.',
+        );
+      }
+
+      const docente =
+        await this.prisma
+          .docente.findUnique({
+            where: {
+              id_persona:
+                idDocente,
+            },
+          });
+
+      if (!docente) {
+        throw new NotFoundException(
+          'No se encontró el docente '
+          + 'evaluador.',
+        );
+      }
+    }
+
+    let existente:
+      | {
+          id_recuperacion_competencia:
+            number;
+        }
+      | null = null;
+
+    if (params.idCompetencia) {
+      existente =
+        await this.prisma
+          .recuperacionCompetencia
+          .findFirst({
+            where: {
+              id_recuperacion_competencia:
+                Number(
+                  params.idCompetencia,
+                ),
+
+              id_recuperacion_alumno:
+                recuperacion
+                  .id_recuperacion_alumno,
+            },
+
+            select: {
+              id_recuperacion_competencia:
+                true,
+            },
+          });
+
+      if (!existente) {
+        throw new NotFoundException(
+          'No se encontró la competencia '
+          + 'que deseas actualizar.',
+        );
+      }
+    }
+
+    const data = {
+      id_recuperacion_alumno:
+        recuperacion
+          .id_recuperacion_alumno,
+
+      id_curso:
+        idCurso,
+
+      competencia_codigo:
+        this.normalizeEmpty(
+          params.competenciaCodigo,
+        ),
+
+      competencia_nombre:
+        competenciaNombre,
+
+      nivel_previo:
+        this.normalizeEmpty(
+          params.nivelPrevio,
+        ),
+
+      nivel_recuperacion:
+        resultado === 'PENDIENTE'
+          ? nivelRecuperacion
+          : nivelRecuperacion,
+
+      resultado,
+
+      fecha_evaluacion:
+        fechaEvaluacion,
+
+      id_docente_evaluador:
+        idDocente,
+
+      institucion_evaluadora:
+        this.normalizeEmpty(
+          params.institucionEvaluadora,
+        ),
+
+      documento_sustento_url:
+        this.normalizeEmpty(
+          params.documentoSustentoUrl,
+        ),
+
+      observacion:
+        this.normalizeEmpty(
+          params.observacion,
+        ),
+
+      id_usuario_registro:
+        params.userId,
+    };
+
+    const resultadoOperacion =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const competencia =
+            existente
+              ? await tx
+                  .recuperacionCompetencia
+                  .update({
+                    where: {
+                      id_recuperacion_competencia:
+                        existente
+                          .id_recuperacion_competencia,
+                    },
+
+                    data,
+
+                    include: {
+                      curso: true,
+
+                      docente_evaluador: {
+                        include: {
+                          persona: true,
+                        },
+                      },
+                    },
+                  })
+              : await tx
+                  .recuperacionCompetencia
+                  .create({
+                    data,
+
+                    include: {
+                      curso: true,
+
+                      docente_evaluador: {
+                        include: {
+                          persona: true,
+                        },
+                      },
+                    },
+                  });
+
+          const competencias =
+            await tx
+              .recuperacionCompetencia
+              .findMany({
+                where: {
+                  id_recuperacion_alumno:
+                    recuperacion
+                      .id_recuperacion_alumno,
+                },
+
+                select: {
+                  resultado: true,
+                },
+              });
+
+          const total =
+            competencias.length;
+
+          const aprobadas =
+            competencias.filter(
+              (item) =>
+                item.resultado
+                === 'APROBADO',
+            ).length;
+
+          const pendientes =
+            competencias.filter(
+              (item) =>
+                item.resultado
+                === 'PENDIENTE',
+            ).length;
+
+          const resultadoFinal =
+            total === 0
+            || pendientes > 0
+              ? 'PENDIENTE'
+              : aprobadas === total
+                ? 'PRO'
+                : 'PER';
+
+          const alumno =
+            await tx
+              .recuperacionAlumno
+              .update({
+                where: {
+                  id_recuperacion_alumno:
+                    recuperacion
+                      .id_recuperacion_alumno,
+                },
+
+                data: {
+                  total_competencias:
+                    total,
+
+                  competencias_aprobadas:
+                    aprobadas,
+
+                  resultado_final:
+                    resultadoFinal,
+
+                  fecha_resultado:
+                    resultadoFinal
+                      === 'PENDIENTE'
+                      ? null
+                      : new Date(),
+
+                  id_usuario_resultado:
+                    params.userId,
+                },
+              });
+
+          return {
+            competencia,
+            alumno,
+          };
+        },
+      );
+
+    return {
+      message:
+        existente
+          ? 'Competencia de recuperación '
+            + 'actualizada.'
+          : 'Competencia de recuperación '
+            + 'registrada.',
+
+      competencia:
+        resultadoOperacion
+          .competencia,
+
+      resumen: {
+        total:
+          resultadoOperacion
+            .alumno
+            .total_competencias,
+
+        aprobadas:
+          resultadoOperacion
+            .alumno
+            .competencias_aprobadas,
+
+        pendientes:
+          resultadoOperacion
+            .alumno
+            .total_competencias
+          - resultadoOperacion
+            .alumno
+            .competencias_aprobadas,
+
+        resultado_final:
+          resultadoOperacion
+            .alumno
+            .resultado_final,
+      },
+    };
+  }
+
+
+  async cerrarProcesoRecuperacion(
+    params: ScopeParams & {
+      idProceso: number;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idProceso,
+      )
+      || params.idProceso <= 0
+    ) {
+      throw new BadRequestException(
+        'El proceso seleccionado '
+        + 'no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const proceso =
+      await this.prisma
+        .procesoRecuperacion.findFirst({
+          where: {
+            id_proceso:
+              params.idProceso,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+            anio: true,
+
+            alumnos: {
+              include: {
+                matricula: {
+                  include: {
+                    seccion: true,
+                  },
+                },
+
+                competencias: true,
+              },
+
+              orderBy: {
+                id_recuperacion_alumno:
+                  'asc',
+              },
+            },
+          },
+        });
+
+    if (!proceso) {
+      throw new NotFoundException(
+        'No se encontró el proceso '
+        + 'de recuperación.',
+      );
+    }
+
+    if (
+      proceso.estado === 'Cerrado'
+    ) {
+      return {
+        message:
+          'El proceso de recuperación '
+          + 'ya estaba cerrado.',
+
+        proceso,
+      };
+    }
+
+    if (
+      proceso.estado !== 'Abierto'
+    ) {
+      throw new BadRequestException(
+        'El proceso debe estar abierto '
+        + 'antes de cerrarlo.',
+      );
+    }
+
+    const matriculasRR =
+      await this.prisma
+        .matricula.findMany({
+          where: {
+            id_colegio:
+              proceso.id_colegio,
+
+            id_anio:
+              proceso.id_anio,
+
+            situacion_final:
+              'RR',
+
+            estado_matricula: {
+              in: [
+                'Matriculado',
+                'Activo',
+              ],
+            },
+          },
+
+          select: {
+            id_matricula: true,
+          },
+        });
+
+    const matriculasCargadas =
+      new Set(
+        proceso.alumnos.map(
+          (item) =>
+            item.id_matricula,
+        ),
+      );
+
+    const faltantes =
+      matriculasRR.filter(
+        (item) =>
+          !matriculasCargadas.has(
+            item.id_matricula,
+          ),
+      );
+
+    if (faltantes.length > 0) {
+      throw new BadRequestException(
+        `Existen ${faltantes.length} `
+        + 'alumno(s) RR sin sincronizar. '
+        + 'Ejecuta la sincronización '
+        + 'antes de cerrar.',
+      );
+    }
+
+    if (
+      proceso.alumnos.length === 0
+    ) {
+      throw new BadRequestException(
+        'El proceso no tiene alumnos '
+        + 'de recuperación.',
+      );
+    }
+
+    const desactualizados =
+      proceso.alumnos.filter(
+        (item) =>
+          item.matricula
+            .situacion_final
+          !== 'RR',
+      );
+
+    if (
+      desactualizados.length > 0
+    ) {
+      throw new BadRequestException(
+        'Existen alumnos cuya situación '
+        + 'ya no es RR. Revisa el proceso '
+        + 'antes de cerrarlo.',
+      );
+    }
+
+    const sinCompetencias =
+      proceso.alumnos.filter(
+        (item) =>
+          item.competencias.length
+          === 0,
+      );
+
+    if (
+      sinCompetencias.length > 0
+    ) {
+      throw new BadRequestException(
+        `${sinCompetencias.length} `
+        + 'alumno(s) no tienen '
+        + 'competencias registradas.',
+      );
+    }
+
+    const conPendientes =
+      proceso.alumnos.filter(
+        (item) =>
+          item.competencias.some(
+            (competencia) =>
+              competencia.resultado
+              === 'PENDIENTE',
+          ),
+      );
+
+    if (
+      conPendientes.length > 0
+    ) {
+      throw new BadRequestException(
+        `${conPendientes.length} `
+        + 'alumno(s) todavía tienen '
+        + 'competencias pendientes.',
+      );
+    }
+
+    const grados =
+      Array.from(
+        new Set(
+          proceso.alumnos.map(
+            (item) =>
+              item.matricula
+                .seccion
+                .id_grado,
+          ),
+        ),
+      );
+
+    const progresionesTerminales =
+      await this.prisma
+        .gradoProgresion.findMany({
+          where: {
+            id_colegio:
+              proceso.id_colegio,
+
+            id_grado_origen: {
+              in: grados,
+            },
+
+            es_terminal: true,
+            estado: 'Activo',
+          },
+
+          select: {
+            id_grado_origen: true,
+          },
+        });
+
+    const gradosTerminales =
+      new Set(
+        progresionesTerminales.map(
+          (item) =>
+            item.id_grado_origen,
+        ),
+      );
+
+    const resultados =
+      proceso.alumnos.map(
+        (item) => {
+          const total =
+            item.competencias.length;
+
+          const aprobadas =
+            item.competencias.filter(
+              (competencia) =>
+                competencia.resultado
+                === 'APROBADO',
+            ).length;
+
+          const resultadoFinal =
+            aprobadas === total
+              ? 'PRO'
+              : 'PER';
+
+          const esEgresado =
+            resultadoFinal === 'PRO'
+            && gradosTerminales.has(
+              item.matricula
+                .seccion
+                .id_grado,
+            );
+
+          return {
+            item,
+            total,
+            aprobadas,
+            resultadoFinal,
+            esEgresado,
+          };
+        },
+      );
+
+    const fecha =
+      new Date();
+
+    const observacion =
+      this.normalizeEmpty(
+        params.observacion,
+      );
+
+    const operacion =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const cierreExistente =
+            await tx
+              .cierreAcademico.findFirst({
+                where: {
+                  id_colegio:
+                    proceso.id_colegio,
+
+                  id_anio:
+                    proceso.id_anio,
+
+                  tipo:
+                    'RECUPERACION',
+                },
+              });
+
+          const cierre =
+            cierreExistente
+              ? await tx
+                  .cierreAcademico
+                  .update({
+                    where: {
+                      id_cierre:
+                        cierreExistente
+                          .id_cierre,
+                    },
+
+                    data: {
+                      estado:
+                        'Cerrado',
+
+                      fecha_inicio:
+                        cierreExistente
+                          .fecha_inicio
+                        || proceso
+                          .fecha_apertura
+                        || proceso
+                          .fecha_inicio,
+
+                      fecha_cierre:
+                        fecha,
+
+                      id_usuario_inicio:
+                        cierreExistente
+                          .id_usuario_inicio
+                        || proceso
+                          .id_usuario_apertura
+                        || params.userId,
+
+                      id_usuario_cierre:
+                        params.userId,
+
+                      estado_siagie:
+                        'Pendiente de revisión',
+
+                      observacion:
+                        observacion
+                        || cierreExistente
+                          .observacion,
+                    },
+                  })
+              : await tx
+                  .cierreAcademico
+                  .create({
+                    data: {
+                      id_tenant:
+                        proceso.id_tenant,
+
+                      id_colegio:
+                        proceso.id_colegio,
+
+                      id_anio:
+                        proceso.id_anio,
+
+                      tipo:
+                        'RECUPERACION',
+
+                      estado:
+                        'Cerrado',
+
+                      estado_siagie:
+                        'Pendiente de revisión',
+
+                      fecha_inicio:
+                        proceso.fecha_apertura
+                        || proceso.fecha_inicio,
+
+                      fecha_cierre:
+                        fecha,
+
+                      id_usuario_inicio:
+                        proceso.id_usuario_apertura
+                        || params.userId,
+
+                      id_usuario_cierre:
+                        params.userId,
+
+                      observacion,
+                    },
+                  });
+
+          for (
+            const resultado
+            of resultados
+          ) {
+            await tx
+              .recuperacionAlumno
+              .update({
+                where: {
+                  id_recuperacion_alumno:
+                    resultado
+                      .item
+                      .id_recuperacion_alumno,
+                },
+
+                data: {
+                  total_competencias:
+                    resultado.total,
+
+                  competencias_aprobadas:
+                    resultado.aprobadas,
+
+                  resultado_final:
+                    resultado
+                      .resultadoFinal,
+
+                  fecha_resultado:
+                    fecha,
+
+                  id_usuario_resultado:
+                    params.userId,
+                },
+              });
+
+            await tx.matricula.update({
+              where: {
+                id_matricula:
+                  resultado
+                    .item
+                    .id_matricula,
+              },
+
+              data: {
+                situacion_final:
+                  resultado
+                    .resultadoFinal,
+
+                es_egresado:
+                  resultado
+                    .esEgresado,
+
+                fecha_situacion_final:
+                  fecha,
+
+                observacion_situacion_final:
+                  'Resultado del cierre '
+                  + 'de recuperación '
+                  + `#${proceso.id_proceso}.`,
+
+                id_usuario_situacion_final:
+                  params.userId,
+              },
+            });
+          }
+
+          await tx
+            .matriculaSituacionHistorial
+            .createMany({
+              data:
+                resultados.map(
+                  (resultado) => ({
+                    id_matricula:
+                      resultado
+                        .item
+                        .id_matricula,
+
+                    id_cierre:
+                      cierre.id_cierre,
+
+                    situacion_anterior:
+                      'RR',
+
+                    situacion_nueva:
+                      resultado
+                        .resultadoFinal,
+
+                    es_egresado:
+                      resultado
+                        .esEgresado,
+
+                    observacion:
+                      'Resultado calculado '
+                      + 'al cerrar recuperación.',
+
+                    id_usuario:
+                      params.userId,
+
+                    fecha_evento:
+                      fecha,
+                  }),
+                ),
+            });
+
+          const procesoCerrado =
+            await tx
+              .procesoRecuperacion
+              .update({
+                where: {
+                  id_proceso:
+                    proceso.id_proceso,
+                },
+
+                data: {
+                  estado:
+                    'Cerrado',
+
+                  fecha_cierre:
+                    fecha,
+
+                  id_usuario_cierre:
+                    params.userId,
+
+                  observacion:
+                    observacion
+                    || proceso.observacion,
+                },
+
+                include: {
+                  colegio: true,
+                  anio: true,
+
+                  cerrado_por: {
+                    select:
+                      this.usuarioPublicoSelect(),
+                  },
+                },
+              });
+
+          return {
+            cierre,
+            proceso:
+              procesoCerrado,
+          };
+        },
+      );
+
+    const resumen = {
+      total:
+        resultados.length,
+
+      promovidos:
+        resultados.filter(
+          (item) =>
+            item.resultadoFinal
+            === 'PRO',
+        ).length,
+
+      permanecen:
+        resultados.filter(
+          (item) =>
+            item.resultadoFinal
+            === 'PER',
+        ).length,
+
+      egresados:
+        resultados.filter(
+          (item) =>
+            item.esEgresado,
+        ).length,
+    };
+
+    return {
+      message:
+        'Proceso de recuperación '
+        + 'cerrado correctamente.',
+
+      resumen,
+
+      proceso:
+        operacion.proceso,
+
+      cierre_academico:
+        operacion.cierre,
+    };
+  }
+
+
   async listarCierresAcademicos(
     params: ScopeParams & {
       idAnio?: number;
