@@ -681,6 +681,101 @@ async deleteGrado(
   }
 
 
+  // ── PROMOCIÓN Y RENOVACIÓN MASIVA ────────────────────
+  @Get('lotes-promocion/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Secretaria', 'Director')
+  getLotePromocion(
+    @Param('id') id: string,
+    @Request() req,
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .getLotePromocion({
+        idLote:
+          Number(id),
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+  @Post('lotes-promocion/vista-previa')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  generarVistaPreviaPromocion(
+    @Request() req,
+    @Body()
+    body: {
+      id_anio_origen: number;
+      id_anio_destino: number;
+      id_seccion_origen: number;
+
+      estado_matricula_destino?:
+        | 'Reserva'
+        | 'Pre-matriculado';
+
+      destinos: {
+        id_grado_destino: number;
+        id_seccion_destino: number;
+      }[];
+
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .generarVistaPreviaPromocion({
+        idAnioOrigen:
+          Number(body.id_anio_origen),
+
+        idAnioDestino:
+          Number(body.id_anio_destino),
+
+        idSeccionOrigen:
+          Number(body.id_seccion_origen),
+
+        estadoMatriculaDestino:
+          body.estado_matricula_destino,
+
+        destinos:
+          Array.isArray(body.destinos)
+            ? body.destinos.map(
+                (item) => ({
+                  idGradoDestino:
+                    Number(
+                      item.id_grado_destino,
+                    ),
+
+                  idSeccionDestino:
+                    Number(
+                      item.id_seccion_destino,
+                    ),
+                }),
+              )
+            : [],
+
+        observacion:
+          body.observacion,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   // ── SECCIONES POR AÑO LECTIVO ────────────────────────
   @Get('secciones-anio')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

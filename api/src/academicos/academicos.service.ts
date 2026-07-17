@@ -7579,6 +7579,1326 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async getLotePromocion(
+    params: ScopeParams & {
+      idLote: number;
+    },
+  ) {
+    if (
+      !Number.isInteger(params.idLote)
+      || params.idLote <= 0
+    ) {
+      throw new BadRequestException(
+        'El lote seleccionado no es válido.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const lote =
+      await this.prisma
+        .lotePromocion.findFirst({
+          where: {
+            id_lote:
+              params.idLote,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+            anio_origen: true,
+            anio_destino: true,
+
+            seccion_origen: {
+              include: {
+                aula: true,
+
+                grado: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            },
+
+            creado_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            ejecutado_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            revertido_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            detalles: {
+              include: {
+                estudiante: {
+                  include: {
+                    persona: true,
+                  },
+                },
+
+                matricula_origen: {
+                  include: {
+                    anio: true,
+
+                    seccion: {
+                      include: {
+                        grado: {
+                          include: {
+                            nivel: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+
+                matricula_generada: true,
+
+                grado_origen: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+
+                grado_destino: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+
+                seccion_origen: true,
+
+                seccion_destino: {
+                  include: {
+                    aula: true,
+                  },
+                },
+              },
+
+              orderBy: {
+                id_detalle: 'asc',
+              },
+            },
+          },
+        });
+
+    if (!lote) {
+      throw new NotFoundException(
+        'No se encontró el lote '
+        + 'de promoción.',
+      );
+    }
+
+    return lote;
+  }
+
+
+  async generarVistaPreviaPromocion(
+    params: ScopeParams & {
+      idAnioOrigen: number;
+      idAnioDestino: number;
+      idSeccionOrigen: number;
+
+      estadoMatriculaDestino?:
+        | 'Reserva'
+        | 'Pre-matriculado';
+
+      destinos: {
+        idGradoDestino: number;
+        idSeccionDestino: number;
+      }[];
+
+      observacion?: string;
+    },
+  ) {
+    const idsPrincipales = [
+      params.idAnioOrigen,
+      params.idAnioDestino,
+      params.idSeccionOrigen,
+    ];
+
+    if (
+      idsPrincipales.some(
+        (value) =>
+          !Number.isInteger(value)
+          || value <= 0,
+      )
+    ) {
+      throw new BadRequestException(
+        'El año o la sección '
+        + 'seleccionada no es válida.',
+      );
+    }
+
+    if (
+      params.idAnioOrigen
+      === params.idAnioDestino
+    ) {
+      throw new BadRequestException(
+        'El año de destino debe ser '
+        + 'diferente al año de origen.',
+      );
+    }
+
+    const estadoMatriculaDestino =
+      params.estadoMatriculaDestino
+      || 'Reserva';
+
+    if (
+      ![
+        'Reserva',
+        'Pre-matriculado',
+      ].includes(
+        estadoMatriculaDestino,
+      )
+    ) {
+      throw new BadRequestException(
+        'El estado administrativo '
+        + 'de destino no es válido.',
+      );
+    }
+
+    const destinosPorGrado =
+      new Map<number, number>();
+
+    for (
+      const destino
+      of params.destinos || []
+    ) {
+      if (
+        !Number.isInteger(
+          destino.idGradoDestino,
+        )
+        || destino.idGradoDestino <= 0
+        || !Number.isInteger(
+          destino.idSeccionDestino,
+        )
+        || destino.idSeccionDestino <= 0
+      ) {
+        throw new BadRequestException(
+          'Existe una asignación de '
+          + 'sección destino no válida.',
+        );
+      }
+
+      if (
+        destinosPorGrado.has(
+          destino.idGradoDestino,
+        )
+      ) {
+        throw new BadRequestException(
+          'No puedes asignar dos secciones '
+          + 'al mismo grado de destino '
+          + 'dentro de este lote.',
+        );
+      }
+
+      destinosPorGrado.set(
+        destino.idGradoDestino,
+        destino.idSeccionDestino,
+      );
+    }
+
+    const scope =
+      await this.resolveScope(params);
+
+    const [
+      anioOrigen,
+      anioDestino,
+      configuracionOrigen,
+    ] = await Promise.all([
+      this.prisma
+        .anioLectivo.findFirst({
+          where: {
+            id_anio:
+              params.idAnioOrigen,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+          },
+        }),
+
+      this.prisma
+        .anioLectivo.findFirst({
+          where: {
+            id_anio:
+              params.idAnioDestino,
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            colegio: true,
+          },
+        }),
+
+      this.prisma
+        .seccionAnio.findFirst({
+          where: {
+            id_anio:
+              params.idAnioOrigen,
+
+            id_seccion:
+              params.idSeccionOrigen,
+
+            estado:
+              'Activo',
+
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+
+          include: {
+            seccion: {
+              include: {
+                aula: true,
+
+                grado: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+    ]);
+
+    if (
+      !anioOrigen
+      || !anioOrigen.id_colegio
+    ) {
+      throw new NotFoundException(
+        'No se encontró el año '
+        + 'lectivo de origen.',
+      );
+    }
+
+    if (
+      !anioDestino
+      || !anioDestino.id_colegio
+    ) {
+      throw new NotFoundException(
+        'No se encontró el año '
+        + 'lectivo de destino.',
+      );
+    }
+
+    if (!configuracionOrigen) {
+      throw new NotFoundException(
+        'La sección de origen no está '
+        + 'activa en el año seleccionado.',
+      );
+    }
+
+    if (
+      anioOrigen.id_colegio
+      !== anioDestino.id_colegio
+      || configuracionOrigen.id_colegio
+        !== anioOrigen.id_colegio
+    ) {
+      throw new BadRequestException(
+        'El año de origen, el año de '
+        + 'destino y la sección deben '
+        + 'pertenecer a la misma institución.',
+      );
+    }
+
+    if (
+      anioDestino.fecha_inicio.getTime()
+      <= anioOrigen.fecha_inicio.getTime()
+    ) {
+      throw new BadRequestException(
+        'El año de destino debe ser '
+        + 'posterior al año de origen.',
+      );
+    }
+
+    const idColegio =
+      anioOrigen.id_colegio;
+
+
+    const cierreOrdinario =
+      await this.prisma
+        .cierreAcademico.findFirst({
+          where: {
+            id_colegio:
+              idColegio,
+
+            id_anio:
+              anioOrigen.id_anio,
+
+            tipo:
+              'ORDINARIO',
+
+            estado:
+              'Cerrado',
+          },
+        });
+
+    if (!cierreOrdinario) {
+      throw new BadRequestException(
+        'Primero debes concluir el cierre '
+        + 'académico ordinario del año '
+        + 'de origen.',
+      );
+    }
+
+    const matriculas =
+      await this.prisma
+        .matricula.findMany({
+          where: {
+            id_colegio:
+              idColegio,
+
+            id_anio:
+              anioOrigen.id_anio,
+
+            id_seccion:
+              configuracionOrigen
+                .id_seccion,
+
+            estado_matricula: {
+              in: [
+                'Matriculado',
+                'Activo',
+              ],
+            },
+          },
+
+          include: {
+            estudiante: {
+              include: {
+                persona: true,
+              },
+            },
+          },
+
+          orderBy: {
+            id_matricula: 'asc',
+          },
+        });
+
+    if (
+      matriculas.length === 0
+    ) {
+      throw new BadRequestException(
+        'La sección de origen no tiene '
+        + 'matrículas activas.',
+      );
+    }
+
+    const idGradoOrigen =
+      configuracionOrigen
+        .seccion
+        .id_grado;
+
+    const progresion =
+      await this.prisma
+        .gradoProgresion.findFirst({
+          where: {
+            id_colegio:
+              idColegio,
+
+            id_grado_origen:
+              idGradoOrigen,
+
+            estado:
+              'Activo',
+          },
+
+          include: {
+            grado_destino: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        });
+
+    const idsSeccionDestino =
+      Array.from(
+        new Set(
+          Array.from(
+            destinosPorGrado.values(),
+          ),
+        ),
+      );
+
+    const configuracionesDestino =
+      idsSeccionDestino.length > 0
+        ? await this.prisma
+            .seccionAnio.findMany({
+              where: {
+                id_anio:
+                  anioDestino.id_anio,
+
+                id_colegio:
+                  anioDestino.id_colegio,
+
+                id_seccion: {
+                  in: idsSeccionDestino,
+                },
+
+                estado:
+                  'Activo',
+              },
+
+              include: {
+                seccion: {
+                  include: {
+                    aula: true,
+
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
+                  },
+                },
+              },
+            })
+        : [];
+
+    const configuracionDestinoPorSeccion =
+      new Map(
+        configuracionesDestino.map(
+          (item) => [
+            item.id_seccion,
+            item,
+          ],
+        ),
+      );
+
+    const ocupacion =
+      idsSeccionDestino.length > 0
+        ? await this.prisma
+            .matricula.groupBy({
+              by: [
+                'id_seccion',
+              ],
+
+              where: {
+                id_colegio:
+                  anioDestino.id_colegio,
+
+                id_anio:
+                  anioDestino.id_anio,
+
+                id_seccion: {
+                  in: idsSeccionDestino,
+                },
+
+                estado_matricula: {
+                  in: [
+                    'Reserva',
+                    'Pre-matriculado',
+                    'Matriculado',
+                    'Activo',
+                  ],
+                },
+              },
+
+              _count: {
+                _all: true,
+              },
+            })
+        : [];
+
+    const ocupadosPorSeccion =
+      new Map(
+        ocupacion.map(
+          (item) => [
+            item.id_seccion,
+            item._count._all,
+          ],
+        ),
+      );
+
+    const idsEstudiantes =
+      matriculas.map(
+        (item) =>
+          item.id_estudiante,
+      );
+
+    const matriculasDestinoExistentes =
+      await this.prisma
+        .matricula.findMany({
+          where: {
+            id_colegio:
+              anioDestino.id_colegio,
+
+            id_anio:
+              anioDestino.id_anio,
+
+            id_estudiante: {
+              in: idsEstudiantes,
+            },
+
+            estado_matricula: {
+              not:
+                'Anulado',
+            },
+          },
+
+          select: {
+            id_matricula: true,
+            id_estudiante: true,
+            id_seccion: true,
+            estado_matricula: true,
+          },
+
+          orderBy: {
+            id_matricula: 'desc',
+          },
+        });
+
+    const matriculaDestinoPorEstudiante =
+      new Map<number, {
+        id_matricula: number;
+        id_estudiante: number;
+        id_seccion: number;
+        estado_matricula: string;
+      }>();
+
+    for (
+      const existente
+      of matriculasDestinoExistentes
+    ) {
+      if (
+        !matriculaDestinoPorEstudiante.has(
+          existente.id_estudiante,
+        )
+      ) {
+        matriculaDestinoPorEstudiante.set(
+          existente.id_estudiante,
+          existente,
+        );
+      }
+    }
+
+    const proyectadosPorSeccion =
+      new Map<number, number>();
+
+    const detalles =
+      matriculas.map(
+        (matricula) => {
+          const situacion =
+            String(
+              matricula.situacion_final
+              || 'PENDIENTE',
+            )
+              .trim()
+              .toUpperCase();
+
+          const continuidad =
+            String(
+              matricula
+                .continuidad_siguiente_anio
+              || 'Pendiente',
+            ).trim();
+
+          const existente =
+            matriculaDestinoPorEstudiante.get(
+              matricula.id_estudiante,
+            );
+
+          let accion =
+            'BLOQUEADO';
+
+          let estadoResultado =
+            'BLOQUEADO';
+
+          let motivo:
+            string | null =
+              null;
+
+          let idGradoDestino:
+            number | null =
+              null;
+
+          let idSeccionDestino:
+            number | null =
+              null;
+
+          let versionSeccionDestino:
+            number | null =
+              null;
+
+          let capacidad:
+            number | null =
+              null;
+
+          let ocupados:
+            number | null =
+              null;
+
+          let proyectadosAntes:
+            number | null =
+              null;
+
+          if (existente) {
+            accion =
+              'YA_EXISTE';
+
+            estadoResultado =
+              'OMITIDO';
+
+            motivo =
+              'El estudiante ya tiene '
+              + 'una matrícula no anulada '
+              + 'en el año de destino.';
+
+            idSeccionDestino =
+              existente.id_seccion;
+          } else if (
+            continuidad === 'Pendiente'
+          ) {
+            motivo =
+              'La decisión de continuidad '
+              + 'todavía está pendiente.';
+          } else if (
+            continuidad === 'No continúa'
+          ) {
+            accion =
+              'NO_CONTINUA';
+
+            estadoResultado =
+              'OMITIDO';
+
+            motivo =
+              'La familia informó que '
+              + 'el estudiante no continuará.';
+          } else if (
+            continuidad
+            === 'Traslado interno'
+          ) {
+            accion =
+              'TRASLADO_INTERNO';
+
+            estadoResultado =
+              'OMITIDO';
+
+            motivo =
+              'Debe procesarse mediante '
+              + 'el flujo de traslado interno.';
+          } else if (
+            continuidad
+            === 'Traslado externo'
+          ) {
+            accion =
+              'TRASLADO_EXTERNO';
+
+            estadoResultado =
+              'OMITIDO';
+
+            motivo =
+              'La familia informó un '
+              + 'traslado externo.';
+          } else if (
+            continuidad !== 'Continúa'
+          ) {
+            motivo =
+              'La decisión de continuidad '
+              + 'no es reconocida.';
+          } else if (
+            situacion === 'PENDIENTE'
+          ) {
+            motivo =
+              'La situación académica '
+              + 'todavía está pendiente.';
+          } else if (
+            situacion === 'RR'
+          ) {
+            motivo =
+              'El estudiante debe concluir '
+              + 'el proceso de recuperación.';
+          } else if (
+            situacion === 'PRO'
+            && (
+              matricula.es_egresado
+              || progresion?.es_terminal
+            )
+          ) {
+            accion =
+              'EGRESO';
+
+            estadoResultado =
+              'OMITIDO';
+
+            motivo =
+              'El estudiante culminó '
+              + 'el último grado y no '
+              + 'genera matrícula futura.';
+          } else if (
+            situacion === 'PRO'
+          ) {
+            if (
+              !progresion
+              || progresion.es_terminal
+              || !progresion
+                .id_grado_destino
+            ) {
+              motivo =
+                'No existe una progresión '
+                + 'activa hacia el siguiente '
+                + 'grado.';
+            } else {
+              accion =
+                'PROMOVER';
+
+              idGradoDestino =
+                progresion
+                  .id_grado_destino;
+            }
+          } else if (
+            situacion === 'PER'
+          ) {
+            accion =
+              'PERMANECER';
+
+            idGradoDestino =
+              idGradoOrigen;
+          } else {
+            motivo =
+              'La situación académica '
+              + 'no permite calcular '
+              + 'una renovación.';
+          }
+
+          if (
+            (
+              accion === 'PROMOVER'
+              || accion === 'PERMANECER'
+            )
+            && idGradoDestino
+          ) {
+            idSeccionDestino =
+              destinosPorGrado.get(
+                idGradoDestino,
+              )
+              || null;
+
+            if (!idSeccionDestino) {
+              estadoResultado =
+                'BLOQUEADO';
+
+              motivo =
+                'No se asignó una sección '
+                + 'activa para el grado '
+                + 'de destino.';
+            } else {
+              const configuracion =
+                configuracionDestinoPorSeccion
+                  .get(
+                    idSeccionDestino,
+                  );
+
+              if (!configuracion) {
+                estadoResultado =
+                  'BLOQUEADO';
+
+                motivo =
+                  'La sección seleccionada '
+                  + 'no está activa en el '
+                  + 'año de destino.';
+              } else if (
+                configuracion.seccion
+                  .id_grado
+                !== idGradoDestino
+              ) {
+                estadoResultado =
+                  'BLOQUEADO';
+
+                motivo =
+                  'La sección seleccionada '
+                  + 'no corresponde al grado '
+                  + 'de destino calculado.';
+              } else {
+                capacidad =
+                  configuracion
+                    .capacidad_override
+                  ?? configuracion
+                    .seccion
+                    .aula
+                    .capacidad;
+
+                ocupados =
+                  ocupadosPorSeccion.get(
+                    idSeccionDestino,
+                  )
+                  || 0;
+
+                proyectadosAntes =
+                  proyectadosPorSeccion.get(
+                    idSeccionDestino,
+                  )
+                  || 0;
+
+                versionSeccionDestino =
+                  configuracion.version;
+
+                if (
+                  ocupados
+                  + proyectadosAntes
+                  >= capacidad
+                ) {
+                  estadoResultado =
+                    'BLOQUEADO';
+
+                  motivo =
+                    'La sección de destino '
+                    + 'no tiene cupos '
+                    + 'disponibles.';
+                } else {
+                  estadoResultado =
+                    'LISTO';
+
+                  motivo =
+                    accion === 'PROMOVER'
+                      ? 'Listo para promover '
+                        + 'al siguiente grado.'
+                      : 'Listo para permanecer '
+                        + 'en el mismo grado.';
+
+                  proyectadosPorSeccion.set(
+                    idSeccionDestino,
+                    proyectadosAntes + 1,
+                  );
+                }
+              }
+            }
+          }
+
+          return {
+            id_estudiante:
+              matricula.id_estudiante,
+
+            id_matricula_origen:
+              matricula.id_matricula,
+
+            id_matricula_generada:
+              existente?.id_matricula
+              || null,
+
+            id_grado_origen:
+              idGradoOrigen,
+
+            id_seccion_origen:
+              configuracionOrigen
+                .id_seccion,
+
+            id_grado_destino:
+              idGradoDestino,
+
+            id_seccion_destino:
+              idSeccionDestino,
+
+            situacion_final:
+              situacion,
+
+            continuidad,
+
+            accion,
+
+            estado_resultado:
+              estadoResultado,
+
+            version_seccion_destino:
+              versionSeccionDestino,
+
+            snapshot: {
+              motivo,
+
+              estado_matricula_destino:
+                estadoMatriculaDestino,
+
+              capacidad,
+
+              ocupados,
+
+              proyectados_antes:
+                proyectadosAntes,
+
+              cupos_restantes:
+                capacidad === null
+                || ocupados === null
+                || proyectadosAntes === null
+                  ? null
+                  : Math.max(
+                      capacidad
+                      - ocupados
+                      - proyectadosAntes
+                      - (
+                        estadoResultado
+                        === 'LISTO'
+                          ? 1
+                          : 0
+                      ),
+                      0,
+                    ),
+
+              matricula_destino_existente:
+                existente
+                  ? {
+                      id_matricula:
+                        existente
+                          .id_matricula,
+
+                      estado:
+                        existente
+                          .estado_matricula,
+
+                      id_seccion:
+                        existente
+                          .id_seccion,
+                    }
+                  : null,
+            },
+          };
+        },
+      );
+
+    const resumen = {
+      total:
+        detalles.length,
+
+      listos:
+        detalles.filter(
+          (item) =>
+            item.estado_resultado
+            === 'LISTO',
+        ).length,
+
+      bloqueados:
+        detalles.filter(
+          (item) =>
+            item.estado_resultado
+            === 'BLOQUEADO',
+        ).length,
+
+      omitidos:
+        detalles.filter(
+          (item) =>
+            item.estado_resultado
+            === 'OMITIDO',
+        ).length,
+
+      promover:
+        detalles.filter(
+          (item) =>
+            item.accion
+            === 'PROMOVER',
+        ).length,
+
+      permanecer:
+        detalles.filter(
+          (item) =>
+            item.accion
+            === 'PERMANECER',
+        ).length,
+
+      egresos:
+        detalles.filter(
+          (item) =>
+            item.accion
+            === 'EGRESO',
+        ).length,
+
+      ya_existentes:
+        detalles.filter(
+          (item) =>
+            item.accion
+            === 'YA_EXISTE',
+        ).length,
+    };
+
+    const fechaVistaPrevia =
+      new Date();
+
+    const snapshotLote = {
+      generado_en:
+        fechaVistaPrevia.toISOString(),
+
+      cierre_ordinario:
+        cierreOrdinario.id_cierre,
+
+      estado_matricula_destino:
+        estadoMatriculaDestino,
+
+      id_anio_origen:
+        anioOrigen.id_anio,
+
+      id_anio_destino:
+        anioDestino.id_anio,
+
+      id_seccion_origen:
+        configuracionOrigen
+          .id_seccion,
+
+      destinos:
+        Array.from(
+          destinosPorGrado.entries(),
+        ).map(
+          ([
+            idGradoDestino,
+            idSeccionDestino,
+          ]) => ({
+            id_grado_destino:
+              idGradoDestino,
+
+            id_seccion_destino:
+              idSeccionDestino,
+
+            version:
+              configuracionDestinoPorSeccion
+                .get(idSeccionDestino)
+                ?.version
+              ?? null,
+          }),
+        ),
+
+      resumen,
+    };
+
+    const idLote =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const existente =
+            await tx
+              .lotePromocion.findFirst({
+                where: {
+                  id_colegio:
+                    idColegio,
+
+                  id_anio_origen:
+                    anioOrigen.id_anio,
+
+                  id_anio_destino:
+                    anioDestino.id_anio,
+
+                  id_seccion_origen:
+                    configuracionOrigen
+                      .id_seccion,
+
+                  estado: {
+                    in: [
+                      'Borrador',
+                      'Vista previa',
+                    ],
+                  },
+                },
+
+                orderBy: {
+                  id_lote: 'desc',
+                },
+              });
+
+          const dataLote = {
+            id_tenant:
+              anioOrigen.id_tenant,
+
+            id_colegio:
+              idColegio,
+
+            id_anio_origen:
+              anioOrigen.id_anio,
+
+            id_anio_destino:
+              anioDestino.id_anio,
+
+            id_seccion_origen:
+              configuracionOrigen
+                .id_seccion,
+
+            estado:
+              'Vista previa',
+
+            estado_matricula_destino:
+              estadoMatriculaDestino,
+
+            snapshot_json:
+              snapshotLote as Prisma.InputJsonValue,
+
+            fecha_vista_previa:
+              fechaVistaPrevia,
+
+            observacion:
+              this.normalizeEmpty(
+                params.observacion,
+              ),
+          };
+
+          const lote =
+            existente
+              ? await tx
+                  .lotePromocion.update({
+                    where: {
+                      id_lote:
+                        existente.id_lote,
+                    },
+
+                    data: {
+                      ...dataLote,
+
+                      fecha_ejecucion:
+                        null,
+
+                      fecha_reversion:
+                        null,
+
+                      id_usuario_ejecucion:
+                        null,
+
+                      id_usuario_reversion:
+                        null,
+
+                      motivo_reversion:
+                        null,
+                    },
+                  })
+              : await tx
+                  .lotePromocion.create({
+                    data: {
+                      ...dataLote,
+
+                      id_usuario_creacion:
+                        params.userId,
+                    },
+                  });
+
+          await tx
+            .lotePromocionDetalle
+            .deleteMany({
+              where: {
+                id_lote:
+                  lote.id_lote,
+              },
+            });
+
+          if (
+            detalles.length > 0
+          ) {
+            await tx
+              .lotePromocionDetalle
+              .createMany({
+                data:
+                  detalles.map(
+                    (detalle) => ({
+                      id_lote:
+                        lote.id_lote,
+
+                      id_estudiante:
+                        detalle
+                          .id_estudiante,
+
+                      id_matricula_origen:
+                        detalle
+                          .id_matricula_origen,
+
+                      id_matricula_generada:
+                        detalle
+                          .id_matricula_generada,
+
+                      id_grado_origen:
+                        detalle
+                          .id_grado_origen,
+
+                      id_seccion_origen:
+                        detalle
+                          .id_seccion_origen,
+
+                      id_grado_destino:
+                        detalle
+                          .id_grado_destino,
+
+                      id_seccion_destino:
+                        detalle
+                          .id_seccion_destino,
+
+                      situacion_final:
+                        detalle
+                          .situacion_final,
+
+                      continuidad:
+                        detalle
+                          .continuidad,
+
+                      accion:
+                        detalle
+                          .accion,
+
+                      estado_resultado:
+                        detalle
+                          .estado_resultado,
+
+                      version_seccion_destino:
+                        detalle
+                          .version_seccion_destino,
+
+                      snapshot_json:
+                        detalle.snapshot as Prisma.InputJsonValue,
+                    }),
+                  ),
+              });
+          }
+
+          return lote.id_lote;
+        },
+      );
+
+    const lote =
+      await this.getLotePromocion({
+        idLote,
+
+        userId:
+          params.userId,
+
+        rol:
+          params.rol,
+
+        scope:
+          params.scope,
+
+        colegioId:
+          params.colegioId,
+      });
+
+    return {
+      message:
+        resumen.bloqueados > 0
+          ? 'Vista previa generada con '
+            + `${resumen.bloqueados} `
+            + 'estudiante(s) bloqueado(s).'
+          : 'Vista previa generada '
+            + 'correctamente.',
+
+      resumen,
+      lote,
+    };
+  }
+
+
   async listarSeccionesAnio(
     params: ScopeParams & {
       idAnio: number;
