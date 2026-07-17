@@ -681,6 +681,43 @@ async deleteGrado(
   }
 
 
+  @Patch('matriculas/:id/situacion-final')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin', 'Director')
+  actualizarSituacionFinalMatricula(
+    @Param('id') id: string,
+    @Request() req,
+    @Body()
+    body: {
+      situacion:
+        | 'PENDIENTE'
+        | 'PRO'
+        | 'PER'
+        | 'RR';
+      es_egresado?: boolean;
+      observacion?: string;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService
+      .actualizarSituacionFinalMatricula({
+        idMatricula: Number(id),
+        situacion: body.situacion,
+        esEgresado:
+          body.es_egresado,
+        observacion:
+          body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
+  }
+
+
   @Patch('matriculas/:id/continuidad')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')

@@ -7579,6 +7579,344 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async actualizarSituacionFinalMatricula(
+    params: ScopeParams & {
+      idMatricula: number;
+      situacion:
+        | 'PENDIENTE'
+        | 'PRO'
+        | 'PER'
+        | 'RR';
+      esEgresado?: boolean;
+      observacion?: string;
+    },
+  ) {
+    if (
+      !Number.isInteger(
+        params.idMatricula,
+      )
+      || params.idMatricula <= 0
+    ) {
+      throw new BadRequestException(
+        'La matrícula seleccionada '
+        + 'no es válida.',
+      );
+    }
+
+    const situacion =
+      String(
+        params.situacion || '',
+      )
+        .trim()
+        .toUpperCase();
+
+    const situacionesPermitidas = [
+      'PENDIENTE',
+      'PRO',
+      'PER',
+      'RR',
+    ];
+
+    if (
+      !situacionesPermitidas.includes(
+        situacion,
+      )
+    ) {
+      throw new BadRequestException(
+        'La situación académica '
+        + 'seleccionada no es válida.',
+      );
+    }
+
+    const observacion =
+      this.normalizeEmpty(
+        params.observacion,
+      );
+
+    const solicitaEgreso =
+      params.esEgresado === true;
+
+    if (
+      solicitaEgreso
+      && situacion !== 'PRO'
+    ) {
+      throw new BadRequestException(
+        'El egreso solo puede registrarse '
+        + 'cuando la situación final es PRO.',
+      );
+    }
+
+    const matricula =
+      await this.prisma
+        .matricula.findUnique({
+          where: {
+            id_matricula:
+              params.idMatricula,
+          },
+
+          include: {
+            colegio: true,
+            anio: true,
+
+            estudiante: {
+              include: {
+                persona: true,
+              },
+            },
+
+            seccion: {
+              include: {
+                grado: {
+                  include: {
+                    nivel: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+    if (!matricula) {
+      throw new NotFoundException(
+        'No se encontró la matrícula '
+        + 'seleccionada.',
+      );
+    }
+
+    if (!matricula.id_colegio) {
+      throw new BadRequestException(
+        'La matrícula no tiene una '
+        + 'institución asociada.',
+      );
+    }
+
+    const scope =
+      await this.resolveScope({
+        userId: params.userId,
+        rol: params.rol,
+        scope: params.scope,
+        colegioId:
+          params.colegioId,
+      });
+
+    if (
+      !scope.colegioIds.includes(
+        matricula.id_colegio,
+      )
+    ) {
+      throw new UnauthorizedException(
+        'No tienes acceso a la institución '
+        + 'de esta matrícula.',
+      );
+    }
+
+    const situacionAnterior =
+      String(
+        matricula.situacion_final
+        || 'PENDIENTE',
+      ).toUpperCase();
+
+    const egresadoAnterior =
+      Boolean(
+        matricula.es_egresado,
+      );
+
+    const esEgresado =
+      solicitaEgreso;
+
+    if (esEgresado) {
+      const progresionTerminal =
+        await this.prisma
+          .gradoProgresion.findFirst({
+            where: {
+              id_colegio:
+                matricula.id_colegio,
+
+              id_grado_origen:
+                matricula.seccion
+                  .id_grado,
+
+              es_terminal: true,
+              estado: 'Activo',
+            },
+          });
+
+      if (!progresionTerminal) {
+        throw new BadRequestException(
+          'El grado actual no está '
+          + 'configurado como terminal. '
+          + 'No se puede registrar al '
+          + 'alumno como egresado.',
+        );
+      }
+    }
+
+    const cambiaSituacion =
+      situacionAnterior
+      !== situacion;
+
+    const cambiaEgreso =
+      egresadoAnterior
+      !== esEgresado;
+
+    if (
+      situacionAnterior
+        !== 'PENDIENTE'
+      && (
+        cambiaSituacion
+        || cambiaEgreso
+      )
+      && !observacion
+    ) {
+      throw new BadRequestException(
+        'Indica el motivo de la '
+        + 'rectificación académica.',
+      );
+    }
+
+    const observacionAnterior =
+      this.normalizeEmpty(
+        matricula
+          .observacion_situacion_final,
+      );
+
+    if (
+      !cambiaSituacion
+      && !cambiaEgreso
+      && observacionAnterior
+        === observacion
+    ) {
+      return {
+        message:
+          'La matrícula ya tiene '
+          + 'esta situación académica.',
+
+        matricula,
+      };
+    }
+
+    const fechaEvento =
+      new Date();
+
+    const actualizada =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const resultado =
+            await tx.matricula.update({
+              where: {
+                id_matricula:
+                  matricula.id_matricula,
+              },
+
+              data: {
+                situacion_final:
+                  situacion,
+
+                es_egresado:
+                  esEgresado,
+
+                fecha_situacion_final:
+                  situacion
+                    === 'PENDIENTE'
+                    ? null
+                    : fechaEvento,
+
+                observacion_situacion_final:
+                  observacion,
+
+                id_usuario_situacion_final:
+                  params.userId,
+              },
+
+              include: {
+                colegio: true,
+                anio: true,
+
+                seccion: {
+                  include: {
+                    grado: {
+                      include: {
+                        nivel: true,
+                      },
+                    },
+                  },
+                },
+
+                situacion_registrada_por: {
+                  select: {
+                    id_usuario: true,
+                    username: true,
+
+                    persona: {
+                      select: {
+                        nombres: true,
+                        apellido_paterno: true,
+                        apellido_materno: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+          await tx
+            .matriculaSituacionHistorial
+            .create({
+              data: {
+                id_matricula:
+                  matricula.id_matricula,
+
+                situacion_anterior:
+                  situacionAnterior,
+
+                situacion_nueva:
+                  situacion,
+
+                es_egresado:
+                  esEgresado,
+
+                observacion,
+
+                id_usuario:
+                  params.userId,
+
+                fecha_evento:
+                  fechaEvento,
+              },
+            });
+
+          return resultado;
+        },
+      );
+
+    const nombreAlumno = [
+      matricula.estudiante
+        .persona.nombres,
+      matricula.estudiante
+        .persona.apellido_paterno,
+      matricula.estudiante
+        .persona.apellido_materno,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return {
+      message:
+        esEgresado
+          ? 'Alumno registrado como '
+            + 'promovido y egresado.'
+          : `Situación académica registrada como ${situacion}.`,
+
+      alumno:
+        nombreAlumno,
+
+      matricula:
+        actualizada,
+    };
+  }
+
+
   async actualizarContinuidadMatricula(
     params: ScopeParams & {
       idMatricula: number;
