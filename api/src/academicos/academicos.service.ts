@@ -9107,6 +9107,8 @@ const existente = await this.prisma.persona.findUnique({
     let resultadoOperacion: {
       procesados: number;
       secciones_actualizadas: number;
+      id_ejecucion: number;
+      numero_ejecucion: number;
     };
 
     try {
@@ -9211,6 +9213,33 @@ const existente = await this.prisma.persona.findUnique({
                 + 'estudiantes listos.',
               );
             }
+
+            const ultimaEjecucion =
+              await tx
+                .lotePromocionEjecucion
+                .findFirst({
+                  where: {
+                    id_lote:
+                      lote.id_lote,
+                  },
+
+                  orderBy: {
+                    numero_ejecucion:
+                      'desc',
+                  },
+
+                  select: {
+                    numero_ejecucion:
+                      true,
+                  },
+                });
+
+            const numeroEjecucion =
+              (
+                ultimaEjecucion
+                  ?.numero_ejecucion
+                || 0
+              ) + 1;
 
             for (
               const detalle
@@ -9652,6 +9681,12 @@ const existente = await this.prisma.persona.findUnique({
             let procesados =
               0;
 
+            const resultadosEjecucion: {
+              idDetalle: number;
+              idMatriculaGenerada: number;
+              accion: string;
+            }[] = [];
+
             for (
               const detalle
               of detallesListos
@@ -9768,6 +9803,18 @@ const existente = await this.prisma.persona.findUnique({
                   },
                 });
 
+              resultadosEjecucion.push({
+                idDetalle:
+                  detalle.id_detalle,
+
+                idMatriculaGenerada:
+                  matriculaGenerada
+                    .id_matricula,
+
+                accion:
+                  detalle.accion,
+              });
+
               procesados++;
             }
 
@@ -9788,6 +9835,98 @@ const existente = await this.prisma.persona.findUnique({
                   },
                 },
               });
+            }
+
+            const totalPendientes =
+              lote.detalles.filter(
+                (detalle) =>
+                  [
+                    'PENDIENTE',
+                    'PENDIENTE_RECUPERACION',
+                  ].includes(
+                    detalle.estado_resultado,
+                  ),
+              ).length;
+
+            const totalOmitidos =
+              lote.detalles.filter(
+                (detalle) =>
+                  detalle.estado_resultado
+                  === 'OMITIDO',
+              ).length;
+
+            const totalBloqueados =
+              lote.detalles.filter(
+                (detalle) =>
+                  detalle.estado_resultado
+                  === 'BLOQUEADO',
+              ).length;
+
+            const ejecucion =
+              await tx
+                .lotePromocionEjecucion
+                .create({
+                  data: {
+                    id_lote:
+                      lote.id_lote,
+
+                    numero_ejecucion:
+                      numeroEjecucion,
+
+                    etapa:
+                      'Ordinaria',
+
+                    estado:
+                      'Ejecutada',
+
+                    fecha_ejecucion:
+                      fechaEjecucion,
+
+                    id_usuario_ejecucion:
+                      params.userId,
+
+                    total_evaluados:
+                      lote.detalles.length,
+
+                    total_procesados:
+                      procesados,
+
+                    total_pendientes:
+                      totalPendientes,
+
+                    total_omitidos:
+                      totalOmitidos,
+
+                    total_bloqueados:
+                      totalBloqueados,
+                  },
+                });
+
+            for (
+              const resultado
+              of resultadosEjecucion
+            ) {
+              await tx
+                .lotePromocionEjecucionDetalle
+                .create({
+                  data: {
+                    id_ejecucion:
+                      ejecucion.id_ejecucion,
+
+                    id_detalle:
+                      resultado.idDetalle,
+
+                    id_matricula_generada:
+                      resultado
+                        .idMatriculaGenerada,
+
+                    accion:
+                      resultado.accion,
+
+                    estado_resultado:
+                      'PROCESADO',
+                  },
+                });
             }
 
             await tx.lotePromocion.update({
@@ -9813,6 +9952,12 @@ const existente = await this.prisma.persona.findUnique({
 
               secciones_actualizadas:
                 seccionesBloqueadas.length,
+
+              id_ejecucion:
+                ejecucion.id_ejecucion,
+
+              numero_ejecucion:
+                numeroEjecucion,
             };
           },
           {
@@ -9875,6 +10020,14 @@ const existente = await this.prisma.persona.findUnique({
         secciones_actualizadas:
           resultadoOperacion
             .secciones_actualizadas,
+
+        id_ejecucion:
+          resultadoOperacion
+            .id_ejecucion,
+
+        numero_ejecucion:
+          resultadoOperacion
+            .numero_ejecucion,
 
         estado_matricula_destino:
           lote.estado_matricula_destino,
