@@ -7873,12 +7873,18 @@ const existente = await this.prisma.persona.findUnique({
     };
 
     if (
-      lote.estado !== 'Ejecutado'
+      ![
+        'Ejecutado',
+        'En proceso',
+        'Finalizado',
+      ].includes(
+        lote.estado,
+      )
     ) {
       agregarBloqueo(
         'LOTE_NO_EJECUTADO',
-        'El lote no se encuentra '
-        + 'en estado Ejecutado.',
+        'El lote no se encuentra en un '
+        + 'estado que permita revertirlo.',
       );
     }
 
@@ -7888,6 +7894,67 @@ const existente = await this.prisma.persona.findUnique({
           detalle.estado_resultado
           === 'PROCESADO',
       );
+
+    const historialesProcesados =
+      detallesProcesados.length > 0
+        ? await this.prisma
+            .lotePromocionEjecucionDetalle
+            .findMany({
+              where: {
+                id_detalle: {
+                  in:
+                    detallesProcesados.map(
+                      (detalle) =>
+                        detalle.id_detalle,
+                    ),
+                },
+              },
+
+              include: {
+                ejecucion:
+                  true,
+              },
+
+              orderBy: [
+                {
+                  id_detalle:
+                    'asc',
+                },
+                {
+                  id_ejecucion_detalle:
+                    'asc',
+                },
+              ],
+            })
+        : [];
+
+    const historialesPorDetalle =
+      new Map<
+        number,
+        (
+          typeof historialesProcesados
+        )[number][]
+      >();
+
+    for (
+      const historial
+      of historialesProcesados
+    ) {
+      const actuales =
+        historialesPorDetalle.get(
+          historial.id_detalle,
+        )
+        || [];
+
+      actuales.push(
+        historial,
+      );
+
+      historialesPorDetalle.set(
+        historial.id_detalle,
+        actuales,
+      );
+    }
 
     if (
       detallesProcesados.length === 0
@@ -7916,6 +7983,56 @@ const existente = await this.prisma.persona.findUnique({
 
       const generada =
         detalle.matricula_generada;
+
+      const historialesDetalle =
+        historialesPorDetalle.get(
+          detalle.id_detalle,
+        )
+        || [];
+
+      const historial =
+        historialesDetalle.length === 1
+          ? historialesDetalle[0]
+          : null;
+
+      if (!historial) {
+        agregarBloqueo(
+          historialesDetalle.length === 0
+            ? 'HISTORIAL_EJECUCION_AUSENTE'
+            : 'HISTORIAL_EJECUCION_DUPLICADO',
+          historialesDetalle.length === 0
+            ? 'No se encontró la ejecución '
+              + 'histórica del detalle.'
+            : 'El detalle tiene más de una '
+              + 'ejecución histórica activa.',
+          referencia,
+        );
+      } else {
+        if (
+          historial.ejecucion.estado
+          !== 'Ejecutada'
+        ) {
+          agregarBloqueo(
+            'EJECUCION_NO_ACTIVA',
+            'La ejecución histórica del '
+            + 'detalle no está activa.',
+            referencia,
+          );
+        }
+
+        if (
+          historial.id_matricula_generada
+          !== detalle.id_matricula_generada
+        ) {
+          agregarBloqueo(
+            'HISTORIAL_MATRICULA_NO_COINCIDE',
+            'La matrícula registrada en el '
+            + 'historial no coincide con '
+            + 'el detalle del lote.',
+            referencia,
+          );
+        }
+      }
 
       if (
         !detalle.id_matricula_generada
@@ -7954,6 +8071,30 @@ const existente = await this.prisma.persona.findUnique({
           'La matrícula de origen '
           + 'cambió después de ejecutar '
           + 'el lote.',
+          referencia,
+        );
+      }
+
+      if (
+        historial
+        && (
+          !origen.fecha_cierre
+          || origen.fecha_cierre.getTime()
+            !== historial
+              .ejecucion
+              .fecha_ejecucion
+              .getTime()
+          || origen.id_usuario_cierre
+            !== historial
+              .ejecucion
+              .id_usuario_ejecucion
+        )
+      ) {
+        agregarBloqueo(
+          'ORIGEN_EJECUCION_NO_COINCIDE',
+          'La fecha o el usuario de cierre '
+          + 'de la matrícula de origen no '
+          + 'coinciden con su ejecución.',
           referencia,
         );
       }
@@ -8129,7 +8270,13 @@ const existente = await this.prisma.persona.findUnique({
 
     return {
       reversible:
-        lote.estado === 'Ejecutado'
+        [
+          'Ejecutado',
+          'En proceso',
+          'Finalizado',
+        ].includes(
+          lote.estado,
+        )
         && detallesProcesados.length > 0
         && bloqueos.length === 0,
 
@@ -8236,6 +8383,7 @@ const existente = await this.prisma.persona.findUnique({
       matriculas_anuladas: number;
       matriculas_restauradas: number;
       secciones_actualizadas: number;
+      ejecuciones_revertidas: number;
     };
 
     try {
@@ -8264,6 +8412,30 @@ const existente = await this.prisma.persona.findUnique({
               `,
             );
 
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT id_ejecucion
+                FROM LotePromocionEjecucion
+                WHERE id_lote = ${params.idLote}
+                ORDER BY id_ejecucion ASC
+                FOR UPDATE
+              `,
+            );
+
+            await tx.$queryRaw(
+              Prisma.sql`
+                SELECT ed.id_ejecucion_detalle
+                FROM LotePromocionEjecucionDetalle ed
+                INNER JOIN LotePromocionEjecucion e
+                  ON e.id_ejecucion
+                    = ed.id_ejecucion
+                WHERE e.id_lote
+                  = ${params.idLote}
+                ORDER BY ed.id_ejecucion_detalle ASC
+                FOR UPDATE
+              `,
+            );
+
             const lote =
               await tx.lotePromocion.findFirst({
                 where: {
@@ -8279,6 +8451,22 @@ const existente = await this.prisma.persona.findUnique({
                       id_detalle: 'asc',
                     },
                   },
+
+                  ejecuciones: {
+                    include: {
+                      detalles: {
+                        orderBy: {
+                          id_ejecucion_detalle:
+                            'asc',
+                        },
+                      },
+                    },
+
+                    orderBy: {
+                      numero_ejecucion:
+                        'asc',
+                    },
+                  },
                 },
               });
 
@@ -8289,7 +8477,15 @@ const existente = await this.prisma.persona.findUnique({
               );
             }
 
-            if (lote.estado !== 'Ejecutado') {
+            if (
+              ![
+                'Ejecutado',
+                'En proceso',
+                'Finalizado',
+              ].includes(
+                lote.estado,
+              )
+            ) {
               throw new BadRequestException(
                 'El lote fue modificado '
                 + 'por otro proceso.',
@@ -8311,17 +8507,15 @@ const existente = await this.prisma.persona.findUnique({
               );
 
             const inconsistentes =
-              lote.detalles.filter(
+              detallesProcesados.filter(
                 (detalle) =>
-                  (
-                    detalle.accion === 'PROMOVER'
-                    || detalle.accion === 'PERMANECER'
+                  ![
+                    'PROMOVER',
+                    'PERMANECER',
+                  ].includes(
+                    detalle.accion,
                   )
-                  && (
-                    detalle.estado_resultado
-                    !== 'PROCESADO'
-                    || !detalle.id_matricula_generada
-                  ),
+                  || !detalle.id_matricula_generada,
               );
 
             if (inconsistentes.length > 0) {
@@ -8338,7 +8532,100 @@ const existente = await this.prisma.persona.findUnique({
               );
             }
 
+            type HistorialReversion = {
+              id_ejecucion_detalle: number;
+              id_ejecucion: number;
+              id_matricula_generada:
+                number | null;
+              fecha_ejecucion: Date;
+              id_usuario_ejecucion:
+                number | null;
+            };
+
+            const historialPorDetalle =
+              new Map<
+                number,
+                HistorialReversion
+              >();
+
+            for (
+              const ejecucion
+              of lote.ejecuciones
+            ) {
+              if (
+                ejecucion.estado
+                !== 'Ejecutada'
+              ) {
+                continue;
+              }
+
+              for (
+                const historial
+                of ejecucion.detalles
+              ) {
+                if (
+                  historial.estado_resultado
+                  !== 'PROCESADO'
+                ) {
+                  continue;
+                }
+
+                if (
+                  historialPorDetalle.has(
+                    historial.id_detalle,
+                  )
+                ) {
+                  throw new BadRequestException(
+                    'Un detalle tiene más de una '
+                    + 'ejecución histórica activa.',
+                  );
+                }
+
+                historialPorDetalle.set(
+                  historial.id_detalle,
+                  {
+                    id_ejecucion_detalle:
+                      historial
+                        .id_ejecucion_detalle,
+
+                    id_ejecucion:
+                      ejecucion.id_ejecucion,
+
+                    id_matricula_generada:
+                      historial
+                        .id_matricula_generada,
+
+                    fecha_ejecucion:
+                      ejecucion.fecha_ejecucion,
+
+                    id_usuario_ejecucion:
+                      ejecucion
+                        .id_usuario_ejecucion,
+                  },
+                );
+              }
+            }
+
             for (const detalle of detallesProcesados) {
+              const historial =
+                historialPorDetalle.get(
+                  detalle.id_detalle,
+                );
+
+              if (
+                !historial
+                || historial
+                  .id_matricula_generada
+                  !== detalle
+                    .id_matricula_generada
+              ) {
+                throw new BadRequestException(
+                  'No se encontró un historial '
+                  + 'activo y válido para un '
+                  + 'detalle procesado.',
+                );
+              }
+
               if (
                 ![
                   'PROMOVER',
@@ -8479,6 +8766,18 @@ const existente = await this.prisma.persona.findUnique({
               const detalle
               of detallesProcesados
             ) {
+              const historial =
+                historialPorDetalle.get(
+                  detalle.id_detalle,
+                );
+
+              if (!historial) {
+                throw new BadRequestException(
+                  'No se encontró la ejecución '
+                  + 'histórica activa del detalle.',
+                );
+              }
+
               const origen =
                 matriculaPorId.get(
                   detalle.id_matricula_origen,
@@ -8514,11 +8813,14 @@ const existente = await this.prisma.persona.findUnique({
                   !== estadoOrigenEsperado
                 || !origen.fecha_cierre
                 || origen.fecha_cierre.getTime()
-                  !== lote.fecha_ejecucion.getTime()
+                  !== historial
+                    .fecha_ejecucion
+                    .getTime()
                 || origen.motivo_cierre
                   !== motivoOrigenEsperado
                 || origen.id_usuario_cierre
-                  !== lote.id_usuario_ejecucion
+                  !== historial
+                    .id_usuario_ejecucion
               ) {
                 throw new BadRequestException(
                   'Una matrícula de origen '
@@ -8595,7 +8897,8 @@ const existente = await this.prisma.persona.findUnique({
                 || generada.id_anio_origen
                   !== lote.id_anio_origen
                 || generada.id_usuario_registro
-                  !== lote.id_usuario_ejecucion
+                  !== historial
+                    .id_usuario_ejecucion
               ) {
                 throw new BadRequestException(
                   'Una matrícula generada '
@@ -8790,6 +9093,7 @@ const existente = await this.prisma.persona.findUnique({
                 detalle,
                 origen,
                 generada,
+                historial,
                 snapshot,
                 estadoOriginal,
                 fechaCierreOriginal,
@@ -8816,6 +9120,7 @@ const existente = await this.prisma.persona.findUnique({
                 detalle,
                 origen,
                 generada,
+                historial,
                 snapshot,
                 estadoOriginal,
                 fechaCierreOriginal,
@@ -8915,6 +9220,80 @@ const existente = await this.prisma.persona.findUnique({
                       null,
                   },
                 });
+
+              await tx
+                .lotePromocionEjecucionDetalle
+                .update({
+                  where: {
+                    id_ejecucion_detalle:
+                      historial
+                        .id_ejecucion_detalle,
+                  },
+
+                  data: {
+                    estado_resultado:
+                      'REVERTIDO',
+
+                    snapshot_json:
+                      snapshotNuevo,
+                  },
+                });
+            }
+
+            const idsEjecucionesRevertidas =
+              Array.from(
+                new Set(
+                  restauraciones.map(
+                    (restauracion) =>
+                      restauracion
+                        .historial
+                        .id_ejecucion,
+                  ),
+                ),
+              ).sort(
+                (a, b) => a - b,
+              );
+
+            const ejecucionesActualizadas =
+              await tx
+                .lotePromocionEjecucion
+                .updateMany({
+                  where: {
+                    id_lote:
+                      lote.id_lote,
+
+                    id_ejecucion: {
+                      in:
+                        idsEjecucionesRevertidas,
+                    },
+
+                    estado:
+                      'Ejecutada',
+                  },
+
+                  data: {
+                    estado:
+                      'Revertida',
+
+                    fecha_reversion:
+                      fechaReversion,
+
+                    id_usuario_reversion:
+                      params.userId,
+
+                    motivo_reversion:
+                      motivoReversion,
+                  },
+                });
+
+            if (
+              ejecucionesActualizadas.count
+              !== idsEjecucionesRevertidas.length
+            ) {
+              throw new BadRequestException(
+                'Una ejecución histórica cambió '
+                + 'durante la reversión.',
+              );
             }
 
             for (const seccion of secciones) {
@@ -8957,6 +9336,9 @@ const existente = await this.prisma.persona.findUnique({
                 restauraciones.length,
               secciones_actualizadas:
                 secciones.length,
+
+              ejecuciones_revertidas:
+                idsEjecucionesRevertidas.length,
             };
           },
           {
@@ -9059,12 +9441,16 @@ const existente = await this.prisma.persona.findUnique({
     }
 
     if (
-      loteActual.estado
-      !== 'Vista previa'
+      ![
+        'Vista previa',
+        'En proceso',
+      ].includes(
+        loteActual.estado,
+      )
     ) {
       throw new BadRequestException(
-        'El lote ya no se encuentra '
-        + 'en estado de vista previa.',
+        'El lote no se encuentra en un '
+        + 'estado que permita ejecutarlo.',
       );
     }
 
@@ -9109,6 +9495,9 @@ const existente = await this.prisma.persona.findUnique({
       secciones_actualizadas: number;
       id_ejecucion: number;
       numero_ejecucion: number;
+      etapa: string;
+      estado_lote: string;
+      pendientes: number;
     };
 
     try {
@@ -9145,8 +9534,12 @@ const existente = await this.prisma.persona.findUnique({
             }
 
             if (
-              lote.estado
-              !== 'Vista previa'
+              ![
+                'Vista previa',
+                'En proceso',
+              ].includes(
+                lote.estado,
+              )
             ) {
               throw new BadRequestException(
                 'El lote fue modificado '
@@ -9240,6 +9633,11 @@ const existente = await this.prisma.persona.findUnique({
                   ?.numero_ejecucion
                 || 0
               ) + 1;
+
+            const etapaEjecucion =
+              numeroEjecucion === 1
+                ? 'Ordinaria'
+                : 'Recuperación';
 
             for (
               const detalle
@@ -9837,12 +10235,24 @@ const existente = await this.prisma.persona.findUnique({
               });
             }
 
+            const totalEvaluados =
+              lote.detalles.filter(
+                (detalle) =>
+                  ![
+                    'PROCESADO',
+                    'REVERTIDO',
+                  ].includes(
+                    detalle.estado_resultado,
+                  ),
+              ).length;
+
             const totalPendientes =
               lote.detalles.filter(
                 (detalle) =>
                   [
                     'PENDIENTE',
                     'PENDIENTE_RECUPERACION',
+                    'PENDIENTE_SECCION_PERMANENCIA',
                   ].includes(
                     detalle.estado_resultado,
                   ),
@@ -9862,6 +10272,11 @@ const existente = await this.prisma.persona.findUnique({
                   === 'BLOQUEADO',
               ).length;
 
+            const estadoLote =
+              totalPendientes > 0
+                ? 'En proceso'
+                : 'Finalizado';
+
             const ejecucion =
               await tx
                 .lotePromocionEjecucion
@@ -9874,7 +10289,7 @@ const existente = await this.prisma.persona.findUnique({
                       numeroEjecucion,
 
                     etapa:
-                      'Ordinaria',
+                      etapaEjecucion,
 
                     estado:
                       'Ejecutada',
@@ -9886,7 +10301,7 @@ const existente = await this.prisma.persona.findUnique({
                       params.userId,
 
                     total_evaluados:
-                      lote.detalles.length,
+                      totalEvaluados,
 
                     total_procesados:
                       procesados,
@@ -9937,7 +10352,7 @@ const existente = await this.prisma.persona.findUnique({
 
               data: {
                 estado:
-                  'Ejecutado',
+                  estadoLote,
 
                 fecha_ejecucion:
                   fechaEjecucion,
@@ -9958,6 +10373,15 @@ const existente = await this.prisma.persona.findUnique({
 
               numero_ejecucion:
                 numeroEjecucion,
+
+              etapa:
+                etapaEjecucion,
+
+              estado_lote:
+                estadoLote,
+
+              pendientes:
+                totalPendientes,
             };
           },
           {
@@ -10011,11 +10435,18 @@ const existente = await this.prisma.persona.findUnique({
 
     return {
       message:
-        'Lote ejecutado correctamente.',
+        resultadoOperacion.estado_lote
+        === 'En proceso'
+          ? 'Ejecución registrada. El lote '
+            + 'mantiene estudiantes pendientes.'
+          : 'Lote finalizado correctamente.',
 
       resumen: {
         procesados:
           resultadoOperacion.procesados,
+
+        pendientes:
+          resultadoOperacion.pendientes,
 
         secciones_actualizadas:
           resultadoOperacion
@@ -10028,6 +10459,13 @@ const existente = await this.prisma.persona.findUnique({
         numero_ejecucion:
           resultadoOperacion
             .numero_ejecucion,
+
+        etapa:
+          resultadoOperacion.etapa,
+
+        estado_lote:
+          resultadoOperacion
+            .estado_lote,
 
         estado_matricula_destino:
           lote.estado_matricula_destino,
@@ -11068,6 +11506,7 @@ const existente = await this.prisma.persona.findUnique({
                     in: [
                       'Borrador',
                       'Vista previa',
+                      'En proceso',
                     ],
                   },
                 },
@@ -11076,6 +11515,24 @@ const existente = await this.prisma.persona.findUnique({
                   id_lote: 'desc',
                 },
               });
+
+          const esLoteEnProceso =
+            existente?.estado
+            === 'En proceso';
+
+          if (
+            existente
+            && esLoteEnProceso
+            && existente
+              .estado_matricula_destino
+              !== estadoMatriculaDestino
+          ) {
+            throw new BadRequestException(
+              'No puedes cambiar el estado '
+              + 'administrativo de destino '
+              + 'después de iniciar el lote.',
+            );
+          }
 
           const dataLote = {
             id_tenant:
@@ -11095,7 +11552,9 @@ const existente = await this.prisma.persona.findUnique({
                 .id_seccion,
 
             estado:
-              'Vista previa',
+              esLoteEnProceso
+                ? 'En proceso'
+                : 'Vista previa',
 
             estado_matricula_destino:
               estadoMatriculaDestino,
@@ -11124,20 +11583,26 @@ const existente = await this.prisma.persona.findUnique({
                     data: {
                       ...dataLote,
 
-                      fecha_ejecucion:
-                        null,
+                      ...(
+                        esLoteEnProceso
+                          ? {}
+                          : {
+                              fecha_ejecucion:
+                                null,
 
-                      fecha_reversion:
-                        null,
+                              fecha_reversion:
+                                null,
 
-                      id_usuario_ejecucion:
-                        null,
+                              id_usuario_ejecucion:
+                                null,
 
-                      id_usuario_reversion:
-                        null,
+                              id_usuario_reversion:
+                                null,
 
-                      motivo_reversion:
-                        null,
+                              motivo_reversion:
+                                null,
+                            }
+                      ),
                     },
                   })
               : await tx
@@ -11150,23 +11615,76 @@ const existente = await this.prisma.persona.findUnique({
                     },
                   });
 
+          const detallesConservados =
+            esLoteEnProceso
+              ? await tx
+                  .lotePromocionDetalle
+                  .findMany({
+                    where: {
+                      id_lote:
+                        lote.id_lote,
+
+                      estado_resultado: {
+                        in: [
+                          'PROCESADO',
+                          'REVERTIDO',
+                        ],
+                      },
+                    },
+
+                    select: {
+                      id_estudiante:
+                        true,
+                    },
+                  })
+              : [];
+
+          const idsEstudiantesConservados =
+            new Set(
+              detallesConservados.map(
+                (detalle) =>
+                  detalle.id_estudiante,
+              ),
+            );
+
+          const detallesPorGuardar =
+            detalles.filter(
+              (detalle) =>
+                !idsEstudiantesConservados.has(
+                  detalle.id_estudiante,
+                ),
+            );
+
           await tx
             .lotePromocionDetalle
             .deleteMany({
               where: {
                 id_lote:
                   lote.id_lote,
+
+                ...(
+                  esLoteEnProceso
+                    ? {
+                        estado_resultado: {
+                          notIn: [
+                            'PROCESADO',
+                            'REVERTIDO',
+                          ],
+                        },
+                      }
+                    : {}
+                ),
               },
             });
 
           if (
-            detalles.length > 0
+            detallesPorGuardar.length > 0
           ) {
             await tx
               .lotePromocionDetalle
               .createMany({
                 data:
-                  detalles.map(
+                  detallesPorGuardar.map(
                     (detalle) => ({
                       id_lote:
                         lote.id_lote,
