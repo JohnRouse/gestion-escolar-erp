@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import {
   useEffect,
   useMemo,
@@ -9,10 +10,14 @@ import {
   ArrowRight,
   CheckCircle2,
   GraduationCap,
+  History,
   Loader2,
+  Play,
   RefreshCcw,
+  RotateCcw,
   ShieldCheck,
   Users,
+  X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -83,6 +88,95 @@ type ProgresionGrado = {
   } | null;
 };
 
+type ResumenPromocion = {
+  total?: number;
+  listos?: number;
+  bloqueados?: number;
+  omitidos?: number;
+  promover?: number;
+  permanecer?: number;
+  egresos?: number;
+  ya_existentes?: number;
+};
+
+type PersonaPromocion = {
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+};
+
+type UsuarioPromocion = {
+  id_usuario?: number;
+  username?: string | null;
+  usuario?: string | null;
+  nombre_usuario?: string | null;
+  email?: string | null;
+  correo?: string | null;
+  persona?: PersonaPromocion | null;
+};
+
+type DetallePromocion = {
+  id_detalle?: number;
+  id_estudiante?: number;
+  id_matricula_origen?: number | null;
+  id_matricula_generada?: number | null;
+  situacion_final?: string | null;
+  continuidad?: string | null;
+  accion?: string | null;
+  estado_resultado?: string | null;
+  snapshot_json?: {
+    motivo?: string | null;
+    [key: string]: unknown;
+  } | null;
+  estudiante?: {
+    persona?: PersonaPromocion | null;
+  } | null;
+};
+
+type DetalleEjecucionPromocion = {
+  id_ejecucion_detalle?: number;
+  id_detalle?: number;
+  estado_resultado?: string | null;
+};
+
+type EjecucionPromocion = {
+  id_ejecucion: number;
+  numero_ejecucion?: number;
+  etapa?: string | null;
+  estado?: string | null;
+  fecha_ejecucion?: string | null;
+  fecha_reversion?: string | null;
+  procesados?: number | null;
+  pendientes?: number | null;
+  total_detalles?: number | null;
+  total_procesados?: number | null;
+  total_pendientes?: number | null;
+  secciones_actualizadas?: number | null;
+  ejecutado_por?: UsuarioPromocion | null;
+  revertido_por?: UsuarioPromocion | null;
+  detalles?: DetalleEjecucionPromocion[];
+  snapshot_json?: {
+    resumen?: ResumenPromocion;
+    [key: string]: unknown;
+  } | null;
+};
+
+type LotePromocion = {
+  id_lote?: number;
+  estado?: string | null;
+  estado_matricula_destino?: string | null;
+  fecha_ejecucion?: string | null;
+  fecha_reversion?: string | null;
+  ejecutado_por?: UsuarioPromocion | null;
+  revertido_por?: UsuarioPromocion | null;
+  detalles?: DetallePromocion[];
+  ejecuciones?: EjecucionPromocion[];
+  snapshot_json?: {
+    resumen?: ResumenPromocion;
+    [key: string]: unknown;
+  } | null;
+};
+
 type ResultadoVistaPrevia = {
   message?: string;
   resumen?: {
@@ -94,8 +188,56 @@ type ResultadoVistaPrevia = {
     permanecer?: number;
     egresos?: number;
     ya_existentes?: number;
+    procesados?: number;
+    pendientes?: number;
+    revertidos?: number;
   };
   lote?: any;
+};
+
+type BloqueoReversion = {
+  codigo?: string;
+  mensaje?: string;
+  id_detalle?: number;
+};
+
+type ValidacionReversion = {
+  reversible: boolean;
+  resumen?: {
+    total_detalles?: number;
+    procesados?: number;
+    detalles_con_bloqueo?: number;
+    total_bloqueos?: number;
+  };
+  lote?: LotePromocion;
+  bloqueos?: BloqueoReversion[];
+};
+
+type OperacionLote =
+  | 'ejecutar'
+  | 'revertir'
+  | null;
+
+const mensajeErrorApi = (
+  error: unknown,
+) => {
+  if (
+    !axios.isAxiosError<{
+      message?: unknown;
+    }>(error)
+  ) {
+    return null;
+  }
+
+  const message =
+    error.response?.data?.message;
+
+  return (
+    typeof message === 'string'
+    && message.trim()
+  )
+    ? message
+    : null;
 };
 
 const inputClass =
@@ -194,55 +336,140 @@ const tonoResultado = (
     return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
   }
 
+  if (estado === 'PROCESADO') {
+    return 'bg-blue-50 text-blue-700 ring-blue-200';
+  }
+
+  if (
+    String(estado || '')
+      .startsWith('PENDIENTE')
+  ) {
+    return 'bg-amber-50 text-amber-700 ring-amber-200';
+  }
+
   if (estado === 'BLOQUEADO') {
     return 'bg-red-50 text-red-700 ring-red-200';
+  }
+
+  if (estado === 'REVERTIDO') {
+    return 'bg-slate-200 text-slate-700 ring-slate-300';
   }
 
   return 'bg-slate-100 text-slate-600 ring-slate-200';
 };
 
+const tonoEstadoLote = (
+  estado?: string,
+) => {
+  if (estado === 'Vista previa') {
+    return 'bg-amber-50 text-amber-800 ring-amber-200';
+  }
+
+  if (
+    estado === 'Ejecutado'
+    || estado === 'En proceso'
+    || estado === 'Finalizado'
+  ) {
+    return 'bg-blue-50 text-blue-800 ring-blue-200';
+  }
+
+  if (estado === 'Revertido') {
+    return 'bg-slate-200 text-slate-700 ring-slate-300';
+  }
+
+  return 'bg-slate-100 text-slate-600 ring-slate-200';
+};
+
+const formatearFechaHora = (
+  value?: string | Date | null,
+) => {
+  if (!value) return '—';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return new Intl.DateTimeFormat(
+    'es-PE',
+    {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    },
+  ).format(date);
+};
+
+const nombreUsuario = (
+  usuario?: UsuarioPromocion | null,
+) => {
+  const persona = usuario?.persona;
+
+  return [
+    persona?.nombres,
+    persona?.apellido_paterno,
+    persona?.apellido_materno,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+    || usuario?.username
+    || 'Usuario no disponible';
+};
+
 const construirResumenLote = (
-  lote: any,
+  lote: LotePromocion | null | undefined,
 ) => {
   const resumenSnapshot =
     lote?.snapshot_json?.resumen;
-
-  if (
-    resumenSnapshot
-    && typeof resumenSnapshot === 'object'
-  ) {
-    return resumenSnapshot;
-  }
 
   const detalles =
     Array.isArray(lote?.detalles)
       ? lote.detalles
       : [];
 
+  const contar = (
+    estado: string,
+  ) =>
+    detalles.filter(
+      (item: DetallePromocion) =>
+        item.estado_resultado
+        === estado,
+    ).length;
+
   return {
+    ...(
+      resumenSnapshot
+      && typeof resumenSnapshot === 'object'
+        ? resumenSnapshot
+        : {}
+    ),
+
     total:
       detalles.length,
 
     listos:
-      detalles.filter(
-        (item: any) =>
-          item.estado_resultado
-          === 'LISTO',
-      ).length,
+      contar('LISTO'),
 
     bloqueados:
-      detalles.filter(
-        (item: any) =>
-          item.estado_resultado
-          === 'BLOQUEADO',
-      ).length,
+      contar('BLOQUEADO'),
 
     omitidos:
+      contar('OMITIDO'),
+
+    procesados:
+      contar('PROCESADO'),
+
+    pendientes:
       detalles.filter(
         (item: any) =>
-          item.estado_resultado
-          === 'OMITIDO',
+          String(
+            item.estado_resultado || '',
+          ).startsWith('PENDIENTE'),
       ).length,
+
+    revertidos:
+      contar('REVERTIDO'),
 
     promover:
       detalles.filter(
@@ -405,6 +632,38 @@ export default function PromocionMasivaPage() {
     resultado,
     setResultado,
   ] = useState<ResultadoVistaPrevia | null>(
+    null,
+  );
+
+  const [
+    operacionModal,
+    setOperacionModal,
+  ] = useState<OperacionLote>(null);
+
+  const [
+    confirmacionOperacion,
+    setConfirmacionOperacion,
+  ] = useState('');
+
+  const [
+    motivoReversion,
+    setMotivoReversion,
+  ] = useState('');
+
+  const [
+    operando,
+    setOperando,
+  ] = useState(false);
+
+  const [
+    validandoReversion,
+    setValidandoReversion,
+  ] = useState(false);
+
+  const [
+    validacionReversion,
+    setValidacionReversion,
+  ] = useState<ValidacionReversion | null>(
     null,
   );
 
@@ -1067,6 +1326,308 @@ export default function PromocionMasivaPage() {
       }
     };
 
+  const cargarLoteActualizado =
+    async (
+      idLote: number,
+      message?: string,
+    ) => {
+      if (!token) {
+        throw new Error(
+          'La sesión ya no está disponible.',
+        );
+      }
+
+      const response =
+        await axios.get(
+          `/api/academicos/lotes-promocion/${idLote}${queryAcceso}`,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          },
+        );
+
+      const loteActualizado =
+        response.data;
+
+      setResultado({
+        message:
+          message
+          || `Lote #${idLote} actualizado.`,
+
+        resumen:
+          construirResumenLote(
+            loteActualizado,
+          ),
+
+        lote:
+          loteActualizado,
+      });
+
+      return loteActualizado;
+    };
+
+  const cerrarOperacion = () => {
+    if (operando) return;
+
+    setOperacionModal(null);
+    setConfirmacionOperacion('');
+    setMotivoReversion('');
+    setValidacionReversion(null);
+    setValidandoReversion(false);
+  };
+
+  const abrirEjecucion = () => {
+    setMensaje(null);
+    setConfirmacionOperacion('');
+    setMotivoReversion('');
+    setValidacionReversion(null);
+    setOperacionModal('ejecutar');
+  };
+
+  const abrirReversion =
+    async () => {
+      const idLote =
+        Number(
+          resultado?.lote?.id_lote
+          || 0,
+        );
+
+      if (
+        !token
+        || !Number.isInteger(idLote)
+        || idLote <= 0
+      ) {
+        setMensaje(
+          'No se pudo identificar el lote.',
+        );
+        return;
+      }
+
+      setMensaje(null);
+      setConfirmacionOperacion('');
+      setMotivoReversion('');
+      setValidacionReversion(null);
+      setOperacionModal('revertir');
+      setValidandoReversion(true);
+
+      try {
+        const response =
+          await axios.get(
+            `/api/academicos/lotes-promocion/${idLote}/reversion/validar${queryAcceso}`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            },
+          );
+
+        setValidacionReversion(
+          response.data,
+        );
+      } catch (error: unknown) {
+        const errorMessage =
+          mensajeErrorApi(error)
+          || 'No se pudo validar '
+            + 'la reversión del lote.';
+
+        setValidacionReversion({
+          reversible: false,
+          bloqueos: [
+            {
+              codigo:
+                'VALIDACION_NO_DISPONIBLE',
+              mensaje:
+                errorMessage,
+            },
+          ],
+        });
+
+        showToast({
+          type: 'error',
+          title:
+            'Validación no disponible',
+          message:
+            errorMessage,
+        });
+      } finally {
+        setValidandoReversion(false);
+      }
+    };
+
+  const ejecutarLote =
+    async () => {
+      const idLote =
+        Number(
+          resultado?.lote?.id_lote
+          || 0,
+        );
+
+      if (
+        !token
+        || !Number.isInteger(idLote)
+        || idLote <= 0
+      ) {
+        setMensaje(
+          'No se pudo identificar el lote.',
+        );
+        return;
+      }
+
+      if (
+        confirmacionOperacion
+          .trim()
+          .toUpperCase()
+        !== 'EJECUTAR'
+      ) {
+        return;
+      }
+
+      setOperando(true);
+      setMensaje(null);
+
+      try {
+        const response =
+          await axios.post(
+            `/api/academicos/lotes-promocion/${idLote}/ejecutar${queryAcceso}`,
+            {
+              confirmacion:
+                'EJECUTAR',
+            },
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            },
+          );
+
+        await cargarLoteActualizado(
+          idLote,
+          response.data?.message
+          || 'La promoción fue ejecutada.',
+        );
+
+        setOperacionModal(null);
+        setConfirmacionOperacion('');
+
+        showToast({
+          type: 'success',
+          title:
+            'Promoción ejecutada',
+          message:
+            response.data?.message
+            || 'Se generaron las matrículas '
+              + 'del año de destino.',
+        });
+      } catch (error: unknown) {
+        const errorMessage =
+          mensajeErrorApi(error)
+          || 'No se pudo ejecutar el lote.';
+
+        setMensaje(errorMessage);
+
+        showToast({
+          type: 'error',
+          title:
+            'Ejecución no completada',
+          message:
+            errorMessage,
+        });
+      } finally {
+        setOperando(false);
+      }
+    };
+
+  const revertirLote =
+    async () => {
+      const idLote =
+        Number(
+          resultado?.lote?.id_lote
+          || 0,
+        );
+
+      if (
+        !token
+        || !Number.isInteger(idLote)
+        || idLote <= 0
+        || !validacionReversion?.reversible
+      ) {
+        return;
+      }
+
+      if (
+        confirmacionOperacion
+          .trim()
+          .toUpperCase()
+        !== 'REVERTIR'
+        || motivoReversion.trim().length < 5
+      ) {
+        return;
+      }
+
+      setOperando(true);
+      setMensaje(null);
+
+      try {
+        const response =
+          await axios.post(
+            `/api/academicos/lotes-promocion/${idLote}/reversion${queryAcceso}`,
+            {
+              confirmacion:
+                'REVERTIR',
+              motivo:
+                motivoReversion.trim(),
+            },
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            },
+          );
+
+        await cargarLoteActualizado(
+          idLote,
+          response.data?.message
+          || 'La promoción fue revertida.',
+        );
+
+        setOperacionModal(null);
+        setConfirmacionOperacion('');
+        setMotivoReversion('');
+        setValidacionReversion(null);
+
+        showToast({
+          type: 'success',
+          title:
+            'Promoción revertida',
+          message:
+            response.data?.message
+            || 'Las matrículas originales '
+              + 'fueron restauradas.',
+        });
+      } catch (error: unknown) {
+        const errorMessage =
+          mensajeErrorApi(error)
+          || 'No se pudo revertir el lote.';
+
+        setMensaje(errorMessage);
+
+        showToast({
+          type: 'error',
+          title:
+            'Reversión no completada',
+          message:
+            errorMessage,
+        });
+      } finally {
+        setOperando(false);
+      }
+    };
+
   const limpiar = () => {
     window.localStorage.removeItem(
       storageKey,
@@ -1083,6 +1644,11 @@ export default function PromocionMasivaPage() {
     setSeccionesDestino([]);
     setResultado(null);
     setMensaje(null);
+    setOperacionModal(null);
+    setConfirmacionOperacion('');
+    setMotivoReversion('');
+    setValidacionReversion(null);
+    setValidandoReversion(false);
   };
 
   const resumen =
@@ -1094,6 +1660,33 @@ export default function PromocionMasivaPage() {
   const detalles =
     Array.isArray(lote?.detalles)
       ? lote.detalles
+      : [];
+
+  const ejecuciones =
+    Array.isArray(lote?.ejecuciones)
+      ? lote.ejecuciones
+      : [];
+
+  const estadoLote =
+    String(lote?.estado || '');
+
+  const puedeEjecutar =
+    estadoLote === 'Vista previa'
+    && Number(resumen?.listos || 0) > 0
+    && Number(resumen?.bloqueados || 0) === 0;
+
+  const puedeRevertir =
+    [
+      'Ejecutado',
+      'En proceso',
+      'Finalizado',
+    ].includes(estadoLote);
+
+  const bloqueosReversion =
+    Array.isArray(
+      validacionReversion?.bloqueos,
+    )
+      ? validacionReversion?.bloqueos || []
       : [];
 
   return (
@@ -1560,21 +2153,75 @@ export default function PromocionMasivaPage() {
 
           {resultado && (
             <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
-                  Resultado del cálculo
-                </p>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
+                    Gestión del lote
+                  </p>
 
-                <h2 className="mt-1 text-lg font-black text-slate-950">
-                  Lote #{lote?.id_lote || '—'}
-                </h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                    <h2 className="text-lg font-black text-slate-950">
+                      Lote #{lote?.id_lote || '—'}
+                    </h2>
 
-                <p className="mt-1 text-sm font-semibold text-slate-500">
-                  {resultado.message}
-                </p>
+                    <span
+                      className={
+                        'inline-flex rounded-full px-3 py-1 text-[11px] font-black ring-1 '
+                        + tonoEstadoLote(
+                          estadoLote,
+                        )
+                      }
+                    >
+                      {estadoLote || 'Sin estado'}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-500">
+                    {resultado.message}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={loadingLote || operando}
+                  onClick={() => {
+                    const idLote =
+                      Number(lote?.id_lote || 0);
+
+                    if (idLote > 0) {
+                      setLoadingLote(true);
+                      setMensaje(null);
+
+                      void cargarLoteActualizado(
+                        idLote,
+                        `Lote #${idLote} actualizado.`,
+                      )
+                        .catch((error: unknown) => {
+                          setMensaje(
+                            mensajeErrorApi(error)
+                            || 'No se pudo actualizar el lote.',
+                          );
+                        })
+                        .finally(() => {
+                          setLoadingLote(false);
+                        });
+                    }
+                  }}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <RefreshCcw
+                    size={15}
+                    className={
+                      loadingLote
+                        ? 'animate-spin'
+                        : ''
+                    }
+                  />
+                  Actualizar lote
+                </button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                 {[
                   {
                     label: 'Total',
@@ -1585,19 +2232,27 @@ export default function PromocionMasivaPage() {
                     value: resumen?.listos || 0,
                   },
                   {
+                    label: 'Procesados',
+                    value: resumen?.procesados || 0,
+                  },
+                  {
+                    label: 'Pendientes',
+                    value: resumen?.pendientes || 0,
+                  },
+                  {
                     label: 'Bloqueados',
                     value: resumen?.bloqueados || 0,
                   },
                   {
-                    label: 'Omitidos',
-                    value: resumen?.omitidos || 0,
+                    label: 'Revertidos',
+                    value: resumen?.revertidos || 0,
                   },
                 ].map((item) => (
                   <div
                     key={item.label}
                     className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                   >
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                       {item.label}
                     </p>
 
@@ -1623,7 +2278,7 @@ export default function PromocionMasivaPage() {
                         ].map((label) => (
                           <th
                             key={label}
-                            className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.13em] text-slate-500"
+                            className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.12em] text-slate-500"
                           >
                             {label}
                           </th>
@@ -1671,8 +2326,9 @@ export default function PromocionMasivaPage() {
                             </td>
 
                             <td className="min-w-72 px-4 py-3 text-sm font-medium text-slate-500">
-                              {detalle.snapshot_json
-                                ?.motivo
+                              {detalle.error_observacion
+                                || detalle.snapshot_json
+                                  ?.motivo
                                 || '—'}
                             </td>
                           </tr>
@@ -1689,21 +2345,531 @@ export default function PromocionMasivaPage() {
                 )}
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                <CheckCircle2
-                  size={18}
-                  className="mt-0.5 shrink-0 text-blue-600"
-                />
+              {estadoLote === 'Vista previa' && (
+                <div
+                  className={
+                    'flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between '
+                    + (
+                      puedeEjecutar
+                        ? 'border-blue-200 bg-blue-50'
+                        : 'border-amber-200 bg-amber-50'
+                    )
+                  }
+                >
+                  <div className="flex items-start gap-3">
+                    {puedeEjecutar ? (
+                      <CheckCircle2
+                        size={19}
+                        className="mt-0.5 shrink-0 text-blue-700"
+                      />
+                    ) : (
+                      <AlertTriangle
+                        size={19}
+                        className="mt-0.5 shrink-0 text-amber-700"
+                      />
+                    )}
 
-                <p className="text-sm font-semibold leading-6 text-blue-800">
-                  Esta es solo una vista previa. Todavía
-                  no se ha creado ninguna matrícula en
-                  el año de destino.
-                </p>
-              </div>
+                    <div>
+                      <p
+                        className={
+                          'text-sm font-black '
+                          + (
+                            puedeEjecutar
+                              ? 'text-blue-950'
+                              : 'text-amber-950'
+                          )
+                        }
+                      >
+                        {puedeEjecutar
+                          ? 'El lote está listo para ejecutarse'
+                          : 'El lote todavía no puede ejecutarse'}
+                      </p>
+
+                      <p
+                        className={
+                          'mt-1 text-sm font-semibold leading-6 '
+                          + (
+                            puedeEjecutar
+                              ? 'text-blue-800'
+                              : 'text-amber-800'
+                          )
+                        }
+                      >
+                        {puedeEjecutar
+                          ? 'La ejecución cerrará las matrículas de origen y creará las reservas del año de destino.'
+                          : 'Corrige los bloqueos o genera nuevamente la vista previa antes de continuar.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!puedeEjecutar || operando}
+                    onClick={abrirEjecucion}
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Play size={16} />
+                    Ejecutar promoción
+                  </button>
+                </div>
+              )}
+
+              {puedeRevertir && (
+                <div className="flex flex-col gap-4 rounded-xl border border-slate-300 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck
+                      size={19}
+                      className="mt-0.5 shrink-0 text-slate-700"
+                    />
+
+                    <div>
+                      <p className="text-sm font-black text-slate-950">
+                        Promoción ejecutada
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                        Antes de revertir, el sistema comprobará que las matrículas generadas no hayan sido utilizadas ni modificadas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={operando || validandoReversion}
+                    onClick={() =>
+                      void abrirReversion()
+                    }
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-400 bg-white px-5 text-sm font-black text-slate-800 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {validandoReversion ? (
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <RotateCcw size={16} />
+                    )}
+                    Validar reversión
+                  </button>
+                </div>
+              )}
+
+              {estadoLote === 'Revertido' && (
+                <div className="flex items-start gap-3 rounded-xl border border-slate-300 bg-slate-100 p-4">
+                  <RotateCcw
+                    size={19}
+                    className="mt-0.5 shrink-0 text-slate-700"
+                  />
+
+                  <div>
+                    <p className="text-sm font-black text-slate-900">
+                      Lote revertido
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                      Las matrículas de origen fueron restauradas y las matrículas generadas quedaron anuladas para conservar la trazabilidad.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {ejecuciones.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                    <History
+                      size={18}
+                      className="text-slate-700"
+                    />
+
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">
+                        Historial de ejecuciones
+                      </h3>
+                      <p className="text-xs font-semibold text-slate-500">
+                        Registro de cada etapa procesada para este lote.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-white">
+                        <tr>
+                          {[
+                            'N.º',
+                            'Etapa',
+                            'Fecha',
+                            'Estado',
+                            'Procesados',
+                            'Pendientes',
+                            'Usuario',
+                          ].map((label) => (
+                            <th
+                              key={label}
+                              className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.12em] text-slate-500"
+                            >
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {ejecuciones.map(
+                          (ejecucion: EjecucionPromocion) => (
+                            <tr
+                              key={
+                                ejecucion.id_ejecucion
+                              }
+                            >
+                              <td className="px-4 py-3 text-sm font-black text-slate-900">
+                                {ejecucion.numero_ejecucion}
+                              </td>
+
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                                {ejecucion.etapa || 'Ordinaria'}
+                              </td>
+
+                              <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-slate-600">
+                                {formatearFechaHora(
+                                  ejecucion.fecha_ejecucion,
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                <span
+                                  className={
+                                    'inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ring-1 '
+                                    + tonoEstadoLote(
+                                      ejecucion.estado
+                                        === 'Ejecutada'
+                                        ? 'Finalizado'
+                                        : ejecucion.estado
+                                          === 'Revertida'
+                                          ? 'Revertido'
+                                          : ejecucion.estado
+                                            ?? undefined,
+                                    )
+                                  }
+                                >
+                                  {ejecucion.estado}
+                                </span>
+                              </td>
+
+                              <td className="px-4 py-3 text-sm font-black text-slate-800">
+                                {ejecucion.total_procesados || 0}
+                              </td>
+
+                              <td className="px-4 py-3 text-sm font-black text-slate-800">
+                                {ejecucion.total_pendientes || 0}
+                              </td>
+
+                              <td className="min-w-48 px-4 py-3 text-sm font-semibold text-slate-600">
+                                {nombreUsuario(
+                                  ejecucion.ejecutado_por,
+                                )}
+                              </td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </>
+      )}
+      {operacionModal && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-slate-950/55 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              cerrarOperacion();
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="operacion-lote-titulo"
+            className="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-300 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">
+                  Lote #{lote?.id_lote || '—'}
+                </p>
+
+                <h2
+                  id="operacion-lote-titulo"
+                  className="mt-1 text-lg font-black text-slate-950"
+                >
+                  {operacionModal === 'ejecutar'
+                    ? 'Confirmar ejecución'
+                    : 'Validar y revertir promoción'}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                disabled={operando}
+                onClick={cerrarOperacion}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                aria-label="Cerrar"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="space-y-5 p-5">
+              {operacionModal === 'ejecutar' && (
+                <>
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <AlertTriangle
+                      size={19}
+                      className="mt-0.5 shrink-0 text-amber-700"
+                    />
+
+                    <p className="text-sm font-semibold leading-6 text-amber-900">
+                      Esta operación cerrará las matrículas de origen y creará las matrículas del año de destino para {resumen?.listos || 0} estudiante(s). No cierres la página durante la ejecución.
+                    </p>
+                  </div>
+
+                  <label className="block">
+                    <span className={etiquetaClass}>
+                      Escribe EJECUTAR para confirmar
+                    </span>
+
+                    <input
+                      autoFocus
+                      value={confirmacionOperacion}
+                      onChange={(event) =>
+                        setConfirmacionOperacion(
+                          event.target.value,
+                        )
+                      }
+                      placeholder="EJECUTAR"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      disabled={operando}
+                      onClick={cerrarOperacion}
+                      className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        operando
+                        || confirmacionOperacion
+                          .trim()
+                          .toUpperCase()
+                          !== 'EJECUTAR'
+                      }
+                      onClick={() =>
+                        void ejecutarLote()
+                      }
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {operando ? (
+                        <Loader2
+                          size={16}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Play size={16} />
+                      )}
+                      Ejecutar promoción
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {operacionModal === 'revertir' && (
+                <>
+                  {validandoReversion ? (
+                    <div className="flex min-h-40 items-center justify-center gap-3 text-sm font-bold text-slate-600">
+                      <Loader2
+                        size={18}
+                        className="animate-spin"
+                      />
+                      Comprobando matrículas e historial…
+                    </div>
+                  ) : validacionReversion?.reversible ? (
+                    <>
+                      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <ShieldCheck
+                          size={19}
+                          className="mt-0.5 shrink-0 text-blue-700"
+                        />
+
+                        <div>
+                          <p className="text-sm font-black text-blue-950">
+                            El lote puede revertirse
+                          </p>
+
+                          <p className="mt-1 text-sm font-semibold leading-6 text-blue-800">
+                            Se restaurarán {validacionReversion.resumen?.procesados || 0} matrícula(s) de origen y se anularán las matrículas generadas.
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="block">
+                        <span className={etiquetaClass}>
+                          Motivo de la reversión
+                        </span>
+
+                        <textarea
+                          value={motivoReversion}
+                          maxLength={500}
+                          rows={4}
+                          onChange={(event) =>
+                            setMotivoReversion(
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Describe el motivo administrativo de la reversión"
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+
+                        <span className="mt-1 block text-xs font-semibold text-slate-500">
+                          Mínimo 5 caracteres.
+                        </span>
+                      </label>
+
+                      <label className="block">
+                        <span className={etiquetaClass}>
+                          Escribe REVERTIR para confirmar
+                        </span>
+
+                        <input
+                          value={confirmacionOperacion}
+                          onChange={(event) =>
+                            setConfirmacionOperacion(
+                              event.target.value,
+                            )
+                          }
+                          placeholder="REVERTIR"
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          disabled={operando}
+                          onClick={cerrarOperacion}
+                          className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            operando
+                            || motivoReversion
+                              .trim()
+                              .length < 5
+                            || confirmacionOperacion
+                              .trim()
+                              .toUpperCase()
+                              !== 'REVERTIR'
+                          }
+                          onClick={() =>
+                            void revertirLote()
+                          }
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {operando ? (
+                            <Loader2
+                              size={16}
+                              className="animate-spin"
+                            />
+                          ) : (
+                            <RotateCcw size={16} />
+                          )}
+                          Revertir promoción
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <AlertTriangle
+                          size={19}
+                          className="mt-0.5 shrink-0 text-red-700"
+                        />
+
+                        <div>
+                          <p className="text-sm font-black text-red-950">
+                            El lote no puede revertirse
+                          </p>
+
+                          <p className="mt-1 text-sm font-semibold leading-6 text-red-800">
+                            Revisa los bloqueos encontrados antes de intentar nuevamente.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {bloqueosReversion.length > 0 ? (
+                          bloqueosReversion.map(
+                            (
+                              bloqueo: BloqueoReversion,
+                              index: number,
+                            ) => (
+                              <div
+                                key={
+                                  `${bloqueo.codigo || 'bloqueo'}-${index}`
+                                }
+                                className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                              >
+                                <p className="text-xs font-black text-slate-900">
+                                  {bloqueo.codigo
+                                    || 'Bloqueo de reversión'}
+                                </p>
+
+                                <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                  {bloqueo.mensaje
+                                    || 'El sistema encontró una inconsistencia.'}
+                                </p>
+                              </div>
+                            ),
+                          )
+                        ) : (
+                          <p className="text-sm font-semibold text-slate-600">
+                            No se recibió el detalle del bloqueo.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={cerrarOperacion}
+                          className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+        </div>,
+        document.body,
       )}
     </div>
   );
