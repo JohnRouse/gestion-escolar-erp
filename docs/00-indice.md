@@ -27,6 +27,21 @@ Las conversaciones y análisis externos pueden ayudar durante el desarrollo, per
 - [Plantilla de módulo](plantillas/plantilla-modulo.md)
 - [Plantilla de cambio](plantillas/plantilla-cambio.md)
 
+## Protocolo de aplicación y calidad visual
+
+- [Formato de respuestas y bloques de aplicación](08-formato-respuestas-y-bloques-aplicacion.md)
+- [Tokens y patrones visuales](09-tokens-y-patrones-visuales.md)
+- [Animaciones y transiciones](10-animaciones-y-transiciones.md)
+- [Responsive, legibilidad y accesibilidad](11-responsive-legibilidad-y-accesibilidad.md)
+- [Plantilla de bloque de aplicación](plantillas/plantilla-bloque-aplicacion.md)
+
+## Auditoría de diseño y unificación
+
+- [Auditoría estática del diseño](auditoria/06-auditoria-estatica-diseno.md)
+- [Matriz estática de páginas](auditoria/07-matriz-paginas-diseno.md)
+- [Backlog inicial de unificación](auditoria/08-backlog-unificacion-ui.md)
+- [Prioridades de revisión visual](auditoria/09-prioridades-revision-visual.md)
+
 ## Auditoría integral del repositorio
 
 - [Metodología y alcance](auditoria/00-metodologia-y-alcance.md)
