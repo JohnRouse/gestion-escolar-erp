@@ -15,6 +15,11 @@ Antes de modificar código se deben leer:
 9. `docs/manual/00-portada-e-indice.md`
 10. `docs/modulos/README.md`
 11. `docs/escenarios/README.md`
+12. `docs/08-formato-respuestas-y-bloques-aplicacion.md`
+13. `docs/09-tokens-y-patrones-visuales.md`
+14. `docs/10-animaciones-y-transiciones.md`
+15. `docs/11-responsive-legibilidad-y-accesibilidad.md`
+16. `docs/auditoria/09-prioridades-revision-visual.md`
 
 ## Propósito
 
@@ -88,6 +93,29 @@ La implementación actual emplea principalmente:
 - Lucide React.
 
 No se debe introducir otra biblioteca visual sin una decisión arquitectónica registrada mediante ADR.
+
+## Auditoría visual obligatoria
+
+Antes de crear o modificar una pantalla se debe revisar:
+
+- `docs/09-tokens-y-patrones-visuales.md`.
+- `docs/10-animaciones-y-transiciones.md`.
+- `docs/11-responsive-legibilidad-y-accesibilidad.md`.
+- `docs/auditoria/09-prioridades-revision-visual.md`.
+
+Todo cambio visual debe indicar:
+
+- Patrón o token aplicado.
+- Componente compartido utilizado o creado.
+- Resoluciones revisadas.
+- Resultado con zoom aumentado.
+- Navegación por teclado.
+- Foco visible.
+- Reducción de movimiento.
+- Animaciones o transiciones afectadas.
+- Hallazgo corregido o inconsistencia resuelta.
+
+Un resultado del análisis estático no se considera error confirmado hasta comprobar el comportamiento real de la pantalla.
 
 ## Antes de implementar
 
