@@ -1,0 +1,133 @@
+# Guía obligatoria de Gestión Escolar ERP
+
+Este archivo es el punto de entrada para cualquier persona, desarrollador o asistente que implemente cambios en el proyecto.
+
+Antes de modificar código se deben leer:
+
+1. `docs/00-indice.md`
+2. `docs/01-vision-y-arquitectura.md`
+3. `docs/02-sistema-de-diseno-ui-ux.md`
+4. `docs/03-multitenant-roles-y-seguridad.md`
+5. `docs/04-reglas-funcionales-transversales.md`
+6. `docs/05-estandares-de-desarrollo.md`
+7. `docs/06-estado-del-proyecto.md`
+
+## Propósito
+
+Gestión Escolar ERP es una plataforma SaaS multi-tenant destinada a instituciones educativas independientes o agrupadas dentro de una misma organización.
+
+La visión del producto contempla:
+
+- Colegios y grupos de colegios.
+- Academias y grupos de academias.
+- Institutos y grupos de institutos.
+- Otros centros educativos con procesos equivalentes.
+
+No debe asumirse que toda la visión objetivo ya está implementada.
+
+La documentación debe distinguir entre:
+
+- Regla vigente.
+- Funcionalidad implementada.
+- Implementación parcial.
+- Funcionalidad en pruebas.
+- Decisión pendiente.
+- Visión futura.
+
+## Reglas no negociables
+
+1. Toda consulta debe respetar el tenant, la institución, el alcance activo, el rol y el permiso del usuario.
+
+2. Ocultar un botón en el frontend no reemplaza la autorización del backend.
+
+3. No se deben codificar nombres concretos de colegios, tenants, años, usuarios o secciones dentro de los componentes.
+
+4. Las reglas de negocio deben mantenerse en una fuente centralizada y no duplicarse entre pantallas.
+
+5. Las operaciones sensibles deben conservar trazabilidad: usuario, fecha, institución, acción, motivo, valor anterior y valor posterior.
+
+6. La información académica o financiera no debe eliminarse irreversiblemente cuando sea necesaria para auditoría.
+
+7. Todo formulario debe contemplar carga, error, vacío, bloqueo y éxito.
+
+8. El sistema debe ser comprensible para docentes, administrativos, padres y personas mayores con poco o ningún conocimiento tecnológico.
+
+9. No se permiten controles ambiguos, textos excesivamente pequeños ni acciones representadas únicamente por iconos poco claros.
+
+10. Toda pantalla nueva debe reutilizar los patrones establecidos en `docs/02-sistema-de-diseno-ui-ux.md`.
+
+11. Cuando varias páginas necesiten el mismo patrón visual, debe crearse o mejorarse un componente compartido.
+
+12. Cuando el alcance activo sea `Todos los colegios`, los años lectivos deben mostrarse junto con el nombre de la institución.
+
+13. Cuando el alcance activo sea un colegio específico, el año lectivo debe mostrarse sin repetir el nombre del colegio.
+
+14. El módulo de Tutoría solo debe estar disponible para el tutor asignado a la sección y para los roles administrativos expresamente autorizados.
+
+15. La autorización de Tutoría debe validarse en frontend y backend.
+
+16. Todo cambio que modifique una regla de negocio debe actualizar la documentación dentro del mismo commit o pull request.
+
+17. Los cambios destructivos o transaccionales deben probarse primero en una base aislada.
+
+18. No se deben realizar pruebas destructivas en la base original.
+
+## Diseño
+
+La aplicación utiliza un diseño minimalista inspirado en los principios de Carbon Design System.
+
+La implementación actual emplea principalmente:
+
+- React.
+- TypeScript.
+- Tailwind CSS.
+- Lucide React.
+
+No se debe introducir otra biblioteca visual sin una decisión arquitectónica registrada mediante ADR.
+
+## Antes de implementar
+
+Se debe comprobar:
+
+- Módulo afectado.
+- Regla de negocio aplicable.
+- Roles autorizados.
+- Alcance institucional.
+- Comportamiento con `Todos los colegios`.
+- Comportamiento con un colegio específico.
+- Estado de carga.
+- Estado vacío.
+- Manejo de errores.
+- Presentación en pantallas pequeñas.
+- Trazabilidad.
+- Pruebas requeridas.
+- Documentación que debe actualizarse.
+
+## Definición mínima de terminado
+
+Una funcionalidad no se considera terminada solo porque aparece visualmente.
+
+Debe incluir, según corresponda:
+
+- Interfaz funcional.
+- Validaciones.
+- Autorización.
+- Backend funcional.
+- Persistencia.
+- Manejo de errores.
+- Estados de carga y vacío.
+- Diseño responsivo.
+- Trazabilidad.
+- Pruebas.
+- Documentación actualizada.
+
+## Validaciones antes de confirmar cambios
+
+Ejecutar como mínimo:
+
+    git diff --check
+    npm run build
+    git status --short
+    git diff --stat
+
+No se debe realizar commit si existen errores de compilación o archivos accidentales.
