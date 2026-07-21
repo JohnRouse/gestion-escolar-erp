@@ -41,6 +41,13 @@ Las conversaciones y análisis externos pueden ayudar durante el desarrollo, per
 - [Matriz estática de páginas](auditoria/07-matriz-paginas-diseno.md)
 - [Backlog inicial de unificación](auditoria/08-backlog-unificacion-ui.md)
 - [Prioridades de revisión visual](auditoria/09-prioridades-revision-visual.md)
+- [Estructura global y componentes compartidos](auditoria/10-estructura-global-y-componentes-compartidos.md)
+- [Matriz de componentes compartidos](auditoria/11-matriz-componentes-compartidos.md)
+- [Backlog de estructura global](auditoria/12-backlog-estructura-global.md)
+- [Revisión semántica de estructura global](auditoria/13-revision-semantica-estructura-global.md)
+- [Mapa de carga CSS](auditoria/14-mapa-carga-css-y-fragmentacion.md)
+- [Hallazgos confirmados](auditoria/15-hallazgos-confirmados-estructura-global.md)
+- [Plan de unificación global](auditoria/16-plan-unificacion-estructura-global.md)
 
 ## Auditoría integral del repositorio
 
@@ -56,6 +63,7 @@ Las conversaciones y análisis externos pueden ayudar durante el desarrollo, per
 - [Plantilla para ADR](decisiones/ADR-000-plantilla.md)
 - [Diseño inspirado en Carbon](decisiones/ADR-001-diseno-carbon-inspirado.md)
 - [Alcance institucional activo](decisiones/ADR-002-alcance-institucional.md)
+- [ADR-003: diálogos accesibles y CSS modular](decisiones/ADR-003-dialogos-accesibles-y-css-modular.md)
 
 ## Regla documental
 
