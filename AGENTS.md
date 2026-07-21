@@ -11,6 +11,10 @@ Antes de modificar código se deben leer:
 5. `docs/04-reglas-funcionales-transversales.md`
 6. `docs/05-estandares-de-desarrollo.md`
 7. `docs/06-estado-del-proyecto.md`
+8. `docs/07-protocolo-documentacion-continua.md`
+9. `docs/manual/00-portada-e-indice.md`
+10. `docs/modulos/README.md`
+11. `docs/escenarios/README.md`
 
 ## Propósito
 
@@ -119,7 +123,27 @@ Debe incluir, según corresponda:
 - Diseño responsivo.
 - Trazabilidad.
 - Pruebas.
-- Documentación actualizada.
+- Documento del módulo actualizado.
+- Registro funcional del cambio creado o actualizado.
+- Escenarios afectados actualizados.
+- Documentación general actualizada.
+
+
+## Documentación simultánea con la implementación
+
+Todo bloque de implementación debe incluir también la actualización documental correspondiente.
+
+Como mínimo debe revisarse:
+
+- Documento del módulo afectado.
+- Registro funcional del cambio.
+- Reglas transversales relacionadas.
+- Escenarios afectados.
+- Estado real de la funcionalidad.
+- Pruebas y resultado.
+- Procedimiento de reversión cuando corresponda.
+
+No se debe presentar un cambio como terminado si el código fue actualizado pero la documentación permanece desactualizada.
 
 ## Validaciones antes de confirmar cambios
 
