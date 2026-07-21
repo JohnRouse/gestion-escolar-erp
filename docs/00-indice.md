@@ -27,6 +27,15 @@ Las conversaciones y análisis externos pueden ayudar durante el desarrollo, per
 - [Plantilla de módulo](plantillas/plantilla-modulo.md)
 - [Plantilla de cambio](plantillas/plantilla-cambio.md)
 
+## Auditoría integral del repositorio
+
+- [Metodología y alcance](auditoria/00-metodologia-y-alcance.md)
+- [Inventario del frontend](auditoria/01-inventario-frontend.md)
+- [Inventario del backend](auditoria/02-inventario-backend.md)
+- [Inventario de base de datos](auditoria/03-inventario-base-de-datos.md)
+- [Matriz de cobertura documental](auditoria/04-matriz-cobertura-documental.md)
+- [Tecnologías detectadas](auditoria/05-tecnologias-detectadas.md)
+
 ## Decisiones arquitectónicas
 
 - [Plantilla para ADR](decisiones/ADR-000-plantilla.md)
