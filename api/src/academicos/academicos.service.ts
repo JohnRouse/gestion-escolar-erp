@@ -7579,6 +7579,896 @@ const existente = await this.prisma.persona.findUnique({
   }
 
 
+  async listarLotesPromocion(
+    params: ScopeParams & {
+      q?: string;
+      estado?: string;
+      anioOrigenId?: number;
+      anioDestinoId?: number;
+      seccionId?: number;
+      usuarioId?: number;
+      fechaDesde?: string;
+      fechaHasta?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const scope =
+      await this.resolveScope(params);
+
+    const page =
+      Number.isInteger(params.page)
+      && Number(params.page) > 0
+        ? Number(params.page)
+        : 1;
+
+    const limit =
+      Number.isInteger(params.limit)
+        ? Math.min(
+            Math.max(
+              Number(params.limit),
+              1,
+            ),
+            50,
+          )
+        : 15;
+
+    const validarId = (
+      value: number | undefined,
+      etiqueta: string,
+    ) => {
+      if (value === undefined) {
+        return;
+      }
+
+      if (
+        !Number.isInteger(value)
+        || value <= 0
+      ) {
+        throw new BadRequestException(
+          `${etiqueta} no es válido.`,
+        );
+      }
+    };
+
+    validarId(
+      params.anioOrigenId,
+      'El año de origen',
+    );
+
+    validarId(
+      params.anioDestinoId,
+      'El año de destino',
+    );
+
+    validarId(
+      params.seccionId,
+      'La sección',
+    );
+
+    validarId(
+      params.usuarioId,
+      'El usuario',
+    );
+
+    const convertirFecha = (
+      value: string | undefined,
+      finDia = false,
+    ) => {
+      const clean =
+        value?.trim();
+
+      if (!clean) {
+        return undefined;
+      }
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(clean)
+      ) {
+        throw new BadRequestException(
+          'Las fechas deben tener el formato AAAA-MM-DD.',
+        );
+      }
+
+      const fecha =
+        new Date(
+          `${clean}T${
+            finDia
+              ? '23:59:59.999'
+              : '00:00:00.000'
+          }`,
+        );
+
+      if (
+        Number.isNaN(
+          fecha.getTime(),
+        )
+      ) {
+        throw new BadRequestException(
+          'La fecha indicada no es válida.',
+        );
+      }
+
+      return fecha;
+    };
+
+    const fechaDesde =
+      convertirFecha(
+        params.fechaDesde,
+      );
+
+    const fechaHasta =
+      convertirFecha(
+        params.fechaHasta,
+        true,
+      );
+
+    if (
+      fechaDesde
+      && fechaHasta
+      && fechaHasta < fechaDesde
+    ) {
+      throw new BadRequestException(
+        'La fecha final no puede ser anterior a la inicial.',
+      );
+    }
+
+    if (!scope.colegioIds.length) {
+      return {
+        items: [],
+
+        resumen: {
+          total_lotes: 0,
+          total_ejecuciones: 0,
+          total_estudiantes: 0,
+          por_estado: {},
+          por_resultado: {},
+        },
+
+        paginacion: {
+          page,
+          limit,
+          total: 0,
+          total_pages: 0,
+          has_previous: false,
+          has_next: false,
+        },
+      };
+    }
+
+    const filtros:
+      Prisma.LotePromocionWhereInput[] = [
+        {
+          id_colegio: {
+            in:
+              scope.colegioIds,
+          },
+        },
+      ];
+
+    const estado =
+      params.estado?.trim();
+
+    if (estado) {
+      filtros.push({
+        estado,
+      });
+    }
+
+    if (
+      params.anioOrigenId
+      !== undefined
+    ) {
+      filtros.push({
+        id_anio_origen:
+          params.anioOrigenId,
+      });
+    }
+
+    if (
+      params.anioDestinoId
+      !== undefined
+    ) {
+      filtros.push({
+        id_anio_destino:
+          params.anioDestinoId,
+      });
+    }
+
+    if (
+      params.seccionId
+      !== undefined
+    ) {
+      filtros.push({
+        id_seccion_origen:
+          params.seccionId,
+      });
+    }
+
+    if (
+      params.usuarioId
+      !== undefined
+    ) {
+      filtros.push({
+        OR: [
+          {
+            id_usuario_creacion:
+              params.usuarioId,
+          },
+          {
+            id_usuario_ejecucion:
+              params.usuarioId,
+          },
+          {
+            id_usuario_reversion:
+              params.usuarioId,
+          },
+        ],
+      });
+    }
+
+    if (
+      fechaDesde
+      || fechaHasta
+    ) {
+      filtros.push({
+        created_at: {
+          ...(fechaDesde
+            ? {
+                gte:
+                  fechaDesde,
+              }
+            : {}),
+          ...(fechaHasta
+            ? {
+                lte:
+                  fechaHasta,
+              }
+            : {}),
+        },
+      });
+    }
+
+    const q =
+      params.q?.trim();
+
+    if (q) {
+      const busqueda:
+        Prisma.LotePromocionWhereInput[] = [
+          {
+            observacion: {
+              contains: q,
+            },
+          },
+          {
+            motivo_reversion: {
+              contains: q,
+            },
+          },
+          {
+            colegio: {
+              is: {
+                OR: [
+                  {
+                    nombre: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    nombre_corto: {
+                      contains: q,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            anio_origen: {
+              is: {
+                nombre_anio: {
+                  contains: q,
+                },
+              },
+            },
+          },
+          {
+            anio_destino: {
+              is: {
+                nombre_anio: {
+                  contains: q,
+                },
+              },
+            },
+          },
+          {
+            seccion_origen: {
+              is: {
+                OR: [
+                  {
+                    letra: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    grado: {
+                      is: {
+                        nombre_grado: {
+                          contains: q,
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            creado_por: {
+              is: {
+                OR: [
+                  {
+                    username: {
+                      contains: q,
+                    },
+                  },
+                  {
+                    persona: {
+                      is: {
+                        OR: [
+                          {
+                            nombres: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            apellido_paterno: {
+                              contains: q,
+                            },
+                          },
+                          {
+                            apellido_materno: {
+                              contains: q,
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ];
+
+      if (/^\d+$/.test(q)) {
+        const idLote =
+          Number(q);
+
+        if (
+          Number.isSafeInteger(idLote)
+          && idLote > 0
+        ) {
+          busqueda.unshift({
+            id_lote:
+              idLote,
+          });
+        }
+      }
+
+      filtros.push({
+        OR:
+          busqueda,
+      });
+    }
+
+    const where:
+      Prisma.LotePromocionWhereInput = {
+        AND:
+          filtros,
+      };
+
+    const total =
+      await this.prisma
+        .lotePromocion.count({
+          where,
+        });
+
+    const lotes =
+      await this.prisma
+        .lotePromocion.findMany({
+          where,
+
+          select: {
+            id_lote: true,
+            id_colegio: true,
+            id_anio_origen: true,
+            id_anio_destino: true,
+            id_seccion_origen: true,
+            estado: true,
+            estado_matricula_destino: true,
+            fecha_vista_previa: true,
+            fecha_ejecucion: true,
+            fecha_reversion: true,
+            motivo_reversion: true,
+            observacion: true,
+            created_at: true,
+            updated_at: true,
+
+            colegio: {
+              select: {
+                id_colegio: true,
+                nombre: true,
+                nombre_corto: true,
+              },
+            },
+
+            anio_origen: {
+              select: {
+                id_anio: true,
+                nombre_anio: true,
+              },
+            },
+
+            anio_destino: {
+              select: {
+                id_anio: true,
+                nombre_anio: true,
+              },
+            },
+
+            seccion_origen: {
+              select: {
+                id_seccion: true,
+                letra: true,
+
+                aula: {
+                  select: {
+                    id_aula: true,
+                    nombre_aula: true,
+                  },
+                },
+
+                grado: {
+                  select: {
+                    id_grado: true,
+                    nombre_grado: true,
+
+                    nivel: {
+                      select: {
+                        id_nivel: true,
+                        nombre_nivel: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+
+            creado_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            ejecutado_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            revertido_por: {
+              select:
+                this.usuarioPublicoSelect(),
+            },
+
+            ejecuciones: {
+              orderBy: {
+                numero_ejecucion:
+                  'desc',
+              },
+
+              take: 1,
+
+              select: {
+                id_ejecucion: true,
+                numero_ejecucion: true,
+                etapa: true,
+                estado: true,
+                fecha_ejecucion: true,
+                fecha_reversion: true,
+                total_evaluados: true,
+                total_procesados: true,
+                total_pendientes: true,
+                total_omitidos: true,
+                total_bloqueados: true,
+                observacion: true,
+
+                ejecutado_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+
+                revertido_por: {
+                  select:
+                    this.usuarioPublicoSelect(),
+                },
+              },
+            },
+
+            _count: {
+              select: {
+                detalles: true,
+                ejecuciones: true,
+              },
+            },
+          },
+
+          orderBy: [
+            {
+              created_at:
+                'desc',
+            },
+            {
+              id_lote:
+                'desc',
+            },
+          ],
+
+          skip:
+            (page - 1) * limit,
+
+          take:
+            limit,
+        });
+
+    const loteIds =
+      lotes.map(
+        (item) =>
+          item.id_lote,
+      );
+
+    const detallesPagina =
+      loteIds.length
+        ? await this.prisma
+            .lotePromocionDetalle
+            .findMany({
+              where: {
+                id_lote: {
+                  in:
+                    loteIds,
+                },
+              },
+
+              select: {
+                id_lote: true,
+                estado_resultado: true,
+                id_grado_destino: true,
+                id_seccion_destino: true,
+
+                grado_destino: {
+                  select: {
+                    id_grado: true,
+                    nombre_grado: true,
+
+                    nivel: {
+                      select: {
+                        id_nivel: true,
+                        nombre_nivel: true,
+                      },
+                    },
+                  },
+                },
+
+                seccion_destino: {
+                  select: {
+                    id_seccion: true,
+                    letra: true,
+                  },
+                },
+              },
+            })
+        : [];
+
+    const conteosPorLote =
+      new Map<
+        number,
+        Record<string, number>
+      >();
+
+    const destinosPorLote =
+      new Map<
+        number,
+        Map<
+          string,
+          {
+            id_grado: number;
+            nombre_grado: string;
+            nivel: {
+              id_nivel: number;
+              nombre_nivel: string;
+            };
+            id_seccion: number;
+            letra: string;
+          }
+        >
+      >();
+
+    for (
+      const detalle
+      of detallesPagina
+    ) {
+      const conteos =
+        conteosPorLote.get(
+          detalle.id_lote,
+        ) || {};
+
+      const clave =
+        String(
+          detalle.estado_resultado
+          || 'SIN ESTADO',
+        ).toUpperCase();
+
+      conteos[clave] =
+        (conteos[clave] || 0)
+        + 1;
+
+      conteosPorLote.set(
+        detalle.id_lote,
+        conteos,
+      );
+
+      if (
+        detalle.id_grado_destino
+        && detalle.id_seccion_destino
+        && detalle.grado_destino
+        && detalle.seccion_destino
+      ) {
+        const destinos =
+          destinosPorLote.get(
+            detalle.id_lote,
+          )
+          || new Map();
+
+        const claveDestino =
+          `${detalle.id_grado_destino}:`
+          + `${detalle.id_seccion_destino}`;
+
+        destinos.set(
+          claveDestino,
+          {
+            id_grado:
+              detalle.grado_destino
+                .id_grado,
+
+            nombre_grado:
+              detalle.grado_destino
+                .nombre_grado,
+
+            nivel:
+              detalle.grado_destino
+                .nivel,
+
+            id_seccion:
+              detalle.seccion_destino
+                .id_seccion,
+
+            letra:
+              detalle.seccion_destino
+                .letra,
+          },
+        );
+
+        destinosPorLote.set(
+          detalle.id_lote,
+          destinos,
+        );
+      }
+    }
+
+    const items =
+      lotes.map(
+        (item) => {
+          const conteos =
+            conteosPorLote.get(
+              item.id_lote,
+            ) || {};
+
+          const {
+            ejecuciones,
+            _count,
+            ...lote
+          } = item;
+
+          return {
+            ...lote,
+
+            destinos:
+              Array.from(
+                destinosPorLote
+                  .get(item.id_lote)
+                  ?.values()
+                || [],
+              ),
+
+            ultima_ejecucion:
+              ejecuciones[0]
+              || null,
+
+            resumen: {
+              total:
+                _count.detalles,
+
+              listos:
+                conteos.LISTO
+                || 0,
+
+              procesados:
+                conteos.PROCESADO
+                || 0,
+
+              pendientes:
+                conteos.PENDIENTE
+                || 0,
+
+              bloqueados:
+                conteos.BLOQUEADO
+                || 0,
+
+              omitidos:
+                conteos.OMITIDO
+                || 0,
+
+              revertidos:
+                conteos.REVERTIDO
+                || 0,
+
+              ejecuciones:
+                _count.ejecuciones,
+            },
+          };
+        },
+      );
+
+    const estadosAgrupados =
+      await this.prisma
+        .lotePromocion.groupBy({
+          by: [
+            'estado',
+          ],
+
+          where,
+
+          orderBy: {
+            estado:
+              'asc',
+          },
+
+          _count: {
+            estado:
+              true,
+          },
+        });
+
+    const resultadosAgrupados =
+      await this.prisma
+        .lotePromocionDetalle
+        .groupBy({
+          by: [
+            'estado_resultado',
+          ],
+
+          where: {
+            lote: {
+              is:
+                where,
+            },
+          },
+
+          orderBy: {
+            estado_resultado:
+              'asc',
+          },
+
+          _count: {
+            estado_resultado:
+              true,
+          },
+        });
+
+    const totalEjecuciones =
+      await this.prisma
+        .lotePromocionEjecucion
+        .count({
+          where: {
+            lote: {
+              is:
+                where,
+            },
+          },
+        });
+
+    const porEstado:
+      Record<string, number> = {};
+
+    for (
+      const fila
+      of estadosAgrupados
+    ) {
+      porEstado[fila.estado] =
+        fila._count.estado;
+    }
+
+    const porResultado:
+      Record<string, number> = {};
+
+    for (
+      const fila
+      of resultadosAgrupados
+    ) {
+      const clave =
+        String(
+          fila.estado_resultado
+          || 'SIN ESTADO',
+        ).toUpperCase();
+
+      porResultado[clave] =
+        fila._count
+          .estado_resultado;
+    }
+
+    const totalEstudiantes =
+      Object.values(
+        porResultado,
+      ).reduce(
+        (
+          suma,
+          cantidad,
+        ) =>
+          suma + cantidad,
+        0,
+      );
+
+    const totalPages =
+      total > 0
+        ? Math.ceil(
+            total / limit,
+          )
+        : 0;
+
+    return {
+      items,
+
+      resumen: {
+        total_lotes:
+          total,
+
+        total_ejecuciones:
+          totalEjecuciones,
+
+        total_estudiantes:
+          totalEstudiantes,
+
+        por_estado:
+          porEstado,
+
+        por_resultado:
+          porResultado,
+      },
+
+      paginacion: {
+        page,
+        limit,
+        total,
+        total_pages:
+          totalPages,
+        has_previous:
+          page > 1,
+        has_next:
+          page < totalPages,
+      },
+    };
+  }
+
+
   async getLotePromocion(
     params: ScopeParams & {
       idLote: number;

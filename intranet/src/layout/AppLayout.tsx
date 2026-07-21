@@ -24,7 +24,7 @@ export default function AppLayout() {
         <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4 md:px-6 lg:px-8">
           <div
             key={location.pathname}
-            className="erp-route-shell w-full max-w-none erp-route-fade"
+            className="erp-route-shell erp-route-fade erp-route-stagger w-full max-w-none"
           >
             <Outlet />
           </div>

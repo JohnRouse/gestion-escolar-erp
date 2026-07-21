@@ -682,6 +682,97 @@ async deleteGrado(
 
 
   // ── PROMOCIÓN Y RENOVACIÓN MASIVA ────────────────────
+  @Get('lotes-promocion')
+  @UseGuards(
+    AuthGuard('jwt'),
+    RolesGuard,
+  )
+  @Roles(
+    'Admin',
+    'Secretaria',
+    'Director',
+  )
+  listarLotesPromocion(
+    @Request() req,
+    @Query('scope')
+    scope?: string,
+    @Query('colegio_id')
+    colegioId?: string,
+    @Query('q')
+    q?: string,
+    @Query('estado')
+    estado?: string,
+    @Query('anio_origen_id')
+    anioOrigenId?: string,
+    @Query('anio_destino_id')
+    anioDestinoId?: string,
+    @Query('seccion_id')
+    seccionId?: string,
+    @Query('usuario_id')
+    usuarioId?: string,
+    @Query('fecha_desde')
+    fechaDesde?: string,
+    @Query('fecha_hasta')
+    fechaHasta?: string,
+    @Query('page')
+    page?: string,
+    @Query('limit')
+    limit?: string,
+  ) {
+    return this.academicosService
+      .listarLotesPromocion({
+        userId:
+          req.user.userId,
+
+        rol:
+          req.user.rol,
+
+        scope,
+
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+
+        q,
+        estado,
+
+        anioOrigenId:
+          anioOrigenId
+            ? Number(anioOrigenId)
+            : undefined,
+
+        anioDestinoId:
+          anioDestinoId
+            ? Number(anioDestinoId)
+            : undefined,
+
+        seccionId:
+          seccionId
+            ? Number(seccionId)
+            : undefined,
+
+        usuarioId:
+          usuarioId
+            ? Number(usuarioId)
+            : undefined,
+
+        fechaDesde,
+        fechaHasta,
+
+        page:
+          page
+            ? Number(page)
+            : undefined,
+
+        limit:
+          limit
+            ? Number(limit)
+            : undefined,
+      });
+  }
+
+
   @Get('lotes-promocion/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria', 'Director')

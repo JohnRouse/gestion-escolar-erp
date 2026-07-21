@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import HistorialPromocionPanel from './HistorialPromocionPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -167,6 +168,31 @@ type LotePromocion = {
   estado_matricula_destino?: string | null;
   fecha_ejecucion?: string | null;
   fecha_reversion?: string | null;
+
+  colegio?: {
+    nombre?: string | null;
+    nombre_corto?: string | null;
+  } | null;
+
+  anio_origen?: {
+    nombre_anio?: string | null;
+  } | null;
+
+  anio_destino?: {
+    nombre_anio?: string | null;
+  } | null;
+
+  seccion_origen?: {
+    letra?: string | null;
+
+    grado?: {
+      nombre_grado?: string | null;
+
+      nivel?: {
+        nombre_nivel?: string | null;
+      } | null;
+    } | null;
+  } | null;
   ejecutado_por?: UsuarioPromocion | null;
   revertido_por?: UsuarioPromocion | null;
   detalles?: DetallePromocion[];
@@ -511,6 +537,8 @@ export default function PromocionMasivaPage() {
     queryString,
     scopeLabel,
     puedeVerConsolidado,
+    colegios,
+    activeScope,
   } = useSchool();
 
   const { showToast } =
@@ -577,6 +605,16 @@ export default function PromocionMasivaPage() {
   ] = useState<number | ''>('');
 
   const [
+    idNivelOrigenFiltro,
+    setIdNivelOrigenFiltro,
+  ] = useState<number | ''>('');
+
+  const [
+    idGradoOrigenFiltro,
+    setIdGradoOrigenFiltro,
+  ] = useState<number | ''>('');
+
+  const [
     idSeccionPromovidos,
     setIdSeccionPromovidos,
   ] = useState<number | ''>('');
@@ -624,6 +662,16 @@ export default function PromocionMasivaPage() {
   ] = useState(false);
 
   const [
+    mostrarDetalleActivo,
+    setMostrarDetalleActivo,
+  ] = useState(false);
+
+  const [
+    historialVersion,
+    setHistorialVersion,
+  ] = useState(0);
+
+  const [
     mensaje,
     setMensaje,
   ] = useState<string | null>(null);
@@ -667,16 +715,80 @@ export default function PromocionMasivaPage() {
     null,
   );
 
+  const aniosEnriquecidos =
+    useMemo<AnioLectivo[]>(
+      () =>
+        anios.map((anio) => {
+          const idColegio =
+            Number(
+              anio.id_colegio
+              || anio.colegio
+                ?.id_colegio
+              || 0,
+            );
+
+          const colegioContexto =
+            colegios.find(
+              (colegio) =>
+                Number(
+                  colegio.id_colegio,
+                )
+                === idColegio,
+            );
+
+          const tieneNombre =
+            Boolean(
+              anio.colegio?.nombre
+              || anio.colegio
+                ?.nombre_corto,
+            );
+
+          if (
+            tieneNombre
+            || !colegioContexto
+          ) {
+            return anio;
+          }
+
+          return {
+            ...anio,
+
+            id_colegio:
+              idColegio
+              || anio.id_colegio,
+
+            colegio: {
+              id_colegio:
+                colegioContexto
+                  .id_colegio,
+
+              nombre:
+                colegioContexto
+                  .nombre,
+
+              nombre_corto:
+                colegioContexto
+                  .nombre_corto,
+            },
+          };
+        }),
+      [
+        anios,
+        colegios,
+      ],
+    );
+
+
   const anioOrigen =
     useMemo(
       () =>
-        anios.find(
+        aniosEnriquecidos.find(
           (item) =>
             item.id_anio
             === idAnioOrigen,
         ) || null,
       [
-        anios,
+        aniosEnriquecidos,
         idAnioOrigen,
       ],
     );
@@ -685,7 +797,7 @@ export default function PromocionMasivaPage() {
     useMemo(() => {
       if (!anioOrigen) return [];
 
-      return anios
+      return aniosEnriquecidos
         .filter(
           (item) =>
             item.id_anio
@@ -704,8 +816,171 @@ export default function PromocionMasivaPage() {
         );
     }, [
       anioOrigen,
-      anios,
+      aniosEnriquecidos,
     ]);
+
+  const seccionesOrigenConAlumnos =
+    useMemo(
+      () =>
+        seccionesOrigen.filter(
+          (item) =>
+            Number(
+              item.ocupados || 0,
+            ) > 0,
+        ),
+      [
+        seccionesOrigen,
+      ],
+    );
+
+  const nivelesOrigen =
+    useMemo(() => {
+      const niveles =
+        new Map<
+          number,
+          string
+        >();
+
+      for (
+        const item
+        of seccionesOrigen
+      ) {
+        const nivel =
+          item.seccion.grado.nivel;
+
+        if (nivel?.id_nivel) {
+          niveles.set(
+            nivel.id_nivel,
+            nivel.nombre_nivel,
+          );
+        }
+      }
+
+      return Array.from(
+        niveles.entries(),
+      )
+        .map(
+          ([
+            id_nivel,
+            nombre_nivel,
+          ]) => ({
+            id_nivel,
+            nombre_nivel,
+          }),
+        )
+        .sort(
+          (a, b) =>
+            a.nombre_nivel.localeCompare(
+              b.nombre_nivel,
+              'es',
+            ),
+        );
+    }, [
+      seccionesOrigen,
+    ]);
+
+  const gradosOrigenFiltro =
+    useMemo(() => {
+      const grados =
+        new Map<
+          number,
+          string
+        >();
+
+      for (
+        const item
+        of seccionesOrigen
+      ) {
+        const grado =
+          item.seccion.grado;
+
+        if (
+          idNivelOrigenFiltro
+          && grado.nivel?.id_nivel
+            !== idNivelOrigenFiltro
+        ) {
+          continue;
+        }
+
+        grados.set(
+          grado.id_grado,
+          grado.nombre_grado,
+        );
+      }
+
+      return Array.from(
+        grados.entries(),
+      )
+        .map(
+          ([
+            id_grado,
+            nombre_grado,
+          ]) => ({
+            id_grado,
+            nombre_grado,
+          }),
+        );
+    }, [
+      idNivelOrigenFiltro,
+      seccionesOrigen,
+    ]);
+
+  const seccionesOrigenFiltro =
+    useMemo(
+      () =>
+        seccionesOrigen.filter(
+          (item) =>
+            (
+              !idNivelOrigenFiltro
+              || item.seccion.grado
+                .nivel?.id_nivel
+                === idNivelOrigenFiltro
+            )
+            && (
+              !idGradoOrigenFiltro
+              || item.seccion.id_grado
+                === idGradoOrigenFiltro
+            ),
+        ),
+      [
+        idGradoOrigenFiltro,
+        idNivelOrigenFiltro,
+        seccionesOrigen,
+      ],
+    );
+
+  const nombreColegioOrigen =
+    anioOrigen?.colegio?.nombre
+    || anioOrigen?.colegio
+      ?.nombre_corto
+    || null;
+
+
+  const mostrarColegioEnAnio =
+    activeScope.tipo === 'todos';
+
+  const etiquetaAnioPromocion = (
+    anio: AnioLectivo,
+  ) => {
+    const nombreColegio =
+      anio.colegio?.nombre
+      || anio.colegio
+        ?.nombre_corto
+      || '';
+
+    if (
+      !mostrarColegioEnAnio
+      || !nombreColegio
+    ) {
+      return anio.nombre_anio;
+    }
+
+    return (
+      `${anio.nombre_anio}`
+      + ` · ${nombreColegio}`
+    );
+  };
+
 
   const seccionOrigen =
     useMemo(
@@ -949,7 +1224,7 @@ export default function PromocionMasivaPage() {
 
           setResultado({
             message:
-              `Lote #${idLote} recuperado `
+              `Proceso N.° ${idLote} recuperado `
               + 'desde el último trabajo.',
 
             resumen:
@@ -1272,6 +1547,13 @@ export default function PromocionMasivaPage() {
           response.data,
         );
 
+        setMostrarDetalleActivo(true);
+
+        setHistorialVersion(
+          (value) =>
+            value + 1,
+        );
+
         const idLoteGenerado =
           Number(
             response.data
@@ -1354,7 +1636,7 @@ export default function PromocionMasivaPage() {
       setResultado({
         message:
           message
-          || `Lote #${idLote} actualizado.`,
+          || `Proceso N.° ${idLote} actualizado.`,
 
         resumen:
           construirResumenLote(
@@ -1364,6 +1646,13 @@ export default function PromocionMasivaPage() {
         lote:
           loteActualizado,
       });
+
+      setMostrarDetalleActivo(true);
+
+      setHistorialVersion(
+        (value) =>
+          value + 1,
+      );
 
       return loteActualizado;
     };
@@ -1643,6 +1932,7 @@ export default function PromocionMasivaPage() {
     setSeccionesOrigen([]);
     setSeccionesDestino([]);
     setResultado(null);
+    setMostrarDetalleActivo(false);
     setMensaje(null);
     setOperacionModal(null);
     setConfirmacionOperacion('');
@@ -1699,7 +1989,7 @@ export default function PromocionMasivaPage() {
         meta={[
           {
             label:
-              'Contexto activo',
+              'Ámbito de consulta',
             value:
               scopeLabel,
           },
@@ -1737,7 +2027,7 @@ export default function PromocionMasivaPage() {
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
-                  Configuración del lote
+                  Preparar promoción
                 </p>
 
                 <h2 className="mt-1 text-lg font-black text-slate-950">
@@ -1771,15 +2061,66 @@ export default function PromocionMasivaPage() {
             )}
 
             {loadingBase ? (
-              <div className="flex min-h-40 items-center justify-center gap-3 text-sm font-bold text-slate-500">
-                <Loader2
-                  size={18}
-                  className="animate-spin"
-                />
-                Cargando configuración académica…
+              <div
+                className="grid gap-5 lg:grid-cols-2"
+                aria-busy="true"
+                aria-label="Cargando configuración académica"
+              >
+                <span className="sr-only">
+                  Cargando configuración académica…
+                </span>
+
+                {[0, 1].map((item) => (
+                  <div
+                    key={item}
+                    className="erp-skeleton-block space-y-5 p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="erp-skeleton-circle" />
+
+                      <div className="flex-1 space-y-2">
+                        <div className="erp-skeleton-line w-36" />
+                        <div className="erp-skeleton-line w-56 max-w-full" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="erp-skeleton-line w-32" />
+                      <div className="erp-skeleton-control" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="erp-skeleton-line w-40" />
+                      <div className="erp-skeleton-control" />
+                    </div>
+
+                    {item === 1 && (
+                      <div className="space-y-2">
+                        <div className="erp-skeleton-line w-48" />
+                        <div className="erp-skeleton-control" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="grid gap-4 md:grid-cols-2 lg:col-span-2">
+                  <div className="space-y-2">
+                    <div className="erp-skeleton-line w-44" />
+                    <div className="erp-skeleton-control" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="erp-skeleton-line w-40" />
+                    <div className="erp-skeleton-control" />
+                  </div>
+                </div>
+
+                <div className="flex justify-end lg:col-span-2">
+                  <div className="erp-skeleton-control w-44" />
+                </div>
               </div>
             ) : (
-              <div className="grid gap-5 lg:grid-cols-2">
+              <div className="erp-content-ready grid gap-5 lg:grid-cols-2">
                 <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white">
@@ -1803,81 +2144,221 @@ export default function PromocionMasivaPage() {
 
                     <select
                       value={idAnioOrigen}
-                      onChange={(event) =>
-                        setIdAnioOrigen(
+                      onChange={(event) => {
+                        const value =
                           event.target.value
                             ? Number(
                                 event.target.value,
                               )
-                            : '',
-                        )
-                      }
+                            : '';
+
+                        setIdAnioOrigen(value);
+                        setIdNivelOrigenFiltro('');
+                        setIdGradoOrigenFiltro('');
+                        setIdSeccionOrigen('');
+                        setIdAnioDestino('');
+                        setIdSeccionPromovidos('');
+                        setIdSeccionPermanencia('');
+                      }}
                       className={inputClass}
                     >
                       <option value="">
                         Seleccionar año
                       </option>
 
-                      {anios.map((anio) => (
-                        <option
-                          key={anio.id_anio}
-                          value={anio.id_anio}
-                        >
-                          {anio.nombre_anio}
-                          {anio.colegio?.nombre_corto
-                            ? ` · ${anio.colegio.nombre_corto}`
-                            : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className={etiquetaClass}>
-                      Sección de origen
-                    </span>
-
-                    <select
-                      value={idSeccionOrigen}
-                      disabled={
-                        !idAnioOrigen
-                        || loadingOrigen
-                      }
-                      onChange={(event) =>
-                        setIdSeccionOrigen(
-                          event.target.value
-                            ? Number(
-                                event.target.value,
-                              )
-                            : '',
-                        )
-                      }
-                      className={inputClass}
-                    >
-                      <option value="">
-                        {loadingOrigen
-                          ? 'Cargando secciones…'
-                          : 'Seleccionar sección'}
-                      </option>
-
-                      {seccionesOrigen.map(
-                        (item) => (
+                      {aniosEnriquecidos.map(
+                        (anio) => (
                           <option
-                            key={
-                              item.id_seccion_anio
-                            }
-                            value={
-                              item.id_seccion
-                            }
+                            key={anio.id_anio}
+                            value={anio.id_anio}
                           >
-                            {nombreSeccion(item)}
-                            {' · '}
-                            {item.ocupados} alumno(s)
+                            {etiquetaAnioPromocion(
+                              anio,
+                            )}
                           </option>
                         ),
                       )}
                     </select>
+
+                    {nombreColegioOrigen && (
+                      <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-600">
+                          Institución seleccionada
+                        </p>
+
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                          {nombreColegioOrigen}
+                        </p>
+                      </div>
+                    )}
                   </label>
+
+                  <div>
+                    <span className={etiquetaClass}>
+                      Grupo de origen
+                    </span>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                          Nivel
+                        </span>
+
+                        <select
+                          value={
+                            idNivelOrigenFiltro
+                          }
+                          disabled={
+                            !idAnioOrigen
+                            || loadingOrigen
+                          }
+                          onChange={(event) => {
+                            const value =
+                              event.target.value
+                                ? Number(
+                                    event.target.value,
+                                  )
+                                : '';
+
+                            setIdNivelOrigenFiltro(
+                              value,
+                            );
+
+                            setIdGradoOrigenFiltro('');
+                            setIdSeccionOrigen('');
+                          }}
+                          className={inputClass}
+                        >
+                          <option value="">
+                            {loadingOrigen
+                              ? 'Cargando…'
+                              : 'Seleccionar nivel'}
+                          </option>
+
+                          {nivelesOrigen.map(
+                            (nivel) => (
+                              <option
+                                key={nivel.id_nivel}
+                                value={nivel.id_nivel}
+                              >
+                                {nivel.nombre_nivel}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                          Grado
+                        </span>
+
+                        <select
+                          value={
+                            idGradoOrigenFiltro
+                          }
+                          disabled={
+                            !idNivelOrigenFiltro
+                          }
+                          onChange={(event) => {
+                            const value =
+                              event.target.value
+                                ? Number(
+                                    event.target.value,
+                                  )
+                                : '';
+
+                            setIdGradoOrigenFiltro(
+                              value,
+                            );
+
+                            setIdSeccionOrigen('');
+                          }}
+                          className={inputClass}
+                        >
+                          <option value="">
+                            Seleccionar grado
+                          </option>
+
+                          {gradosOrigenFiltro.map(
+                            (grado) => (
+                              <option
+                                key={grado.id_grado}
+                                value={grado.id_grado}
+                              >
+                                {grado.nombre_grado}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                          Sección
+                        </span>
+
+                        <select
+                          value={idSeccionOrigen}
+                          disabled={
+                            !idGradoOrigenFiltro
+                          }
+                          onChange={(event) =>
+                            setIdSeccionOrigen(
+                              event.target.value
+                                ? Number(
+                                    event.target.value,
+                                  )
+                                : '',
+                            )
+                          }
+                          className={inputClass}
+                        >
+                          <option value="">
+                            Seleccionar sección
+                          </option>
+
+                          {seccionesOrigenFiltro.map(
+                            (item) => (
+                              <option
+                                key={
+                                  item.id_seccion_anio
+                                }
+                                value={
+                                  item.id_seccion
+                                }
+                                disabled={
+                                  Number(
+                                    item.ocupados
+                                    || 0,
+                                  ) <= 0
+                                }
+                              >
+                                Sección {item.seccion.letra}
+                                {' · '}
+                                {item.ocupados} alumno(s)
+                                {Number(
+                                  item.ocupados
+                                  || 0,
+                                ) <= 0
+                                  ? ' · Sin alumnos por promover'
+                                  : ''}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+                    </div>
+
+                    {idAnioOrigen
+                      && !loadingOrigen
+                      && seccionesOrigenConAlumnos
+                        .length === 0 && (
+                        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                          Este año no tiene alumnos activos pendientes de promoción. Los niveles y las secciones se muestran como referencia, pero las secciones vacías no pueden seleccionarse.
+                        </p>
+                      )}
+                  </div>
 
                   {seccionOrigen && (
                     <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
@@ -1902,7 +2383,7 @@ export default function PromocionMasivaPage() {
 
                     <div>
                       <h3 className="text-sm font-black text-slate-900">
-                        Destino del lote
+                        Destino de la promoción
                       </h3>
                       <p className="text-xs font-semibold text-slate-500">
                         Año futuro y secciones receptoras.
@@ -1939,12 +2420,30 @@ export default function PromocionMasivaPage() {
                             key={anio.id_anio}
                             value={anio.id_anio}
                           >
-                            {anio.nombre_anio}
+                            {etiquetaAnioPromocion(
+                              anio,
+                            )}
                           </option>
                         ),
                       )}
                     </select>
                   </label>
+
+                  {idAnioOrigen
+                    && aniosDestino.length === 0 && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <p className="text-sm font-black text-amber-900">
+                          No existe un año lectivo posterior habilitado para esta institución.
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold leading-5 text-amber-800">
+                          Crea el siguiente año lectivo antes de continuar con la promoción.
+                          Si el alumno pasa de 6.º de Primaria a 1.º de Secundaria,
+                          también debe estar configurada esa progresión académica.
+                        </p>
+                      </div>
+                    )}
+
 
                   {seccionOrigen && (
                     <div className="rounded-xl border border-blue-100 bg-white p-4">
@@ -2068,7 +2567,7 @@ export default function PromocionMasivaPage() {
                 <div className="lg:col-span-2 grid gap-4 md:grid-cols-2">
                   <label className="block">
                     <span className={etiquetaClass}>
-                      Estado administrativo de destino
+                      Estado de la nueva matrícula
                     </span>
 
                     <select
@@ -2094,7 +2593,7 @@ export default function PromocionMasivaPage() {
 
                   <label className="block">
                     <span className={etiquetaClass}>
-                      Observación del lote
+                      Observación del proceso
                     </span>
 
                     <input
@@ -2140,6 +2639,68 @@ export default function PromocionMasivaPage() {
             )}
           </section>
 
+          <HistorialPromocionPanel
+            token={token}
+            queryAcceso={queryAcceso}
+            refreshKey={historialVersion}
+            anios={aniosEnriquecidos}
+            mostrarColegioEnAnio={
+              mostrarColegioEnAnio
+            }
+            onContinueProceso={async (idLote) => {
+              setLoadingLote(true);
+              setMensaje(null);
+
+              try {
+                await cargarLoteActualizado(
+                  idLote,
+                  `Proceso N.° ${idLote} abierto para continuar su gestión.`,
+                );
+
+                window.localStorage.setItem(
+                  storageKey,
+                  String(idLote),
+                );
+
+                window.requestAnimationFrame(
+                  () => {
+                    document
+                      .getElementById(
+                        'detalle-promocion-activa',
+                      )
+                      ?.scrollIntoView({
+                        behavior:
+                          'smooth',
+                        block:
+                          'start',
+                      });
+                  },
+                );
+
+                showToast({
+                  type: 'success',
+                  title: 'Detalle cargado',
+                  message:
+                    `Se abrió el proceso N.° ${idLote}.`,
+                });
+              } catch (error: unknown) {
+                const errorMessage =
+                  mensajeErrorApi(error)
+                  || 'No se pudo abrir el lote seleccionado.';
+
+                setMensaje(errorMessage);
+
+                showToast({
+                  type: 'error',
+                  title: 'Proceso no disponible',
+                  message: errorMessage,
+                });
+              } finally {
+                setLoadingLote(false);
+              }
+            }}
+          />
+
           {loadingLote && !resultado && (
             <section className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">
               <Loader2
@@ -2151,17 +2712,21 @@ export default function PromocionMasivaPage() {
             </section>
           )}
 
-          {resultado && (
-            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          {resultado && mostrarDetalleActivo && (
+            <section
+              key={`${lote?.id_lote || 0}-${lote?.estado || 'sin-estado'}-${resumen?.procesados ?? 0}-${resumen?.revertidos ?? 0}`}
+              id="detalle-promocion-activa"
+              className="erp-action-enter space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
-                    Gestión del lote
+                    Detalle de la promoción
                   </p>
 
                   <div className="mt-1 flex flex-wrap items-center gap-3">
                     <h2 className="text-lg font-black text-slate-950">
-                      Lote #{lote?.id_lote || '—'}
+                      Proceso N.° {lote?.id_lote || '—'}
                     </h2>
 
                     <span
@@ -2179,6 +2744,34 @@ export default function PromocionMasivaPage() {
                   <p className="mt-1 text-sm font-semibold text-slate-500">
                     {resultado.message}
                   </p>
+
+                  {lote?.seccion_origen && (
+                    <p className="mt-1 text-sm font-bold text-slate-700">
+                      {[
+                        lote.seccion_origen
+                          ?.grado
+                          ?.nivel
+                          ?.nombre_nivel,
+                        lote.seccion_origen
+                          ?.grado
+                          ?.nombre_grado,
+                        lote.seccion_origen
+                          ?.letra
+                          ? `Sección ${lote.seccion_origen.letra}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                      {' · '}
+                      {lote.anio_origen
+                        ?.nombre_anio
+                        || 'Año de origen'}
+                      {' → '}
+                      {lote.anio_destino
+                        ?.nombre_anio
+                        || 'Año de destino'}
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -2194,7 +2787,7 @@ export default function PromocionMasivaPage() {
 
                       void cargarLoteActualizado(
                         idLote,
-                        `Lote #${idLote} actualizado.`,
+                        `Proceso N.° ${idLote} actualizado.`,
                       )
                         .catch((error: unknown) => {
                           setMensaje(
@@ -2217,7 +2810,7 @@ export default function PromocionMasivaPage() {
                         : ''
                     }
                   />
-                  Actualizar lote
+                  Actualizar detalle
                 </button>
               </div>
 
@@ -2340,7 +2933,7 @@ export default function PromocionMasivaPage() {
 
                 {detalles.length === 0 && (
                   <div className="p-8 text-center text-sm font-semibold text-slate-500">
-                    El lote no contiene estudiantes.
+                    El proceso no contiene estudiantes.
                   </div>
                 )}
               </div>
@@ -2381,8 +2974,8 @@ export default function PromocionMasivaPage() {
                         }
                       >
                         {puedeEjecutar
-                          ? 'El lote está listo para ejecutarse'
-                          : 'El lote todavía no puede ejecutarse'}
+                          ? 'La promoción está lista para ejecutarse'
+                          : 'La promoción todavía no puede ejecutarse'}
                       </p>
 
                       <p
@@ -2463,7 +3056,7 @@ export default function PromocionMasivaPage() {
 
                   <div>
                     <p className="text-sm font-black text-slate-900">
-                      Lote revertido
+                      Promoción revertida
                     </p>
 
                     <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
@@ -2600,7 +3193,7 @@ export default function PromocionMasivaPage() {
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">
-                  Lote #{lote?.id_lote || '—'}
+                  Proceso N.° {lote?.id_lote || '—'}
                 </p>
 
                 <h2
