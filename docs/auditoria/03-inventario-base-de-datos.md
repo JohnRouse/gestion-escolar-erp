@@ -1,0 +1,84 @@
+# Inventario inicial de base de datos
+
+Esquema revisado: `api/prisma/schema.prisma`.
+
+Modelos Prisma detectados: 76.
+
+## Modelos
+
+- `Rol`
+- `Persona`
+- `Usuario`
+- `Tenant`
+- `Colegio`
+- `UsuarioTenant`
+- `UsuarioColegio`
+- `ColegioNivel`
+- `ColegioGrado`
+- `Nivel`
+- `Grado`
+- `Aula`
+- `Seccion`
+- `AreaCurricular`
+- `Curso`
+- `AnioLectivo`
+- `Bimestre`
+- `Unidad`
+- `Apoderado`
+- `Docente`
+- `Estudiante`
+- `ApoderadoEstudiante`
+- `DocenteEspecialidad`
+- `Matricula`
+- `AsignacionDocente`
+- `TipoEvaluacion`
+- `EvaluacionDetalle`
+- `EscalaCalificacion`
+- `NotaAlumno`
+- `RegistroNotasUnidad`
+- `Asistencia`
+- `ConceptoPago`
+- `CampanaMatricula`
+- `PlanPensiones`
+- `PlanPensionesDetalle`
+- `CampanaDescuento`
+- `CronogramaPagos`
+- `PagoTransaccion`
+- `OrdenPago`
+- `PagoRecibido`
+- `PagoRecibidoHistorial`
+- `CobranzaGestion`
+- `Circular`
+- `CircularDestinatario`
+- `Adjunto`
+- `Notificacion`
+- `Horario`
+- `Staff`
+- `Cita`
+- `Evento`
+- `Album`
+- `Foto`
+- `ComentarioFoto`
+- `ReaccionFoto`
+- `ComentarioBimestral`
+- `CriterioTutoria`
+- `CalificacionTutoria`
+- `TokenFCM`
+- `RegistroNFC`
+- `PlantillaEvaluacion`
+- `PlantillaEvaluacionDetalle`
+- `EstudianteCodigoColegio`
+- `EstudianteEstadoHistorial`
+- `DatosCobroColegio`
+- `CierreAcademico`
+- `MatriculaSituacionHistorial`
+- `GradoProgresion`
+- `MovimientoEstudiante`
+- `ProcesoRecuperacion`
+- `RecuperacionAlumno`
+- `RecuperacionCompetencia`
+- `LotePromocion`
+- `LotePromocionEjecucion`
+- `LotePromocionEjecucionDetalle`
+- `LotePromocionDetalle`
+- `SeccionAnio`
