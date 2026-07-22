@@ -74,6 +74,7 @@ export default function PlantillasEvaluacionTab() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Plantilla | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [search, setSearch] = useState('');
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -290,18 +291,47 @@ export default function PlantillasEvaluacionTab() {
   };
 
   const ejecutarEliminarPlantilla = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const plantilla = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
-      await axios.delete(`/api/plantillas/${plantilla.id_plantilla}`, authHeader);
-      setPlantillas((current) => current.filter((item) => item.id_plantilla !== plantilla.id_plantilla));
-      setMensaje({ type: 'success', text: 'Plantilla eliminada correctamente.' });
-      showToast({ type: 'success', title: 'Plantilla eliminada', message: `"${plantilla.nombre}" fue eliminada correctamente.` });
+      await axios.delete(
+        `/api/plantillas/${plantilla.id_plantilla}`,
+        authHeader,
+      );
+
+      setPlantillas((current) =>
+        current.filter(
+          (item) =>
+            item.id_plantilla !==
+            plantilla.id_plantilla,
+        ),
+      );
+
+      setMensaje({
+        type: 'success',
+        text: 'Plantilla eliminada correctamente.',
+      });
+
+      showToast({
+        type: 'success',
+        title: 'Plantilla eliminada',
+        message:
+          `"${plantilla.nombre}" `
+          + 'fue eliminada correctamente.',
+      });
     } catch (error: any) {
-      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo eliminar la plantilla.' });
+      setMensaje({
+        type: 'error',
+        text:
+          error.response?.data?.message ||
+          'No se pudo eliminar la plantilla.',
+      });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -500,6 +530,7 @@ export default function PlantillasEvaluacionTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminarPlantilla}
       />

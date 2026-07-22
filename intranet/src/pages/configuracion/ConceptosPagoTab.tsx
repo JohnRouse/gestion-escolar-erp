@@ -107,6 +107,7 @@ export default function ConceptosPagoTab() {
   const [colegioId, setColegioId] = useState<number | ''>(colegioDefault);
   const [filtroColegioId, setFiltroColegioId] = useState<number | ''>(colegioDefault);
   const [confirmDelete, setConfirmDelete] = useState<Concepto | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const [anioId, setAnioId] = useState<number | ''>('');
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
@@ -333,38 +334,75 @@ export default function ConceptosPagoTab() {
   };
 
   const ejecutarEliminarConcepto = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const concepto = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
-      const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+      const params = new URLSearchParams(
+        queryString.startsWith('?')
+          ? queryString.slice(1)
+          : '',
+      );
 
       if (concepto.id_colegio) {
         params.delete('scope');
-        params.set('colegio_id', String(concepto.id_colegio));
+        params.set(
+          'colegio_id',
+          String(concepto.id_colegio),
+        );
       } else if (filtroColegioId) {
         params.delete('scope');
-        params.set('colegio_id', String(filtroColegioId));
-      } else if (activeScope.tipo === 'todos') {
+        params.set(
+          'colegio_id',
+          String(filtroColegioId),
+        );
+      } else if (
+        activeScope.tipo === 'todos'
+      ) {
         params.set('scope', 'all');
       }
 
-      const query = params.toString() ? `?${params.toString()}` : '';
-      await axios.delete(`/api/tesoreria/conceptos/${concepto.id_concepto}${query}`, authHeader);
-      setConceptos((prev) => prev.filter((item) => item.id_concepto !== concepto.id_concepto));
-      showToast({ type: 'success', title: 'Concepto eliminado', message: `"${concepto.nombre_concepto}" fue eliminado correctamente.` });
+      const query = params.toString()
+        ? `?${params.toString()}`
+        : '';
+
+      await axios.delete(
+        `/api/tesoreria/conceptos/${concepto.id_concepto}${query}`,
+        authHeader,
+      );
+
+      setConceptos((prev) =>
+        prev.filter(
+          (item) =>
+            item.id_concepto !==
+            concepto.id_concepto,
+        ),
+      );
+
+      showToast({
+        type: 'success',
+        title: 'Concepto eliminado',
+        message:
+          `"${concepto.nombre_concepto}" `
+          + 'fue eliminado correctamente.',
+      });
     } catch (err: any) {
       const message =
         err.response?.data?.message ||
-        'No se pudo eliminar el concepto. Revisa si ya tiene deudas, pagos o cronogramas relacionados.';
+        'No se pudo eliminar el concepto. '
+        + 'Revisa si ya tiene deudas, pagos '
+        + 'o cronogramas relacionados.';
 
       showToast({
         type: 'error',
         title: 'No se pudo eliminar',
         message,
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -721,6 +759,7 @@ export default function ConceptosPagoTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminarConcepto}
       />

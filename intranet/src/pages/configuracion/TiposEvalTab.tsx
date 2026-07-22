@@ -77,6 +77,7 @@ export default function TiposEvalTab() {
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TipoEval | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -194,20 +195,41 @@ export default function TiposEvalTab() {
   };
 
   const ejecutarEliminarTipo = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const tipo = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
-      await axios.delete(`/api/calificaciones/tipos-evaluacion/${tipo.id_tipo_eval}`, authHeader);
-      setTipos((prev) => prev.filter((item) => item.id_tipo_eval !== tipo.id_tipo_eval));
-      setMensaje({ type: 'success', text: 'Tipo de evaluación eliminado correctamente.' });
+      await axios.delete(
+        `/api/calificaciones/tipos-evaluacion/${tipo.id_tipo_eval}`,
+        authHeader,
+      );
+
+      setTipos((prev) =>
+        prev.filter(
+          (item) =>
+            item.id_tipo_eval !==
+            tipo.id_tipo_eval,
+        ),
+      );
+
+      setMensaje({
+        type: 'success',
+        text:
+          'Tipo de evaluación eliminado '
+          + 'correctamente.',
+      });
     } catch (err: any) {
       setMensaje({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudo eliminar.',
+        text:
+          err.response?.data?.message ||
+          'No se pudo eliminar.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -426,6 +448,7 @@ export default function TiposEvalTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminarTipo}
       />

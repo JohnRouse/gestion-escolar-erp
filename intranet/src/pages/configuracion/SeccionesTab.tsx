@@ -106,6 +106,7 @@ export default function SeccionesTab() {
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Seccion | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [docentes, setDocentes] = useState<DocenteTutor[]>([]);
   const [guardandoTutorId, setGuardandoTutorId] = useState<number | null>(null);
   const [tutorPendiente, setTutorPendiente] = useState<{
@@ -345,25 +346,46 @@ export default function SeccionesTab() {
   };
 
   const ejecutarEliminarSeccion = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const seccion = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
-      await axios.delete(`/api/academicos/secciones/${seccion.id_seccion}`, authHeader);
-      setSecciones((prev) => prev.filter((item) => item.id_seccion !== seccion.id_seccion));
-      setMensaje({ type: 'success', text: 'Sección eliminada correctamente.' });
+      await axios.delete(
+        `/api/academicos/secciones/${seccion.id_seccion}`,
+        authHeader,
+      );
+
+      setSecciones((prev) =>
+        prev.filter(
+          (item) =>
+            item.id_seccion !==
+            seccion.id_seccion,
+        ),
+      );
+
+      setMensaje({
+        type: 'success',
+        text: 'Sección eliminada correctamente.',
+      });
+
       showToast({
         type: 'success',
         title: 'Sección eliminada',
-        message: 'La sección fue retirada correctamente.',
+        message:
+          'La sección fue retirada correctamente.',
       });
     } catch (err: any) {
       setMensaje({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudo eliminar la sección.',
+        text:
+          err.response?.data?.message ||
+          'No se pudo eliminar la sección.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -827,6 +849,7 @@ export default function SeccionesTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminarSeccion}
       />

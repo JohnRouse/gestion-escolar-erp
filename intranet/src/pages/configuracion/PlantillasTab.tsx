@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   AlertCircle,
   BookOpenCheck,
@@ -116,6 +117,7 @@ export default function PlantillasTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [plantillaAEliminar, setPlantillaAEliminar] = useState<Plantilla | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje>(null);
 
   const [busqueda, setBusqueda] = useState('');
@@ -436,24 +438,49 @@ export default function PlantillasTab() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!token) return;
-    if (!window.confirm('¿Eliminar esta plantilla de evaluación?')) return;
+  const handleDelete = async () => {
+    if (
+      !token ||
+      !plantillaAEliminar ||
+      deletingId !== null
+    ) {
+      return;
+    }
 
-    setDeletingId(id);
+    const plantilla = plantillaAEliminar;
+
+    setDeletingId(plantilla.id_plantilla);
     setMensaje(null);
 
     try {
-      await axios.delete(`/api/plantillas/${id}`, authHeaders);
-      setPlantillas((prev) => prev.filter((plantilla) => plantilla.id_plantilla !== id));
-      setMensaje({ tipo: 'exito', texto: 'Plantilla eliminada correctamente.' });
+      await axios.delete(
+        `/api/plantillas/${plantilla.id_plantilla}`,
+        authHeaders,
+      );
+
+      setPlantillas((prev) =>
+        prev.filter(
+          (item) =>
+            item.id_plantilla !==
+            plantilla.id_plantilla,
+        ),
+      );
+
+      setMensaje({
+        tipo: 'exito',
+        texto:
+          'Plantilla eliminada correctamente.',
+      });
     } catch (err: any) {
       setMensaje({
         tipo: 'error',
-        texto: err.response?.data?.message || 'No se pudo eliminar la plantilla.',
+        texto:
+          err.response?.data?.message ||
+          'No se pudo eliminar la plantilla.',
       });
     } finally {
       setDeletingId(null);
+      setPlantillaAEliminar(null);
     }
   };
 
@@ -731,7 +758,7 @@ export default function PlantillasTab() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(plantilla.id_plantilla)}
+                            onClick={() => setPlantillaAEliminar(plantilla)}
                             disabled={deletingId === plantilla.id_plantilla}
                             className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
                             title="Eliminar plantilla"
@@ -1174,6 +1201,24 @@ export default function PlantillasTab() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(plantillaAEliminar)}
+        eyebrow="Plantillas de evaluación"
+        title={
+          plantillaAEliminar
+            ? `Eliminar plantilla "${plantillaAEliminar.nombre}"`
+            : 'Eliminar plantilla'
+        }
+        description="La plantilla se eliminará de forma definitiva. Si ya tiene información relacionada, el sistema puede impedir la operación para proteger el historial."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        loading={deletingId !== null}
+        onCancel={() =>
+          setPlantillaAEliminar(null)
+        }
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

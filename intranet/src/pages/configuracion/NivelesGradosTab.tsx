@@ -91,6 +91,7 @@ export default function NivelesGradosTab() {
     | { type: 'grado'; nivel: Nivel; grado: Grado }
     | null
   >(null);
+  const [confirming, setConfirming] = useState(false);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
@@ -264,6 +265,27 @@ export default function NivelesGradosTab() {
 
   const eliminarGrado = (nivel: Nivel, grado: Grado) => {
     setConfirmDelete({ type: 'grado', nivel, grado });
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!confirmDelete || confirming) return;
+
+    const item = confirmDelete;
+    setConfirming(true);
+
+    try {
+      if (item.type === 'grado') {
+        await ejecutarEliminarGrado(
+          item.nivel,
+          item.grado,
+        );
+      } else {
+        await ejecutarEliminarNivel(item.nivel);
+      }
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
+    }
   };
 
   if (loading) {
@@ -568,14 +590,9 @@ export default function NivelesGradosTab() {
         }
         tone="danger"
         confirmLabel="Sí, retirar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
-        onConfirm={async () => {
-          const item = confirmDelete;
-          setConfirmDelete(null);
-          if (!item) return;
-          if (item.type === 'grado') await ejecutarEliminarGrado(item.nivel, item.grado);
-          else await ejecutarEliminarNivel(item.nivel);
-        }}
+        onConfirm={confirmarEliminacion}
       />
     </div>
   );

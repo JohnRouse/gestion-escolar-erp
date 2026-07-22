@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
+import ConfirmDialog from '../components/ConfirmDialog';
 import {
   Plus,
   Trash2,
@@ -259,6 +260,8 @@ export default function NotasPage() {
   const [nuevaEvalTipoGrilla, setNuevaEvalTipoGrilla] = useState<TipoGrilla>('TRABAJO EN CLASE');
   const [evaluacionesModal, setEvaluacionesModal] = useState<EvaluacionModalItem[]>([]);
   const [guardandoModal, setGuardandoModal] = useState(false);
+  const [evaluacionAEliminarId, setEvaluacionAEliminarId] = useState<number | null>(null);
+  const [eliminandoEvaluacion, setEliminandoEvaluacion] = useState(false);
 
   // Estados de cierre/reapertura de registro (ya existentes)
   const [procesandoRegistro, setProcesandoRegistro] = useState(false);
@@ -842,10 +845,48 @@ export default function NotasPage() {
     if (confirmAction?.tipo === 'reabrir') reabrirRegistroNotas();
   };
 
-  const eliminarEvaluacion = async (idEval: number) => {
-    if (!confirm('¿Eliminar esta evaluación? Las notas asociadas se perderán.')) return;
-    if (!token) return;
-    try { await axios.delete(`/api/calificaciones/evaluaciones/${idEval}`, { headers: { Authorization: `Bearer ${token}` } }); cargarGrilla(); } catch (err: any) { alert(err.response?.data?.message || 'Error al eliminar'); }
+  const eliminarEvaluacion = async () => {
+    const idEval = evaluacionAEliminarId;
+
+    if (
+      !idEval ||
+      !token ||
+      eliminandoEvaluacion
+    ) {
+      return;
+    }
+
+    setEliminandoEvaluacion(true);
+    setMensaje(null);
+
+    try {
+      await axios.delete(
+        `/api/calificaciones/evaluaciones/${idEval}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      await cargarGrilla();
+
+      setMensaje({
+        tipo: 'exito',
+        texto:
+          'Evaluación eliminada correctamente.',
+      });
+    } catch (err: any) {
+      setMensaje({
+        tipo: 'error',
+        texto:
+          err.response?.data?.message ||
+          'No se pudo eliminar la evaluación.',
+      });
+    } finally {
+      setEliminandoEvaluacion(false);
+      setEvaluacionAEliminarId(null);
+    }
   };
 
   const imprimirGrilla = () => {
@@ -1324,7 +1365,7 @@ export default function NotasPage() {
                               {puedeGestionarEvaluaciones && (
                                 <button
                                   type="button"
-                                  onClick={() => eliminarEvaluacion(eva.id)}
+                                  onClick={() => setEvaluacionAEliminarId(eva.id)}
                                   className="no-print flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-300 opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100"
                                   title="Eliminar evaluación"
                                 >
@@ -1633,6 +1674,20 @@ export default function NotasPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={evaluacionAEliminarId !== null}
+        eyebrow="Registro de notas"
+        title="Eliminar evaluación"
+        description="Las notas asociadas a esta evaluación se perderán. Esta acción no se puede deshacer."
+        tone="danger"
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        loading={eliminandoEvaluacion}
+        onCancel={() =>
+          setEvaluacionAEliminarId(null)
+        }
+        onConfirm={eliminarEvaluacion}
+      />
     </div>
   );
 }
