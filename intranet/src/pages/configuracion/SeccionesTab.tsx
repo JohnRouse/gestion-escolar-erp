@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import CenteredFormModal from '../../components/CenteredFormModal';
 import {
   AlertCircle,
   Building2,
@@ -11,11 +12,9 @@ import {
   Loader2,
   Pencil,
   Plus,
-  Save,
   Trash2,
   UserRoundCheck,
   Users,
-  X,
 } from 'lucide-react';
 
 interface ColegioBasico {
@@ -744,74 +743,74 @@ export default function SeccionesTab() {
         </div>
       )}
 
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative w-full max-w-md rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.7)]">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-500">Sección</p>
-                <h3 className="mt-1 text-lg font-semibold text-gray-950">
-                  {modal.mode === 'edit' ? 'Editar sección' : 'Nueva sección'}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">{gradoActivo?.nombre_grado || 'Grado seleccionado'}</p>
-              </div>
-              <button type="button" onClick={closeModal} className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
-                <X size={18} />
-              </button>
-            </div>
+      <CenteredFormModal
+        open={Boolean(modal)}
+        eyebrow="Sección"
+        title={
+          modal?.mode === 'edit'
+            ? 'Editar sección'
+            : 'Nueva sección'
+        }
+        description={
+          gradoActivo?.nombre_grado
+            || 'Grado seleccionado'
+        }
+        message={
+          modal && mensaje
+            ? mensaje.text
+            : null
+        }
+        messageTone={mensaje?.type}
+        saving={saving}
+        submitLabel="Guardar"
+        maxWidthClassName="max-w-md"
+        onClose={closeModal}
+        onSubmit={handleSave}
+      >
+        <div className="space-y-4">
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-gray-500">
+              Letra o código de sección
+            </span>
 
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Letra o código de sección</label>
-                <input
-                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold uppercase text-gray-800 outline-none transition placeholder:normal-case placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-                  value={letra}
-                  onChange={(event) => setLetra(event.target.value.toUpperCase())}
-                  placeholder="Ej. A"
-                  maxLength={3}
-                  autoFocus
-                />
-              </div>
+            <input
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold uppercase text-gray-800 outline-none transition-colors duration-150 placeholder:normal-case placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
+              value={letra}
+              onChange={(event) =>
+                setLetra(
+                  event.target.value.toUpperCase(),
+                )
+              }
+              placeholder="Ej. A"
+              maxLength={3}
+              autoFocus
+            />
+          </label>
 
-              {modal.mode === 'create' && (
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Capacidad del aula</label>
-                  <input
-                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-                    value={capacidad}
-                    inputMode="numeric"
-                    onChange={(event) => setCapacidad(event.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="30"
-                  />
-                </div>
-              )}
+          {modal?.mode === 'create' && (
+            <label>
+              <span className="mb-1.5 block text-xs font-semibold text-gray-500">
+                Capacidad del aula
+              </span>
 
-              {mensaje && modal && (
-                <div
-                  className={`rounded-2xl border px-3 py-2 text-sm ${
-                    mensaje.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
-                  }`}
-                >
-                  {mensaje.text}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <button type="button" onClick={closeModal} className="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 transition hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button type="button" onClick={handleSave} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-70">
-                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {saving ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-          </div>
+              <input
+                className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
+                value={capacidad}
+                inputMode="numeric"
+                onChange={(event) =>
+                  setCapacidad(
+                    event.target.value.replace(
+                      /[^0-9]/g,
+                      '',
+                    ),
+                  )
+                }
+                placeholder="30"
+              />
+            </label>
+          )}
         </div>
-      )}
+      </CenteredFormModal>
 
       <ConfirmDialog
         open={Boolean(tutorPendiente)}
