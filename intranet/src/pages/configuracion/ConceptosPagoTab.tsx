@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import {
   AlertCircle,
   CalendarDays,
@@ -17,7 +18,6 @@ import {
   Search,
   Trash2,
   WalletCards,
-  X,
 } from 'lucide-react';
 
 interface Concepto {
@@ -86,6 +86,8 @@ export default function ConceptosPagoTab() {
   const { token } = useAuth();
   const { colegios, activeColegio, activeScope, tenant, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
+
+  const nombreInputRef = useRef<HTMLInputElement | null>(null);
 
   const colegioDefault =
     activeScope.tipo === 'colegio' && activeColegio?.id_colegio
@@ -615,142 +617,251 @@ export default function ConceptosPagoTab() {
         </div>
       )}
 
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative w-full max-w-xl rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.7)]">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-500">Concepto de pago</p>
-                <h3 className="mt-1 text-lg font-semibold text-gray-950">
-                  {modal.mode === 'edit' ? 'Editar concepto' : 'Nuevo concepto'}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">Se usará para generar cuentas por cobrar.</p>
-              </div>
-              <button type="button" onClick={closeModal} className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Colegio</label>
-                  <select
-                    value={colegioId}
-                    onChange={(event) => {
-                      const value = event.target.value ? Number(event.target.value) : '';
-                      setColegioId(value);
-                      setAnioId('');
-                      loadAnios(value);
-                    }}
-                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-                  >
-                    <option value="">Seleccionar colegio</option>
-                    {colegios.map((colegio) => (
-                      <option key={colegio.id_colegio} value={colegio.id_colegio}>
-                        {colegio.nombre || colegio.nombre_corto}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+      <AccessibleDialog
+        open={Boolean(modal)}
+        eyebrow="Concepto de pago"
+        title={
+          modal?.mode === 'edit'
+            ? 'Editar concepto'
+            : 'Nuevo concepto'
+        }
+        description="Se usará para generar cuentas por cobrar."
+        onClose={closeModal}
+        preventClose={saving}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar formulario de concepto"
+        initialFocusRef={nombreInputRef}
+        maxWidthClassName="max-w-xl"
+        bodyClassName="px-6 py-6"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Año lectivo</label>
-                  <select
-                    value={anioId}
-                    onChange={(event) => setAnioId(event.target.value ? Number(event.target.value) : '')}
-                    disabled={loadingAnios}
-                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 disabled:opacity-60"
-                  >
-                    <option value="">{loadingAnios ? 'Cargando...' : 'Seleccionar año'}</option>
-                    {aniosDisponibles.map((anio) => (
-                      <option key={anio.id_anio} value={anio.id_anio}>
-                        {anio.nombre_anio} · {anio.estado}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">
-                  Nombre
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const anio = aniosDisponibles.find((item) => item.id_anio === anioId);
-                      const year = anio?.nombre_anio?.match(/\d{4}/)?.[0] || new Date().getFullYear();
-                      setNombre(`Matrícula ${year}`);
-                      setTipoConcepto('MATRICULA');
-                      setEsPension(false);
-                    }}
-                    className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100"
-                  >
-                    <CalendarDays size={13} />
-                    Usar "Matrícula año"
-                  </button>
-                </label>
-                <input
-                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-                  value={nombre}
-                  onChange={(event) => setNombre(event.target.value)}
-                  placeholder="Ej. Pensión Abril"
-                  autoFocus
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors duration-150 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {saving ? (
+                <Loader2
+                  size={16}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
                 />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Monto base</label>
-                <div className="flex h-11 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 transition focus-within:border-accent-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-accent-500/10">
-                  <span className="flex items-center border-r border-gray-200 px-4 text-sm font-semibold text-gray-400">S/</span>
-                  <input
-                    className="min-w-0 flex-1 bg-transparent px-4 text-sm font-medium text-gray-800 outline-none"
-                    value={monto}
-                    inputMode="decimal"
-                    onChange={(event) => setMonto(event.target.value.replace(/[^0-9.,]/g, ''))}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Tipo de concepto</label>
-                <select
-                  value={tipoConcepto}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setTipoConcepto(value);
-                    setEsPension(value === 'PENSION');
-                  }}
-                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-                >
-                  <option value="MATRICULA">Matrícula</option>
-                  <option value="PENSION">Pensión</option>
-                  <option value="EXTRAORDINARIO">Extraordinario</option>
-                  <option value="OTRO">Otro</option>
-                </select>
-              </div>
-
-              {mensaje && modal && (
-                <div className={`rounded-2xl border px-3 py-2 text-sm ${mensaje.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
-                  {mensaje.text}
-                </div>
+              ) : (
+                <Save size={16} aria-hidden="true" />
               )}
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <button type="button" onClick={closeModal} className="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 transition hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button type="button" onClick={handleSave} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-70">
-                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {saving ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </div>
+              {saving ? 'Guardando...' : 'Guardar concepto'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+                Colegio
+              </span>
+
+              <select
+                value={colegioId}
+                onChange={(event) => {
+                  const value = event.target.value
+                    ? Number(event.target.value)
+                    : '';
+
+                  setColegioId(value);
+                  setAnioId('');
+                  void loadAnios(value);
+                }}
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 motion-reduce:transition-none"
+              >
+                <option value="">
+                  Seleccionar colegio
+                </option>
+
+                {colegios.map((colegio) => (
+                  <option
+                    key={colegio.id_colegio}
+                    value={colegio.id_colegio}
+                  >
+                    {colegio.nombre
+                      || colegio.nombre_corto}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+                Año lectivo
+              </span>
+
+              <select
+                value={anioId}
+                onChange={(event) =>
+                  setAnioId(
+                    event.target.value
+                      ? Number(event.target.value)
+                      : '',
+                  )
+                }
+                disabled={loadingAnios}
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
+              >
+                <option value="">
+                  {loadingAnios
+                    ? 'Cargando...'
+                    : 'Seleccionar año'}
+                </option>
+
+                {aniosDisponibles.map((anio) => (
+                  <option
+                    key={anio.id_anio}
+                    value={anio.id_anio}
+                  >
+                    {anio.nombre_anio} · {anio.estado}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+
+          <label>
+            <span className="mb-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+              Nombre
+
+              <button
+                type="button"
+                onClick={() => {
+                  const anio = aniosDisponibles.find(
+                    (item) =>
+                      item.id_anio === anioId,
+                  );
+
+                  const year =
+                    anio?.nombre_anio
+                      ?.match(/\d{4}/)?.[0]
+                    || new Date().getFullYear();
+
+                  setNombre(`Matrícula ${year}`);
+                  setTipoConcepto('MATRICULA');
+                  setEsPension(false);
+                }}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100 transition-colors duration-150 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 motion-reduce:transition-none"
+              >
+                <CalendarDays
+                  size={13}
+                  aria-hidden="true"
+                />
+                Usar “Matrícula año”
+              </button>
+            </span>
+
+            <input
+              ref={nombreInputRef}
+              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition-colors duration-150 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 motion-reduce:transition-none"
+              value={nombre}
+              onChange={(event) =>
+                setNombre(event.target.value)
+              }
+              placeholder="Ej. Pensión Abril"
+              autoFocus
+            />
+          </label>
+
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+              Monto base
+            </span>
+
+            <div className="flex h-11 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 transition-colors duration-150 focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10 motion-reduce:transition-none">
+              <span className="flex items-center border-r border-slate-200 px-4 text-sm font-semibold text-slate-500">
+                S/
+              </span>
+
+              <input
+                className="min-w-0 flex-1 bg-transparent px-4 text-sm font-medium text-slate-800 outline-none"
+                value={monto}
+                inputMode="decimal"
+                onChange={(event) =>
+                  setMonto(
+                    event.target.value.replace(
+                      /[^0-9.,]/g,
+                      '',
+                    ),
+                  )
+                }
+                placeholder="0.00"
+              />
+            </div>
+          </label>
+
+          <label>
+            <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+              Tipo de concepto
+            </span>
+
+            <select
+              value={tipoConcepto}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                setTipoConcepto(value);
+                setEsPension(value === 'PENSION');
+              }}
+              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 motion-reduce:transition-none"
+            >
+              <option value="MATRICULA">
+                Matrícula
+              </option>
+              <option value="PENSION">
+                Pensión
+              </option>
+              <option value="EXTRAORDINARIO">
+                Extraordinario
+              </option>
+              <option value="OTRO">
+                Otro
+              </option>
+            </select>
+          </label>
+
+          {mensaje && modal && (
+            <div
+              role={
+                mensaje.type === 'error'
+                  ? 'alert'
+                  : 'status'
+              }
+              aria-live={
+                mensaje.type === 'error'
+                  ? 'assertive'
+                  : 'polite'
+              }
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                mensaje.type === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {mensaje.text}
+            </div>
+          )}
         </div>
-      )}
+      </AccessibleDialog>
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}
