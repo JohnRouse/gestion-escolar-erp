@@ -108,6 +108,7 @@ export default function CriteriosTutoriaTab() {
   const [ordenEditado, setOrdenEditado] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<CriterioTutoria | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CriterioTutoria | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -325,13 +326,17 @@ export default function CriteriosTutoriaTab() {
   };
 
   const ejecutarEliminarCriterio = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const criterio = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
-      await axios.delete(`/api/tutoria/criterios/${criterio.id_criterio}${scopedQuery}`, authHeader);
+      await axios.delete(
+        `/api/tutoria/criterios/${criterio.id_criterio}${scopedQuery}`,
+        authHeader,
+      );
+
       await loadData();
 
       setMensaje({
@@ -342,28 +347,37 @@ export default function CriteriosTutoriaTab() {
       showToast({
         type: 'success',
         title: 'Criterio eliminado',
-        message: 'El indicador fue retirado de la configuración.',
+        message:
+          'El indicador fue retirado '
+          + 'de la configuración.',
       });
     } catch (err: any) {
       setMensaje({
         type: 'error',
         text:
           err.response?.data?.message ||
-          'No se pudo eliminar el criterio. Si ya tiene registros, desactívalo para conservar el historial.',
+          'No se pudo eliminar el criterio. '
+          + 'Si ya tiene registros, desactívalo '
+          + 'para conservar el historial.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
   const ejecutarToggle = async () => {
-    if (!confirmToggle) return;
+    if (!confirmToggle || confirming) return;
 
     const criterio = confirmToggle;
-    setConfirmToggle(null);
+    setConfirming(true);
 
     try {
       await axios.patch(
         `/api/tutoria/criterios/${criterio.id_criterio}${scopedQuery}`,
-        { activo: !criterio.activo },
+        {
+          activo: !criterio.activo,
+        },
         authHeader,
       );
 
@@ -371,13 +385,21 @@ export default function CriteriosTutoriaTab() {
 
       setMensaje({
         type: 'success',
-        text: criterio.activo ? 'Criterio desactivado correctamente.' : 'Criterio reactivado correctamente.',
+        text: criterio.activo
+          ? 'Criterio desactivado correctamente.'
+          : 'Criterio reactivado correctamente.',
       });
     } catch (err: any) {
       setMensaje({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudo actualizar el estado del criterio.',
+        text:
+          err.response?.data?.message ||
+          'No se pudo actualizar el estado '
+          + 'del criterio.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmToggle(null);
     }
   };
 
@@ -784,6 +806,7 @@ export default function CriteriosTutoriaTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={() => {
           void ejecutarEliminarCriterio();
@@ -802,6 +825,7 @@ export default function CriteriosTutoriaTab() {
         tone={confirmToggle?.activo ? 'warning' : 'neutral'}
         confirmLabel={confirmToggle?.activo ? 'Sí, desactivar' : 'Sí, reactivar'}
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmToggle(null)}
         onConfirm={() => {
           void ejecutarToggle();

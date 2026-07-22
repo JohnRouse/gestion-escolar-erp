@@ -130,6 +130,7 @@ export default function AsignacionesDocentesTab() {
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Asignacion | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
 
@@ -358,25 +359,39 @@ export default function AsignacionesDocentesTab() {
   };
 
   const ejecutarEliminarAsignacion = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const asignacion = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
       await axios.delete(
         `/api/academicos/asignaciones-docentes/${asignacion.id_asignacion}${queryString}`,
         authHeader,
       );
+
       setAsignaciones((prev) =>
-        prev.filter((item) => item.id_asignacion !== asignacion.id_asignacion),
+        prev.filter(
+          (item) =>
+            item.id_asignacion !==
+            asignacion.id_asignacion,
+        ),
       );
-      setMensaje({ type: 'success', text: 'Asignación eliminada correctamente.' });
+
+      setMensaje({
+        type: 'success',
+        text: 'Asignación eliminada correctamente.',
+      });
     } catch (error: any) {
       setMensaje({
         type: 'error',
-        text: error.response?.data?.message || 'No se pudo eliminar la asignación.',
+        text:
+          error.response?.data?.message ||
+          'No se pudo eliminar la asignación.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -574,6 +589,7 @@ export default function AsignacionesDocentesTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminarAsignacion}
       />

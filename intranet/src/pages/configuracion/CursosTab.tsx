@@ -145,6 +145,7 @@ export default function CursosTab() {
       | { type: 'curso'; curso: Curso }
       | null
     >(null);
+  const [confirming, setConfirming] = useState(false);
 
   const authHeader = useMemo(
     () => ({
@@ -375,10 +376,10 @@ export default function CursosTab() {
   };
 
   const ejecutarEliminar = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || confirming) return;
 
     const item = confirmDelete;
-    setConfirmDelete(null);
+    setConfirming(true);
 
     try {
       if (item.type === 'area') {
@@ -397,8 +398,7 @@ export default function CursosTab() {
         setCursos((current) =>
           current.filter(
             (curso) =>
-              curso.id_area !==
-                item.area.id_area &&
+              curso.id_area !== item.area.id_area &&
               curso.area?.nombre_area !==
                 item.area.nombre_area,
           ),
@@ -434,6 +434,9 @@ export default function CursosTab() {
           error.response?.data?.message ||
           'No se pudo eliminar el registro.',
       });
+    } finally {
+      setConfirming(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -836,6 +839,7 @@ export default function CursosTab() {
         tone="danger"
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
+        loading={confirming}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={ejecutarEliminar}
       />

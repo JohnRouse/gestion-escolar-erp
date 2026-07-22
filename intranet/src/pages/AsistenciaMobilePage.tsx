@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 type EstadoAsistencia = 'Presente' | 'Ausente' | 'Tardanza' | 'Justificado';
 
@@ -92,6 +93,10 @@ export default function AsistenciaMobilePage() {
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [offlineMessage, setOfflineMessage] = useState<string | null>(null);
+  const [continuacionPendiente, setContinuacionPendiente] = useState<{
+    firstPending: number;
+    done: number;
+  } | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -135,25 +140,48 @@ export default function AsistenciaMobilePage() {
     }
   };
 
-  const ubicarContinuacion = (items: AlumnoAsistencia[]) => {
+  const resolverContinuacion = (
+    continuar: boolean,
+  ) => {
+    if (!continuacionPendiente) return;
+
+    setCurrentIndex(
+      continuar
+        ? continuacionPendiente.firstPending
+        : 0,
+    );
+
+    setContinuacionPendiente(null);
+  };
+
+  const ubicarContinuacion = (
+    items: AlumnoAsistencia[],
+  ) => {
     if (items.length === 0) {
       setCurrentIndex(0);
       return;
     }
 
-    const firstPending = items.findIndex((alumno) => !alumno.registrado);
-    const done = items.filter((alumno) => alumno.registrado).length;
+    const firstPending = items.findIndex(
+      (alumno) => !alumno.registrado,
+    );
+
+    const done = items.filter(
+      (alumno) => alumno.registrado,
+    ).length;
 
     if (firstPending >= 0 && done > 0) {
-      const continuar = window.confirm(
-        `Ya registraste asistencia para ${done} alumno(s). ¿Deseas continuar desde el primer pendiente?`,
-      );
+      setContinuacionPendiente({
+        firstPending,
+        done,
+      });
 
-      setCurrentIndex(continuar ? firstPending : 0);
       return;
     }
 
-    setCurrentIndex(firstPending >= 0 ? firstPending : 0);
+    setCurrentIndex(
+      firstPending >= 0 ? firstPending : 0,
+    );
   };
 
   const cargarAsistencia = async () => {
@@ -738,6 +766,25 @@ export default function AsistenciaMobilePage() {
           </>
         )}
       </main>
+      <ConfirmDialog
+        open={Boolean(continuacionPendiente)}
+        eyebrow="Asistencia móvil"
+        title="Continuar asistencia pendiente"
+        description={
+          continuacionPendiente
+            ? `Ya registraste asistencia para ${continuacionPendiente.done} alumno(s). Puedes continuar desde el primer pendiente o comenzar nuevamente desde el primero.`
+            : ''
+        }
+        tone="neutral"
+        confirmLabel="Continuar pendiente"
+        cancelLabel="Empezar desde el primero"
+        onCancel={() =>
+          resolverContinuacion(false)
+        }
+        onConfirm={() =>
+          resolverContinuacion(true)
+        }
+      />
     </div>
   );
 }
