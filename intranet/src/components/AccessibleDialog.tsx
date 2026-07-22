@@ -170,8 +170,22 @@ export default function AccessibleDialog({
 
     const animationFrame =
       window.requestAnimationFrame(() => {
+        const activeElement =
+          document.activeElement instanceof
+            HTMLElement &&
+          dialog.contains(document.activeElement)
+            ? document.activeElement
+            : null;
+
+        const autoFocusElement =
+          dialog.querySelector<HTMLElement>(
+            '[autofocus]',
+          );
+
         const firstFocusable =
           initialFocusRef?.current ??
+          activeElement ??
+          autoFocusElement ??
           getFocusableElements(dialog)[0] ??
           dialog;
 
