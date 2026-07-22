@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import CenteredFormModal from '../../components/CenteredFormModal';
 
 interface ColegioBasico {
   id_colegio: number;
@@ -65,10 +66,10 @@ const panelClass =
   'rounded-[1.5rem] border border-slate-200/70 bg-white/95 shadow-[0_18px_60px_-48px_rgba(15,23,42,0.45)] ring-1 ring-white/70';
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300';
+  'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 motion-reduce:transition-none';
 
 const labelClass =
-  'mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
+  'mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500';
 
 const formatDate = (value?: string) => {
   if (!value) return 'Sin fecha';
@@ -88,6 +89,8 @@ export default function PeriodosUnidadesTab() {
   const [periodos, setPeriodos] = useState<Periodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [generando, setGenerando] = useState(false);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
@@ -331,8 +334,39 @@ export default function PeriodosUnidadesTab() {
     setConfirmGenerarOpen(true);
   };
 
+  const confirmarGeneracion = async () => {
+    if (generando) return;
+
+    await generarEstructura();
+    setConfirmGenerarOpen(false);
+  };
+
+  const abrirEdicion = (
+    siguiente: NonNullable<typeof editando>,
+  ) => {
+    setMensajeEdicion(null);
+    setEditando(siguiente);
+  };
+
+  const cerrarEdicion = () => {
+    if (guardandoEdicion) return;
+
+    setEditando(null);
+    setMensajeEdicion(null);
+  };
+
   const guardarEdicion = async () => {
-    if (!token || !editando) return;
+    if (
+      !token
+      || !editando
+      || guardandoEdicion
+    ) {
+      return;
+    }
+
+    setGuardandoEdicion(true);
+    setMensajeEdicion(null);
+
     try {
       const url =
         editando.tipo === 'periodo'
@@ -351,10 +385,23 @@ export default function PeriodosUnidadesTab() {
 
       setPeriodos(res.data?.periodos || []);
       setEditando(null);
+      setMensajeEdicion(null);
+
       await cargarPeriodos(idAnio);
-      showToast({ type: 'success', title: 'Cambios guardados', message: 'La estructura académica fue actualizada.' });
+
+      showToast({
+        type: 'success',
+        title: 'Cambios guardados',
+        message:
+          'La estructura académica fue actualizada.',
+      });
     } catch (error: any) {
-      setMensaje({ type: 'error', text: error.response?.data?.message || 'No se pudo guardar la edición.' });
+      setMensajeEdicion(
+        error.response?.data?.message
+        || 'No se pudo guardar la edición.',
+      );
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
@@ -649,7 +696,7 @@ export default function PeriodosUnidadesTab() {
                     <button
                       type="button"
                       onClick={() =>
-                        setEditando({
+                        abrirEdicion({
                           tipo: 'periodo',
                           id: periodo.id_bimestre,
                           nombre:
@@ -707,7 +754,7 @@ export default function PeriodosUnidadesTab() {
                           <div className="mt-4 flex justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => setEditando({
+                              onClick={() => abrirEdicion({
                                 tipo: 'unidad',
                                 id: unidad.id_unidad,
                                 nombre: unidad.nombre || unidad.label,
@@ -758,60 +805,98 @@ export default function PeriodosUnidadesTab() {
         tone={periodos.length > 0 ? 'warning' : 'neutral'}
         confirmLabel={periodos.length > 0 ? 'Sí, reemplazar' : 'Generar estructura'}
         loading={generando}
-        onCancel={() => setConfirmGenerarOpen(false)}
-        onConfirm={async () => {
-          setConfirmGenerarOpen(false);
-          await generarEstructura();
+        onCancel={() => {
+          if (!generando) {
+            setConfirmGenerarOpen(false);
+          }
         }}
+        onConfirm={confirmarGeneracion}
       />
 
-      {editando && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h5 className="text-sm font-black text-slate-950">
-              Editar {editando.tipo === 'periodo' ? 'periodo' : 'unidad'}
-            </h5>
-            <div className="mt-4 space-y-3">
-              <label className={labelClass}>Nombre</label>
-              <input
-                className={inputClass}
-                value={editando.nombre}
-                onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
-              />
-              <label className={labelClass}>Fecha inicio</label>
-              <input
-                type="date"
-                className={inputClass}
-                value={editando.fecha_inicio}
-                onChange={(e) => setEditando({ ...editando, fecha_inicio: e.target.value })}
-              />
-              <label className={labelClass}>Fecha fin</label>
-              <input
-                type="date"
-                className={inputClass}
-                value={editando.fecha_fin}
-                onChange={(e) => setEditando({ ...editando, fecha_fin: e.target.value })}
-              />
-            </div>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setEditando(null)}
-                className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={guardarEdicion}
-                className="inline-flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white"
-              >
-                Guardar cambios
-              </button>
-            </div>
-          </div>
+
+      <CenteredFormModal
+        open={Boolean(editando)}
+        eyebrow={
+          editando?.tipo === 'periodo'
+            ? 'Periodo académico'
+            : 'Unidad académica'
+        }
+        title={
+          editando?.tipo === 'periodo'
+            ? 'Editar periodo'
+            : 'Editar unidad'
+        }
+        description="Actualiza el nombre y las fechas de la estructura seleccionada."
+        message={mensajeEdicion}
+        messageTone="error"
+        saving={guardandoEdicion}
+        submitLabel="Guardar cambios"
+        maxWidthClassName="max-w-md"
+        onClose={cerrarEdicion}
+        onSubmit={guardarEdicion}
+      >
+        <div className="space-y-4">
+          <label>
+            <span className={labelClass}>
+              Nombre
+            </span>
+
+            <input
+              className={inputClass}
+              value={editando?.nombre || ''}
+              onChange={(event) => {
+                if (!editando) return;
+
+                setEditando({
+                  ...editando,
+                  nombre: event.target.value,
+                });
+              }}
+              autoFocus
+            />
+          </label>
+
+          <label>
+            <span className={labelClass}>
+              Fecha de inicio
+            </span>
+
+            <input
+              type="date"
+              className={inputClass}
+              value={editando?.fecha_inicio || ''}
+              onChange={(event) => {
+                if (!editando) return;
+
+                setEditando({
+                  ...editando,
+                  fecha_inicio: event.target.value,
+                });
+              }}
+            />
+          </label>
+
+          <label>
+            <span className={labelClass}>
+              Fecha de fin
+            </span>
+
+            <input
+              type="date"
+              className={inputClass}
+              value={editando?.fecha_fin || ''}
+              onChange={(event) => {
+                if (!editando) return;
+
+                setEditando({
+                  ...editando,
+                  fecha_fin: event.target.value,
+                });
+              }}
+            />
+          </label>
         </div>
-      )}
+      </CenteredFormModal>
     </div>
   );
 }
