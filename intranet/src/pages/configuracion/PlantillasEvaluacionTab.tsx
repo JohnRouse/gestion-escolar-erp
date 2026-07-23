@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import {
   AlertCircle,
   ArrowDown,
@@ -21,7 +21,6 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  X,
 } from 'lucide-react';
 
 type Alcance = 'institucion' | 'nivel' | 'grado' | 'seccion' | 'curso' | 'asignacion';
@@ -43,8 +42,8 @@ interface Preview { plantilla: { id_plantilla: number; nombre: string; evaluacio
 type ModalState = { mode: 'create' } | { mode: 'edit'; plantilla: Plantilla };
 
 const panelClass = 'rounded-[1.5rem] border border-slate-200/70 bg-white/95 shadow-[0_18px_60px_-48px_rgba(15,23,42,0.45)] ring-1 ring-white/70';
-const inputClass = 'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300';
-const labelClass = 'mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400';
+const inputClass = 'h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 motion-reduce:transition-none';
+const labelClass = 'mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500';
 
 const detalleVacio = (orden: number, tipoDefault?: number): PlantillaDetalle => ({
   id_tipo_eval: tipoDefault || 0,
@@ -57,6 +56,10 @@ export default function PlantillasEvaluacionTab() {
   const { token } = useAuth();
   const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
+
+  const nombrePlantillaInputRef = useRef<HTMLInputElement | null>(null);
+
+  const cancelarAplicacionRef = useRef<HTMLButtonElement | null>(null);
 
   const authHeader = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
@@ -426,102 +429,430 @@ export default function PlantillasEvaluacionTab() {
       <div className={`${panelClass} p-4 soft-fade-up`}><div className="relative max-w-md"><Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10" placeholder="Buscar plantilla, curso, nivel o evaluación..." value={search} onChange={(e)=>setSearch(e.target.value)}/></div></div>
       {plantillasFiltradas.length===0 ? <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center soft-fade-up`}><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400"><ClipboardList size={25}/></div><h4 className="text-base font-black text-slate-900">No hay plantillas para mostrar</h4><p className="mt-1 max-w-md text-sm text-slate-500">Crea una plantilla inicial para que pueda aplicarse a cursos, niveles o a toda una institución.</p></div> : <div className="grid gap-4 xl:grid-cols-2 soft-fade-up">{plantillasFiltradas.map((plantilla)=><article key={plantilla.id_plantilla} className={`${panelClass} overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)]`}><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4"><div className="min-w-0"><h4 className="truncate text-base font-black text-slate-950">{plantilla.nombre}</h4><p className="mt-1 text-sm text-slate-500">{plantilla.curso?.nombre_curso || plantilla.nivel?.nombre_nivel || 'Alcance general'}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={()=>openEdit(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><Pencil size={16}/></button><button type="button" onClick={()=>pedirEliminarPlantilla(plantilla)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={16}/></button></div></div><div className="space-y-2 px-5 py-4">{(plantilla.detalles||[]).slice().sort((a,b)=>a.orden-b.orden).map((detalle,index)=><div key={`${plantilla.id_plantilla}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100"><div><p className="text-sm font-bold text-slate-900">{String(index+1).padStart(2,'0')}. {detalle.descripcion}</p><p className="mt-0.5 text-xs font-semibold text-slate-400">{detalle.grupo_evaluacion || 'Trabajo en clase'} · {detalle.tipo?.nombre_tipo || 'Tipo no especificado'}</p></div></div>)}</div></article>)}</div>}
 
-      {modal && createPortal(<div className="carbon-config-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={closeModal}/><div className="carbon-config-modal-panel relative flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up"><div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5"><div><div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100"><ClipboardList size={13}/> {modal.mode==='edit'?'Editar plantilla':'Nueva plantilla'}</div><h2 className="mt-3 text-xl font-black text-slate-950">Plantilla de evaluación</h2><p className="mt-1 text-sm text-slate-500">Configura las columnas iniciales que usará Dirección al aplicar plantillas.</p></div><button type="button" onClick={closeModal} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X size={17}/></button></div><div className="space-y-5 overflow-y-auto px-6 py-5">{mensaje && modal && <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${mensaje.type==='error'?'bg-red-50 text-red-700 ring-1 ring-red-100':'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>{mensaje.text}</div>}<div className="grid gap-4 md:grid-cols-3"><label className="block md:col-span-3"><span className={labelClass}>Nombre de la plantilla</span><input className={inputClass} value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Ej. Plantilla general de Comunicación"/></label><label className="block"><span className={labelClass}>Nivel sugerido</span><select className={inputClass} value={idNivel} onChange={(e)=>setIdNivel(e.target.value)}><option value="">Todos los niveles</option>{niveles.map(n=><option key={n.id_nivel} value={n.id_nivel}>{n.nombre_nivel}</option>)}</select></label><label className="block md:col-span-2"><span className={labelClass}>Curso sugerido</span><select className={inputClass} value={idCurso} onChange={(e)=>setIdCurso(e.target.value)}><option value="">Todos los cursos</option>{cursos.map(c=><option key={c.id_curso} value={c.id_curso}>{c.nombre_curso}</option>)}</select></label></div><div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Evaluaciones iniciales</p><p className="mt-1 text-xs font-semibold text-slate-500">Estas columnas aparecerán en Registro de Notas cuando Dirección aplique la plantilla.</p></div><button type="button" onClick={addDetalle} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-white px-3 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"><Plus size={15}/> Agregar</button></div><div className="space-y-3">
-                  {detalles.map((detalle,index)=>(
-                    <div key={index} className="grid gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100 md:grid-cols-[72px_140px_140px_1fr_94px_44px]">
-                      <div className="flex h-11 items-center justify-center rounded-2xl bg-slate-50 text-sm font-black tabular-nums text-slate-700 ring-1 ring-slate-100">
-                        {String(index + 1).padStart(2, '0')}
-                      </div>
-                      <select className={inputClass} value={detalle.id_tipo_eval||''} onChange={(e)=>updateDetalle(index,{id_tipo_eval:Number(e.target.value)})}>
-                        <option value="">Tipo</option>
-                        {tipos.map(t=><option key={t.id_tipo_eval} value={t.id_tipo_eval}>{t.nombre_tipo}</option>)}
-                      </select>
-                      <select
-                        value={detalle.grupo_evaluacion || 'Trabajo en clase'}
-                        onChange={(event) =>
-                          setDetalles((prev) =>
-                            prev.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, grupo_evaluacion: event.target.value } : item,
-                            ),
-                          )
-                        }
-                        className={inputClass}
-                      >
-                        {gruposEvaluacion.map((grupo) => (
-                          <option key={grupo} value={grupo}>{grupo}</option>
-                        ))}
-                      </select>
-                      <input className={inputClass} value={detalle.descripcion} onChange={(e)=>updateDetalle(index,{descripcion:e.target.value})} placeholder={`Evaluación ${index + 1}: Cuaderno, Práctica 1, Examen...`}/>
-                      <div className="flex items-center justify-center gap-1">
-                        <button type="button" onClick={()=>moveDetalle(index,'up')} disabled={index===0} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30" title="Subir evaluación">
-                          <ArrowUp size={15}/>
-                        </button>
-                        <button type="button" onClick={()=>moveDetalle(index,'down')} disabled={index===detalles.length-1} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30" title="Bajar evaluación">
-                          <ArrowDown size={15}/>
-                        </button>
-                      </div>
-                      <button type="button" onClick={()=>removeDetalle(index)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-300 transition hover:bg-red-50 hover:text-red-500" disabled={detalles.length===1}>
-                        <Trash2 size={16}/>
-                      </button>
-                    </div>
-                  ))}
-                </div></div></div><div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end"><button type="button" onClick={closeModal} className="h-11 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200">Cancelar</button><button type="button" onClick={handleSave} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">{saving?<Loader2 size={17} className="animate-spin"/>:<Save size={17}/>} Guardar plantilla</button></div></div></div>, document.body)}
-      {confirmApplyOpen && preview && createPortal(
-        <div className="carbon-config-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={() => !applying && setConfirmApplyOpen(false)} />
-          <div className="carbon-config-modal-panel relative w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 soft-fade-up">
-            <div className="border-b border-slate-100 px-6 py-5">
-              <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1 text-xs font-black text-violet-700 ring-1 ring-violet-100">
-                <ShieldCheck size={13} /> Confirmar aplicación
-              </div>
-              <h3 className="mt-3 text-xl font-black tracking-[-0.02em] text-slate-950">Aplicar plantilla</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Se aplicará <strong>{preview.plantilla.nombre}</strong> a las asignaciones pendientes de la cobertura revisada.
+
+      <AccessibleDialog
+        open={Boolean(modal)}
+        eyebrow={
+          modal?.mode === 'edit'
+            ? 'Editar plantilla'
+            : 'Nueva plantilla'
+        }
+        title="Plantilla de evaluación"
+        description="Configura las columnas iniciales que usará Dirección al aplicar plantillas."
+        onClose={closeModal}
+        preventClose={saving}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar editor de plantilla"
+        initialFocusRef={nombrePlantillaInputRef}
+        maxWidthClassName="max-w-5xl"
+        bodyClassName="space-y-5 px-6 py-5"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {saving ? (
+                <Loader2
+                  size={17}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <Save size={17} aria-hidden="true" />
+              )}
+
+              {saving
+                ? 'Guardando...'
+                : 'Guardar plantilla'}
+            </button>
+          </>
+        }
+      >
+        {mensaje && modal && (
+          <div
+            role={
+              mensaje.type === 'error'
+                ? 'alert'
+                : 'status'
+            }
+            aria-live={
+              mensaje.type === 'error'
+                ? 'assertive'
+                : 'polite'
+            }
+            className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+              mensaje.type === 'error'
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            }`}
+          >
+            {mensaje.text}
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="block md:col-span-3">
+            <span className={labelClass}>
+              Nombre de la plantilla
+            </span>
+
+            <input
+              ref={nombrePlantillaInputRef}
+              className={inputClass}
+              value={nombre}
+              onChange={(event) =>
+                setNombre(event.target.value)
+              }
+              placeholder="Ej. Plantilla general de Comunicación"
+              autoFocus
+            />
+          </label>
+
+          <label className="block">
+            <span className={labelClass}>
+              Nivel sugerido
+            </span>
+
+            <select
+              className={inputClass}
+              value={idNivel}
+              onChange={(event) =>
+                setIdNivel(event.target.value)
+              }
+            >
+              <option value="">
+                Todos los niveles
+              </option>
+
+              {niveles.map((nivel) => (
+                <option
+                  key={nivel.id_nivel}
+                  value={nivel.id_nivel}
+                >
+                  {nivel.nombre_nivel}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block md:col-span-2">
+            <span className={labelClass}>
+              Curso sugerido
+            </span>
+
+            <select
+              className={inputClass}
+              value={idCurso}
+              onChange={(event) =>
+                setIdCurso(event.target.value)
+              }
+            >
+              <option value="">
+                Todos los cursos
+              </option>
+
+              {cursos.map((curso) => (
+                <option
+                  key={curso.id_curso}
+                  value={curso.id_curso}
+                >
+                  {curso.nombre_curso}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <section className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-black text-slate-950">
+                Evaluaciones iniciales
+              </h3>
+
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                Estas columnas aparecerán en Registro
+                de Notas cuando Dirección aplique la
+                plantilla.
               </p>
             </div>
 
-            <div className="grid gap-3 px-6 py-5 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Total</p>
-                <p className="mt-2 text-2xl font-black text-slate-950">{preview.cobertura.total}</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Cubiertas</p>
-                <p className="mt-2 text-2xl font-black text-emerald-700">{preview.cobertura.cubiertas}</p>
-              </div>
-              <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-600">Pendientes</p>
-                <p className="mt-2 text-2xl font-black text-amber-700">{preview.cobertura.faltantes}</p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-amber-50/80 px-5 py-4 mx-6 text-sm leading-6 text-amber-900 ring-1 ring-amber-100">
-              Al confirmar, el sistema creará las evaluaciones y las notas iniciales en <strong>00</strong> para los alumnos matriculados o activos.
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmApplyOpen(false)}
-                disabled={applying}
-                className="h-11 rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmarAplicacionPlantilla}
-                disabled={applying}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
-              >
-                {applying ? <Loader2 size={17} className="animate-spin"/> : <ShieldCheck size={17}/>}
-                {applying ? 'Aplicando...' : 'Sí, aplicar plantilla'}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={addDetalle}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 transition-colors duration-150 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transition-none"
+            >
+              <Plus size={15} aria-hidden="true" />
+              Agregar evaluación
+            </button>
           </div>
-        </div>,
-        document.body,
-      )}
+
+          <div className="space-y-3">
+            {detalles.map((detalle, index) => (
+              <div
+                key={index}
+                className="grid gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100 md:grid-cols-[72px_140px_140px_1fr_94px_44px]"
+              >
+                <div className="flex h-11 items-center justify-center rounded-2xl bg-slate-50 text-sm font-black tabular-nums text-slate-700 ring-1 ring-slate-100">
+                  {String(index + 1).padStart(
+                    2,
+                    '0',
+                  )}
+                </div>
+
+                <select
+                  className={inputClass}
+                  value={detalle.id_tipo_eval || ''}
+                  aria-label={`Tipo de evaluación ${index + 1}`}
+                  onChange={(event) =>
+                    updateDetalle(index, {
+                      id_tipo_eval: Number(
+                        event.target.value,
+                      ),
+                    })
+                  }
+                >
+                  <option value="">Tipo</option>
+
+                  {tipos.map((tipo) => (
+                    <option
+                      key={tipo.id_tipo_eval}
+                      value={tipo.id_tipo_eval}
+                    >
+                      {tipo.nombre_tipo}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={
+                    detalle.grupo_evaluacion
+                    || 'Trabajo en clase'
+                  }
+                  aria-label={`Grupo de evaluación ${index + 1}`}
+                  onChange={(event) =>
+                    setDetalles((prev) =>
+                      prev.map(
+                        (item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                grupo_evaluacion:
+                                  event.target.value,
+                              }
+                            : item,
+                      ),
+                    )
+                  }
+                  className={inputClass}
+                >
+                  {gruposEvaluacion.map((grupo) => (
+                    <option
+                      key={grupo}
+                      value={grupo}
+                    >
+                      {grupo}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  className={inputClass}
+                  value={detalle.descripcion}
+                  aria-label={`Descripción de evaluación ${index + 1}`}
+                  onChange={(event) =>
+                    updateDetalle(index, {
+                      descripcion:
+                        event.target.value,
+                    })
+                  }
+                  placeholder={`Evaluación ${index + 1}: Cuaderno, Práctica 1, Examen...`}
+                />
+
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      moveDetalle(index, 'up')
+                    }
+                    disabled={index === 0}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors duration-150 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none"
+                    title="Subir evaluación"
+                    aria-label={`Subir evaluación ${index + 1}`}
+                  >
+                    <ArrowUp
+                      size={15}
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      moveDetalle(index, 'down')
+                    }
+                    disabled={
+                      index === detalles.length - 1
+                    }
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors duration-150 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none"
+                    title="Bajar evaluación"
+                    aria-label={`Bajar evaluación ${index + 1}`}
+                  >
+                    <ArrowDown
+                      size={15}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    removeDetalle(index)
+                  }
+                  disabled={detalles.length === 1}
+                  aria-label={`Eliminar evaluación ${index + 1}`}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition-colors duration-150 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none"
+                >
+                  <Trash2
+                    size={16}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </AccessibleDialog>
+
+
+      <AccessibleDialog
+        open={
+          confirmApplyOpen
+          && Boolean(preview)
+        }
+        eyebrow="Confirmar aplicación"
+        title="Aplicar plantilla"
+        description={
+          preview
+            ? `Se aplicará ${preview.plantilla.nombre} a las asignaciones pendientes de la cobertura revisada.`
+            : undefined
+        }
+        icon={
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+            <ShieldCheck
+              size={20}
+              aria-hidden="true"
+            />
+          </div>
+        }
+        onClose={() =>
+          setConfirmApplyOpen(false)
+        }
+        preventClose={applying}
+        closeOnEscape
+        closeOnOverlay
+        showCloseButton={false}
+        initialFocusRef={cancelarAplicacionRef}
+        maxWidthClassName="max-w-lg"
+        bodyClassName="space-y-5 px-6 py-5"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              ref={cancelarAplicacionRef}
+              type="button"
+              onClick={() =>
+                setConfirmApplyOpen(false)
+              }
+              disabled={applying}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={
+                confirmarAplicacionPlantilla
+              }
+              disabled={applying}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {applying ? (
+                <Loader2
+                  size={17}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <ShieldCheck
+                  size={17}
+                  aria-hidden="true"
+                />
+              )}
+
+              {applying
+                ? 'Aplicando...'
+                : 'Sí, aplicar plantilla'}
+            </button>
+          </>
+        }
+      >
+        {preview && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Total
+                </p>
+                <p className="mt-2 text-2xl font-black text-slate-950">
+                  {preview.cobertura.total}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">
+                  Cubiertas
+                </p>
+                <p className="mt-2 text-2xl font-black text-emerald-700">
+                  {preview.cobertura.cubiertas}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
+                  Pendientes
+                </p>
+                <p className="mt-2 text-2xl font-black text-amber-700">
+                  {preview.cobertura.faltantes}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold leading-6 text-amber-900">
+              Al confirmar, el sistema creará las
+              evaluaciones y las notas iniciales en
+              <strong> 00 </strong>
+              para los alumnos matriculados o activos.
+            </div>
+          </>
+        )}
+      </AccessibleDialog>
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}

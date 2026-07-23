@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -17,9 +16,9 @@ import {
   Trash2,
   ShieldCheck,
   UserRoundCheck,
-  X,
 } from 'lucide-react';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import CenteredFormModal from '../../components/CenteredFormModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -724,75 +723,56 @@ export default function CriteriosTutoriaTab() {
         </div>
       </section>
 
-      {modal && createPortal(
-        <div className="carbon-config-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" onClick={closeModal} />
+      <CenteredFormModal
+        open={Boolean(modal)}
+        eyebrow="Criterios de tutoría"
+        title={
+          modal?.mode === 'edit'
+            ? 'Editar criterio'
+            : 'Nuevo criterio'
+        }
+        description={
+          modal?.mode === 'edit'
+            ? modal.criterio.descripcion
+            : modal
+              ? tipoInfo[modal.tipo].label
+              : undefined
+        }
+        message={
+          modal && mensaje
+            ? mensaje.text
+            : null
+        }
+        messageTone={mensaje?.type}
+        saving={saving}
+        submitLabel="Guardar criterio"
+        maxWidthClassName="max-w-xl"
+        onClose={closeModal}
+        onSubmit={handleSave}
+      >
+        <div className="space-y-4">
+          <label>
+            <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Descripción del criterio
+            </span>
 
-          <section className="carbon-config-modal-panel relative w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.75)] ring-1 ring-slate-200/70">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  {modal.mode === 'edit' ? 'Editar criterio' : 'Nuevo criterio'}
-                </p>
-                <h3 className="mt-1 text-lg font-black text-slate-950">
-                  {modal.mode === 'edit'
-                    ? modal.criterio.descripcion
-                    : tipoInfo[modal.tipo].label}
-                </h3>
-              </div>
+            <textarea
+              value={descripcion}
+              onChange={(event) =>
+                setDescripcion(event.target.value)
+              }
+              rows={4}
+              autoFocus
+              className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50 motion-reduce:transition-none"
+              placeholder="Ej. Mantiene orden y buena presentación personal..."
+            />
+          </label>
 
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={saving}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-5">
-              <label>
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Descripción del criterio
-                </span>
-                <textarea
-                  value={descripcion}
-                  onChange={(event) => setDescripcion(event.target.value)}
-                  rows={4}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                  placeholder="Ej. Mantiene orden y buena presentación personal..."
-                />
-              </label>
-
-              <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
-                El orden se modifica desde la tabla con las flechas de subir y bajar.
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 bg-slate-50/70 px-5 py-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={saving}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-              >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Guardar criterio
-              </button>
-            </div>
-          </section>
-        </div>,
-        document.body,
-      )}
+          <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
+            El orden se modifica desde la tabla con las flechas de subir y bajar.
+          </div>
+        </div>
+      </CenteredFormModal>
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}
