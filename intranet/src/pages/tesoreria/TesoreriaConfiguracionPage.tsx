@@ -10,9 +10,9 @@ import {
   Save,
   Send,
   WalletCards,
-  X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -202,6 +202,7 @@ function ModalShell({
   eyebrow,
   description,
   children,
+  preventClose = false,
   onClose,
 }: {
   open: boolean;
@@ -209,35 +210,26 @@ function ModalShell({
   eyebrow: string;
   description: string;
   children: React.ReactNode;
+  preventClose?: boolean;
   onClose: () => void;
 }) {
-  if (!open) return null;
-
   return (
-    <div className="carbon-config-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
-      <div className="carbon-config-modal-panel relative max-h-[90vh] w-full max-w-3xl overflow-hidden bg-white animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">
-              {eyebrow}
-            </p>
-            <h3 className="mt-1 text-xl font-black text-slate-950">{title}</h3>
-            <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="max-h-[calc(90vh-120px)] overflow-y-auto px-6 py-5">
-          {children}
-        </div>
-      </div>
-    </div>
+    <AccessibleDialog
+      open={open}
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      onClose={onClose}
+      preventClose={preventClose}
+      closeOnEscape
+      closeOnOverlay
+      closeLabel="Cerrar formulario de tesorería"
+      maxWidthClassName="max-w-3xl"
+      panelClassName="carbon-config-modal-panel"
+      bodyClassName="max-h-[calc(90vh-120px)] overflow-y-auto px-6 py-5"
+    >
+      {children}
+    </AccessibleDialog>
   );
 }
 
@@ -1149,13 +1141,17 @@ export default function TesoreriaConfiguracionPage() {
         eyebrow="Cronograma de pensiones"
         title="Editar cronograma"
         description="Puedes corregir nombre, rango de meses, monto o días mientras el plan no tenga cronogramas generados para alumnos."
-        onClose={() => setEditPlan(null)}
+        preventClose={savingPlan}
+        onClose={() => {
+          if (!savingPlan) setEditPlan(null);
+        }}
       >
         {editPlan && (
           <div className="grid gap-4 md:grid-cols-2">
             <label>
               <span className={labelClass}>Nombre del plan</span>
               <input
+                autoFocus
                 className={inputClass}
                 value={editPlan.nombre}
                 onChange={(e) => setEditPlan((c: any) => ({ ...c, nombre: e.target.value }))}
@@ -1252,7 +1248,10 @@ export default function TesoreriaConfiguracionPage() {
             <div className="md:col-span-2 mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => setEditPlan(null)}
+                onClick={() => {
+                  if (!savingPlan) setEditPlan(null);
+                }}
+                disabled={savingPlan}
                 className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100"
               >
                 Cancelar
@@ -1276,13 +1275,17 @@ export default function TesoreriaConfiguracionPage() {
         eyebrow="Campaña o descuento"
         title="Editar campaña"
         description="Aquí puedes corregir si el descuento corresponde a matrícula, pensión u otro concepto."
-        onClose={() => setEditCampana(null)}
+        preventClose={savingCampana}
+        onClose={() => {
+          if (!savingCampana) setEditCampana(null);
+        }}
       >
         {editCampana && (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="md:col-span-2">
               <span className={labelClass}>Nombre</span>
               <input
+                autoFocus
                 className={inputClass}
                 value={editCampana.nombre}
                 onChange={(e) => setEditCampana((c: any) => ({ ...c, nombre: e.target.value }))}
@@ -1410,7 +1413,10 @@ export default function TesoreriaConfiguracionPage() {
             <div className="md:col-span-2 mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => setEditCampana(null)}
+                onClick={() => {
+                  if (!savingCampana) setEditCampana(null);
+                }}
+                disabled={savingCampana}
                 className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100"
               >
                 Cancelar
