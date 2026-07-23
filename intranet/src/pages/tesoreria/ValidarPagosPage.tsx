@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -12,6 +12,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -110,6 +111,8 @@ export default function ValidarPagosPage() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+
+  const revisarPagoButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const [form, setForm] = useState({
     medio_pago: 'Yape',
@@ -229,6 +232,12 @@ export default function ValidarPagosPage() {
     } finally {
       setRegistrando(false);
     }
+  };
+
+  const cerrarConfirmacion = () => {
+    if (confirmando) return;
+
+    setConfirmOpen(false);
   };
 
   const aplicarPago = async () => {
@@ -528,88 +537,134 @@ export default function ValidarPagosPage() {
         </section>
       )}
 
-      {/* Modal de confirmación */}
-      {confirmOpen && deuda && pagoRecibido && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg animate-modal-pop rounded-[30px] bg-white p-6 shadow-2xl shadow-slate-950/20">
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                <CheckCircle2 size={20} />
+      {/* Confirmación enriquecida del pago */}
+      <AccessibleDialog
+        open={Boolean(
+          confirmOpen
+          && deuda
+          && pagoRecibido
+        )}
+        eyebrow="Validación de pago"
+        title="Confirmar pago"
+        description="Revisa los datos antes de marcar la deuda como pagada o parcialmente pagada."
+        icon={
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <CheckCircle2
+              size={20}
+              aria-hidden="true"
+            />
+          </div>
+        }
+        onClose={cerrarConfirmacion}
+        preventClose={confirmando}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar confirmación de pago"
+        initialFocusRef={revisarPagoButtonRef}
+        maxWidthClassName="max-w-lg"
+        bodyClassName="px-6 py-6"
+        footerClassName="gap-2 px-6 py-5"
+        footer={
+          <>
+            <button
+              ref={revisarPagoButtonRef}
+              type="button"
+              onClick={cerrarConfirmacion}
+              disabled={confirmando}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Revisar otra vez
+            </button>
+
+            <button
+              type="button"
+              onClick={aplicarPago}
+              disabled={confirmando}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white transition-colors duration-150 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {confirmando ? (
+                <Loader2
+                  size={16}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <CheckCircle2
+                  size={16}
+                  aria-hidden="true"
+                />
+              )}
+
+              {confirmando
+                ? 'Confirmando...'
+                : 'Confirmar pago'}
+            </button>
+          </>
+        }
+      >
+        {deuda && pagoRecibido && (
+          <div className="grid gap-3">
+            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                Alumno
+              </p>
+
+              <p className="mt-1 text-sm font-black text-slate-900">
+                {alumnoNombre}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                Concepto
+              </p>
+
+              <p className="mt-1 text-sm font-black text-slate-900">
+                {deuda.concepto?.nombre_concepto
+                  || 'Pago pendiente'}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700 ring-1 ring-emerald-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+                  Monto recibido
+                </p>
+
+                <p className="mt-1 text-lg font-black">
+                  S/ {Number(
+                    form.monto_recibido || 0,
+                  ).toFixed(2)}
+                </p>
               </div>
-              <div>
-                <h2 className="text-lg font-black text-slate-950">Confirmar pago</h2>
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                  Revisa los datos antes de marcar la deuda como pagada o parcialmente pagada.
+
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  Medio
+                </p>
+
+                <p className="mt-1 text-lg font-black text-slate-900">
+                  {form.medio_pago}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3">
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  Alumno
-                </p>
-                <p className="mt-1 text-sm font-black text-slate-900">{alumnoNombre}</p>
-              </div>
+            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                Operación / pagador
+              </p>
 
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  Concepto
-                </p>
-                <p className="mt-1 text-sm font-black text-slate-900">
-                  {deuda.concepto?.nombre_concepto || 'Pago pendiente'}
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700 ring-1 ring-emerald-100">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
-                    Monto recibido
-                  </p>
-                  <p className="mt-1 text-lg font-black">S/ {Number(form.monto_recibido || 0).toFixed(2)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                    Medio
-                  </p>
-                  <p className="mt-1 text-lg font-black text-slate-900">{form.medio_pago}</p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  Operación / pagador
-                </p>
-                <p className="mt-1 text-sm font-black text-slate-900">
-                  {form.numero_operacion || 'Sin operación'} · {form.nombre_pagador || 'Sin nombre'}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(false)}
-                disabled={confirmando}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-100 px-5 text-sm font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-50"
-              >
-                Revisar otra vez
-              </button>
-
-              <button
-                type="button"
-                onClick={aplicarPago}
-                disabled={confirmando}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {confirmando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                Confirmar pago
-              </button>
+              <p className="mt-1 text-sm font-black text-slate-900">
+                {form.numero_operacion
+                  || 'Sin operación'}
+                {' · '}
+                {form.nombre_pagador
+                  || 'Sin nombre'}
+              </p>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AccessibleDialog>
     </div>
   );
 }
