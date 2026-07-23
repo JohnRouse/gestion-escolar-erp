@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import PersonAvatar from '../../components/PersonAvatar';
+import CenteredFormModal from '../../components/CenteredFormModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -513,6 +514,12 @@ export default function CobranzasPage() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const cerrarGestion = () => {
+    if (guardandoGestion) return;
+
+    setGestionDeuda(null);
+  };
+
   const guardarGestion = async () => {
     if (!token || !gestionDeuda) return;
 
@@ -919,40 +926,47 @@ export default function CobranzasPage() {
         />
       )}
 
-      {gestionDeuda && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
-          <div className="w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-100">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Seguimiento de cobranza
-                </p>
-                <h2 className="mt-2 text-xl font-black text-slate-950">
-                  {fullName(gestionDeuda.alumno)}
-                </h2>
-                <p className="mt-1 text-sm font-bold text-slate-500">
-                  {gestionDeuda.concepto} · {formatMoney(gestionDeuda.saldo)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setGestionDeuda(null)}
-                className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-black text-slate-500 ring-1 ring-slate-100"
-              >
-                Cerrar
-              </button>
-            </div>
-
-            <div className="mt-5 grid gap-3">
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+      <CenteredFormModal
+        open={Boolean(gestionDeuda)}
+        eyebrow="Seguimiento de cobranza"
+        title={
+          gestionDeuda
+            ? fullName(gestionDeuda.alumno)
+            : 'Registrar gestión'
+        }
+        description={
+          gestionDeuda
+            ? `${gestionDeuda.concepto} · ${formatMoney(gestionDeuda.saldo)}`
+            : 'Registra el resultado del contacto y el próximo seguimiento.'
+        }
+        saving={guardandoGestion}
+        submitLabel={
+          guardandoGestion
+            ? 'Guardando...'
+            : 'Guardar gestión'
+        }
+        cancelLabel="Cancelar"
+        maxWidthClassName="max-w-lg"
+        onClose={cerrarGestion}
+        onSubmit={guardarGestion}
+      >
+        {gestionDeuda && (
+          <div className="grid gap-4">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Canal
-              </label>
+              </span>
+
               <select
+                autoFocus
+                disabled={guardandoGestion}
                 className={inputClass}
                 value={gestionForm.canal}
                 onChange={(event) =>
-                  setGestionForm((current) => ({ ...current, canal: event.target.value }))
+                  setGestionForm((current) => ({
+                    ...current,
+                    canal: event.target.value,
+                  }))
                 }
               >
                 <option>WhatsApp</option>
@@ -960,15 +974,22 @@ export default function CobranzasPage() {
                 <option>Presencial</option>
                 <option>Correo</option>
               </select>
+            </label>
 
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Estado
-              </label>
+              </span>
+
               <select
+                disabled={guardandoGestion}
                 className={inputClass}
                 value={gestionForm.estado_contacto}
                 onChange={(event) =>
-                  setGestionForm((current) => ({ ...current, estado_contacto: event.target.value }))
+                  setGestionForm((current) => ({
+                    ...current,
+                    estado_contacto: event.target.value,
+                  }))
                 }
               >
                 <option>Mensaje enviado</option>
@@ -978,64 +999,68 @@ export default function CobranzasPage() {
                 <option>Requiere seguimiento</option>
                 <option>No contactar</option>
               </select>
+            </label>
 
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Fecha de próximo seguimiento
-              </label>
+              </span>
+
               <input
                 type="date"
+                disabled={guardandoGestion}
                 className={inputClass}
                 value={gestionForm.fecha_programada}
                 onChange={(event) =>
-                  setGestionForm((current) => ({ ...current, fecha_programada: event.target.value }))
+                  setGestionForm((current) => ({
+                    ...current,
+                    fecha_programada: event.target.value,
+                  }))
                 }
               />
+            </label>
 
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Mensaje a enviar / guardar
-              </label>
+              </span>
+
               <textarea
-                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                disabled={guardandoGestion}
+                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none"
                 placeholder="Edita el mensaje antes de guardarlo o enviarlo."
                 value={gestionForm.mensaje}
                 onChange={(event) =>
-                  setGestionForm((current) => ({ ...current, mensaje: event.target.value }))
+                  setGestionForm((current) => ({
+                    ...current,
+                    mensaje: event.target.value,
+                  }))
                 }
               />
+            </label>
 
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Observación
-              </label>
+              </span>
+
               <textarea
-                className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
+                disabled={guardandoGestion}
+                className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none"
                 placeholder="Ejemplo: se envió WhatsApp, indicó que pagará el viernes."
                 value={gestionForm.observacion}
                 onChange={(event) =>
-                  setGestionForm((current) => ({ ...current, observacion: event.target.value }))
+                  setGestionForm((current) => ({
+                    ...current,
+                    observacion: event.target.value,
+                  }))
                 }
               />
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setGestionDeuda(null)}
-                className="h-11 rounded-2xl bg-slate-50 px-4 text-sm font-black text-slate-600 ring-1 ring-slate-100"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={guardarGestion}
-                disabled={guardandoGestion}
-                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-60"
-              >
-                {guardandoGestion ? 'Guardando...' : 'Guardar gestión'}
-              </button>
-            </div>
+            </label>
           </div>
-        </div>
-      )}
+        )}
+      </CenteredFormModal>
+
     </div>
   );
 }
@@ -1067,4 +1092,3 @@ function Mini({
     </div>
   );
 }
-
