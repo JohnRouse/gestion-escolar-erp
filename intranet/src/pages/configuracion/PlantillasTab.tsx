@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import {
   AlertCircle,
   BookOpenCheck,
@@ -22,7 +23,6 @@ import {
   Search,
   Sparkles,
   Trash2,
-  X,
 } from 'lucide-react';
 
 interface TipoEval {
@@ -107,6 +107,10 @@ const scopeMeta: Record<Alcance, { label: string; help: string; icon: typeof Bui
 
 export default function PlantillasTab() {
   const { token } = useAuth();
+
+  const nombrePlantillaInputRef = useRef<HTMLInputElement | null>(null);
+
+  const anioAplicacionSelectRef = useRef<HTMLSelectElement | null>(null);
 
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
   const [tipos, setTipos] = useState<TipoEval[]>([]);
@@ -484,6 +488,14 @@ export default function PlantillasTab() {
     }
   };
 
+  const closeAplicarAnio = () => {
+    if (aplicandoAnio) return;
+
+    setShowAplicarAnio(false);
+    setPlantillaSeleccionada(null);
+    setAnioSeleccionado(null);
+  };
+
   const handleAplicarAnio = async () => {
     if (!anioSeleccionado || !plantillaSeleccionada || !token) return;
 
@@ -780,45 +792,71 @@ export default function PlantillasTab() {
         )}
       </section>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Cerrar modal"
-            className="absolute inset-0 bg-gray-950/45 backdrop-blur-sm"
-            onClick={closeModal}
-          />
 
-          <div className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_100px_-35px_rgba(15,23,42,0.55)]">
-            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 sm:p-6">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-semibold text-accent-600">
-                  <ClipboardList size={14} /> Plantilla anual
-                </span>
-                <h2 className="mt-3 text-xl font-semibold tracking-[-0.02em] text-gray-950">
-                  {editingId ? 'Editar plantilla' : 'Nueva plantilla'}
-                </h2>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-                  Configura la estructura que luego se usará para generar las columnas del registro de notas por unidad.
-                </p>
-              </div>
+      <AccessibleDialog
+        open={modalOpen}
+        eyebrow="Plantilla anual"
+        title={
+          editingId
+            ? 'Editar plantilla'
+            : 'Nueva plantilla'
+        }
+        description="Configura la estructura que luego se usará para generar las columnas del registro de notas por unidad."
+        onClose={closeModal}
+        preventClose={saving}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar editor de plantilla anual"
+        initialFocusRef={nombrePlantillaInputRef}
+        maxWidthClassName="max-w-5xl"
+        bodyClassName="p-0"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
 
-              <button
-                type="button"
-                onClick={closeModal}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl text-gray-400 transition hover:bg-gray-50 hover:text-gray-700"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors duration-150 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {saving ? (
+                <Loader2
+                  size={17}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <Save
+                  size={17}
+                  aria-hidden="true"
+                />
+              )}
 
-            <div className="grid flex-1 overflow-y-auto lg:grid-cols-[1.2fr_0.8fr]">
+              {saving
+                ? 'Guardando...'
+                : 'Guardar plantilla'}
+            </button>
+          </>
+        }
+      >
+        <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-5 p-5 sm:p-6">
                 <div className="rounded-[1.5rem] border border-gray-200 bg-white p-4 shadow-sm">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
                     Nombre de la plantilla
                   </label>
                   <input
+                    ref={nombrePlantillaInputRef}
+                    autoFocus
                     value={nombre}
                     onChange={(event) => setNombre(event.target.value)}
                     placeholder="Ej. Evaluaciones Primaria"
@@ -1110,97 +1148,112 @@ export default function PlantillasTab() {
                 </div>
               </aside>
             </div>
+      </AccessibleDialog>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-white p-5 sm:flex-row sm:justify-end sm:p-6">
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={saving}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-[0_16px_34px_-22px_rgba(76,110,245,0.95)] transition hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-                {saving ? 'Guardando...' : 'Guardar plantilla'}
-              </button>
-            </div>
+
+      <AccessibleDialog
+        open={
+          showAplicarAnio
+          && Boolean(plantillaSeleccionada)
+        }
+        eyebrow="Aplicación anual"
+        title="Aplicar plantilla al año"
+        description={
+          plantillaSeleccionada
+            ? `Se crearán las evaluaciones de ${plantillaSeleccionada.nombre} en las asignaciones del año seleccionado.`
+            : undefined
+        }
+        icon={
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+            <Calendar
+              size={20}
+              aria-hidden="true"
+            />
           </div>
-        </div>
-      )}
+        }
+        onClose={closeAplicarAnio}
+        preventClose={aplicandoAnio}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar aplicación anual"
+        initialFocusRef={anioAplicacionSelectRef}
+        maxWidthClassName="max-w-md"
+        bodyClassName="px-6 py-6"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeAplicarAnio}
+              disabled={aplicandoAnio}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
 
-      {showAplicarAnio && plantillaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Cerrar modal"
-            className="absolute inset-0 bg-gray-950/45 backdrop-blur-sm"
-            onClick={() => {
-              if (aplicandoAnio) return;
-              setShowAplicarAnio(false);
-              setPlantillaSeleccionada(null);
-              setAnioSeleccionado(null);
-            }}
-          />
-          <div className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-6 shadow-[0_30px_100px_-35px_rgba(15,23,42,0.55)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600">
-              <Calendar size={21} />
-            </div>
-            <h2 className="mt-4 text-xl font-bold text-gray-950">Aplicar plantilla al año</h2>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              Se crearán las evaluaciones de <span className="font-semibold text-gray-800">{plantillaSeleccionada.nombre}</span> en las asignaciones del año seleccionado.
-            </p>
+            <button
+              type="button"
+              onClick={handleAplicarAnio}
+              disabled={
+                !anioSeleccionado
+                || aplicandoAnio
+              }
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors duration-150 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+            >
+              {aplicandoAnio ? (
+                <Loader2
+                  size={17}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <Save
+                  size={17}
+                  aria-hidden="true"
+                />
+              )}
 
-            <div className="mt-5">
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-                Año lectivo
-              </label>
-              <select
-                className="h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 outline-none transition focus:border-accent-200 focus:ring-4 focus:ring-accent-50"
-                value={anioSeleccionado || ''}
-                onChange={(event) => setAnioSeleccionado(event.target.value ? Number(event.target.value) : null)}
-              >
-                <option value="">Seleccionar año</option>
-                {anios.map((anio) => (
-                  <option key={anio.id_anio} value={anio.id_anio}>
-                    {anio.nombre_anio} ({anio.estado})
-                  </option>
-                ))}
-              </select>
-            </div>
+              {aplicandoAnio
+                ? 'Aplicando...'
+                : 'Aplicar plantilla'}
+            </button>
+          </>
+        }
+      >
+        <label>
+          <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Año lectivo
+          </span>
 
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => {
-                  if (aplicandoAnio) return;
-                  setShowAplicarAnio(false);
-                  setPlantillaSeleccionada(null);
-                  setAnioSeleccionado(null);
-                }}
-                disabled={aplicandoAnio}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          <select
+            ref={anioAplicacionSelectRef}
+            value={anioSeleccionado || ''}
+            onChange={(event) =>
+              setAnioSeleccionado(
+                event.target.value
+                  ? Number(event.target.value)
+                  : null,
+              )
+            }
+            autoFocus
+            className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-colors duration-150 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 motion-reduce:transition-none"
+          >
+            <option value="">
+              Seleccionar año
+            </option>
+
+            {anios.map((anio) => (
+              <option
+                key={anio.id_anio}
+                value={anio.id_anio}
               >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleAplicarAnio}
-                disabled={!anioSeleccionado || aplicandoAnio}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-accent-500 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {aplicandoAnio ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-                {aplicandoAnio ? 'Aplicando...' : 'Aplicar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {anio.nombre_anio} ({anio.estado})
+              </option>
+            ))}
+          </select>
+        </label>
+      </AccessibleDialog>
+
       <ConfirmDialog
         open={Boolean(plantillaAEliminar)}
         eyebrow="Plantillas de evaluación"
