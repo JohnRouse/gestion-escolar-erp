@@ -18,6 +18,7 @@ type CenteredFormModalProps = {
   message?: string | null;
   messageTone?: MessageTone;
   saving?: boolean;
+  submitDisabled?: boolean;
   submitLabel?: string;
   cancelLabel?: string;
   maxWidthClassName?: string;
@@ -34,6 +35,7 @@ export default function CenteredFormModal({
   message,
   messageTone = 'info',
   saving = false,
+  submitDisabled = false,
   submitLabel = 'Guardar',
   cancelLabel = 'Cancelar',
   maxWidthClassName = 'max-w-2xl',
@@ -93,7 +95,7 @@ export default function CenteredFormModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={saving}
+            disabled={saving || submitDisabled}
             className="
               inline-flex h-11
               items-center justify-center
