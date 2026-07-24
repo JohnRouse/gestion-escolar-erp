@@ -8,7 +8,6 @@ import {
   Loader2,
   Search,
   Users,
-  X,
   GraduationCap,
   CheckCircle2,
   AlertTriangle,
@@ -25,6 +24,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import PageHeader from '../../components/PageHeader';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useToast } from '../../contexts/ToastContext';
 
 // ─── Interfaces ──────────────────────────────────────────
@@ -246,7 +246,6 @@ export default function MatriculasHistorialPage() {
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
   const [detalleTab, setDetalleTab] =
     useState<'general' | 'finanzas'>('general');
-  const [isClosing, setIsClosing] = useState(false);
 
   const [revisionEstado, setRevisionEstado] = useState('Aprobado');
   const [revisionObservacion, setRevisionObservacion] = useState('');
@@ -434,7 +433,6 @@ export default function MatriculasHistorialPage() {
     setDetalleOpen(true); setDetalleLoading(true); setDetalleMatricula(null);
     setCronogramaOpen(false);
     setDetalleTab('general');
-    setIsClosing(false);
     try {
       const res = await axios.get(
         `/api/academicos/matriculas/${idMatricula}/detalle${detalleQueryString}`,
@@ -488,16 +486,24 @@ export default function MatriculasHistorialPage() {
   }, [token, searchParams, autoOpenedMatriculaId]);
 
   const cerrarDetalle = useCallback(() => {
-    setIsClosing(true);
-    setTimeout(() => {
-      const next = new URLSearchParams(searchParams);
-      next.delete('matricula_id'); next.delete('colegio_id');
-      setSearchParams(next, { replace: true });
-      setDetalleOpen(false); setIsClosing(false);
-      setDetalleMatricula(null); setCronogramaOpen(false);
-      setMensajeRevision(null); setMensajePago(null);
-    }, 280);
-  }, [searchParams, setSearchParams]);
+    if (savingRevision || savingPago) return;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('matricula_id');
+    next.delete('colegio_id');
+
+    setSearchParams(next, { replace: true });
+    setDetalleOpen(false);
+    setDetalleMatricula(null);
+    setCronogramaOpen(false);
+    setMensajeRevision(null);
+    setMensajePago(null);
+  }, [
+    savingPago,
+    savingRevision,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const guardarRevision = async () => {
     if (!token || !detalleMatricula?.id_matricula) return;
@@ -614,30 +620,6 @@ export default function MatriculasHistorialPage() {
   // ═══════════════════════════════════════════════════════
   return (
     <div className="carbon-matricula-page w-full space-y-6">
-      {/* Animaciones del modal */}
-      <style>{`
-        @keyframes modalOverlayIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes modalOverlayOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes modalPanelIn {
-          from { opacity: 0; transform: translateY(24px) scale(0.97); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes modalPanelOut {
-          from { opacity: 1; transform: translateY(0) scale(1); }
-          to { opacity: 0; transform: translateY(16px) scale(0.98); }
-        }
-        .modal-overlay-enter { animation: modalOverlayIn 0.25s ease-out forwards; }
-        .modal-overlay-exit { animation: modalOverlayOut 0.2s ease-in forwards; }
-        .modal-panel-enter { animation: modalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .modal-panel-exit { animation: modalPanelOut 0.2s ease-in forwards; }
-      `}</style>
-
       <PageHeader
         eyebrow="Gestión académica"
         title="Historial de matrículas"
@@ -954,45 +936,32 @@ export default function MatriculasHistorialPage() {
       </div>
 
       {/* ══════════ Modal de detalle ══════════ */}
-      {detalleOpen && (
-        <div
-          className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center bg-neutral-950/40 backdrop-blur-sm px-4 py-6 ${
-            isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'
-          }`}
-          onClick={(e) => { if (e.target === e.currentTarget) cerrarDetalle(); }}
-        >
-          <div
-            className={`carbon-matricula-modal-panel w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${
-              isClosing ? 'modal-panel-exit' : 'modal-panel-enter'
-            }`}
-          >
-            {/* ── Header del modal ── */}
-            <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#0f62fe]/10 px-3 py-1 text-xs font-semibold text-neutral-800">
-                  <GraduationCap size={13} />
-                  Detalle de matrícula
-                </div>
-                <h3 className="mt-3 text-xl font-semibold text-neutral-900 tracking-tight">
-                  {detalleMatricula?.estudiante?.persona
-                    ? `${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
-                    : 'Cargando matrícula'}
-                </h3>
-                <p className="mt-1 text-sm text-neutral-400">
-                  Información académica, apoderados, procedencia y cronograma.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={cerrarDetalle}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 hover:text-slate-950"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* ── Body del modal ── */}
-            <div className="overflow-y-auto flex-1 p-6">
+      <AccessibleDialog
+        open={detalleOpen}
+        eyebrow="Gestión académica"
+        title={
+          detalleMatricula?.estudiante?.persona
+            ? `${detalleMatricula.estudiante.persona.nombres} ${detalleMatricula.estudiante.persona.apellido_paterno}`
+            : 'Detalle de matrícula'
+        }
+        description="Información académica, apoderados, procedencia, revisión y cronograma."
+        icon={
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0f62fe] ring-1 ring-blue-100">
+            <GraduationCap
+              size={20}
+              aria-hidden="true"
+            />
+          </div>
+        }
+        onClose={cerrarDetalle}
+        preventClose={savingRevision || savingPago}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar detalle de matrícula"
+        maxWidthClassName="max-w-5xl"
+        panelClassName="carbon-matricula-modal-panel max-h-[88vh]"
+        bodyClassName="overflow-y-auto px-6 py-6"
+      >
               {detalleLoading ? (
                 <div className="flex min-h-[260px] items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
@@ -1588,10 +1557,7 @@ export default function MatriculasHistorialPage() {
                   )}
                 </div>
               ) : null}
-            </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
     </div>
   );
 }
