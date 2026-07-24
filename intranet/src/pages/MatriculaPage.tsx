@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
 import CenteredFormModal from '../components/CenteredFormModal';
+import AccessibleDialog from '../components/AccessibleDialog';
 import { useToast } from '../contexts/ToastContext';
 import LocationSelects from '../components/LocationSelects';
 import {
@@ -308,7 +309,6 @@ export default function MatriculaPage() {
   const [observacionProcedencia, setObservacionProcedencia] = useState('');
 
   const modalActivo =
-    confirmOpen ||
     detalleOpen;
 
   useEffect(() => {
@@ -818,6 +818,12 @@ export default function MatriculaPage() {
 
     setClosingModal(null);
     setConfirmOpen(true);
+  };
+
+  const cerrarConfirmacion = () => {
+    if (matriculando) return;
+
+    setConfirmOpen(false);
   };
 
   const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (err: any) { const errorMessage = err.response?.data?.message || 'No se pudo registrar la matrícula.'; setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
@@ -2225,12 +2231,63 @@ export default function MatriculaPage() {
 
       {/* ── Modal confirmación ── */}
       {confirmOpen && alumno && seccionSeleccionada && (
-        <ViewportPortal>
-          <div className={`carbon-matricula-modal-overlay fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${closingModal === 'confirm' ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(setConfirmOpen, 'confirm'); }}>
-          <div className="absolute inset-0 bg-neutral-950/40" />
-          <div className={`carbon-matricula-modal-panel matricula-review-modal relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-neutral-200/50 flex flex-col max-h-[88vh] ${closingModal === 'confirm' ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
-            <ModalHead title={`Revisar ${operacionConArticulo}`} subtitle="Confirma la institución, sección, proceso y apoderados antes de guardar." onClose={() => closeModal(setConfirmOpen, 'confirm')} />
-            <div className="matricula-review-body space-y-4 p-6 overflow-y-auto">
+        <AccessibleDialog
+          open
+          eyebrow="Revisión final"
+          title={`Revisar ${operacionConArticulo}`}
+          description="Confirma la institución, sección, proceso y apoderados antes de guardar."
+          icon={
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0f62fe] ring-1 ring-blue-100">
+              <CheckCircle2
+                size={20}
+                aria-hidden="true"
+              />
+            </div>
+          }
+          onClose={cerrarConfirmacion}
+          preventClose={matriculando}
+          closeOnEscape
+          closeOnOverlay
+          closeLabel="Cerrar revisión de matrícula"
+          maxWidthClassName="max-w-3xl"
+          panelClassName="max-h-[88vh]"
+          bodyClassName="matricula-review-body space-y-4 !overflow-y-auto !p-6"
+          footerClassName="matricula-review-footer flex-col-reverse gap-3 sm:flex-row sm:justify-end"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={cerrarConfirmacion}
+                disabled={matriculando}
+                className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+              >
+                Corregir
+              </button>
+
+              <button
+                type="button"
+                onClick={registrarMatricula}
+                disabled={matriculando}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:scale-100 disabled:opacity-50 motion-reduce:transition-none"
+              >
+                {matriculando ? (
+                  <Loader2
+                    size={15}
+                    aria-hidden="true"
+                    className="animate-spin motion-reduce:animate-none"
+                  />
+                ) : (
+                  <CheckCircle2
+                    size={15}
+                    aria-hidden="true"
+                  />
+                )}
+
+                Confirmar {operacionConArticulo}
+              </button>
+            </>
+          }
+        >
               <div className="matricula-review-intro">
                 <span>
                   <CheckCircle2 size={22} />
@@ -2367,16 +2424,7 @@ export default function MatriculaPage() {
                   ))}
                 </div>
               </div>
-            </div>
-            <div className="matricula-review-footer flex flex-col-reverse gap-3 border-t border-neutral-100 sm:flex-row sm:justify-end flex-shrink-0">
-              <button type="button" onClick={() => closeModal(setConfirmOpen, 'confirm')} className="h-10 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50">Corregir</button>
-              <button type="button" onClick={registrarMatricula} disabled={matriculando} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#0f62fe] px-5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#0043ce] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100">
-                {matriculando ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmar {operacionConArticulo}
-              </button>
-            </div>
-          </div>
-          </div>
-        </ViewportPortal>
+        </AccessibleDialog>
       )}
 
       {/* ── Modales persona ── */}
@@ -2549,46 +2597,6 @@ function SectionBox({ title, children }: { title: string; children: React.ReactN
       <h4 className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">{title}</h4>
       <div className="mt-3">{children}</div>
     </div>
-  );
-}
-
-function ModalHead({
-  title,
-  subtitle,
-  eyebrow,
-  onClose,
-}: {
-  title: string;
-  subtitle: string;
-  eyebrow: string;
-  onClose: () => void;
-}) {
-  return (
-    <header className="matricula-persona-modal__header">
-      <div className="min-w-0">
-        <span className="matricula-persona-modal__eyebrow">
-          <UserPlus size={12} />
-          {eyebrow}
-        </span>
-
-        <h3 className="matricula-persona-modal__title">
-          {title}
-        </h3>
-
-        <p className="matricula-persona-modal__subtitle">
-          {subtitle}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        className="matricula-persona-modal__close"
-        aria-label="Cerrar modal"
-      >
-        <X size={17} />
-      </button>
-    </header>
   );
 }
 
