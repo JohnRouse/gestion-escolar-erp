@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
+import CenteredFormModal from '../components/CenteredFormModal';
 import { useToast } from '../contexts/ToastContext';
 import LocationSelects from '../components/LocationSelects';
 import {
@@ -307,10 +308,6 @@ export default function MatriculaPage() {
   const [observacionProcedencia, setObservacionProcedencia] = useState('');
 
   const modalActivo =
-    modalAlumno ||
-    modalApoderado ||
-    modalEditarAlumno ||
-    modalEditarApoderado ||
     confirmOpen ||
     detalleOpen;
 
@@ -643,9 +640,9 @@ export default function MatriculaPage() {
 
   const agregarApoderado = async (apoderado: Apoderado) => { if (!estudiante?.id_persona || !token) { setMensaje('Primero debes buscar o registrar un alumno.'); return; } if (apoderados.some((item) => item.id_persona === apoderado.id_persona)) { setMensaje('Este apoderado ya está vinculado al alumno.'); return; } const parentescoSeleccionado = apoderado.parentesco || parentesco || 'Apoderado'; try { await axios.post(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados`, { id_apoderado: apoderado.id_persona, parentesco: parentescoSeleccionado }, { headers: { Authorization: `Bearer ${token}` } }); setApoderados([...apoderados, { ...apoderado, parentesco: parentescoSeleccionado }]); setMensaje(null); showToast({ type: 'success', title: 'Apoderado vinculado', message: `${parentescoSeleccionado} agregado correctamente.` }); setApoderadoEncontrado(null); setApoderadoDni(''); setParentesco('Madre'); } catch (error: any) { setMensaje(error.response?.data?.message || 'No se pudo vincular el apoderado.'); } };
 
-  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; if (tipo === 'alumno' && !colegioDestinoDefinido) { setErrorPersona('Selecciona primero la institución destino. La ficha se guardará como borrador institucional hasta confirmar la matrícula.'); return; } const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? `/api/academicos/alumnos${colegioDestinoQuery}` : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); closeModal(setModalAlumno, 'alumno'); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Borrador guardado', message: 'La ficha quedó guardada como registro incompleto hasta confirmar la matrícula.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); closeModal(setModalApoderado, 'apoderado'); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
+  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; if (tipo === 'alumno' && !colegioDestinoDefinido) { setErrorPersona('Selecciona primero la institución destino. La ficha se guardará como borrador institucional hasta confirmar la matrícula.'); return; } const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? `/api/academicos/alumnos${colegioDestinoQuery}` : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); setModalAlumno(false); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Borrador guardado', message: 'La ficha quedó guardada como registro incompleto hasta confirmar la matrícula.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); setModalApoderado(false); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
 
-  const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); closeModal(setModalEditarAlumno, 'editarAlumno'); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el alumno.'); } finally { setSavingPersona(false); } };
+  const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setModalEditarAlumno(false); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el alumno.'); } finally { setSavingPersona(false); } };
 
   const editarApoderado = async () => {
     if (!token || !apoderadoEditando) return;
@@ -694,7 +691,7 @@ export default function MatriculaPage() {
         actual?.id_persona === actualizado.id_persona ? actualizado : actual,
       );
 
-      closeModal(setModalEditarApoderado, 'editarApoderado');
+      setModalEditarApoderado(false);
       setApoderadoEditando(null);
       setMensaje(null);
       showToast({
@@ -2383,9 +2380,9 @@ export default function MatriculaPage() {
       )}
 
       {/* ── Modales persona ── */}
-      {modalAlumno && <PersonaModal title="Nuevo alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalAlumno, 'alumno')} onSave={() => crearPersona('alumno')} aviso={avisoEdadFichaAlumno} alumno isClosing={closingModal === 'alumno'} />}
-      {modalEditarAlumno && <PersonaModal title="Editar alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalEditarAlumno, 'editarAlumno')} onSave={editarAlumno} alumno isClosing={closingModal === 'editarAlumno'} />}
-      {modalApoderado && <PersonaModal title="Nuevo apoderado" form={formApoderado} setForm={setFormApoderado} error={errorPersona} loading={savingPersona} onClose={() => closeModal(setModalApoderado, 'apoderado')} onSave={() => crearPersona('apoderado')} apoderado parentesco={parentesco} onParentescoChange={setParentesco} isClosing={closingModal === 'apoderado'} />}
+      {modalAlumno && <PersonaModal title="Nuevo alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => setModalAlumno(false)} onSave={() => crearPersona('alumno')} aviso={avisoEdadFichaAlumno} alumno />}
+      {modalEditarAlumno && <PersonaModal title="Editar alumno" form={formAlumno} setForm={setFormAlumno} error={errorPersona} loading={savingPersona} onClose={() => setModalEditarAlumno(false)} onSave={editarAlumno} alumno />}
+      {modalApoderado && <PersonaModal title="Nuevo apoderado" form={formApoderado} setForm={setFormApoderado} error={errorPersona} loading={savingPersona} onClose={() => setModalApoderado(false)} onSave={() => crearPersona('apoderado')} apoderado parentesco={parentesco} onParentescoChange={setParentesco} />}
       {modalEditarApoderado && (
         <PersonaModal
           title="Editar apoderado"
@@ -2393,12 +2390,11 @@ export default function MatriculaPage() {
           setForm={setFormApoderado}
           error={errorPersona}
           loading={savingPersona}
-          onClose={() => closeModal(setModalEditarApoderado, 'editarApoderado')}
+          onClose={() => setModalEditarApoderado(false)}
           onSave={editarApoderado}
           apoderado
           parentesco={parentesco}
           onParentescoChange={setParentesco}
-          isClosing={closingModal === 'editarApoderado'}
         />
       )}
 
@@ -2609,7 +2605,6 @@ function PersonaModal({
   aviso,
   parentesco,
   onParentescoChange,
-  isClosing,
 }: any) {
   const set = (
     key: keyof PersonaForm,
@@ -2620,12 +2615,6 @@ function PersonaModal({
       [key]: value,
     });
   };
-
-  if (
-    typeof document === 'undefined'
-  ) {
-    return null;
-  }
 
   const esEdicion =
     String(title)
@@ -2647,40 +2636,25 @@ function PersonaModal({
       ? 'Completa los datos generales y la ubicación del alumno.'
       : 'Completa los datos generales y la ubicación del apoderado.';
 
-  return createPortal(
-    (
-      <div
-        className={`carbon-matricula-modal-overlay matricula-persona-modal fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6 backdrop-blur-sm ${
-          isClosing
-            ? 'modal-overlay-exit'
-            : 'modal-overlay-enter'
-        }`}
-        onClick={(event) => {
-          if (
-            event.target
-            === event.currentTarget
-          ) {
-            onClose();
-          }
-        }}
-      >
-        <div className="absolute inset-0 bg-slate-950/55" />
-
-        <div
-          className={`matricula-persona-modal__panel ${
-            isClosing
-              ? 'modal-panel-exit'
-              : 'modal-panel-enter'
-          }`}
-        >
-          <ModalHead
-            title={title}
-            eyebrow={eyebrow}
-            subtitle={subtitle}
-            onClose={onClose}
-          />
-
-          <div className="matricula-persona-modal__body">
+  return (
+    <CenteredFormModal
+      open
+      eyebrow={eyebrow}
+      title={title}
+      description={subtitle}
+      message={error}
+      messageTone="error"
+      saving={loading}
+      submitLabel={
+        esEdicion
+          ? 'Guardar cambios'
+          : 'Guardar'
+      }
+      cancelLabel="Cancelar"
+      maxWidthClassName="max-w-[940px]"
+      onClose={onClose}
+      onSubmit={onSave}
+    >
             <div className="matricula-persona-form-grid">
               <Field
                 label="DNI"
@@ -2922,55 +2896,7 @@ function PersonaModal({
                 {aviso}
               </div>
             )}
-
-            {error && (
-              <div className="matricula-persona-message matricula-persona-message--error">
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
-
-                {error}
-              </div>
-            )}
-          </div>
-
-          <footer className="matricula-persona-modal__footer">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="matricula-persona-cancel"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={loading}
-              className="matricula-persona-save"
-            >
-              {loading ? (
-                <Loader2
-                  size={16}
-                  className="animate-spin"
-                />
-              ) : (
-                <CheckCircle2 size={16} />
-              )}
-
-              {loading
-                ? 'Guardando…'
-                : esEdicion
-                  ? 'Guardar cambios'
-                  : 'Guardar'}
-            </button>
-          </footer>
-        </div>
-      </div>
-    ),
-    document.body,
+    </CenteredFormModal>
   );
 }
 
