@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { CalendarClock, Copy, Loader2, MessageCircle, RefreshCw, Search } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import PersonAvatar from '../../components/PersonAvatar';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -173,6 +174,9 @@ export default function AgendaCobranzasPage() {
   const [historial, setHistorial] = useState<HistorialGestion[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
 
+  const mensajeTextoRef = useRef<HTMLTextAreaElement | null>(null);
+  const cerrarHistorialButtonRef = useRef<HTMLButtonElement | null>(null);
+
   const totalSaldo = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.deuda.saldo || 0), 0),
     [items],
@@ -249,6 +253,14 @@ export default function AgendaCobranzasPage() {
     setMensajeItem(item);
     setMensajeModo(modo);
     setMensajeTexto(buildMensaje(item));
+  };
+
+  const cerrarEditorMensaje = () => {
+    setMensajeItem(null);
+  };
+
+  const cerrarHistorial = () => {
+    setHistorialItem(null);
   };
 
   const confirmarMensaje = async () => {
@@ -528,171 +540,219 @@ export default function AgendaCobranzasPage() {
           ))}
       </section>
 
-      {/* Modal editor de mensaje */}
-      {mensajeItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4">
-          <div className="w-full max-w-2xl rounded-[30px] bg-white p-6 shadow-2xl ring-1 ring-slate-100">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Preparar mensaje
-                </p>
-                <h2 className="mt-2 text-xl font-black text-slate-950">
-                  {fullName(mensajeItem.alumno)}
-                </h2>
-                <p className="mt-1 text-sm font-bold text-slate-500">
-                  {mensajeItem.deuda.concepto} · {formatMoney(mensajeItem.deuda.saldo)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMensajeItem(null)}
-                className="rounded-2xl bg-slate-50 px-4 py-2 text-sm font-black text-slate-600 ring-1 ring-slate-100"
-              >
-                Cerrar
-              </button>
-            </div>
-
-            <textarea
-              className="mt-5 min-h-[280px] w-full rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm font-semibold leading-6 text-slate-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100"
-              value={mensajeTexto}
-              onChange={(event) => setMensajeTexto(event.target.value)}
+      {/* Editor accesible del mensaje */}
+      <AccessibleDialog
+        open={Boolean(mensajeItem)}
+        eyebrow="Preparar mensaje"
+        title={
+          mensajeItem
+            ? fullName(mensajeItem.alumno)
+            : 'Preparar mensaje'
+        }
+        description={
+          mensajeItem
+            ? `${mensajeItem.deuda.concepto} · ${formatMoney(mensajeItem.deuda.saldo)}`
+            : undefined
+        }
+        icon={
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <MessageCircle
+              size={19}
+              aria-hidden="true"
             />
-
-            <div className="mt-5 flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setMensajeItem(null)}
-                className="h-11 rounded-2xl bg-slate-50 px-5 text-sm font-black text-slate-600 ring-1 ring-slate-100"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={confirmarMensaje}
-                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white"
-              >
-                {mensajeModo === 'copiar' ? 'Copiar mensaje editado' : 'Abrir WhatsApp con este mensaje'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        }
+        onClose={cerrarEditorMensaje}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar editor de mensaje"
+        initialFocusRef={mensajeTextoRef}
+        maxWidthClassName="max-w-2xl"
+        bodyClassName="px-6 py-6"
+        footerClassName="gap-3 px-6 py-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={cerrarEditorMensaje}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transition-none"
+            >
+              Cancelar
+            </button>
 
-      {/* Modal de historial completo */}
-      {historialItem && (
-        <div className="agenda-history-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
-          <div className="agenda-history-modal max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-[30px] bg-white shadow-2xl ring-1 ring-slate-100">
-            <div className="agenda-history-header border-b border-slate-100 p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                    Historial de seguimiento
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    {fullName(historialItem.alumno)}
-                  </h2>
-                  <p className="mt-1 text-sm font-bold text-slate-500">
-                    {historialItem.deuda.concepto} · {formatMoney(historialItem.deuda.saldo)}
-                  </p>
-                  <p className="mt-1 text-xs font-black text-slate-400">
-                    Código: {historialItem.deuda.referencia_pago || 'Sin código'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setHistorialItem(null)}
-                  className="rounded-2xl bg-slate-50 px-4 py-2 text-sm font-black text-slate-600 ring-1 ring-slate-100"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            <div className="agenda-history-body max-h-[62vh] overflow-y-auto p-6">
-              {loadingHistorial && (
-                <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
-                  <Loader2 className="mx-auto mb-3 animate-spin" />
-                  Cargando historial...
-                </div>
+            <button
+              type="button"
+              onClick={confirmarMensaje}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transition-none"
+            >
+              {mensajeModo === 'copiar' ? (
+                <Copy
+                  size={16}
+                  aria-hidden="true"
+                />
+              ) : (
+                <MessageCircle
+                  size={16}
+                  aria-hidden="true"
+                />
               )}
 
-              {!loadingHistorial && !historial.length && (
-                <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
-                  Todavía no hay gestiones registradas.
-                </div>
-              )}
+              {mensajeModo === 'copiar'
+                ? 'Copiar mensaje editado'
+                : 'Abrir WhatsApp con este mensaje'}
+            </button>
+          </>
+        }
+      >
+        <label>
+          <span className="sr-only">
+            Mensaje de cobranza
+          </span>
 
-              {!loadingHistorial && historial.length > 0 && (
-                <div className="relative space-y-4">
-                  {historial.map((gestion, index) => (
-                    <div
-                      key={gestion.id_gestion}
-                      className="agenda-history-entry relative rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
-                              {gestion.canal}
-                            </span>
-                            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-100">
-                              {gestion.estado_contacto}
-                            </span>
-                            {index === 0 && (
-                              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
-                                Última gestión
-                              </span>
-                            )}
-                          </div>
+          <textarea
+            ref={mensajeTextoRef}
+            autoFocus
+            className="min-h-[280px] w-full rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm font-semibold leading-6 text-slate-700 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-100 motion-reduce:transition-none"
+            value={mensajeTexto}
+            onChange={(event) =>
+              setMensajeTexto(event.target.value)
+            }
+          />
+        </label>
+      </AccessibleDialog>
 
-                          <p className="mt-3 text-sm font-black text-slate-950">
-                            Registrado por: {nombreUsuarioGestion(gestion)}
-                          </p>
+      {/* Historial accesible de gestiones */}
+      <AccessibleDialog
+        open={Boolean(historialItem)}
+        eyebrow="Historial de seguimiento"
+        title={
+          historialItem
+            ? fullName(historialItem.alumno)
+            : 'Historial de seguimiento'
+        }
+        description={
+          historialItem
+            ? `${historialItem.deuda.concepto} · ${formatMoney(historialItem.deuda.saldo)} · Código: ${historialItem.deuda.referencia_pago || 'Sin código'}`
+            : undefined
+        }
+        icon={
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
+            <CalendarClock
+              size={19}
+              aria-hidden="true"
+            />
+          </div>
+        }
+        onClose={cerrarHistorial}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar historial de gestiones"
+        showCloseButton={false}
+        initialFocusRef={cerrarHistorialButtonRef}
+        maxWidthClassName="max-w-3xl"
+        bodyClassName="px-6 py-6"
+        footerClassName="px-6 py-5"
+        footer={
+          <button
+            ref={cerrarHistorialButtonRef}
+            type="button"
+            onClick={cerrarHistorial}
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 motion-reduce:transition-none"
+          >
+            Cerrar
+          </button>
+        }
+      >
+        {loadingHistorial && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500"
+          >
+            <Loader2
+              aria-hidden="true"
+              className="mx-auto mb-3 animate-spin motion-reduce:animate-none"
+            />
+            Cargando historial...
+          </div>
+        )}
 
-                          <p className="mt-1 text-xs font-bold text-slate-500">
-                            Fecha de gestión: {formatDateTime(gestion.fecha_gestion)}
-                          </p>
+        {!loadingHistorial && !historial.length && (
+          <div className="rounded-3xl bg-slate-50 p-8 text-center text-sm font-black text-slate-500">
+            Todavía no hay gestiones registradas.
+          </div>
+        )}
 
-                          <p className="mt-1 text-xs font-bold text-slate-500">
-                            Próximo seguimiento: {gestion.fecha_programada ? formatDate(gestion.fecha_programada) : 'Sin próximo seguimiento'}
-                          </p>
+        {!loadingHistorial && historial.length > 0 && (
+          <div className="relative space-y-4">
+            {historial.map((gestion, index) => (
+              <div
+                key={gestion.id_gestion}
+                className="agenda-history-entry relative rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-100"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 ring-1 ring-indigo-100">
+                        {gestion.canal}
+                      </span>
 
-                          {gestion.telefono && (
-                            <p className="mt-1 text-xs font-bold text-slate-500">
-                              Teléfono usado: {gestion.telefono}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-100">
+                        {gestion.estado_contacto}
+                      </span>
 
-                      {gestion.observacion && (
-                        <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-100">
-                          {gestion.observacion}
-                        </div>
-                      )}
-
-                      {gestion.mensaje && (
-                        <details className="agenda-history-message mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                          <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                            Ver mensaje enviado
-                          </summary>
-                          <pre className="mt-3 whitespace-pre-wrap text-xs font-semibold leading-5 text-slate-600">
-                            {gestion.mensaje}
-                          </pre>
-                        </details>
+                      {index === 0 && (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                          Última gestión
+                        </span>
                       )}
                     </div>
-                  ))}
+
+                    <p className="mt-3 text-sm font-black text-slate-950">
+                      Registrado por: {nombreUsuarioGestion(gestion)}
+                    </p>
+
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Fecha de gestión: {formatDateTime(gestion.fecha_gestion)}
+                    </p>
+
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Próximo seguimiento:{' '}
+                      {gestion.fecha_programada
+                        ? formatDate(gestion.fecha_programada)
+                        : 'Sin próximo seguimiento'}
+                    </p>
+
+                    {gestion.telefono && (
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        Teléfono usado: {gestion.telefono}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {gestion.observacion && (
+                  <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-slate-100">
+                    {gestion.observacion}
+                  </div>
+                )}
+
+                {gestion.mensaje && (
+                  <details className="agenda-history-message mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                    <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2">
+                      Ver mensaje enviado
+                    </summary>
+
+                    <pre className="mt-3 whitespace-pre-wrap text-xs font-semibold leading-5 text-slate-600">
+                      {gestion.mensaje}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </AccessibleDialog>
     </div>
   );
 }

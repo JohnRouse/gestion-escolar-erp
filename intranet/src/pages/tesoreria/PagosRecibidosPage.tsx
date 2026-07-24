@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CheckCircle2,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import PersonAvatar from '../../components/PersonAvatar';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -179,19 +179,7 @@ export default function PagosRecibidosPage() {
   const [historial, setHistorial] = useState<PagoRecibidoHistorial[]>([]);
   const [historialLoading, setHistorialLoading] = useState(false);
 
-  useEffect(() => {
-    if (!selected) return;
-
-    const previousOverflow =
-      document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow =
-        previousOverflow;
-    };
-  }, [selected]);
+  const cerrarDetalleButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const resumen = useMemo(() => {
     const total = pagos.reduce((sum, item) => sum + Number(item.monto_recibido || 0), 0);
@@ -256,6 +244,13 @@ export default function PagosRecibidosPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, queryString, q, estado, medio]);
+
+  const cerrarDetalle = () => {
+    if (saving) return;
+
+    setSelected(null);
+    setHistorial([]);
+  };
 
   const abrirDetalle = (pago: PagoRecibido) => {
     setSelected(pago);
@@ -530,33 +525,132 @@ export default function PagosRecibidosPage() {
         )}
       </section>
 
-      {selected &&
-        createPortal(
-          <div className="pagos-recibidos-modal-overlay fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
-            <div className="pagos-recibidos-modal-panel my-auto max-h-[calc(100vh-3rem)] w-full max-w-3xl animate-modal-pop overflow-y-auto rounded-[24px] bg-white p-4 shadow-2xl shadow-slate-950/25 ring-1 ring-slate-200 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
-                  <Smartphone size={20} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-950">Pago recibido #{selected.id_pago_recibido}</h2>
-                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">Identifica el pago con un código y luego confírmalo.</p>
-                </div>
-              </div>
+      <AccessibleDialog
+        open={Boolean(selected)}
+        eyebrow="Tesorería"
+        title={
+          selected
+            ? `Pago recibido #${selected.id_pago_recibido}`
+            : 'Pago recibido'
+        }
+        description="Identifica el pago con un código y luego confírmalo."
+        icon={
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+            <Smartphone
+              size={20}
+              aria-hidden="true"
+            />
+          </div>
+        }
+        onClose={cerrarDetalle}
+        preventClose={saving}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar detalle del pago recibido"
+        showCloseButton={false}
+        initialFocusRef={cerrarDetalleButtonRef}
+        maxWidthClassName="max-w-3xl"
+        panelClassName="pagos-recibidos-modal-panel"
+        bodyClassName="max-h-[calc(100vh-11rem)] overflow-y-auto px-4 py-5 sm:px-6"
+        footerClassName="flex-wrap gap-2 px-4 py-4 sm:px-6"
+        footer={
+          <>
+            <button
+              ref={cerrarDetalleButtonRef}
+              type="button"
+              onClick={cerrarDetalle}
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-black text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Cerrar
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setSelected(null);
-                  setHistorial([]);
-                }}
-                className="rounded-2xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-500 hover:bg-slate-200"
-              >
-                Cerrar
-              </button>
-            </div>
+            {selected
+              && selected.estado !== 'Aplicado'
+              && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      cambiarEstado('Observado')
+                    }
+                    disabled={saving}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-amber-50 px-4 text-sm font-black text-amber-700 ring-1 ring-amber-100 transition-colors duration-150 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+                  >
+                    <AlertCircle
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    Observar
+                  </button>
 
+                  <button
+                    type="button"
+                    onClick={() =>
+                      cambiarEstado('Rechazado')
+                    }
+                    disabled={saving}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-50 px-4 text-sm font-black text-rose-700 ring-1 ring-rose-100 transition-colors duration-150 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+                  >
+                    <XCircle
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    Rechazar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={identificar}
+                    disabled={saving}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 text-sm font-black text-white transition-colors duration-150 hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+                  >
+                    {saving ? (
+                      <Loader2
+                        size={16}
+                        aria-hidden="true"
+                        className="animate-spin motion-reduce:animate-none"
+                      />
+                    ) : (
+                      <ShieldCheck
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    )}
+                    Identificar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={aplicar}
+                    disabled={
+                      saving
+                      || !selected.id_cronograma
+                      || selected.estado === 'Reemplazado'
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white transition-colors duration-150 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 motion-reduce:transition-none"
+                  >
+                    {saving ? (
+                      <Loader2
+                        size={16}
+                        aria-hidden="true"
+                        className="animate-spin motion-reduce:animate-none"
+                      />
+                    ) : (
+                      <CheckCircle2
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    )}
+                    Confirmar pago
+                  </button>
+                </>
+              )}
+          </>
+        }
+      >
+        {selected && (
+          <>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               <Info label="Monto recibido" value={formatMoney(selected.monto_recibido)} />
               <Info label="Medio" value={selected.medio_pago} />
@@ -725,7 +819,7 @@ export default function PagosRecibidosPage() {
                   value={referencia}
                   onChange={(event) => setReferencia(event.target.value)}
                   placeholder="Ej. SMV-PG-2027-000001"
-                  disabled={selected.estado === 'Aplicado'}
+                  disabled={saving || selected.estado === 'Aplicado'}
                 />
               </label>
 
@@ -736,40 +830,13 @@ export default function PagosRecibidosPage() {
                   value={observacion}
                   onChange={(event) => setObservacion(event.target.value)}
                   placeholder="Ej. El padre envió captura por WhatsApp."
-                  disabled={selected.estado === 'Aplicado'}
+                  disabled={saving || selected.estado === 'Aplicado'}
                 />
               </label>
             </div>
-
-            <div className="-mx-4 mt-6 flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:-mx-6 sm:px-6">
-              {selected.estado !== 'Aplicado' && (
-                <>
-                  <button type="button" onClick={() => cambiarEstado('Observado')} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 text-sm font-black text-amber-700 ring-1 ring-amber-100 transition hover:bg-amber-100 disabled:opacity-50">
-                    <AlertCircle size={16} />
-                    Observar
-                  </button>
-
-                  <button type="button" onClick={() => cambiarEstado('Rechazado')} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 text-sm font-black text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:opacity-50">
-                    <XCircle size={16} />
-                    Rechazar
-                  </button>
-
-                  <button type="button" onClick={identificar} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-sky-600 px-4 text-sm font-black text-white transition hover:bg-sky-700 disabled:opacity-50">
-                    {saving ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                    Identificar
-                  </button>
-
-                  <button type="button" onClick={aplicar} disabled={saving || !selected.id_cronograma || selected.estado === 'Reemplazado'} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">
-                    {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                    Confirmar pago
-                  </button>
-                </>
-              )}
-            </div>
-            </div>
-          </div>,
-          document.body,
+          </>
         )}
+      </AccessibleDialog>
     </div>
   );
 }
