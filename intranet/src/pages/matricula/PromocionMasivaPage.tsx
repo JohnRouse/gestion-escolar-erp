@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom';
 import {
   useEffect,
   useMemo,
@@ -17,9 +16,9 @@ import {
   RotateCcw,
   ShieldCheck,
   Users,
-  X,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import HistorialPromocionPanel from './HistorialPromocionPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -1658,7 +1657,7 @@ export default function PromocionMasivaPage() {
     };
 
   const cerrarOperacion = () => {
-    if (operando) return;
+    if (operando || validandoReversion) return;
 
     setOperacionModal(null);
     setConfirmacionOperacion('');
@@ -3174,50 +3173,43 @@ export default function PromocionMasivaPage() {
           )}
         </>
       )}
-      {operacionModal && createPortal(
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-slate-950/55 p-4"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              cerrarOperacion();
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="operacion-lote-titulo"
-            className="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-300 bg-white shadow-2xl"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">
-                  Proceso N.° {lote?.id_lote || '—'}
-                </p>
-
-                <h2
-                  id="operacion-lote-titulo"
-                  className="mt-1 text-lg font-black text-slate-950"
-                >
-                  {operacionModal === 'ejecutar'
-                    ? 'Confirmar ejecución'
-                    : 'Validar y revertir promoción'}
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                disabled={operando}
-                onClick={cerrarOperacion}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
-                aria-label="Cerrar"
-              >
-                <X size={17} />
-              </button>
-            </div>
-
-            <div className="space-y-5 p-5">
+      <AccessibleDialog
+        open={operacionModal !== null}
+        eyebrow={`Proceso N.° ${lote?.id_lote || '—'}`}
+        title={
+          operacionModal === 'ejecutar'
+            ? 'Confirmar ejecución'
+            : 'Validar y revertir promoción'
+        }
+        description={
+          operacionModal === 'ejecutar'
+            ? 'Confirma la promoción masiva antes de modificar las matrículas de origen y destino.'
+            : 'Comprueba la reversibilidad y registra el motivo administrativo antes de continuar.'
+        }
+        icon={
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+            {operacionModal === 'ejecutar' ? (
+              <Play
+                size={20}
+                aria-hidden="true"
+              />
+            ) : (
+              <RotateCcw
+                size={20}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        }
+        onClose={cerrarOperacion}
+        preventClose={operando || validandoReversion}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar operación de promoción"
+        maxWidthClassName="max-w-xl"
+        panelClassName="max-h-[calc(100dvh-2rem)]"
+        bodyClassName="space-y-5"
+      >
               {operacionModal === 'ejecutar' && (
                 <>
                   <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -3345,6 +3337,7 @@ export default function PromocionMasivaPage() {
                         </span>
 
                         <input
+                          autoFocus
                           value={confirmacionOperacion}
                           onChange={(event) =>
                             setConfirmacionOperacion(
@@ -3459,11 +3452,7 @@ export default function PromocionMasivaPage() {
                   )}
                 </>
               )}
-            </div>
-          </section>
-        </div>,
-        document.body,
-      )}
+      </AccessibleDialog>
     </div>
   );
 }
