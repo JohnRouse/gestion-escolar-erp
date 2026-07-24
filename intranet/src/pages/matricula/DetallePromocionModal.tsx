@@ -1,17 +1,15 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from 'react';
-import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   ClipboardList,
   History,
   RotateCcw,
   Users,
-  X,
 } from 'lucide-react';
+import AccessibleDialog from '../../components/AccessibleDialog';
 
 type PersonaProceso = {
   nombres?: string | null;
@@ -231,32 +229,6 @@ const accionVisible = (
     || '—';
 };
 
-const tonoEstado = (
-  estado?: string | null,
-) => {
-  switch (
-    String(estado || '')
-      .toLowerCase()
-  ) {
-    case 'finalizado':
-    case 'ejecutado':
-      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
-
-    case 'revertido':
-      return 'bg-slate-100 text-slate-700 ring-slate-300';
-
-    case 'en proceso':
-      return 'bg-blue-50 text-blue-700 ring-blue-200';
-
-    case 'vista previa':
-    case 'borrador':
-      return 'bg-amber-50 text-amber-700 ring-amber-200';
-
-    default:
-      return 'bg-slate-50 text-slate-600 ring-slate-200';
-  }
-};
-
 const tonoResultado = (
   resultado?: string | null,
 ) => {
@@ -447,122 +419,6 @@ export default function DetallePromocionModal({
       .join(' · ')
     || 'Origen no disponible';
 
-  useEffect(() => {
-    const onKeyDown = (
-      event: KeyboardEvent,
-    ) => {
-      if (
-        event.key === 'Escape'
-        && !continuando
-      ) {
-        onClose();
-      }
-    };
-
-    window.addEventListener(
-      'keydown',
-      onKeyDown,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'keydown',
-        onKeyDown,
-      );
-    };
-  }, [
-    continuando,
-    onClose,
-  ]);
-
-  if (cargando) {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-3 sm:p-5"
-        role="presentation"
-        onMouseDown={(event) => {
-          if (
-            event.target
-            === event.currentTarget
-          ) {
-            onClose();
-          }
-        }}
-      >
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-busy="true"
-          aria-labelledby="detalle-promocion-cargando"
-          className="flex h-[92vh] min-h-0 w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl sm:h-[88vh] border border-slate-200 bg-white shadow-2xl"
-        >
-          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-            <div className="flex-1 space-y-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
-                Detalle histórico
-              </p>
-
-              <div
-                id="detalle-promocion-cargando"
-                className="erp-skeleton-line h-5 w-52"
-              />
-
-              <div className="erp-skeleton-line w-96 max-w-full" />
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100"
-              aria-label="Cerrar detalle"
-            >
-              <X size={18} />
-            </button>
-          </header>
-
-          <div className="flex shrink-0 gap-5 border-b border-slate-200 bg-slate-50 px-5 py-4">
-            <div className="erp-skeleton-line w-24" />
-            <div className="erp-skeleton-line w-32" />
-            <div className="erp-skeleton-line w-24" />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-hidden p-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-              {Array.from({
-                length: 7,
-              }).map((_, index) => (
-                <div
-                  key={index}
-                  className="erp-skeleton-block h-24 p-4"
-                />
-              ))}
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="erp-skeleton-block h-52 p-5" />
-              <div className="erp-skeleton-block h-52 p-5" />
-            </div>
-
-            <p className="mt-5 text-center text-sm font-semibold text-slate-500">
-              Cargando información del proceso…
-            </p>
-          </div>
-
-          <footer className="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50 px-5 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-100"
-            >
-              Cerrar
-            </button>
-          </footer>
-        </section>
-      </div>,
-      document.body,
-    );
-  }
-
 
   const continuar =
     async () => {
@@ -586,78 +442,109 @@ export default function DetallePromocionModal({
       }
     };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-3 sm:p-5"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (
-          event.target
-          === event.currentTarget
-          && !continuando
-        ) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="detalle-promocion-titulo"
-        className="flex h-[92vh] min-h-0 w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl sm:h-[88vh] border border-slate-200 bg-white shadow-2xl"
-      >
-        <header className="erp-content-ready flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-600">
-              Detalle histórico
-            </p>
-
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h2
-                id="detalle-promocion-titulo"
-                className="text-xl font-black text-slate-950"
-              >
-                Proceso N.° {idProceso || '—'}
-              </h2>
-
-              <span
-                className={
-                  'inline-flex rounded-full px-3 py-1 text-[11px] font-black ring-1 '
-                  + tonoEstado(
-                    estado,
-                  )
-                }
-              >
-                {estadoVisible(
-                  estado,
-                )}
-              </span>
-            </div>
-
-            <p className="mt-1 text-sm font-semibold text-slate-600">
-              {origen}
-              {' · '}
-              {proceso.anio_origen
-                ?.nombre_anio
-                || 'Año de origen'}
-              {' → '}
-              {proceso.anio_destino
-                ?.nombre_anio
-                || 'Año de destino'}
-            </p>
-          </div>
-
+  return (
+    <AccessibleDialog
+      open
+      eyebrow="Detalle histórico"
+      title={
+        cargando
+          ? 'Cargando detalle del proceso'
+          : `Proceso N.° ${idProceso || '—'}`
+      }
+      description={
+        cargando
+          ? 'Estamos recuperando el resumen, los estudiantes y la actividad registrada.'
+          : `${origen} · ${
+              proceso.anio_origen?.nombre_anio
+              || 'Año de origen'
+            } → ${
+              proceso.anio_destino?.nombre_anio
+              || 'Año de destino'
+            } · ${estadoVisible(estado)}`
+      }
+      icon={
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+          <ClipboardList
+            size={20}
+            aria-hidden="true"
+          />
+        </div>
+      }
+      onClose={onClose}
+      preventClose={continuando}
+      closeOnEscape
+      closeOnOverlay
+      closeLabel="Cerrar detalle de promoción"
+      maxWidthClassName="max-w-[1500px]"
+      panelClassName="h-[92vh] min-h-0 sm:h-[88vh]"
+      bodyClassName="flex min-h-0 flex-1 flex-col !overflow-hidden !p-0"
+      footerClassName="sm:items-center"
+      footer={
+        <>
           <button
             type="button"
             disabled={continuando}
             onClick={onClose}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
-            aria-label="Cerrar detalle"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition-colors duration-150 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
           >
-            <X size={18} />
+            Cerrar
           </button>
-        </header>
 
+          {!cargando && puedeContinuar && (
+            <button
+              type="button"
+              disabled={continuando}
+              onClick={() =>
+                void continuar()
+              }
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white transition-colors duration-150 hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
+            >
+              {continuando ? (
+                <RotateCcw
+                  size={16}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <CheckCircle2
+                  size={16}
+                  aria-hidden="true"
+                />
+              )}
+
+              Abrir para gestionar
+            </button>
+          )}
+        </>
+      }
+    >
+      {cargando ? (
+        <div
+          aria-busy="true"
+          className="min-h-0 flex-1 overflow-y-auto p-5"
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {Array.from({
+              length: 7,
+            }).map((_, index) => (
+              <div
+                key={index}
+                className="erp-skeleton-block h-24 p-4"
+              />
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="erp-skeleton-block h-52 p-5" />
+            <div className="erp-skeleton-block h-52 p-5" />
+          </div>
+
+          <p className="mt-5 text-center text-sm font-semibold text-slate-600">
+            Cargando información del proceso…
+          </p>
+        </div>
+      ) : (
+        <>
         <div className="erp-content-ready shrink-0 border-b border-slate-200 bg-slate-50 px-5 pt-3">
           <div className="flex gap-2 overflow-x-auto">
             {[
@@ -1220,41 +1107,8 @@ export default function DetallePromocionModal({
             </div>
           )}
         </div>
-
-        <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            disabled={continuando}
-            onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
-          >
-            Cerrar
-          </button>
-
-          {puedeContinuar && (
-            <button
-              type="button"
-              disabled={continuando}
-              onClick={() =>
-                void continuar()
-              }
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white transition hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
-            >
-              {continuando ? (
-                <RotateCcw
-                  size={16}
-                  className="animate-spin"
-                />
-              ) : (
-                <CheckCircle2 size={16} />
-              )}
-
-              Abrir para gestionar
-            </button>
-          )}
-        </footer>
-      </section>
-    </div>,
-    document.body,
+        </>
+      )}
+    </AccessibleDialog>
   );
 }
