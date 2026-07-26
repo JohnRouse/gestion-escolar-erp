@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertCircle,
-  Briefcase,
   Camera,
   CheckCircle2,
   Eye,
@@ -13,11 +11,10 @@ import {
   Mail,
   Pencil,
   Phone,
-  Save,
   ShieldCheck,
   User,
-  X,
 } from 'lucide-react';
+import CenteredFormModal from '../components/CenteredFormModal';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { assetUrl, initialsFromName } from '../utils/assets';
@@ -32,7 +29,19 @@ interface PerfilData {
   avatar_url: string | null;
 }
 
-function toPerfilData(data: any): PerfilData {
+type PerfilApiData = {
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+  correo?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  rol?: string | null;
+  cargo?: string | null;
+  avatar_url?: string | null;
+};
+
+function toPerfilData(data?: PerfilApiData | null): PerfilData {
   return {
     nombres: data?.nombres || '',
     apellidoPaterno: data?.apellido_paterno || '',
@@ -47,9 +56,11 @@ function toPerfilData(data: any): PerfilData {
 function fullName(perfil: PerfilData | null) {
   if (!perfil) return 'Usuario';
 
-  return `${perfil.nombres} ${perfil.apellidoPaterno} ${perfil.apellidoMaterno}`
-    .replace(/\s+/g, ' ')
-    .trim() || 'Usuario';
+  return (
+    `${perfil.nombres} ${perfil.apellidoPaterno} ${perfil.apellidoMaterno}`
+      .replace(/\s+/g, ' ')
+      .trim() || 'Usuario'
+  );
 }
 
 const inputClass =
@@ -66,7 +77,10 @@ export default function PerfilPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const [editNombres, setEditNombres] = useState('');
   const [editApPaterno, setEditApPaterno] = useState('');
@@ -80,7 +94,10 @@ export default function PerfilPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -92,8 +109,14 @@ export default function PerfilPage() {
 
   const headerMeta = useMemo(
     () => [
-      { label: 'Rol del sistema', value: perfil?.cargo || user?.rol || 'Usuario' },
-      { label: 'Correo', value: perfil?.correo || user?.email || user?.correo || 'No registrado' },
+      {
+        label: 'Rol del sistema',
+        value: perfil?.cargo || user?.rol || 'Usuario',
+      },
+      {
+        label: 'Correo',
+        value: perfil?.correo || user?.email || user?.correo || 'No registrado',
+      },
     ],
     [perfil, user],
   );
@@ -104,7 +127,7 @@ export default function PerfilPage() {
     setLoading(true);
 
     try {
-      const res = await axios.get('/api/auth/perfil', {
+      const res = await axios.get<PerfilApiData>('/api/auth/perfil', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -115,12 +138,14 @@ export default function PerfilPage() {
   };
 
   useEffect(() => {
-    fetchPerfil().catch(() => setLoading(false));
+    void fetchPerfil().catch(() => setLoading(false));
   }, [token]);
 
   useEffect(() => {
     return () => {
-      if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl);
+      if (previewAvatarUrl) {
+        URL.revokeObjectURL(previewAvatarUrl);
+      }
     };
   }, [previewAvatarUrl]);
 
@@ -134,19 +159,26 @@ export default function PerfilPage() {
     setEditTelefono(perfil.telefono);
     setPendingAvatarFile(null);
 
-    if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl);
-    setPreviewAvatarUrl('');
+    if (previewAvatarUrl) {
+      URL.revokeObjectURL(previewAvatarUrl);
+    }
 
+    setPreviewAvatarUrl('');
     setMessage(null);
     setModalOpen(true);
   };
 
   const closeModal = () => {
+    if (saving) return;
+
     setModalOpen(false);
     setMessage(null);
     setPendingAvatarFile(null);
 
-    if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl);
+    if (previewAvatarUrl) {
+      URL.revokeObjectURL(previewAvatarUrl);
+    }
+
     setPreviewAvatarUrl('');
   };
 
@@ -156,16 +188,24 @@ export default function PerfilPage() {
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setMessage({ type: 'error', text: 'Solo se permiten imágenes JPG, PNG o WEBP.' });
+      setMessage({
+        type: 'error',
+        text: 'Solo se permiten imágenes JPG, PNG o WEBP.',
+      });
       return;
     }
 
     if (file.size > 3 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'La imagen no debe superar los 3 MB.' });
+      setMessage({
+        type: 'error',
+        text: 'La imagen no debe superar los 3 MB.',
+      });
       return;
     }
 
-    if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl);
+    if (previewAvatarUrl) {
+      URL.revokeObjectURL(previewAvatarUrl);
+    }
 
     setPendingAvatarFile(file);
     setPreviewAvatarUrl(URL.createObjectURL(file));
@@ -173,17 +213,23 @@ export default function PerfilPage() {
   };
 
   const uploadAvatarIfNeeded = async () => {
-    if (!pendingAvatarFile || !token) return perfil?.avatar_url || null;
+    if (!pendingAvatarFile || !token) {
+      return perfil?.avatar_url || null;
+    }
 
     const formData = new FormData();
     formData.append('avatar', pendingAvatarFile);
 
-    const res = await axios.post('/api/auth/perfil/avatar', formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
+    const res = await axios.post<{ avatar_url?: string | null }>(
+      '/api/auth/perfil/avatar',
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
       },
-    });
+    );
 
     return res.data?.avatar_url || null;
   };
@@ -197,7 +243,7 @@ export default function PerfilPage() {
     try {
       const avatarUrl = await uploadAvatarIfNeeded();
 
-      const res = await axios.put(
+      const res = await axios.put<PerfilApiData>(
         '/api/auth/perfil',
         {
           nombres: editNombres,
@@ -223,15 +269,20 @@ export default function PerfilPage() {
         avatar_url: nextPerfil.avatar_url,
       });
 
-      await refreshUser().catch(() => {});
+      await refreshUser().catch(() => undefined);
 
+      setSaving(false);
       closeModal();
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const fallback = 'No se pudieron guardar los cambios.';
+      const responseMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : null;
+
       setMessage({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudieron guardar los cambios.',
+        text: typeof responseMessage === 'string' ? responseMessage : fallback,
       });
-    } finally {
       setSaving(false);
     }
   };
@@ -242,12 +293,18 @@ export default function PerfilPage() {
     setPasswordMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'Las contraseñas no coinciden.' });
+      setPasswordMessage({
+        type: 'error',
+        text: 'Las contraseñas no coinciden.',
+      });
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordMessage({ type: 'error', text: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      setPasswordMessage({
+        type: 'error',
+        text: 'La nueva contraseña debe tener al menos 6 caracteres.',
+      });
       return;
     }
 
@@ -263,14 +320,22 @@ export default function PerfilPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setPasswordMessage({ type: 'success', text: 'Contraseña actualizada correctamente.' });
+      setPasswordMessage({
+        type: 'success',
+        text: 'Contraseña actualizada correctamente.',
+      });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const fallback = 'No se pudo cambiar la contraseña.';
+      const responseMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : null;
+
       setPasswordMessage({
         type: 'error',
-        text: err.response?.data?.message || 'No se pudo cambiar la contraseña.',
+        text: typeof responseMessage === 'string' ? responseMessage : fallback,
       });
     } finally {
       setChangingPassword(false);
@@ -324,11 +389,13 @@ export default function PerfilPage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-3xl font-black text-neutral-950">{initials}</span>
+                  <span className="text-3xl font-black text-neutral-950">
+                    {initials}
+                  </span>
                 )}
 
                 <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-sm bg-blue-600 text-white ring-2 ring-white">
-                  <CheckCircle2 size={15} />
+                  <CheckCircle2 size={15} aria-hidden="true" />
                 </span>
               </div>
 
@@ -350,39 +417,23 @@ export default function PerfilPage() {
               onClick={openModal}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-blue-600 px-5 text-sm font-black text-white transition-colors hover:bg-blue-700"
             >
-              <Pencil size={16} />
+              <Pencil size={16} aria-hidden="true" />
               Editar perfil
             </button>
           </div>
 
           <div className="grid gap-4 p-6 md:grid-cols-3">
-            <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-5">
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-sm bg-white text-blue-600 ring-1 ring-neutral-200">
-                <User size={18} />
-              </div>
-              <p className={labelClass}>Nombre completo</p>
-              <p className="text-base font-black text-neutral-950">{nombreCompleto}</p>
-            </div>
-
-            <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-5">
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-sm bg-white text-blue-600 ring-1 ring-neutral-200">
-                <Mail size={18} />
-              </div>
-              <p className={labelClass}>Correo electrónico</p>
-              <p className="break-words text-base font-black text-neutral-950">
-                {perfil.correo || 'No registrado'}
-              </p>
-            </div>
-
-            <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-5">
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-sm bg-white text-blue-600 ring-1 ring-neutral-200">
-                <Phone size={18} />
-              </div>
-              <p className={labelClass}>Teléfono</p>
-              <p className="text-base font-black text-neutral-950">
-                {perfil.telefono || 'No registrado'}
-              </p>
-            </div>
+            <ProfileInfoCard icon={User} label="Nombre completo" value={nombreCompleto} />
+            <ProfileInfoCard
+              icon={Mail}
+              label="Correo electrónico"
+              value={perfil.correo || 'No registrado'}
+            />
+            <ProfileInfoCard
+              icon={Phone}
+              label="Teléfono"
+              value={perfil.telefono || 'No registrado'}
+            />
           </div>
         </section>
 
@@ -390,78 +441,48 @@ export default function PerfilPage() {
           <div className="border-b border-neutral-200 p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-blue-50 text-blue-600 ring-1 ring-blue-100">
-                <ShieldCheck size={19} />
+                <ShieldCheck size={19} aria-hidden="true" />
               </div>
               <div>
                 <h3 className="text-xl font-black text-neutral-950">Seguridad</h3>
-                <p className="text-sm font-medium text-neutral-700">Actualiza tu contraseña de acceso.</p>
+                <p className="text-sm font-medium text-neutral-700">
+                  Actualiza tu contraseña de acceso.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-5 p-6">
-            <div>
-              <label className={labelClass}>Contraseña actual</label>
-              <div className="relative">
-                <input
-                  type={showCurrent ? 'text' : 'password'}
-                  className={`${inputClass} pr-11`}
-                  placeholder="Ingresa tu contraseña actual"
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent((value) => !value)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-700"
-                >
-                  {showCurrent ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              label="Contraseña actual"
+              placeholder="Ingresa tu contraseña actual"
+              value={currentPassword}
+              visible={showCurrent}
+              onChange={setCurrentPassword}
+              onToggle={() => setShowCurrent((value) => !value)}
+            />
 
-            <div>
-              <label className={labelClass}>Nueva contraseña</label>
-              <div className="relative">
-                <input
-                  type={showNew ? 'text' : 'password'}
-                  className={`${inputClass} pr-11`}
-                  placeholder="Mínimo 6 caracteres"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew((value) => !value)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-700"
-                >
-                  {showNew ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              label="Nueva contraseña"
+              placeholder="Mínimo 6 caracteres"
+              value={newPassword}
+              visible={showNew}
+              onChange={setNewPassword}
+              onToggle={() => setShowNew((value) => !value)}
+            />
 
-            <div>
-              <label className={labelClass}>Confirmar nueva contraseña</label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  className={`${inputClass} pr-11`}
-                  placeholder="Repite la nueva contraseña"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((value) => !value)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-700"
-                >
-                  {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              label="Confirmar nueva contraseña"
+              placeholder="Repite la nueva contraseña"
+              value={confirmPassword}
+              visible={showConfirm}
+              onChange={setConfirmPassword}
+              onToggle={() => setShowConfirm((value) => !value)}
+            />
 
             {passwordMessage && (
               <div
+                role={passwordMessage.type === 'error' ? 'alert' : 'status'}
                 className={`rounded-sm border px-4 py-3 text-sm font-bold ${
                   passwordMessage.type === 'success'
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
@@ -474,169 +495,179 @@ export default function PerfilPage() {
 
             <button
               type="button"
-              onClick={handleChangePassword}
+              onClick={() => void handleChangePassword()}
               disabled={changingPassword}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-sm bg-neutral-950 px-5 text-sm font-black text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {changingPassword ? <Loader2 size={17} className="animate-spin" /> : <Lock size={17} />}
+              {changingPassword ? (
+                <Loader2 size={17} aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Lock size={17} aria-hidden="true" />
+              )}
               {changingPassword ? 'Actualizando...' : 'Actualizar contraseña'}
             </button>
           </div>
         </section>
       </div>
 
-      {modalOpen &&
-        createPortal(
-          <div
-            className="erp-carbon-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center p-4"
-            onClick={(event) => {
-              if (event.target === event.currentTarget) closeModal();
-            }}
-          >
-            <div className="absolute inset-0 bg-neutral-950/55 backdrop-blur-sm" />
+      <CenteredFormModal
+        open={modalOpen}
+        eyebrow="Editar perfil"
+        title="Información personal"
+        description="Actualiza tus datos y foto de perfil."
+        saving={saving}
+        submitLabel={saving ? 'Guardando...' : 'Guardar cambios'}
+        cancelLabel="Cancelar"
+        maxWidthClassName="max-w-3xl"
+        message={message?.text}
+        messageTone={message?.type || 'info'}
+        onClose={closeModal}
+        onSubmit={() => void handleSave()}
+      >
+        <div className="mb-6 flex flex-col gap-4 rounded-sm border border-neutral-200 bg-neutral-50 p-5 sm:flex-row sm:items-center">
+          <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-neutral-300 bg-white">
+            {previewAvatarUrl || avatarDisplayUrl ? (
+              <img
+                src={previewAvatarUrl || avatarDisplayUrl}
+                alt={nombreCompleto}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl font-black text-neutral-950">
+                {initials}
+              </span>
+            )}
+          </div>
 
-            <section className="erp-carbon-modal-panel relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-sm border border-neutral-300 bg-white">
-              <div className="flex items-start justify-between gap-4 border-b border-neutral-200 p-6">
-                <div>
-                  <p className="mb-2 inline-flex rounded-sm bg-blue-50 px-2.5 py-1 text-xs font-black uppercase tracking-[0.14em] text-blue-700 ring-1 ring-blue-100">
-                    Editar perfil
-                  </p>
-                  <h2 className="text-2xl font-black text-neutral-950">Información personal</h2>
-                  <p className="mt-1 text-sm font-semibold text-neutral-700">
-                    Actualiza tus datos y foto de perfil.
-                  </p>
-                </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-black text-neutral-950">Foto de perfil</p>
+            <p className="mt-1 text-sm font-semibold text-neutral-700">
+              Usa una imagen JPG, PNG o WEBP. Tamaño máximo: 3 MB.
+            </p>
 
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex h-10 w-10 items-center justify-center rounded-sm border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+            <label className="mt-4 inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700">
+              <Camera size={16} aria-hidden="true" />
+              Seleccionar foto
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={handleAvatarChange}
+              />
+            </label>
+          </div>
+        </div>
 
-              <div className="overflow-y-auto p-6">
-                <div className="mb-6 flex flex-col gap-4 rounded-sm border border-neutral-200 bg-neutral-50 p-5 sm:flex-row sm:items-center">
-                  <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-neutral-300 bg-white">
-                    {previewAvatarUrl || avatarDisplayUrl ? (
-                      <img
-                        src={previewAvatarUrl || avatarDisplayUrl}
-                        alt={nombreCompleto}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-3xl font-black text-neutral-950">{initials}</span>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-black text-neutral-950">Foto de perfil</p>
-                    <p className="mt-1 text-sm font-semibold text-neutral-700">
-                      Usa una imagen JPG, PNG o WEBP. Tamaño máximo: 3 MB.
-                    </p>
-
-                    <label className="mt-4 inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-sm bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700">
-                      <Camera size={16} />
-                      Seleccionar foto
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={handleAvatarChange}
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div>
-                    <label className={labelClass}>Nombres</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={editNombres}
-                      onChange={(event) => setEditNombres(event.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Apellido paterno</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={editApPaterno}
-                      onChange={(event) => setEditApPaterno(event.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Apellido materno</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={editApMaterno}
-                      onChange={(event) => setEditApMaterno(event.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Correo electrónico</label>
-                    <input
-                      type="email"
-                      className={inputClass}
-                      value={editCorreo}
-                      onChange={(event) => setEditCorreo(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className={labelClass}>Teléfono</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={editTelefono}
-                      onChange={(event) => setEditTelefono(event.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {message && (
-                  <div
-                    className={`mt-5 rounded-sm border px-4 py-3 text-sm font-bold ${
-                      message.type === 'success'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-red-200 bg-red-50 text-red-800'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 border-t border-neutral-200 bg-neutral-50 p-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="inline-flex h-11 items-center justify-center rounded-sm border border-neutral-300 bg-white px-5 text-sm font-black text-neutral-800 hover:bg-neutral-100"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-blue-600 px-5 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-                  {saving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              </div>
-            </section>
-          </div>,
-          document.body,
-        )}
+        <div className="grid gap-5 md:grid-cols-2">
+          <ProfileField label="Nombres" value={editNombres} onChange={setEditNombres} />
+          <ProfileField
+            label="Apellido paterno"
+            value={editApPaterno}
+            onChange={setEditApPaterno}
+          />
+          <ProfileField
+            label="Apellido materno"
+            value={editApMaterno}
+            onChange={setEditApMaterno}
+          />
+          <ProfileField
+            label="Correo electrónico"
+            value={editCorreo}
+            type="email"
+            onChange={setEditCorreo}
+          />
+          <div className="md:col-span-2">
+            <ProfileField
+              label="Teléfono"
+              value={editTelefono}
+              onChange={setEditTelefono}
+            />
+          </div>
+        </div>
+      </CenteredFormModal>
     </div>
+  );
+}
+
+function ProfileInfoCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof User;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-5">
+      <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-sm bg-white text-blue-600 ring-1 ring-neutral-200">
+        <Icon size={18} aria-hidden="true" />
+      </div>
+      <p className={labelClass}>{label}</p>
+      <p className="break-words text-base font-black text-neutral-950">{value}</p>
+    </div>
+  );
+}
+
+function ProfileField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className={labelClass}>{label}</span>
+      <input
+        type={type}
+        className={inputClass}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function PasswordField({
+  label,
+  placeholder,
+  value,
+  visible,
+  onChange,
+  onToggle,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  visible: boolean;
+  onChange: (value: string) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="block">
+      <span className={labelClass}>{label}</span>
+      <span className="relative block">
+        <input
+          type={visible ? 'text' : 'password'}
+          className={`${inputClass} pr-11`}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-700"
+        >
+          {visible ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+        </button>
+      </span>
+    </label>
   );
 }
