@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -24,6 +23,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import AccessibleDialog from '../../components/AccessibleDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -684,6 +684,18 @@ export default function AlumnosPage() {
       file,
       previewUrl: URL.createObjectURL(file),
     });
+  };
+
+  const cerrarAjusteFoto = () => {
+    if (uploadingAvatar) return;
+
+    if (avatarDraft?.previewUrl) {
+      URL.revokeObjectURL(
+        avatarDraft.previewUrl,
+      );
+    }
+
+    setAvatarDraft(null);
   };
 
   const crearFotoAjustada = async (file: File, zoom: number, offsetY: number) => {
@@ -1926,30 +1938,42 @@ export default function AlumnosPage() {
         }}
       />
 
-      {/* ── Modal de visualización de foto (Visor) ── */}
-      {avatarViewOpen && detalle?.avatar_url && createPortal(
-        <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto"
-          onClick={() => setAvatarViewOpen(false)}
-        >
-          <div className="relative flex max-h-[90vh] w-full max-w-3xl items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setAvatarViewOpen(false)}
-              className="absolute -top-2 right-0 z-10 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 sm:top-2 sm:right-2"
-            >
-              <X size={20} />
-            </button>
-            <img 
-              src={assetUrl(detalle.avatar_url)} 
-              alt={fullName(detalle.persona)} 
-              className="max-h-[85vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
-              onClick={(e) => e.stopPropagation()} 
+      {/* ── Visor accesible de fotografía ── */}
+      <AccessibleDialog
+        open={
+          avatarViewOpen
+          && Boolean(detalle?.avatar_url)
+        }
+        eyebrow="Foto del alumno"
+        title={
+          detalle
+            ? fullName(detalle.persona)
+            : 'Foto del alumno'
+        }
+        description="Vista ampliada de la fotografía registrada."
+        onClose={() =>
+          setAvatarViewOpen(false)
+        }
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar visor de fotografía"
+        maxWidthClassName="max-w-4xl"
+        bodyClassName="!bg-slate-950 !p-4 sm:!p-6"
+      >
+        {detalle?.avatar_url && (
+          <div className="flex min-h-[360px] items-center justify-center">
+            <img
+              src={assetUrl(
+                detalle.avatar_url,
+              )}
+              alt={fullName(
+                detalle.persona,
+              )}
+              className="max-h-[78vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
             />
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </AccessibleDialog>
 
       {/* ── Modal de edición ── */}
       <CommunityEditModal
@@ -2012,110 +2036,123 @@ export default function AlumnosPage() {
         )}
       </CommunityEditModal>
 
-      {avatarDraft && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <section className="w-full max-w-3xl overflow-hidden rounded-[24px] bg-white shadow-2xl ring-1 ring-slate-200 erp-detail-enter my-auto">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-5">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-500">
-                  Foto del alumno
-                </p>
-                <h3 className="mt-1 text-lg font-black text-slate-950">
-                  Ajustar foto del alumno
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
-                  Ajusta el encuadre antes de guardar. Esta imagen aparecerá en la libreta.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  URL.revokeObjectURL(avatarDraft.previewUrl);
-                  setAvatarDraft(null);
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
-              >
-                <X size={15} />
-              </button>
-            </div>
+      <AccessibleDialog
+        open={Boolean(avatarDraft)}
+        eyebrow="Foto del alumno"
+        title="Ajustar foto del alumno"
+        description="Ajusta el encuadre antes de guardar. Esta imagen aparecerá en la libreta."
+        onClose={cerrarAjusteFoto}
+        preventClose={uploadingAvatar}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar ajuste de fotografía"
+        maxWidthClassName="max-w-3xl"
+        bodyClassName="!p-5"
+        footerClassName="sm:!justify-end"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={cerrarAjusteFoto}
+              disabled={uploadingAvatar}
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancelar
+            </button>
 
-            <div className="grid gap-5 p-5 md:grid-cols-[260px_minmax(0,1fr)]">
-              <div className="flex justify-center">
-                <div className="h-[280px] w-[210px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-inner">
-                  <img
-                    src={avatarDraft.previewUrl}
-                    alt="Vista previa"
-                    className="h-full w-full object-cover"
-                    style={{
-                      transform: `scale(${avatarZoom}) translateY(${avatarOffsetY}px)`,
-                      transformOrigin: 'center',
-                    }}
-                  />
-                </div>
-              </div>
+            <button
+              type="button"
+              onClick={() =>
+                void confirmarSubidaFoto()
+              }
+              disabled={uploadingAvatar}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+            >
+              {uploadingAvatar && (
+                <Loader2
+                  size={15}
+                  aria-hidden="true"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+              )}
 
-              <div className="space-y-5">
-                <div className="rounded-3xl bg-blue-50 p-4 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
-                  Usa el zoom para acercar el rostro y el ajuste vertical para centrarlo mejor.
-                </div>
-
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Zoom
-                  </span>
-                  <input
-                    type="range"
-                    min="1"
-                    max="1.8"
-                    step="0.02"
-                    value={avatarZoom}
-                    onChange={(event) => setAvatarZoom(Number(event.target.value))}
-                    className="w-full"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                    Ajuste vertical
-                  </span>
-                  <input
-                    type="range"
-                    min="-90"
-                    max="90"
-                    step="2"
-                    value={avatarOffsetY}
-                    onChange={(event) => setAvatarOffsetY(Number(event.target.value))}
-                    className="w-full"
-                  />
-                </label>
+              Confirmar y subir
+            </button>
+          </>
+        }
+      >
+        {avatarDraft && (
+          <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex justify-center">
+              <div className="h-[280px] w-[210px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-inner">
+                <img
+                  src={
+                    avatarDraft.previewUrl
+                  }
+                  alt="Vista previa de la fotografía"
+                  className="h-full w-full object-cover"
+                  style={{
+                    transform: `scale(${avatarZoom}) translateY(${avatarOffsetY}px)`,
+                    transformOrigin: 'center',
+                  }}
+                />
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/50 p-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  URL.revokeObjectURL(avatarDraft.previewUrl);
-                  setAvatarDraft(null);
-                }}
-                className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmarSubidaFoto()}
-                disabled={uploadingAvatar}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-              >
-                {uploadingAvatar && <Loader2 size={15} className="animate-spin" />}
-                Confirmar y subir
-              </button>
+            <div className="space-y-5">
+              <div className="rounded-3xl bg-blue-50 p-4 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
+                Usa el zoom para acercar el rostro y el ajuste vertical para centrarlo mejor.
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Zoom
+                </span>
+
+                <input
+                  type="range"
+                  min="1"
+                  max="1.8"
+                  step="0.02"
+                  value={avatarZoom}
+                  aria-label="Zoom de la fotografía"
+                  onChange={(event) =>
+                    setAvatarZoom(
+                      Number(
+                        event.target.value,
+                      ),
+                    )
+                  }
+                  className="w-full"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  Ajuste vertical
+                </span>
+
+                <input
+                  type="range"
+                  min="-90"
+                  max="90"
+                  step="2"
+                  value={avatarOffsetY}
+                  aria-label="Ajuste vertical de la fotografía"
+                  onChange={(event) =>
+                    setAvatarOffsetY(
+                      Number(
+                        event.target.value,
+                      ),
+                    )
+                  }
+                  className="w-full"
+                />
+              </label>
             </div>
-          </section>
-        </div>,
-        document.body
-      )}
+          </div>
+        )}
+      </AccessibleDialog>
 
       <ConfirmDialog
         open={confirmEditAlumno}

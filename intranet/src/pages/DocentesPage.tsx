@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   BriefcaseBusiness,
@@ -19,6 +18,8 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CommunityDetailModal from '../components/community/CommunityDetailModal';
+import CommunityEditModal from '../components/community/CommunityEditModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import { useToast } from '../contexts/ToastContext';
@@ -350,7 +351,6 @@ export default function DocentesPage() {
     await fetchDocentes();
   };
 
-
   const toggleArea = (idArea: number) => {
     setForm((current) => {
       const exists = current.especialidades.includes(idArea);
@@ -503,6 +503,7 @@ export default function DocentesPage() {
                   setQ('');
                   setPage(1);
                 }}
+                aria-label="Limpiar búsqueda"
                 className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
               >
                 <X size={15} />
@@ -669,289 +670,242 @@ export default function DocentesPage() {
         </div>
       </section>
 
-      {modalOpen && createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-5xl overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
+      <CommunityEditModal
+        open={modalOpen}
+        eyebrow={editing ? 'Editar docente' : 'Nuevo docente'}
+        title={editing ? editing.nombre_completo : 'Registrar docente'}
+        description="Completa los datos generales y selecciona sus áreas de especialidad."
+        saving={saving}
+        submitLabel={editing ? 'Guardar cambios' : 'Registrar docente'}
+        cancelLabel="Cancelar"
+        maxWidthClassName="max-w-5xl"
+        onClose={() => setModalOpen(false)}
+        onSubmit={guardarDocente}
+      >
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="DNI" value={form.dni} disabled={Boolean(editing)} onChange={(value) => setForm({ ...form, dni: value })} />
+            <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={(value) => setForm({ ...form, fecha_nacimiento: value })} />
+            <Field label="Nombres" value={form.nombres} onChange={(value) => setForm({ ...form, nombres: value })} />
+            <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(value) => setForm({ ...form, apellido_paterno: value })} />
+            <Field label="Apellido materno" value={form.apellido_materno} onChange={(value) => setForm({ ...form, apellido_materno: value })} />
+            <Field label="Fecha de ingreso" type="date" value={form.fecha_ingreso} onChange={(value) => setForm({ ...form, fecha_ingreso: value })} />
+            <Field label="Teléfono" value={form.telefono} onChange={(value) => setForm({ ...form, telefono: value })} />
+            <Field label="Correo" value={form.correo} onChange={(value) => setForm({ ...form, correo: value })} />
+            <div className="md:col-span-2">
+              <LocationSelects
+                value={{
+                  pais: 'Perú',
+                  departamento: form.departamento,
+                  provincia: form.provincia,
+                  distrito: form.distrito,
+                }}
+                onChange={(location) =>
+                  setForm({
+                    ...form,
+                    departamento: location.departamento || '',
+                    provincia: location.provincia || '',
+                    distrito: location.distrito || '',
+                  })
+                }
+                selectClass={inputClass}
+                wrapperClassName="grid gap-4 md:grid-cols-3"
+              />
+            </div>
+            <label className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">Género</span>
+              <select
+                value={form.genero}
+                onChange={(event) => setForm({ ...form, genero: event.target.value })}
+                className={inputClass}
+              >
+                <option value="">No especificado</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
+            </label>
+            <label className="space-y-1 md:col-span-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">Dirección</span>
+              <input
+                value={form.direccion}
+                onChange={(event) => setForm({ ...form, direccion: event.target.value })}
+                className={inputClass}
+              />
+            </label>
+          </div>
+
+          <aside className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                <GraduationCap size={20} />
+              </span>
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">
-                  {editing ? 'Editar docente' : 'Nuevo docente'}
-                </p>
-                <h3 className="mt-1 text-xl font-black text-slate-950">
-                  {editing ? editing.nombre_completo : 'Registrar docente'}
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Completa los datos generales y selecciona sus áreas de especialidad.
+                <h4 className="font-black text-slate-950">Áreas / especialidades</h4>
+                <p className="mt-1 text-sm font-semibold leading-5 text-slate-600">
+                  Estas áreas vinculan al docente con el colegio actual.
                 </p>
               </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-                className="rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-50"
-              >
-                <X size={18} />
-              </button>
-            </header>
+            <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+              {areas.length === 0 ? (
+                <p className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
+                  No hay áreas configuradas para el colegio actual.
+                </p>
+              ) : (
+                areas.map((area) => (
+                  <label
+                    key={area.id_area}
+                    className="flex cursor-pointer items-center gap-3 rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 hover:bg-blue-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.especialidades.includes(area.id_area)}
+                      onChange={() => toggleArea(area.id_area)}
+                      className="h-4 w-4"
+                    />
+                    {area.nombre_area}
+                  </label>
+                ))
+              )}
+            </div>
 
-            <div className="grid max-h-[72vh] gap-5 overflow-y-auto p-6 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="DNI" value={form.dni} disabled={Boolean(editing)} onChange={(value) => setForm({ ...form, dni: value })} />
-                <Field label="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={(value) => setForm({ ...form, fecha_nacimiento: value })} />
-                <Field label="Nombres" value={form.nombres} onChange={(value) => setForm({ ...form, nombres: value })} />
-                <Field label="Apellido paterno" value={form.apellido_paterno} onChange={(value) => setForm({ ...form, apellido_paterno: value })} />
-                <Field label="Apellido materno" value={form.apellido_materno} onChange={(value) => setForm({ ...form, apellido_materno: value })} />
-                <Field label="Fecha de ingreso" type="date" value={form.fecha_ingreso} onChange={(value) => setForm({ ...form, fecha_ingreso: value })} />
-                <Field label="Teléfono" value={form.telefono} onChange={(value) => setForm({ ...form, telefono: value })} />
-                <Field label="Correo" value={form.correo} onChange={(value) => setForm({ ...form, correo: value })} />
-                <div className="md:col-span-2">
-                  <LocationSelects
-                    value={{
-                      pais: 'Perú',
-                      departamento: form.departamento,
-                      provincia: form.provincia,
-                      distrito: form.distrito,
-                    }}
-                    onChange={(location) =>
+            {!editing && (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={form.crear_credencial}
+                    onChange={(event) =>
                       setForm({
                         ...form,
-                        departamento: location.departamento || '',
-                        provincia: location.provincia || '',
-                        distrito: location.distrito || '',
+                        crear_credencial: event.target.checked,
+                        username: event.target.checked && !form.username ? form.dni : form.username,
                       })
                     }
-                    selectClass={inputClass}
-                    wrapperClassName="grid gap-4 md:grid-cols-3"
+                    className="mt-1 h-4 w-4"
                   />
-                </div>
-                <label className="space-y-1">
-                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">Género</span>
-                  <select
-                    value={form.genero}
-                    onChange={(event) => setForm({ ...form, genero: event.target.value })}
-                    className={inputClass}
-                  >
-                    <option value="">No especificado</option>
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                  </select>
-                </label>
-                <label className="space-y-1 md:col-span-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">Dirección</span>
-                  <input
-                    value={form.direccion}
-                    onChange={(event) => setForm({ ...form, direccion: event.target.value })}
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-
-              <aside className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
-                    <GraduationCap size={20} />
+                  <span>
+                    Crear credencial de acceso
+                    <small className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
+                      El docente podrá ingresar con rol Profesor. La contraseña se guarda protegida.
+                    </small>
                   </span>
-                  <div>
-                    <h4 className="font-black text-slate-950">Áreas / especialidades</h4>
-                    <p className="mt-1 text-sm font-semibold leading-5 text-slate-600">
-                      Estas áreas vinculan al docente con el colegio actual.
-                    </p>
-                  </div>
-                </div>
+                </label>
 
-                <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
-                  {areas.length === 0 ? (
-                    <p className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
-                      No hay áreas configuradas para el colegio actual.
-                    </p>
-                  ) : (
-                    areas.map((area) => (
-                      <label
-                        key={area.id_area}
-                        className="flex cursor-pointer items-center gap-3 rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 hover:bg-blue-50"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.especialidades.includes(area.id_area)}
-                          onChange={() => toggleArea(area.id_area)}
-                          className="h-4 w-4"
-                        />
-                        {area.nombre_area}
-                      </label>
-                    ))
-                  )}
-                </div>
-                {!editing && (
-                  <div className="mt-4 border-t border-slate-200 pt-4">
-                    <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={form.crear_credencial}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            crear_credencial: event.target.checked,
-                            username: event.target.checked && !form.username ? form.dni : form.username,
-                          })
-                        }
-                        className="mt-1 h-4 w-4"
-                      />
-                      <span>
-                        Crear credencial de acceso
-                        <small className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
-                          El docente podrá ingresar con rol Profesor. La contraseña se guarda protegida.
-                        </small>
+                {form.crear_credencial && (
+                  <div className="mt-3 grid gap-3">
+                    <Field
+                      label="Usuario"
+                      value={form.username}
+                      onChange={(value) => setForm({ ...form, username: value })}
+                    />
+                    <Field
+                      label="Contraseña temporal"
+                      type="password"
+                      value={form.password}
+                      onChange={(value) => setForm({ ...form, password: value })}
+                    />
+                    <label className="space-y-1">
+                      <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                        Estado
                       </span>
+                      <select
+                        value={form.credencial_activa ? 'activo' : 'inactivo'}
+                        onChange={(event) => setForm({ ...form, credencial_activa: event.target.value === 'activo' })}
+                        className={inputClass}
+                      >
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Desactivado</option>
+                      </select>
                     </label>
-
-                    {form.crear_credencial && (
-                      <div className="mt-3 grid gap-3">
-                        <Field
-                          label="Usuario"
-                          value={form.username}
-                          onChange={(value) => setForm({ ...form, username: value })}
-                        />
-                        <Field
-                          label="Contraseña temporal"
-                          type="password"
-                          value={form.password}
-                          onChange={(value) => setForm({ ...form, password: value })}
-                        />
-                        <label className="space-y-1">
-                          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
-                            Estado
-                          </span>
-                          <select
-                            value={form.credencial_activa ? 'activo' : 'inactivo'}
-                            onChange={(event) => setForm({ ...form, credencial_activa: event.target.value === 'activo' })}
-                            className={inputClass}
-                          >
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Desactivado</option>
-                          </select>
-                        </label>
-                      </div>
-                    )}
                   </div>
                 )}
+              </div>
+            )}
+          </aside>
+        </div>
+      </CommunityEditModal>
 
-              </aside>
+      <CommunityDetailModal
+        open={detalleOpen && Boolean(selected)}
+        eyebrow="Ficha docente"
+        title={selected?.nombre_completo || 'Docente'}
+        description={selected ? `DNI ${selected.persona.dni}` : undefined}
+        leadingSlot={
+          selected ? (
+            <span className="text-sm font-black">
+              {initials(selected)}
+            </span>
+          ) : undefined
+        }
+        actions={
+          selected ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDetalleOpen(false);
+                openEdit(selected);
+              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"
+            >
+              <Edit3 size={14} />
+              Editar docente
+            </button>
+          ) : undefined
+        }
+        maxWidthClassName="max-w-4xl"
+        onClose={() => setDetalleOpen(false)}
+      >
+        {selected && (
+          <>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Info icon={Phone} label="Teléfono" value={selected.persona.telefono || '—'} />
+              <Info icon={Mail} label="Correo" value={selected.persona.correo || '—'} />
+              <Info icon={CalendarDays} label="Fecha de ingreso" value={toDateInput(selected.fecha_ingreso) || '—'} />
             </div>
 
-            <footer className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-                className="h-11 rounded-sm border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={guardarDocente}
-                disabled={saving}
-                className="inline-flex h-11 items-center gap-2 rounded-sm bg-slate-950 px-5 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving && <Loader2 size={16} className="animate-spin" />}
-                {editing ? 'Guardar cambios' : 'Registrar docente'}
-              </button>
-            </footer>
-          </section>
-        </div>,
-        document.body
-      )}
-
-      {detalleOpen && selected && createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-4xl overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-            <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-sm font-black text-blue-700 ring-1 ring-blue-100">
-                  {initials(selected)}
-                </span>
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">Ficha docente</p>
-                  <h3 className="mt-1 text-xl font-black text-slate-950">{selected.nombre_completo}</h3>
-                  <p className="mt-1 text-sm font-semibold text-slate-600">DNI {selected.persona.dni}</p>
-                </div>
+            <section className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+              <h4 className="text-sm font-black text-slate-950">Especialidades</h4>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(selected.especialidades || []).map((item) => (
+                  <span key={item.id_area} className="rounded-sm border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">
+                    {item.area.nombre_area}
+                  </span>
+                ))}
               </div>
+            </section>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDetalleOpen(false);
-                    openEdit(selected);
-                  }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"
-                >
-                  <Edit3 size={14} />
-                  Editar docente
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDetalleOpen(false)}
-                  className="rounded-sm p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                >
-                  <X size={18} />
-                </button>
+            <section className="mt-5 rounded-[18px] border border-slate-200 bg-white p-4">
+              <h4 className="text-sm font-black text-slate-950">Asignaciones recientes</h4>
+              <div className="mt-3 space-y-2">
+                {(selected.asignaciones_resumen || []).length === 0 ? (
+                  <p className="text-sm font-semibold text-slate-500">Sin asignaciones registradas.</p>
+                ) : (
+                  (selected.asignaciones_resumen || []).map((item) => (
+                    <div key={item.id_asignacion} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-sm font-black text-slate-950">{item.curso}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-600">
+                        {item.seccion} · {item.anio || 'Año no definido'} · {item.colegio || 'Colegio'}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
-            </header>
+            </section>
 
-            <div className="max-h-[72vh] overflow-y-auto p-6">
-              <div className="grid gap-3 md:grid-cols-3">
-                <Info icon={Phone} label="Teléfono" value={selected.persona.telefono || '—'} />
-                <Info icon={Mail} label="Correo" value={selected.persona.correo || '—'} />
-                <Info icon={CalendarDays} label="Fecha de ingreso" value={toDateInput(selected.fecha_ingreso) || '—'} />
-              </div>
-
-              <section className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                <h4 className="text-sm font-black text-slate-950">Especialidades</h4>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(selected.especialidades || []).map((item) => (
-                    <span key={item.id_area} className="rounded-sm border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">
-                      {item.area.nombre_area}
-                    </span>
-                  ))}
-                </div>
-              </section>
-
-              <section className="mt-5 rounded-[18px] border border-slate-200 bg-white p-4">
-                <h4 className="text-sm font-black text-slate-950">Asignaciones recientes</h4>
-                <div className="mt-3 space-y-2">
-                  {(selected.asignaciones_resumen || []).length === 0 ? (
-                    <p className="text-sm font-semibold text-slate-500">Sin asignaciones registradas.</p>
-                  ) : (
-                    (selected.asignaciones_resumen || []).map((item) => (
-                      <div key={item.id_asignacion} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-                        <p className="text-sm font-black text-slate-950">{item.curso}</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-600">
-                          {item.seccion} · {item.anio || 'Año no definido'} · {item.colegio || 'Colegio'}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </section>
-
-              <AccessCredentialsCard
-                personaId={selected.id_persona}
-                tipo="docente"
-                token={token}
-                queryString={queryString}
-                className="mt-5"
-                onLoaded={syncSelectedDocenteCredential}
-                onSaved={handleDocenteCredentialSaved}
-              />
-
-            </div>
-          </section>
-        </div>,
-        document.body
-      )}
+            <AccessCredentialsCard
+              personaId={selected.id_persona}
+              tipo="docente"
+              token={token}
+              queryString={queryString}
+              className="mt-5"
+              onLoaded={syncSelectedDocenteCredential}
+              onSaved={handleDocenteCredentialSaved}
+            />
+          </>
+        )}
+      </CommunityDetailModal>
 
       <ConfirmDialog
         open={confirmDelete}

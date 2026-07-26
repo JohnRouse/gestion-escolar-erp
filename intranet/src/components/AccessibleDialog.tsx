@@ -78,10 +78,11 @@ const cx = (
 
 export type AccessibleDialogProps = {
   open: boolean;
-  title: string;
-  description?: string;
-  eyebrow?: string;
+  title: ReactNode;
+  description?: ReactNode;
+  eyebrow?: ReactNode;
   icon?: ReactNode;
+  headerActions?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
   onClose: () => void;
@@ -104,6 +105,7 @@ export default function AccessibleDialog({
   description,
   eyebrow,
   icon,
+  headerActions,
   children,
   footer,
   onClose,
@@ -397,6 +399,7 @@ export default function AccessibleDialog({
             {eyebrow && (
               <p
                 className="
+                  inline-flex items-center gap-1.5
                   text-xs font-black
                   uppercase tracking-[0.14em]
                   text-slate-500
@@ -430,34 +433,40 @@ export default function AccessibleDialog({
             )}
           </div>
 
-          {showCloseButton && (
-            <button
-              type="button"
-              onClick={requestClose}
-              disabled={preventClose}
-              aria-label={closeLabel}
-              className="
-                inline-flex h-10 w-10
-                shrink-0 items-center
-                justify-center rounded-xl
-                text-slate-500
-                transition-colors duration-150
-                hover:bg-slate-100
-                hover:text-slate-800
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-blue-600
-                focus-visible:ring-offset-2
-                disabled:cursor-not-allowed
-                disabled:opacity-50
-                motion-reduce:transition-none
-              "
-            >
-              <X
-                size={18}
-                aria-hidden="true"
-              />
-            </button>
+          {(headerActions || showCloseButton) && (
+            <div className="flex shrink-0 items-center gap-2">
+              {headerActions}
+
+              {showCloseButton && (
+                <button
+                  type="button"
+                  onClick={requestClose}
+                  disabled={preventClose}
+                  aria-label={closeLabel}
+                  className="
+                    inline-flex h-10 w-10
+                    shrink-0 items-center
+                    justify-center rounded-xl
+                    text-slate-500
+                    transition-colors duration-150
+                    hover:bg-slate-100
+                    hover:text-slate-800
+                    focus-visible:outline-none
+                    focus-visible:ring-2
+                    focus-visible:ring-blue-600
+                    focus-visible:ring-offset-2
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    motion-reduce:transition-none
+                  "
+                >
+                  <X
+                    size={18}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+            </div>
           )}
         </header>
 
