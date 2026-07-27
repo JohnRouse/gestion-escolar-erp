@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type ElementType,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -238,6 +239,12 @@ export default function AppSidebar() {
   const flyoutCloseTimer =
     useRef<number | null>(null);
 
+  const flyoutRef =
+    useRef<HTMLElement | null>(null);
+
+  const flyoutTriggerRef =
+    useRef<HTMLButtonElement | null>(null);
+
   const categorias = useMemo(() => {
     const filterByRole = (items: NavItem[]) =>
       items
@@ -317,9 +324,33 @@ export default function AppSidebar() {
       }, 180);
   };
 
+  const closeCollapsedFlyout = (
+    returnFocus = false,
+  ) => {
+    clearFlyoutCloseTimer();
+    setHoveredItem(null);
+
+    if (returnFocus) {
+      window.setTimeout(() => {
+        flyoutTriggerRef.current?.focus();
+      }, 0);
+    }
+  };
+
+  const focusFirstFlyoutItem = () => {
+    window.setTimeout(() => {
+      flyoutRef.current
+        ?.querySelector<HTMLButtonElement>(
+          '[role="menuitem"]',
+        )
+        ?.focus();
+    }, 0);
+  };
+
   const openCollapsedFlyout = (
     item: NavItem,
-    target: HTMLElement,
+    target: HTMLButtonElement,
+    focusFirst = false,
   ) => {
     if (
       !isCollapsed ||
@@ -364,7 +395,12 @@ export default function AppSidebar() {
       left: rect.right + 12,
     });
 
+    flyoutTriggerRef.current = target;
     setHoveredItem(item);
+
+    if (focusFirst) {
+      focusFirstFlyoutItem();
+    }
   };
 
   useEffect(() => {
@@ -386,8 +422,61 @@ export default function AppSidebar() {
     };
   }, []);
 
+  const handleFlyoutKeyDown = (
+    event: ReactKeyboardEvent<HTMLElement>,
+  ) => {
+    if (
+      event.key === 'Escape' ||
+      event.key === 'ArrowLeft'
+    ) {
+      event.preventDefault();
+      closeCollapsedFlyout(true);
+      return;
+    }
+
+    const menuItems = Array.from(
+      flyoutRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]',
+      ) || [],
+    );
+
+    if (menuItems.length === 0) {
+      return;
+    }
+
+    const currentIndex = menuItems.indexOf(
+      document.activeElement as HTMLButtonElement,
+    );
+
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      nextIndex =
+        currentIndex < 0
+          ? 0
+          : (currentIndex + 1) % menuItems.length;
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      nextIndex =
+        currentIndex <= 0
+          ? menuItems.length - 1
+          : currentIndex - 1;
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      nextIndex = menuItems.length - 1;
+    } else {
+      return;
+    }
+
+    menuItems[nextIndex]?.focus();
+  };
+
   const Tooltip = ({ title }: { title: string }) => (
-    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-[80] -translate-y-1/2 whitespace-nowrap rounded-2xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-xl shadow-slate-950/15 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100">
+    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-[80] -translate-y-1/2 whitespace-nowrap rounded-2xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-xl shadow-slate-950/15 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:translate-x-1 group-focus-visible:opacity-100">
       {title}
     </span>
   );
@@ -423,11 +512,49 @@ export default function AppSidebar() {
                 event.currentTarget,
               )
             }
-            onClick={() => {
+            onBlur={(event) => {
+              const nextTarget =
+                event.relatedTarget as Node | null;
+
+              if (
+                nextTarget &&
+                flyoutRef.current?.contains(
+                  nextTarget,
+                )
+              ) {
+                return;
+              }
+
+              scheduleFlyoutClose();
+            }}
+            onKeyDown={(event) => {
+              if (!isCollapsed) return;
+
+              if (
+                event.key === 'ArrowRight' ||
+                event.key === 'ArrowDown' ||
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault();
+
+                openCollapsedFlyout(
+                  item,
+                  event.currentTarget,
+                  true,
+                );
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeCollapsedFlyout(true);
+              }
+            }}
+            onClick={(event) => {
               if (isCollapsed) {
-                setHoveredItem(null);
-                toggleCollapse();
-                setExpanded(item.title);
+                openCollapsedFlyout(
+                  item,
+                  event.currentTarget,
+                  true,
+                );
                 return;
               }
 
@@ -435,6 +562,19 @@ export default function AppSidebar() {
                 isExpanded ? null : item.title,
               );
             }}
+            aria-haspopup={
+              isCollapsed ? 'menu' : undefined
+            }
+            aria-controls={
+              isCollapsed
+                ? 'sidebar-collapsed-flyout'
+                : undefined
+            }
+            aria-expanded={
+              isCollapsed
+                ? hoveredItem?.title === item.title
+                : isExpanded
+            }
             title={isCollapsed ? item.title : undefined}
             className={cx(
               'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
@@ -669,6 +809,7 @@ export default function AppSidebar() {
                 onClick={toggleCollapse}
                 className="sidebar-brand__collapse"
                 title="Contraer menú"
+                aria-label="Contraer menú lateral"
               >
                 <PanelLeft size={18} />
               </button>
@@ -683,6 +824,7 @@ export default function AppSidebar() {
                 onClick={toggleCollapse}
                 className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 active:scale-95"
                 title="Expandir menú"
+                aria-label="Expandir menú lateral"
               >
                 <PanelLeft size={18} className="rotate-180" />
               </button>
@@ -690,6 +832,7 @@ export default function AppSidebar() {
           )}
 
           <nav
+            aria-label="Navegación principal"
             className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-5 scrollbar-hide"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
@@ -733,6 +876,10 @@ export default function AppSidebar() {
         typeof document !== 'undefined' &&
         createPortal(
           <aside
+            ref={flyoutRef}
+            id="sidebar-collapsed-flyout"
+            role="menu"
+            tabIndex={-1}
             className="sidebar-hover-flyout"
             style={{
               top: flyoutPosition.top,
@@ -744,6 +891,30 @@ export default function AppSidebar() {
             onMouseLeave={() =>
               scheduleFlyoutClose()
             }
+            onFocus={
+              clearFlyoutCloseTimer
+            }
+            onBlur={(event) => {
+              const nextTarget =
+                event.relatedTarget as Node | null;
+
+              if (
+                nextTarget &&
+                (
+                  flyoutRef.current?.contains(
+                    nextTarget,
+                  ) ||
+                  flyoutTriggerRef.current?.contains(
+                    nextTarget,
+                  )
+                )
+              ) {
+                return;
+              }
+
+              scheduleFlyoutClose();
+            }}
+            onKeyDown={handleFlyoutKeyDown}
             aria-label={`Opciones de ${hoveredItem.title}`}
           >
             <div className="sidebar-hover-flyout__header">
@@ -802,6 +973,11 @@ export default function AppSidebar() {
                                   }
                                   type="button"
                                   role="menuitem"
+                                  aria-current={
+                                    active
+                                      ? 'page'
+                                      : undefined
+                                  }
                                   onClick={() =>
                                     handleNavigate(
                                       nestedChild.path,
@@ -848,6 +1024,11 @@ export default function AppSidebar() {
                       key={child.title}
                       type="button"
                       role="menuitem"
+                      aria-current={
+                        active
+                          ? 'page'
+                          : undefined
+                      }
                       onClick={() =>
                         handleNavigate(
                           child.path,
