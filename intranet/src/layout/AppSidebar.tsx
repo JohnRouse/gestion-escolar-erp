@@ -21,6 +21,7 @@ import {
   Wallet,
   Mail,
   Users,
+  Presentation,
   FileText,
   CheckSquare,
   Settings,
@@ -108,7 +109,7 @@ const menuComunidad: NavItem[] = [
 ];
 
 const menuPersonal: NavItem[] = [
-  { title: 'Docentes', icon: Users, path: '/docentes', roles: ['Admin', 'Director'] },
+  { title: 'Docentes', icon: Presentation, path: '/docentes', roles: ['Admin', 'Director'] },
   { title: 'Staff', icon: UserCircle, path: '/staff', roles: ['Admin', 'Director'] },
   { title: 'Citas', icon: MessageSquareHeart, path: '/citas', roles: ['Admin', 'Secretaria'] },
 ];
