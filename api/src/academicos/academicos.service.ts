@@ -83,6 +83,24 @@ export class AcademicosService {
     return clean ? clean : null;
   }
 
+  private normalizarClaveNombreGrado(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  private normalizarClaveNombreNivel(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
   private normalizeGenero(value?: string | null) {
     if (!value) return null;
     if (value === 'Masculino') return 'M';
@@ -1560,49 +1578,162 @@ export class AcademicosService {
     },
   ) {
     const scope = await this.resolveScope(params);
-    const nombre = this.normalizeEmpty(params.nombreNivel);
+    const nombre = String(params.nombreNivel || '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     if (!nombre) {
       throw new BadRequestException('Ingresa el nombre del nivel.');
     }
 
+    if (nombre.length > 50) {
+      throw new BadRequestException(
+        'El nombre del nivel no puede superar los 50 caracteres.',
+      );
+    }
+
     const colegioId =
       params.idColegio ||
+      params.colegioId ||
       (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
 
-    let nivel = await this.prisma.nivel.findFirst({
-      where: { nombre_nivel: nombre },
+    if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+      throw new BadRequestException(
+        'Selecciona una institución válida para el nivel.',
+      );
+    }
+
+    const clave = this.normalizarClaveNombreNivel(nombre);
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existentes = await tx.nivel.findMany({
+          orderBy: {
+            id_nivel: 'asc',
+          },
+        });
+
+        let nivel = existentes.find(
+          (item) =>
+            this.normalizarClaveNombreNivel(item.nombre_nivel) === clave,
+        );
+
+        let creado = false;
+
+        if (!nivel) {
+          nivel = await tx.nivel.create({
+            data: {
+              nombre_nivel: nombre,
+            },
+          });
+          creado = true;
+        }
+
+        const asociacion = await tx.colegioNivel.findUnique({
+          where: {
+            id_colegio_id_nivel: {
+              id_colegio: colegioId,
+              id_nivel: nivel.id_nivel,
+            },
+          },
+        });
+
+        if (!asociacion) {
+          await tx.colegioNivel.create({
+            data: {
+              id_colegio: colegioId,
+              id_nivel: nivel.id_nivel,
+            },
+          });
+        }
+
+        return {
+          nivel,
+          creado,
+          vinculado: !creado && !asociacion,
+          yaConfigurado: Boolean(asociacion),
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
+  async actualizarNivelConfig(
+    params: ScopeParams & {
+      idNivel: number;
+      nombreNivel: string;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    if (!Number.isInteger(params.idNivel) || params.idNivel <= 0) {
+      throw new BadRequestException('El nivel seleccionado no es válido.');
+    }
+
+    const nombre = String(params.nombreNivel || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!nombre) {
+      throw new BadRequestException('Ingresa el nombre del nivel.');
+    }
+
+    if (nombre.length > 50) {
+      throw new BadRequestException(
+        'El nombre del nivel no puede superar los 50 caracteres.',
+      );
+    }
+
+    const nivel = await this.prisma.nivel.findFirst({
+      where: {
+        id_nivel: params.idNivel,
+        colegios: {
+          some: {
+            id_colegio: {
+              in: scope.colegioIds,
+            },
+          },
+        },
+      },
     });
 
     if (!nivel) {
-      nivel = await this.prisma.nivel.create({
-        data: {
-          nombre_nivel: nombre,
-        },
-      });
+      throw new NotFoundException('Nivel no encontrado o sin acceso.');
     }
 
-    if (colegioId) {
-      if (!scope.colegioIds.includes(colegioId)) {
-        throw new UnauthorizedException('No tienes acceso a este colegio.');
-      }
+    const clave = this.normalizarClaveNombreNivel(nombre);
+    const otrosNiveles = await this.prisma.nivel.findMany({
+      where: {
+        id_nivel: {
+          not: nivel.id_nivel,
+        },
+      },
+      select: {
+        id_nivel: true,
+        nombre_nivel: true,
+      },
+    });
 
-      await this.prisma.colegioNivel.upsert({
-        where: {
-          id_colegio_id_nivel: {
-            id_colegio: colegioId,
-            id_nivel: nivel.id_nivel,
-          },
-        },
-        update: {},
-        create: {
-          id_colegio: colegioId,
-          id_nivel: nivel.id_nivel,
-        },
-      });
+    const duplicado = otrosNiveles.find(
+      (item) => this.normalizarClaveNombreNivel(item.nombre_nivel) === clave,
+    );
+
+    if (duplicado) {
+      throw new BadRequestException(
+        `El nivel "${nombre}" ya existe. Usa el nivel existente.`,
+      );
     }
 
-    return nivel;
+    return this.prisma.nivel.update({
+      where: {
+        id_nivel: nivel.id_nivel,
+      },
+      data: {
+        nombre_nivel: nombre,
+      },
+    });
   }
 
   async getGrados(params: ScopeParams & { nivelId: number }) {
@@ -1625,38 +1756,193 @@ export class AcademicosService {
   });
 }
 
-async crearGradoConfig(params: ScopeParams & { nombreGrado: string; idNivel: number; idColegio?: number }) {
-  const scope = await this.resolveScope(params);
-  const nombre = this.normalizeEmpty(params.nombreGrado);
-  if (!nombre) throw new BadRequestException('Ingresa el nombre del grado.');
+  async crearGradoConfig(
+    params: ScopeParams & {
+      nombreGrado: string;
+      idNivel: number;
+      idColegio?: number;
+    },
+  ) {
+    const resultado = await this.crearGradosLoteConfig({
+      ...params,
+      nombresGrado: [params.nombreGrado],
+    });
 
-  const colegioId = params.idColegio || params.colegioId || (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
-  if (!colegioId || !scope.colegioIds.includes(colegioId)) {
-    throw new BadRequestException('Selecciona una institución válida para el grado.');
+    return resultado.grados[0];
   }
 
-  const nivel = await this.prisma.nivel.findUnique({ where: { id_nivel: params.idNivel } });
-  if (!nivel) throw new NotFoundException('Nivel no encontrado.');
+  async crearGradosLoteConfig(
+    params: ScopeParams & {
+      nombresGrado: string[];
+      idNivel: number;
+      idColegio?: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
 
-  let grado = await this.prisma.grado.findFirst({ where: { id_nivel: params.idNivel, nombre_grado: nombre } });
-  if (!grado) {
-    grado = await this.prisma.grado.create({ data: { id_nivel: params.idNivel, nombre_grado: nombre } });
+    if (!Number.isInteger(params.idNivel) || params.idNivel <= 0) {
+      throw new BadRequestException('Selecciona un nivel válido.');
+    }
+
+    const colegioId =
+      params.idColegio ||
+      params.colegioId ||
+      (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
+
+    if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+      throw new BadRequestException(
+        'Selecciona una institución válida para los grados.',
+      );
+    }
+
+    if (!Array.isArray(params.nombresGrado)) {
+      throw new BadRequestException('Envía una lista válida de grados.');
+    }
+
+    const nombres = params.nombresGrado
+      .map((value) =>
+        String(value ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      )
+      .filter(Boolean);
+
+    if (nombres.length === 0) {
+      throw new BadRequestException('Agrega al menos un grado.');
+    }
+
+    if (nombres.length > 20) {
+      throw new BadRequestException(
+        'Solo puedes registrar hasta 20 grados por operación.',
+      );
+    }
+
+    const nombresPorClave = new Map<string, string>();
+
+    for (const nombre of nombres) {
+      if (nombre.length > 50) {
+        throw new BadRequestException(
+          `El nombre "${nombre}" supera los 50 caracteres.`,
+        );
+      }
+
+      const clave = this.normalizarClaveNombreGrado(nombre);
+
+      if (nombresPorClave.has(clave)) {
+        throw new BadRequestException(
+          `El grado "${nombre}" está repetido en la lista.`,
+        );
+      }
+
+      nombresPorClave.set(clave, nombre);
+    }
+
+    const nivel = await this.prisma.nivel.findUnique({
+      where: {
+        id_nivel: params.idNivel,
+      },
+    });
+
+    if (!nivel) {
+      throw new NotFoundException('Nivel no encontrado.');
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existentes = await tx.grado.findMany({
+          where: {
+            id_nivel: params.idNivel,
+          },
+        });
+
+        const gradosPorClave = new Map(
+          existentes.map((grado) => [
+            this.normalizarClaveNombreGrado(grado.nombre_grado),
+            grado,
+          ]),
+        );
+
+        await tx.colegioNivel.upsert({
+          where: {
+            id_colegio_id_nivel: {
+              id_colegio: colegioId,
+              id_nivel: params.idNivel,
+            },
+          },
+          update: {},
+          create: {
+            id_colegio: colegioId,
+            id_nivel: params.idNivel,
+          },
+        });
+
+        const grados: typeof existentes = [];
+        let creados = 0;
+        let vinculados = 0;
+
+        for (const [clave, nombre] of nombresPorClave.entries()) {
+          let grado = gradosPorClave.get(clave);
+
+          if (!grado) {
+            grado = await tx.grado.create({
+              data: {
+                id_nivel: params.idNivel,
+                nombre_grado: nombre,
+              },
+            });
+
+            gradosPorClave.set(clave, grado);
+            creados += 1;
+          }
+
+          const asociacion = await tx.colegioGrado.findUnique({
+            where: {
+              id_colegio_id_grado: {
+                id_colegio: colegioId,
+                id_grado: grado.id_grado,
+              },
+            },
+          });
+
+          await tx.colegioGrado.upsert({
+            where: {
+              id_colegio_id_grado: {
+                id_colegio: colegioId,
+                id_grado: grado.id_grado,
+              },
+            },
+            update: {
+              estado: 'Activo',
+            },
+            create: {
+              id_colegio: colegioId,
+              id_grado: grado.id_grado,
+              estado: 'Activo',
+            },
+          });
+
+          if (!asociacion || asociacion.estado !== 'Activo') {
+            vinculados += 1;
+          }
+
+          grados.push(grado);
+        }
+
+        return {
+          idNivel: params.idNivel,
+          colegioId,
+          totalSolicitados: nombresPorClave.size,
+          creados,
+          reutilizados: nombresPorClave.size - creados,
+          vinculados,
+          grados,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   }
-
-  await this.prisma.colegioNivel.upsert({
-    where: { id_colegio_id_nivel: { id_colegio: colegioId, id_nivel: params.idNivel } },
-    update: {},
-    create: { id_colegio: colegioId, id_nivel: params.idNivel },
-  });
-
-  await this.prisma.colegioGrado.upsert({
-    where: { id_colegio_id_grado: { id_colegio: colegioId, id_grado: grado.id_grado } },
-    update: { estado: 'Activo' },
-    create: { id_colegio: colegioId, id_grado: grado.id_grado, estado: 'Activo' },
-  });
-
-  return grado;
-}
 
 async eliminarGradoConfig(params: ScopeParams & { idGrado: number }) {
   const scope = await this.resolveScope(params);
@@ -1852,7 +2138,7 @@ colegio_nombre: sec.colegio?.nombre || null,
     }));
   }
 
-  
+
   async listarDocentesGestion(params: ScopeParams) {
     const scope = await this.resolveScope(params);
 
@@ -2735,6 +3021,360 @@ async obtenerPreparacionAnioLectivo(
     });
   }
 
+  async crearSeccionesLoteConfig(
+    params: ScopeParams & {
+      letra: string;
+      aplicarA: 'grado' | 'nivel';
+      idGrado?: number;
+      idNivel?: number;
+      idColegio?: number;
+      capacidad?: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    const colegioId =
+      params.idColegio ||
+      params.colegioId ||
+      (scope.tipo === 'colegio' ? scope.colegioIds[0] : undefined);
+
+    if (!colegioId || !scope.colegioIds.includes(colegioId)) {
+      throw new BadRequestException('Selecciona una institución válida.');
+    }
+
+    const letra = String(params.letra || '')
+      .trim()
+      .toUpperCase();
+
+    if (letra.length !== 1) {
+      throw new BadRequestException(
+        'La sección debe tener una sola letra o código.',
+      );
+    }
+
+    const capacidad = Number(params.capacidad ?? 30);
+
+    if (!Number.isInteger(capacidad) || capacidad < 1 || capacidad > 127) {
+      throw new BadRequestException('La capacidad debe estar entre 1 y 127.');
+    }
+
+    type GradoConNivel = Prisma.GradoGetPayload<{
+      include: {
+        nivel: true;
+      };
+    }>;
+
+    let grados: GradoConNivel[] = [];
+
+    if (params.aplicarA === 'nivel') {
+      if (!Number.isInteger(params.idNivel) || Number(params.idNivel) <= 0) {
+        throw new BadRequestException('Selecciona un nivel válido.');
+      }
+
+      const vinculados = await this.prisma.colegioGrado.findMany({
+        where: {
+          id_colegio: colegioId,
+          estado: 'Activo',
+          grado: {
+            id_nivel: Number(params.idNivel),
+          },
+        },
+        include: {
+          grado: {
+            include: {
+              nivel: true,
+            },
+          },
+        },
+        orderBy: {
+          id_grado: 'asc',
+        },
+      });
+
+      grados = vinculados.map((item) => item.grado);
+
+      if (grados.length === 0) {
+        throw new BadRequestException('Este nivel no tiene grados activos.');
+      }
+    } else {
+      if (!Number.isInteger(params.idGrado) || Number(params.idGrado) <= 0) {
+        throw new BadRequestException('Selecciona un grado válido.');
+      }
+
+      const grado = await this.prisma.grado.findUnique({
+        where: {
+          id_grado: Number(params.idGrado),
+        },
+        include: {
+          nivel: true,
+        },
+      });
+
+      if (!grado) {
+        throw new NotFoundException('Grado no encontrado.');
+      }
+
+      grados = [grado];
+    }
+
+    const colegio = scope.colegios.find(
+      (item) => item.id_colegio === colegioId,
+    );
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existentes = await tx.seccion.findMany({
+          where: {
+            id_colegio: colegioId,
+            id_grado: {
+              in: grados.map((grado) => grado.id_grado),
+            },
+            letra,
+          },
+          select: {
+            id_grado: true,
+          },
+        });
+
+        const existentesIds = new Set(
+          existentes.map((seccion) => seccion.id_grado),
+        );
+
+        const omitidos = grados.filter((grado) =>
+          existentesIds.has(grado.id_grado),
+        );
+
+        const faltantes = grados.filter(
+          (grado) => !existentesIds.has(grado.id_grado),
+        );
+
+        if (faltantes.length === 0) {
+          throw new BadRequestException(
+            `La sección "${letra}" ya existe ` +
+              'en todos los grados seleccionados.',
+          );
+        }
+
+        type SeccionCreada = Prisma.SeccionGetPayload<{
+          include: {
+            colegio: true;
+            aula: true;
+            grado: {
+              include: {
+                nivel: true;
+              };
+            };
+          };
+        }>;
+
+        const secciones: SeccionCreada[] = [];
+
+        for (const grado of faltantes) {
+          await tx.colegioGrado.upsert({
+            where: {
+              id_colegio_id_grado: {
+                id_colegio: colegioId,
+                id_grado: grado.id_grado,
+              },
+            },
+            update: {
+              estado: 'Activo',
+            },
+            create: {
+              id_colegio: colegioId,
+              id_grado: grado.id_grado,
+              estado: 'Activo',
+            },
+          });
+
+          const aula = await tx.aula.create({
+            data: {
+              id_tenant: colegio?.id_tenant || scope.tenantId,
+              id_colegio: colegioId,
+              nombre_aula: `${grado.nombre_grado} ${letra}`,
+              capacidad,
+            },
+          });
+
+          const seccion = await tx.seccion.create({
+            data: {
+              letra,
+              id_grado: grado.id_grado,
+              id_aula: aula.id_aula,
+              id_tenant: colegio?.id_tenant || scope.tenantId,
+              id_colegio: colegioId,
+            },
+            include: {
+              colegio: true,
+              aula: true,
+              grado: {
+                include: {
+                  nivel: true,
+                },
+              },
+            },
+          });
+
+          secciones.push(seccion);
+        }
+
+        return {
+          letra,
+          totalObjetivo: grados.length,
+          creadas: secciones.length,
+          omitidas: omitidos.length,
+          gradosOmitidos: omitidos.map((grado) => ({
+            id_grado: grado.id_grado,
+            nombre_grado: grado.nombre_grado,
+          })),
+          secciones,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
+  async actualizarSeccionConfig(
+    params: ScopeParams & {
+      idSeccion: number;
+      letra?: string;
+      idAula?: number;
+    },
+  ) {
+    const scope = await this.resolveScope(params);
+
+    if (!Number.isInteger(params.idSeccion) || params.idSeccion <= 0) {
+      throw new BadRequestException('La sección seleccionada no es válida.');
+    }
+
+    const seccion = await this.prisma.seccion.findUnique({
+      where: {
+        id_seccion: params.idSeccion,
+      },
+      include: {
+        grado: true,
+        aula: true,
+      },
+    });
+
+    const seccionColegioId = Number(seccion?.id_colegio);
+
+    if (
+      seccion === null
+      || Number.isInteger(seccionColegioId) === false
+      || seccionColegioId <= 0
+      || scope.colegioIds.includes(seccionColegioId) === false
+    ) {
+      throw new NotFoundException('Sección no encontrada.');
+    }
+
+    const letra =
+      params.letra === undefined
+        ? seccion.letra
+        : String(params.letra || '')
+            .trim()
+            .toUpperCase();
+
+    if (letra.length !== 1) {
+      throw new BadRequestException(
+        'La sección debe tener una sola letra o código.',
+      );
+    }
+
+    let aulaDestinoId = seccion.id_aula;
+
+    if (params.idAula !== undefined) {
+      if (!Number.isInteger(params.idAula) || params.idAula <= 0) {
+        throw new BadRequestException('El aula seleccionada no es válida.');
+      }
+
+      const aulaDestino = await this.prisma.aula.findFirst({
+        where: {
+          id_aula: params.idAula,
+          id_colegio: seccionColegioId,
+        },
+      });
+
+      if (!aulaDestino) {
+        throw new BadRequestException(
+          'El aula seleccionada no pertenece a la institución.',
+        );
+      }
+
+      aulaDestinoId = aulaDestino.id_aula;
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const duplicada = await tx.seccion.findFirst({
+          where: {
+            id_colegio: seccionColegioId,
+            id_grado: seccion.id_grado,
+            letra,
+            NOT: {
+              id_seccion: seccion.id_seccion,
+            },
+          },
+          select: {
+            id_seccion: true,
+          },
+        });
+
+        if (duplicada) {
+          throw new BadRequestException(
+            `La sección "${letra}" ya existe en ${seccion.grado.nombre_grado}.`,
+          );
+        }
+
+        const actualizada = await tx.seccion.update({
+          where: {
+            id_seccion: seccion.id_seccion,
+          },
+          data: {
+            letra,
+            id_aula: aulaDestinoId,
+          },
+          include: {
+            colegio: true,
+            aula: true,
+            grado: {
+              include: {
+                nivel: true,
+              },
+            },
+          },
+        });
+
+        const otrasSeccionesEnAula = await tx.seccion.count({
+          where: {
+            id_aula: aulaDestinoId,
+            NOT: {
+              id_seccion: seccion.id_seccion,
+            },
+          },
+        });
+
+        if (otrasSeccionesEnAula === 0) {
+          await tx.aula.update({
+            where: {
+              id_aula: aulaDestinoId,
+            },
+            data: {
+              nombre_aula: `${seccion.grado.nombre_grado} ${letra}`,
+            },
+          });
+        }
+
+        return actualizada;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
   async buscarAlumno(params: ScopeParams & { dni: string }) {
     const scope = await this.resolveScope(params);
 
@@ -3360,7 +4000,7 @@ async obtenerPreparacionAnioLectivo(
   // ── CREAR APODERADO ───────────────────────────────────
 
   async createApoderado(dto: CreateApoderadoDto) {
-    
+
     dto = normalizePersonaInput(dto) as CreateApoderadoDto;
 const existente = await this.prisma.persona.findUnique({
       where: { dni: dto.dni },

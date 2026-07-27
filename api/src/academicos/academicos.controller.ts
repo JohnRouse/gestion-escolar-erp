@@ -89,17 +89,24 @@ export class AcademicosController {
   @Roles('Admin')
   async updateNivel(
     @Param('id') id: string,
+    @Request()
+    req: {
+      user: {
+        userId: number;
+        rol: string;
+      };
+    },
     @Body() body: { nombre_nivel: string },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
   ) {
-    const nivel = await this.prisma.nivel.findUnique({
-      where: { id_nivel: Number(id) },
-    });
-
-    if (!nivel) throw new NotFoundException('Nivel no encontrado');
-
-    return this.prisma.nivel.update({
-      where: { id_nivel: Number(id) },
-      data: { nombre_nivel: body.nombre_nivel },
+    return this.academicosService.actualizarNivelConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idNivel: Number(id),
+      nombreNivel: body.nombre_nivel,
     });
   }
 
@@ -158,6 +165,31 @@ async createGrado(
     idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
   });
 }
+
+  @Post('grados/lote')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin')
+  async createGradosLote(
+    @Request() req: { user: { userId: number; rol: string } },
+    @Body()
+    body: {
+      nombres_grado: string[];
+      id_nivel: number;
+      id_colegio?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearGradosLoteConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      nombresGrado: body.nombres_grado,
+      idNivel: Number(body.id_nivel),
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+    });
+  }
 
   @Put('grados/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -343,22 +375,67 @@ async deleteGrado(
     });
   }
 
+  @Post('secciones/lote')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin')
+  async createSeccionesLote(
+    @Request()
+    req: {
+      user: {
+        userId: number;
+        rol: string;
+      };
+    },
+    @Body()
+    body: {
+      letra: string;
+      aplicar_a: 'grado' | 'nivel';
+      id_grado?: number;
+      id_nivel?: number;
+      id_colegio?: number;
+      capacidad?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearSeccionesLoteConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      letra: body.letra,
+      aplicarA: body.aplicar_a,
+      idGrado: body.id_grado ? Number(body.id_grado) : undefined,
+      idNivel: body.id_nivel ? Number(body.id_nivel) : undefined,
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+      capacidad: body.capacidad ? Number(body.capacidad) : undefined,
+    });
+  }
+
   @Put('secciones/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
   async updateSeccion(
     @Param('id') id: string,
+    @Request()
+    req: {
+      user: {
+        userId: number;
+        rol: string;
+      };
+    },
     @Body() body: { letra?: string; id_aula?: number },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
   ) {
-    const seccion = await this.prisma.seccion.findUnique({
-      where: { id_seccion: Number(id) },
-    });
-
-    if (!seccion) throw new NotFoundException('Sección no encontrada');
-
-    return this.prisma.seccion.update({
-      where: { id_seccion: Number(id) },
-      data: body,
+    return this.academicosService.actualizarSeccionConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      idSeccion: Number(id),
+      letra: body.letra,
+      idAula: body.id_aula ? Number(body.id_aula) : undefined,
     });
   }
 

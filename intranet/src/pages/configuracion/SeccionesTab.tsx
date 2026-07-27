@@ -42,7 +42,7 @@ interface Seccion {
   letra: string;
   id_grado: number;
   id_aula: number;
-  grado: { nombre_grado: string; nivel: { nombre_nivel: string } };
+  grado: Grado;
   aula: { nombre_aula: string; capacidad: number };
   _count?: { matriculas: number };
   tutor?: TutorBasico | null;
@@ -74,6 +74,8 @@ interface AnioLectivo {
   estado: string;
 }
 
+type ApplyTarget = 'grado' | 'nivel';
+
 type ModalState =
   | { mode: 'create' }
   | { mode: 'edit'; seccion: Seccion };
@@ -85,7 +87,7 @@ const iconButtonClass =
 
 export default function SeccionesTab() {
   const { token } = useAuth();
-  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
@@ -117,6 +119,8 @@ export default function SeccionesTab() {
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
   const [capacidad, setCapacidad] = useState('30');
+  const [aplicarA, setAplicarA] = useState<ApplyTarget>('grado');
+  const [seccionesNivel, setSeccionesNivel] = useState<Seccion[] | null>(null);
   const [colegioGestionId, setColegioGestionId] = useState('');
 
   // ════ Variables derivadas (después de los estados) ════
@@ -273,11 +277,33 @@ export default function SeccionesTab() {
   }, [gradoSeleccionado, anioSeleccionado, token, scopedQuery]);
 
   // ════ Acciones ════
-  const openCreate = () => {
+  const openCreate = async () => {
+    if (!token || !nivelSeleccionado || !gradoSeleccionado) return;
+
     setModal({ mode: 'create' });
-    setLetra('');
+    setLetra('A');
     setCapacidad('30');
+    setAplicarA('grado');
+    setSeccionesNivel(null);
     setMensaje(null);
+
+    try {
+      const response = await axios.get(
+        `/api/academicos/secciones${scopedQuery}`,
+        authHeader,
+      );
+
+      setSeccionesNivel(
+        Array.isArray(response.data)
+          ? response.data
+          : [],
+      );
+    } catch {
+      setMensaje({
+        type: 'error',
+        text: 'No se pudieron verificar las secciones existentes.',
+      });
+    }
   };
 
   const openEdit = (seccion: Seccion) => {
@@ -290,20 +316,90 @@ export default function SeccionesTab() {
     if (saving) return;
     setModal(null);
     setLetra('');
+    setAplicarA('grado');
+    setSeccionesNivel(null);
   };
 
   const handleSave = async () => {
-    if (!token || !gradoSeleccionado || !modal) return;
-    const cleanLetter = letra.trim().toUpperCase();
+    if (
+      !token
+      || !gradoSeleccionado
+      || !nivelSeleccionado
+      || !modal
+    ) {
+      return;
+    }
 
-    if (!cleanLetter) {
-      setMensaje({ type: 'error', text: 'Ingresa una letra para la sección.' });
+    const cleanLetter = letra.trim().toUpperCase();
+    const capacidadNumero = Number(capacidad);
+
+    if (cleanLetter.length !== 1) {
+      setMensaje({
+        type: 'error',
+        text: 'La sección debe tener una sola letra o código.',
+      });
+      return;
+    }
+
+    if (
+      modal.mode === 'edit'
+      && secciones.some(
+        (seccion) =>
+          seccion.id_seccion !== modal.seccion.id_seccion
+          && seccion.letra.trim().toUpperCase() === cleanLetter,
+      )
+    ) {
+      setMensaje({
+        type: 'error',
+        text: `La sección "${cleanLetter}" ya existe en este grado.`,
+      });
+      return;
+    }
+
+    if (
+      modal.mode === 'create'
+      && (
+        !Number.isInteger(capacidadNumero)
+        || capacidadNumero < 1
+        || capacidadNumero > 127
+      )
+    ) {
+      setMensaje({
+        type: 'error',
+        text: 'La capacidad debe estar entre 1 y 127.',
+      });
+      return;
+    }
+
+    if (
+      modal.mode === 'create'
+      && seccionesNivel === null
+    ) {
+      setMensaje({
+        type: 'error',
+        text: 'Espera mientras se verifican las secciones existentes.',
+      });
+      return;
+    }
+
+    if (
+      modal.mode === 'create'
+      && gradosPendientes.length === 0
+    ) {
+      setMensaje({
+        type: 'error',
+        text: `La sección "${cleanLetter}" ya existe en todos los grados seleccionados.`,
+      });
       return;
     }
 
     setSaving(true);
     setMensaje(null);
+
     try {
+      let creadas = 0;
+      let omitidas = 0;
+
       if (modal.mode === 'edit') {
         await axios.put(
           `/api/academicos/secciones/${modal.seccion.id_seccion}`,
@@ -311,30 +407,64 @@ export default function SeccionesTab() {
           authHeader,
         );
       } else {
-        await axios.post(
-          `/api/academicos/secciones${scopedQuery}`,
+        const response = await axios.post(
+          `/api/academicos/secciones/lote${scopedQuery}`,
           {
             letra: cleanLetter,
-            id_grado: gradoSeleccionado,
-            id_colegio: colegioGestionActualId || undefined,
-            id_tenant: tenant?.id_tenant || undefined,
-            capacidad: Number(capacidad) || 30,
+            aplicar_a: aplicarA,
+            id_grado:
+              aplicarA === 'grado'
+                ? gradoSeleccionado
+                : undefined,
+            id_nivel:
+              aplicarA === 'nivel'
+                ? nivelSeleccionado
+                : undefined,
+            id_colegio:
+              colegioGestionActualId || undefined,
+            capacidad: capacidadNumero,
           },
           authHeader,
         );
+
+        creadas = Number(response.data?.creadas || 0);
+        omitidas = Number(response.data?.omitidas || 0);
       }
 
       await cargarSecciones();
+
+      const textoResultado =
+        modal.mode === 'edit'
+          ? 'Sección actualizada correctamente.'
+          : omitidas > 0
+            ? `${creadas} sección(es) creada(s). ${omitidas} ya existía(n) y fueron omitida(s).`
+            : `${creadas} sección(es) creada(s) correctamente.`;
+
       setModal(null);
       setLetra('');
-      setMensaje({ type: 'success', text: 'Sección guardada correctamente.' });
+      setAplicarA('grado');
+      setSeccionesNivel(null);
+
+      setMensaje({
+        type: 'success',
+        text: textoResultado,
+      });
+
       showToast({
         type: 'success',
-        title: 'Sección guardada',
-        message: `Sección guardada para ${scopeLabel}.`,
+        title:
+          modal.mode === 'edit'
+            ? 'Sección actualizada'
+            : 'Secciones configuradas',
+        message: textoResultado,
       });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar la sección.' });
+      setMensaje({
+        type: 'error',
+        text:
+          err.response?.data?.message
+          || 'No se pudo guardar la sección.',
+      });
     } finally {
       setSaving(false);
     }
@@ -456,6 +586,60 @@ export default function SeccionesTab() {
   // ════ Lecturas derivadas ════
   const nivelActivo = niveles.find((nivel) => nivel.id_nivel === nivelSeleccionado);
   const gradoActivo = grados.find((grado) => grado.id_grado === gradoSeleccionado);
+  const codigoSeccion = letra.trim().toUpperCase();
+
+  const gradosObjetivo =
+    aplicarA === 'nivel'
+      ? grados
+      : gradoActivo
+        ? [gradoActivo]
+        : [];
+
+  const gradosConCodigo = new Set(
+    (seccionesNivel || [])
+      .filter(
+        (seccion) =>
+          seccion.letra.trim().toUpperCase()
+          === codigoSeccion,
+      )
+      .map((seccion) => seccion.grado.id_grado),
+  );
+
+  const gradosExistentes = gradosObjetivo.filter(
+    (grado) => gradosConCodigo.has(grado.id_grado),
+  );
+
+  const gradosPendientes = gradosObjetivo.filter(
+    (grado) => !gradosConCodigo.has(grado.id_grado),
+  );
+
+  const capacidadNumero = Number(capacidad);
+
+  const edicionDuplicada =
+    modal?.mode === 'edit'
+    && secciones.some(
+      (seccion) =>
+        seccion.id_seccion !== modal.seccion.id_seccion
+        && seccion.letra.trim().toUpperCase() === codigoSeccion,
+    );
+
+  const creacionInvalida =
+    modal?.mode === 'create'
+    && (
+      seccionesNivel === null
+      || codigoSeccion.length !== 1
+      || !Number.isInteger(capacidadNumero)
+      || capacidadNumero < 1
+      || capacidadNumero > 127
+      || gradosPendientes.length === 0
+    );
+
+  const etiquetaGuardar =
+    modal?.mode === 'create'
+      ? gradosPendientes.length === 1
+        ? 'Agregar 1 sección'
+        : `Agregar ${gradosPendientes.length} secciones`
+      : 'Guardar cambios';
   const capacidadTotal = secciones.reduce((total, sec) => total + Number(sec.aula?.capacidad || 0), 0);
   const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
   const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
@@ -745,25 +929,26 @@ export default function SeccionesTab() {
 
       <CenteredFormModal
         open={Boolean(modal)}
-        eyebrow="Sección"
+        eyebrow="Configuración académica"
         title={
-          modal?.mode === 'edit'
-            ? 'Editar sección'
-            : 'Nueva sección'
+          modal?.mode === "edit" ? "Editar sección" : "Configurar secciones"
         }
         description={
-          gradoActivo?.nombre_grado
-            || 'Grado seleccionado'
+          modal?.mode === "create" && aplicarA === "nivel"
+            ? nivelActivo?.nombre_nivel || "Nivel seleccionado"
+            : gradoActivo?.nombre_grado || "Grado seleccionado"
         }
-        message={
-          modal && mensaje
-            ? mensaje.text
-            : null
-        }
+        message={modal && mensaje ? mensaje.text : null}
         messageTone={mensaje?.type}
         saving={saving}
-        submitLabel="Guardar"
-        maxWidthClassName="max-w-md"
+        submitDisabled={
+          modal?.mode === "create"
+            ? Boolean(creacionInvalida)
+            : codigoSeccion.length !== 1
+              || edicionDuplicada
+        }
+        submitLabel={etiquetaGuardar}
+        maxWidthClassName="max-w-2xl"
         onClose={closeModal}
         onSubmit={handleSave}
       >
@@ -776,38 +961,174 @@ export default function SeccionesTab() {
             <input
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold uppercase text-gray-800 outline-none transition-colors duration-150 placeholder:normal-case placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
               value={letra}
-              onChange={(event) =>
-                setLetra(
-                  event.target.value.toUpperCase(),
-                )
-              }
+              onChange={(event) => setLetra(event.target.value.toUpperCase())}
               placeholder="Ej. A"
-              maxLength={3}
+              maxLength={1}
               autoFocus
             />
+
+            {modal?.mode === 'edit'
+              && edicionDuplicada && (
+              <span className="mt-1.5 block text-xs font-semibold text-red-600">
+                La sección “{codigoSeccion}” ya existe en este grado.
+              </span>
+            )}
           </label>
 
-          {modal?.mode === 'create' && (
-            <label>
-              <span className="mb-1.5 block text-xs font-semibold text-gray-500">
-                Capacidad del aula
-              </span>
+          {modal?.mode === "create" && (
+            <>
+              <fieldset>
+                <legend className="mb-2 block text-xs font-semibold text-gray-500">
+                  Aplicar la sección a
+                </legend>
 
-              <input
-                className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
-                value={capacidad}
-                inputMode="numeric"
-                onChange={(event) =>
-                  setCapacidad(
-                    event.target.value.replace(
-                      /[^0-9]/g,
-                      '',
-                    ),
-                  )
-                }
-                placeholder="30"
-              />
-            </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${
+                      aplicarA === "grado"
+                        ? "border-blue-300 bg-blue-50 ring-4 ring-blue-500/10"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="aplicar-seccion"
+                        value="grado"
+                        checked={aplicarA === "grado"}
+                        onChange={() => {
+                          setAplicarA("grado");
+                          setMensaje(null);
+                        }}
+                        className="mt-1"
+                      />
+
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          Solo el grado actual
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {gradoActivo?.nombre_grado || "Grado seleccionado"}
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${
+                      aplicarA === "nivel"
+                        ? "border-blue-300 bg-blue-50 ring-4 ring-blue-500/10"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="aplicar-seccion"
+                        value="nivel"
+                        checked={aplicarA === "nivel"}
+                        onChange={() => {
+                          setAplicarA("nivel");
+                          setMensaje(null);
+                        }}
+                        className="mt-1"
+                      />
+
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          Todos los grados del nivel
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {nivelActivo?.nombre_nivel || "Nivel seleccionado"}
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </fieldset>
+
+              <label>
+                <span className="mb-1.5 block text-xs font-semibold text-gray-500">
+                  Capacidad por aula
+                </span>
+
+                <input
+                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
+                  value={capacidad}
+                  inputMode="numeric"
+                  onChange={(event) =>
+                    setCapacidad(event.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  placeholder="30"
+                />
+
+                <span className="mt-1.5 block text-xs text-gray-400">
+                  Se aplicará la misma capacidad a cada aula creada.
+                </span>
+              </label>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">
+                      Vista previa
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-800">
+                      Sección “{codigoSeccion || "—"}”
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-600">
+                    {seccionesNivel === null
+                      ? "Verificando"
+                      : `${gradosPendientes.length} por crear`}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {gradosObjetivo.map((grado) => {
+                    const existe = gradosConCodigo.has(grado.id_grado);
+
+                    return (
+                      <div
+                        key={grado.id_grado}
+                        className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${
+                          existe
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-emerald-200 bg-emerald-50"
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-gray-800">
+                          {grado.nombre_grado}
+                        </span>
+
+                        <span
+                          className={`text-[11px] font-black ${
+                            existe ? "text-amber-700" : "text-emerald-700"
+                          }`}
+                        >
+                          {existe ? "Ya existe" : "Se creará"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {seccionesNivel !== null && gradosExistentes.length > 0 && (
+                  <p
+                    className={`mt-3 rounded-xl px-3 py-2 text-xs font-semibold ${
+                      gradosPendientes.length === 0
+                        ? "bg-red-50 text-red-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {gradosPendientes.length === 0
+                      ? `La sección “${codigoSeccion}” ya existe en todos los grados seleccionados.`
+                      : `${gradosExistentes.length} grado(s) ya tiene(n) esta sección y serán omitidos.`}
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </CenteredFormModal>

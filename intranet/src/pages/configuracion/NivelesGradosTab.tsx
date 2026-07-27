@@ -5,6 +5,7 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CenteredFormModal from '../../components/CenteredFormModal';
+import GradeBatchModal from '../../components/GradeBatchModal';
 import {
   AlertCircle,
   BookOpen,
@@ -30,16 +31,45 @@ interface Grado {
   id_nivel: number;
 }
 
+interface GradeBatchResult {
+  totalSolicitados: number;
+  creados: number;
+  reutilizados: number;
+  vinculados: number;
+}
+
+interface LevelCreateResult {
+  nivel: Nivel;
+  creado: boolean;
+  vinculado: boolean;
+  yaConfigurado: boolean;
+}
+
 type ModalState =
   | { type: 'nivel'; mode: 'create' }
   | { type: 'nivel'; mode: 'edit'; nivel: Nivel }
-  | { type: 'grado'; mode: 'create'; nivel: Nivel }
   | { type: 'grado'; mode: 'edit'; nivel: Nivel; grado: Grado };
 
 const panelClass =
   'rounded-[1.5rem] border border-gray-200/70 bg-white/90 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.5)]';
 const actionButtonClass =
   'inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-gray-400 transition-all hover:border-gray-200 hover:bg-white hover:text-gray-700';
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || fallback;
+  }
+
+  return fallback;
+};
+
+const normalizeLevelName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 export default function NivelesGradosTab() {
   const { token } = useAuth();
@@ -82,6 +112,7 @@ export default function NivelesGradosTab() {
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [nombre, setNombre] = useState('');
+  const [batchNivel, setBatchNivel] = useState<Nivel | null>(null);
   const [mensaje, setMensaje] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<
     | { type: 'nivel'; nivel: Nivel }
@@ -101,6 +132,15 @@ export default function NivelesGradosTab() {
   );
 
   const nivelExpandido = niveles.find((nivel) => nivel.id_nivel === expanded);
+  const nombreNivelNormalizado = normalizeLevelName(nombre);
+  const nivelDuplicado =
+    modal?.type === "nivel" &&
+    nombreNivelNormalizado.length > 0 &&
+    niveles.some(
+      (nivel) =>
+        (modal.mode !== "edit" || nivel.id_nivel !== modal.nivel.id_nivel) &&
+        normalizeLevelName(nivel.nombre_nivel) === nombreNivelNormalizado,
+    );
 
   const fetchNiveles = async () => {
     if (!token) return;
@@ -154,7 +194,7 @@ export default function NivelesGradosTab() {
     if (state.type === 'nivel') {
       setNombre(state.mode === 'edit' ? state.nivel.nombre_nivel : '');
     } else {
-      setNombre(state.mode === 'edit' ? state.grado.nombre_grado : '');
+      setNombre(state.grado.nombre_grado);
     }
   };
 
@@ -164,27 +204,59 @@ export default function NivelesGradosTab() {
     setNombre('');
   };
 
+  const openBatchModal = (nivel: Nivel) => {
+    setBatchNivel(nivel);
+    setMensaje(null);
+  };
+
+  const closeBatchModal = () => {
+    if (saving) return;
+    setBatchNivel(null);
+  };
+
   const handleSave = async () => {
     if (!token || !modal) return;
-    const cleanName = nombre.trim();
+    const cleanName = nombre.replace(/\s+/g, " ").trim();
 
     if (!cleanName) {
-      setMensaje({ type: 'error', text: 'Escribe un nombre antes de guardar.' });
+      setMensaje({
+        type: "error",
+        text: "Escribe un nombre antes de guardar.",
+      });
+      return;
+    }
+
+    if (modal.type === "nivel" && nivelDuplicado) {
+      setMensaje({
+        type: "error",
+        text: `El nivel "${cleanName}" ya está configurado en esta institución.`,
+      });
       return;
     }
 
     setSaving(true);
     setMensaje(null);
+
     try {
-      if (modal.type === 'nivel') {
-        if (modal.mode === 'edit') {
+      let successText = "Cambios guardados correctamente.";
+      let toastTitle = "Configuración guardada";
+      let toastMessage = `Cambios aplicados para ${scopeLabel}.`;
+
+      if (modal.type === "nivel") {
+        if (modal.mode === "edit") {
           await axios.put(
-            `/api/academicos/niveles/${modal.nivel.id_nivel}`,
-            { nombre_nivel: cleanName },
-            authHeader
+            `/api/academicos/niveles/${modal.nivel.id_nivel}${scopedQuery}`,
+            {
+              nombre_nivel: cleanName,
+            },
+            authHeader,
           );
+
+          successText = `Nivel "${cleanName}" actualizado correctamente.`;
+          toastTitle = "Nivel actualizado";
+          toastMessage = successText;
         } else {
-          await axios.post(
+          const response = await axios.post<LevelCreateResult>(
             `/api/academicos/niveles${scopedQuery}`,
             {
               nombre_nivel: cleanName,
@@ -193,40 +265,107 @@ export default function NivelesGradosTab() {
             },
             authHeader,
           );
+
+          const levelName = response.data.nivel.nombre_nivel;
+
+          if (response.data.yaConfigurado) {
+            successText = `El nivel "${levelName}" ya estaba configurado en esta institución.`;
+            toastTitle = "Nivel ya configurado";
+          } else if (response.data.creado) {
+            successText = `Nivel "${levelName}" agregado correctamente.`;
+            toastTitle = "Nivel agregado";
+          } else if (response.data.vinculado) {
+            successText = `Nivel "${levelName}" vinculado correctamente a la institución.`;
+            toastTitle = "Nivel vinculado";
+          }
+
+          toastMessage = successText;
         }
+
         await fetchNiveles();
       } else {
-        if (modal.mode === 'edit') {
-          await axios.put(
-            `/api/academicos/grados/${modal.grado.id_grado}`,
-            { nombre_grado: cleanName, id_nivel: modal.nivel.id_nivel },
-            authHeader
-          );
-        } else {
-          await axios.post(
-            `/api/academicos/grados${scopedQuery}`,
-            {
-              nombre_grado: cleanName,
-              id_nivel: modal.nivel.id_nivel,
-              id_colegio: colegioGestionActualId || undefined,
-            },
-            authHeader
-          );
-        }
+        await axios.put(
+          `/api/academicos/grados/${modal.grado.id_grado}`,
+          {
+            nombre_grado: cleanName,
+            id_nivel: modal.nivel.id_nivel,
+          },
+          authHeader,
+        );
+
         await fetchGrados(modal.nivel.id_nivel, true);
         setExpanded(modal.nivel.id_nivel);
+        successText = `Grado "${cleanName}" actualizado correctamente.`;
+        toastTitle = "Grado actualizado";
+        toastMessage = successText;
       }
 
       setModal(null);
-      setNombre('');
-      setMensaje({ type: 'success', text: 'Cambios guardados correctamente.' });
+      setNombre("");
+      setMensaje({
+        type: "success",
+        text: successText,
+      });
+      showToast({
+        type: "success",
+        title: toastTitle,
+        message: toastMessage,
+      });
+    } catch (error: unknown) {
+      setMensaje({
+        type: "error",
+        text: getApiErrorMessage(error, "No se pudo guardar."),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBatchSave = async (names: string[]) => {
+    if (!token || !batchNivel) return;
+
+    setSaving(true);
+    setMensaje(null);
+
+    try {
+      const response = await axios.post<GradeBatchResult>(
+        `/api/academicos/grados/lote${scopedQuery}`,
+        {
+          nombres_grado: names,
+          id_nivel: batchNivel.id_nivel,
+          id_colegio: colegioGestionActualId || undefined,
+        },
+        authHeader,
+      );
+
+      await fetchGrados(batchNivel.id_nivel, true);
+      setExpanded(batchNivel.id_nivel);
+      setBatchNivel(null);
+
+      const total = response.data.totalSolicitados;
+
+      setMensaje({
+        type: 'success',
+        text: `${total} ${
+          total === 1 ? 'grado agregado' : 'grados agregados'
+        } correctamente.`,
+      });
+
       showToast({
         type: 'success',
-        title: 'Configuración guardada',
-        message: `Cambios aplicados para ${scopeLabel}.`,
+        title: 'Grados configurados',
+        message: `${total} ${
+          total === 1 ? 'grado fue agregado' : 'grados fueron agregados'
+        } para ${scopeLabel}.`,
       });
-    } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar.' });
+    } catch (error: unknown) {
+      setMensaje({
+        type: 'error',
+        text: getApiErrorMessage(
+          error,
+          'No se pudieron configurar los grados.',
+        ),
+      });
     } finally {
       setSaving(false);
     }
@@ -451,10 +590,10 @@ export default function NivelesGradosTab() {
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Grados</p>
                       <button
                         type="button"
-                        onClick={() => openModal({ type: 'grado', mode: 'create', nivel })}
+                        onClick={() => openBatchModal(nivel)}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-accent-200 hover:text-accent-600"
                       >
-                        <Plus size={14} /> Agregar grado
+                        <Plus size={14} /> Configurar grados
                       </button>
                     </div>
 
@@ -525,6 +664,7 @@ export default function NivelesGradosTab() {
         messageTone={mensaje?.type}
         saving={saving}
         submitLabel="Guardar"
+        submitDisabled={!nombre.trim() || nivelDuplicado}
         maxWidthClassName="max-w-md"
         onClose={closeModal}
         onSubmit={handleSave}
@@ -537,18 +677,40 @@ export default function NivelesGradosTab() {
           <input
             className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-800 outline-none transition-colors duration-150 placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
             value={nombre}
-            onChange={(event) =>
-              setNombre(event.target.value)
-            }
+            onChange={(event) => setNombre(event.target.value)}
             placeholder={
-              modal?.type === 'nivel'
-                ? 'Ej. Primaria'
-                : 'Ej. Quinto Grado'
+              modal?.type === "nivel" ? "Ej. Primaria" : "Ej. Quinto Grado"
             }
             autoFocus
           />
+
+          {modal?.type === "nivel" && nivelDuplicado && (
+            <span className="mt-1.5 block text-xs font-semibold text-red-600">
+              El nivel “{nombre.trim()}” ya está configurado en esta
+              institución.
+            </span>
+          )}
         </label>
       </CenteredFormModal>
+
+      {batchNivel && (
+        <GradeBatchModal
+          key={`${colegioGestionActualId}-${batchNivel.id_nivel}`}
+          open
+          nivel={batchNivel}
+          existingGrades={
+            grados[batchNivel.id_nivel] || []
+          }
+          saving={saving}
+          error={
+            mensaje?.type === 'error'
+              ? mensaje.text
+              : null
+          }
+          onClose={closeBatchModal}
+          onSubmit={handleBatchSave}
+        />
+      )}
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}
