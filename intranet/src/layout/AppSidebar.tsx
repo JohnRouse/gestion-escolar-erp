@@ -575,7 +575,6 @@ export default function AppSidebar() {
                 ? hoveredItem?.title === item.title
                 : isExpanded
             }
-            title={isCollapsed ? item.title : undefined}
             className={cx(
               'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
               isCollapsed ? 'justify-center px-0' : 'justify-between px-3',
