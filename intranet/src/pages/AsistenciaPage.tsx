@@ -19,6 +19,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
+import AttendanceJustificationModal from '../components/AttendanceJustificationModal';
+import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog';
 
 type EstadoAsistencia = 'Presente' | 'Ausente' | 'Tardanza' | 'Justificado';
 
@@ -195,6 +197,7 @@ export default function AsistenciaPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justificacionDraft, setJustificacionDraft] = useState<JustificacionDraft | null>(null);
+  const [justificacionError, setJustificacionError] = useState<string | null>(null);
   const [archivoPreview, setArchivoPreview] = useState<{ url: string; nombre?: string | null; mime?: string | null } | null>(null);
 
   const scopeKey = useMemo(() => JSON.stringify(queryParams), [queryParams]);
@@ -487,6 +490,7 @@ export default function AsistenciaPage() {
 
   const abrirJustificacion = (alumno: AlumnoAsistencia) => {
     setMessage(null);
+    setJustificacionError(null);
     setJustificacionDraft({
       id_matricula: alumno.id_matricula,
       alumno: alumno.alumno,
@@ -522,6 +526,13 @@ export default function AsistenciaPage() {
     );
   };
 
+  const cerrarJustificacion = () => {
+    if (saving) return;
+
+    setJustificacionDraft(null);
+    setJustificacionError(null);
+  };
+
   const confirmarJustificacion = async () => {
     if (!justificacionDraft || !token || !headers || !seccionId) return;
 
@@ -543,6 +554,7 @@ export default function AsistenciaPage() {
 
     setSaving(true);
     setError(null);
+    setJustificacionError(null);
     setMessage(null);
 
     try {
@@ -584,10 +596,11 @@ export default function AsistenciaPage() {
       );
 
       setJustificacionDraft(null);
+      setJustificacionError(null);
       setMessage('Justificación guardada correctamente.');
       await cargarCalendarioAsistencia();
     } catch {
-      setError('No se pudo guardar la justificación. Intenta nuevamente.');
+      setJustificacionError('No se pudo guardar la justificación. Intenta nuevamente.');
     } finally {
       setSaving(false);
     }
@@ -1264,162 +1277,37 @@ export default function AsistenciaPage() {
         </div>
       </section>
 
-      {justificacionDraft && createPortal((
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center overflow-y-auto bg-slate-950/45 px-4 py-8">
-          <div className="w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Justificación de asistencia
-              </p>
-              <h3 className="mt-1 text-lg font-black text-slate-950">
-                {justificacionDraft.alumno}
-              </h3>
-            </div>
+      <AttendanceJustificationModal
+        draft={justificacionDraft}
+        motivos={motivosJustificacion}
+        saving={saving}
+        error={justificacionError}
+        onChange={(draft) =>
+          setJustificacionDraft((current) =>
+            current
+              ? {
+                  ...current,
+                  ...draft,
+                }
+              : current,
+          )
+        }
+        onPreviewCurrent={(preview) =>
+          setArchivoPreview(preview)
+        }
+        onClose={cerrarJustificacion}
+        onSubmit={() =>
+          void confirmarJustificacion()
+        }
+      />
 
-            <div className="space-y-4 px-5 py-5">
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Motivo
-                </span>
-                <select
-                  value={justificacionDraft.motivo}
-                  onChange={(event) =>
-                    setJustificacionDraft((current) =>
-                      current ? { ...current, motivo: event.target.value } : current,
-                    )
-                  }
-                  className="h-12 w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 text-sm font-black text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                >
-                  {motivosJustificacion.map((motivo) => (
-                    <option key={motivo} value={motivo}>
-                      {motivo}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Observación opcional
-                </span>
-                <textarea
-                  value={justificacionDraft.observacion}
-                  onChange={(event) =>
-                    setJustificacionDraft((current) =>
-                      current ? { ...current, observacion: event.target.value } : current,
-                    )
-                  }
-                  rows={4}
-                  maxLength={500}
-                  placeholder="Ejemplo: Presentó permiso del apoderado, cita médica, etc."
-                  className="w-full resize-none rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Documento de sustento opcional
-                </span>
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] || null;
-                    setJustificacionDraft((current) =>
-                      current ? { ...current, archivo: file } : current,
-                    );
-                  }}
-                  className="w-full rounded-sm border border-transparent border-b-slate-500 bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-950 outline-none file:mr-3 file:rounded-sm file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-black file:text-white"
-                />
-
-                <p className="mt-2 text-xs font-semibold text-slate-400">
-                  Formatos permitidos: PDF, JPG, PNG o WEBP. Máximo 5 MB.
-                </p>
-
-                {justificacionDraft.archivoActualUrl && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setArchivoPreview({
-                        url: justificacionDraft.archivoActualUrl || '',
-                        nombre: justificacionDraft.archivoActualNombre || 'Documento de sustento',
-                      })
-                    }
-                    className="mt-2 inline-flex rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
-                  >
-                    Ver documento actual{justificacionDraft.archivoActualNombre ? `: ${justificacionDraft.archivoActualNombre}` : ''}
-                  </button>
-                )}
-
-                {justificacionDraft.archivo && (
-                  <p className="mt-2 text-xs font-black text-slate-600">
-                    Nuevo archivo: {justificacionDraft.archivo.name}
-                  </p>
-                )}
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
-              <button
-                type="button"
-                onClick={() => setJustificacionDraft(null)}
-                className="h-10 rounded-sm border border-slate-300 bg-white px-4 text-xs font-black text-slate-700 hover:border-slate-900"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmarJustificacion}
-                disabled={saving}
-                className="h-10 rounded-sm bg-slate-950 px-4 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {saving ? 'Guardando...' : 'Guardar justificación'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ), document.body)}
-
-      {archivoPreview && createPortal((
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                  Documento de sustento
-                </p>
-                <h3 className="mt-1 text-base font-black text-slate-950">
-                  {archivoPreview.nombre || 'Archivo adjunto'}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setArchivoPreview(null)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-700 hover:border-slate-900"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="min-h-[60vh] overflow-auto bg-slate-100 p-4">
-              {String(archivoPreview.url).toLowerCase().includes('.pdf') ? (
-                <iframe
-                  src={archivoPreview.url}
-                  title={archivoPreview.nombre || 'Documento de sustento'}
-                  className="h-[72vh] w-full rounded-sm border border-slate-200 bg-white"
-                />
-              ) : (
-                <img
-                  src={archivoPreview.url}
-                  alt={archivoPreview.nombre || 'Documento de sustento'}
-                  className="mx-auto max-h-[72vh] max-w-full rounded-sm bg-white object-contain shadow-sm"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      ), document.body)}
+      <AttachmentPreviewDialog
+        preview={archivoPreview}
+        eyebrow="Documento de sustento"
+        onClose={() =>
+          setArchivoPreview(null)
+        }
+      />
 
       <MobileAttendanceFab href={mobileHref} visible={hasSeccion} />
     </div>
