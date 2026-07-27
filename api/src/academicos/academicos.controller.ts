@@ -159,6 +159,31 @@ async createGrado(
   });
 }
 
+  @Post('grados/lote')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin')
+  async createGradosLote(
+    @Request() req: { user: { userId: number; rol: string } },
+    @Body()
+    body: {
+      nombres_grado: string[];
+      id_nivel: number;
+      id_colegio?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearGradosLoteConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+      nombresGrado: body.nombres_grado,
+      idNivel: Number(body.id_nivel),
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+    });
+  }
+
   @Put('grados/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
