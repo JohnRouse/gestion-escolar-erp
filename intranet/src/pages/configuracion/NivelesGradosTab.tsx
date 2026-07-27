@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import { useAuth } from "../../contexts/AuthContext";
-import { useSchool } from "../../contexts/SchoolContext";
-import { useToast } from "../../contexts/ToastContext";
-import ConfirmDialog from "../../components/ConfirmDialog";
-import CenteredFormModal from "../../components/CenteredFormModal";
-import GradeBatchModal from "../../components/GradeBatchModal";
+import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSchool } from '../../contexts/SchoolContext';
+import { useToast } from '../../contexts/ToastContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import CenteredFormModal from '../../components/CenteredFormModal';
+import GradeBatchModal from '../../components/GradeBatchModal';
 import {
   AlertCircle,
   BookOpen,
@@ -17,7 +17,7 @@ import {
   Plus,
   School,
   Trash2,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface Nivel {
   id_nivel: number;
@@ -46,14 +46,14 @@ interface LevelCreateResult {
 }
 
 type ModalState =
-  | { type: "nivel"; mode: "create" }
-  | { type: "nivel"; mode: "edit"; nivel: Nivel }
-  | { type: "grado"; mode: "edit"; nivel: Nivel; grado: Grado };
+  | { type: 'nivel'; mode: 'create' }
+  | { type: 'nivel'; mode: 'edit'; nivel: Nivel }
+  | { type: 'grado'; mode: 'edit'; nivel: Nivel; grado: Grado };
 
 const panelClass =
-  "rounded-[1.5rem] border border-gray-200/70 bg-white/90 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.5)]";
+  'rounded-[1.5rem] border border-gray-200/70 bg-white/90 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.5)]';
 const actionButtonClass =
-  "inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-gray-400 transition-all hover:border-gray-200 hover:bg-white hover:text-gray-700";
+  'inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-gray-400 transition-all hover:border-gray-200 hover:bg-white hover:text-gray-700';
 
 const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -73,24 +73,16 @@ const normalizeLevelName = (value: string) =>
 
 export default function NivelesGradosTab() {
   const { token } = useAuth();
-  const {
-    tenant,
-    colegios,
-    activeScope,
-    activeColegio,
-    queryString,
-    scopeLabel,
-  } = useSchool();
+  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
-    activeScope.tipo === "colegio" && activeColegio?.id_colegio
+    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
 
-  const mostrarSelectorInstitucion =
-    activeScope.tipo === "todos" && colegios.length > 1;
-  const [colegioGestionId, setColegioGestionId] = useState("");
+  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const [colegioGestionId, setColegioGestionId] = useState('');
 
   const colegioGestionActualId = Number(
     mostrarSelectorInstitucion
@@ -99,21 +91,17 @@ export default function NivelesGradosTab() {
   );
 
   const scopedQuery = useMemo(() => {
-    const params = new URLSearchParams(
-      queryString.startsWith("?") ? queryString.slice(1) : "",
-    );
+    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
 
     if (colegioGestionActualId) {
-      params.set("colegio_id", String(colegioGestionActualId));
+      params.set('colegio_id', String(colegioGestionActualId));
     }
 
     return `?${params.toString()}`;
   }, [queryString, colegioGestionActualId]);
 
   const nombreColegioGestion = useMemo(() => {
-    const colegio = colegios.find(
-      (item) => item.id_colegio === colegioGestionActualId,
-    );
+    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
     return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
   }, [colegios, colegioGestionActualId, scopeLabel]);
 
@@ -123,31 +111,24 @@ export default function NivelesGradosTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState('');
   const [batchNivel, setBatchNivel] = useState<Nivel | null>(null);
-  const [mensaje, setMensaje] = useState<{
-    type: "error" | "success";
-    text: string;
-  } | null>(null);
+  const [mensaje, setMensaje] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<
-    | { type: "nivel"; nivel: Nivel }
-    | { type: "grado"; nivel: Nivel; grado: Grado }
+    | { type: 'nivel'; nivel: Nivel }
+    | { type: 'grado'; nivel: Nivel; grado: Grado }
     | null
   >(null);
   const [confirming, setConfirming] = useState(false);
 
   const authHeader = useMemo(
     () => ({ headers: { Authorization: `Bearer ${token}` } }),
-    [token],
+    [token]
   );
 
   const totalGradosCargados = useMemo(
-    () =>
-      (Object.values(grados) as Grado[][]).reduce(
-        (total, lista) => total + lista.length,
-        0,
-      ),
-    [grados],
+    () => (Object.values(grados) as Grado[][]).reduce((total, lista) => total + lista.length, 0),
+    [grados]
   );
 
   const nivelExpandido = niveles.find((nivel) => nivel.id_nivel === expanded);
@@ -165,13 +146,10 @@ export default function NivelesGradosTab() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get(
-        `/api/academicos/niveles${scopedQuery}`,
-        authHeader,
-      );
+      const res = await axios.get(`/api/academicos/niveles${scopedQuery}`, authHeader);
       setNiveles(res.data);
     } catch {
-      setMensaje({ type: "error", text: "No se pudieron cargar los niveles." });
+      setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' });
     } finally {
       setLoading(false);
     }
@@ -180,16 +158,10 @@ export default function NivelesGradosTab() {
   const fetchGrados = async (nivelId: number, force = false) => {
     if (!token || (!force && grados[nivelId])) return;
     try {
-      const res = await axios.get(
-        `/api/academicos/grados${scopedQuery}&nivel_id=${nivelId}`,
-        authHeader,
-      );
+      const res = await axios.get(`/api/academicos/grados${scopedQuery}&nivel_id=${nivelId}`, authHeader);
       setGrados((prev) => ({ ...prev, [nivelId]: res.data }));
     } catch {
-      setMensaje({
-        type: "error",
-        text: "No se pudieron cargar los grados del nivel.",
-      });
+      setMensaje({ type: 'error', text: 'No se pudieron cargar los grados del nivel.' });
     }
   };
 
@@ -201,11 +173,7 @@ export default function NivelesGradosTab() {
   }, [token, scopedQuery]);
 
   useEffect(() => {
-    if (
-      mostrarSelectorInstitucion &&
-      !colegioGestionId &&
-      colegios[0]?.id_colegio
-    ) {
+    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
       setColegioGestionId(String(colegios[0].id_colegio));
     }
   }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
@@ -223,8 +191,8 @@ export default function NivelesGradosTab() {
   const openModal = (state: ModalState) => {
     setModal(state);
     setMensaje(null);
-    if (state.type === "nivel") {
-      setNombre(state.mode === "edit" ? state.nivel.nombre_nivel : "");
+    if (state.type === 'nivel') {
+      setNombre(state.mode === 'edit' ? state.nivel.nombre_nivel : '');
     } else {
       setNombre(state.grado.nombre_grado);
     }
@@ -233,7 +201,7 @@ export default function NivelesGradosTab() {
   const closeModal = () => {
     if (saving) return;
     setModal(null);
-    setNombre("");
+    setNombre('');
   };
 
   const openBatchModal = (nivel: Nivel) => {
@@ -377,25 +345,25 @@ export default function NivelesGradosTab() {
       const total = response.data.totalSolicitados;
 
       setMensaje({
-        type: "success",
+        type: 'success',
         text: `${total} ${
-          total === 1 ? "grado agregado" : "grados agregados"
+          total === 1 ? 'grado agregado' : 'grados agregados'
         } correctamente.`,
       });
 
       showToast({
-        type: "success",
-        title: "Grados configurados",
+        type: 'success',
+        title: 'Grados configurados',
         message: `${total} ${
-          total === 1 ? "grado fue agregado" : "grados fueron agregados"
+          total === 1 ? 'grado fue agregado' : 'grados fueron agregados'
         } para ${scopeLabel}.`,
       });
     } catch (error: unknown) {
       setMensaje({
-        type: "error",
+        type: 'error',
         text: getApiErrorMessage(
           error,
-          "No se pudieron configurar los grados.",
+          'No se pudieron configurar los grados.',
         ),
       });
     } finally {
@@ -405,13 +373,8 @@ export default function NivelesGradosTab() {
 
   const ejecutarEliminarNivel = async (nivel: Nivel) => {
     try {
-      await axios.delete(
-        `/api/academicos/niveles/${nivel.id_nivel}${scopedQuery}`,
-        authHeader,
-      );
-      setNiveles((prev) =>
-        prev.filter((item) => item.id_nivel !== nivel.id_nivel),
-      );
+      await axios.delete(`/api/academicos/niveles/${nivel.id_nivel}${scopedQuery}`, authHeader);
+      setNiveles((prev) => prev.filter((item) => item.id_nivel !== nivel.id_nivel));
       setExpanded((prev) => (prev === nivel.id_nivel ? null : prev));
       setGrados((prev) => {
         const next = { ...prev };
@@ -419,34 +382,25 @@ export default function NivelesGradosTab() {
         return next;
       });
     } catch (err: any) {
-      setMensaje({
-        type: "error",
-        text: err.response?.data?.message || "No se pudo eliminar el nivel.",
-      });
+      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el nivel.' });
     }
   };
 
   const eliminarNivel = (nivel: Nivel) => {
-    setConfirmDelete({ type: "nivel", nivel });
+    setConfirmDelete({ type: 'nivel', nivel });
   };
 
   const ejecutarEliminarGrado = async (nivel: Nivel, grado: Grado) => {
     try {
-      await axios.delete(
-        `/api/academicos/grados/${grado.id_grado}${scopedQuery}`,
-        authHeader,
-      );
+      await axios.delete(`/api/academicos/grados/${grado.id_grado}${scopedQuery}`, authHeader);
       await fetchGrados(nivel.id_nivel, true);
     } catch (err: any) {
-      setMensaje({
-        type: "error",
-        text: err.response?.data?.message || "No se pudo eliminar el grado.",
-      });
+      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo eliminar el grado.' });
     }
   };
 
   const eliminarGrado = (nivel: Nivel, grado: Grado) => {
-    setConfirmDelete({ type: "grado", nivel, grado });
+    setConfirmDelete({ type: 'grado', nivel, grado });
   };
 
   const confirmarEliminacion = async () => {
@@ -456,8 +410,11 @@ export default function NivelesGradosTab() {
     setConfirming(true);
 
     try {
-      if (item.type === "grado") {
-        await ejecutarEliminarGrado(item.nivel, item.grado);
+      if (item.type === 'grado') {
+        await ejecutarEliminarGrado(
+          item.nivel,
+          item.grado,
+        );
       } else {
         await ejecutarEliminarNivel(item.nivel);
       }
@@ -484,17 +441,14 @@ export default function NivelesGradosTab() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">
-            Niveles educativos
-          </h3>
+          <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Niveles educativos</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Ordena Inicial, Primaria y Secundaria con sus grados respectivos.
-            Contexto: {nombreColegioGestion}.
+            Ordena Inicial, Primaria y Secundaria con sus grados respectivos. Contexto: {nombreColegioGestion}.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => openModal({ type: "nivel", mode: "create" })}
+          onClick={() => openModal({ type: 'nivel', mode: 'create' })}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:-translate-y-0.5 hover:bg-accent-600"
         >
           <Plus size={17} /> Nuevo nivel
@@ -521,8 +475,7 @@ export default function NivelesGradosTab() {
           </label>
 
           <p className="mt-2 text-xs font-semibold text-gray-500">
-            En vista consolidada, primero elige la institución para evitar
-            mezclar grados entre colegios.
+            En vista consolidada, primero elige la institución para evitar mezclar grados entre colegios.
           </p>
         </section>
       )}
@@ -530,9 +483,9 @@ export default function NivelesGradosTab() {
       {mensaje && !modal && (
         <div
           className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium ${
-            mensaje.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-red-200 bg-red-50 text-red-700"
+            mensaje.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-700'
           }`}
         >
           <AlertCircle size={17} /> {mensaje.text}
@@ -542,56 +495,37 @@ export default function NivelesGradosTab() {
       <div className="grid gap-3 md:grid-cols-3">
         <div className={`${panelClass} p-4`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Niveles
-            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Niveles</span>
             <Layers3 size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
-            {niveles.length}
-          </p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{niveles.length}</p>
           <p className="mt-1 text-sm text-gray-500">Estructuras registradas</p>
         </div>
         <div className={`${panelClass} p-4`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Grados visibles
-            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Grados visibles</span>
             <BookOpen size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
-            {totalGradosCargados}
-          </p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{totalGradosCargados}</p>
           <p className="mt-1 text-sm text-gray-500">Cargados al expandir</p>
         </div>
         <div className={`${panelClass} p-4`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Seleccionado
-            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Seleccionado</span>
             <School size={18} className="text-accent-500" />
           </div>
-          <p className="mt-3 truncate text-lg font-semibold text-gray-950">
-            {nivelExpandido?.nombre_nivel || "Ninguno"}
-          </p>
+          <p className="mt-3 truncate text-lg font-semibold text-gray-950">{nivelExpandido?.nombre_nivel || 'Ninguno'}</p>
           <p className="mt-1 text-sm text-gray-500">Nivel desplegado</p>
         </div>
       </div>
 
       {niveles.length === 0 ? (
-        <div
-          className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}
-        >
+        <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}>
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
             <GraduationCap size={25} />
           </div>
-          <h4 className="text-base font-semibold text-gray-900">
-            Aún no hay niveles educativos
-          </h4>
-          <p className="mt-1 max-w-md text-sm text-gray-500">
-            Crea tu primer nivel para empezar a organizar grados, secciones y
-            cursos.
-          </p>
+          <h4 className="text-base font-semibold text-gray-900">Aún no hay niveles educativos</h4>
+          <p className="mt-1 max-w-md text-sm text-gray-500">Crea tu primer nivel para empezar a organizar grados, secciones y cursos.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -599,32 +533,24 @@ export default function NivelesGradosTab() {
             const isOpen = expanded === nivel.id_nivel;
             const gradosDelNivel = grados[nivel.id_nivel] || [];
             return (
-              <article
-                key={nivel.id_nivel}
-                className={`${panelClass} overflow-hidden transition-all hover:-translate-y-0.5`}
-              >
+              <article key={nivel.id_nivel} className={`${panelClass} overflow-hidden transition-all hover:-translate-y-0.5`}>
                 <div
                   onClick={() => toggleExpand(nivel.id_nivel)}
                   className="flex cursor-pointer items-center justify-between gap-4 p-4 transition hover:bg-gray-50/70"
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ")
-                      toggleExpand(nivel.id_nivel);
+                    if (e.key === 'Enter' || e.key === ' ') toggleExpand(nivel.id_nivel);
                   }}
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 ring-1 ring-accent-100">
-                      {String(index + 1).padStart(2, "0")}
+                      {String(index + 1).padStart(2, '0')}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="truncate text-sm font-semibold text-gray-950">
-                        {nivel.nombre_nivel}
-                      </h4>
+                      <h4 className="truncate text-sm font-semibold text-gray-950">{nivel.nombre_nivel}</h4>
                       <p className="mt-0.5 text-xs text-gray-500">
-                        {gradosDelNivel.length > 0
-                          ? `${gradosDelNivel.length} grados cargados`
-                          : "Haz clic para ver sus grados"}
+                        {gradosDelNivel.length > 0 ? `${gradosDelNivel.length} grados cargados` : 'Haz clic para ver sus grados'}
                       </p>
                     </div>
                   </div>
@@ -634,7 +560,7 @@ export default function NivelesGradosTab() {
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        openModal({ type: "nivel", mode: "edit", nivel });
+                        openModal({ type: 'nivel', mode: 'edit', nivel });
                       }}
                       className={actionButtonClass}
                       aria-label="Editar nivel"
@@ -653,11 +579,7 @@ export default function NivelesGradosTab() {
                       <Trash2 size={15} />
                     </button>
                     <div className="ml-1 text-gray-400">
-                      {isOpen ? (
-                        <ChevronDown size={20} />
-                      ) : (
-                        <ChevronRight size={20} />
-                      )}
+                      {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                     </div>
                   </div>
                 </div>
@@ -665,9 +587,7 @@ export default function NivelesGradosTab() {
                 {isOpen && (
                   <div className="border-t border-gray-100 bg-gray-50/45 p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-                        Grados
-                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Grados</p>
                       <button
                         type="button"
                         onClick={() => openBatchModal(nivel)}
@@ -688,20 +608,11 @@ export default function NivelesGradosTab() {
                             key={grado.id_grado}
                             className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200/70 bg-white px-3 py-3 shadow-sm"
                           >
-                            <span className="truncate text-sm font-medium text-gray-800">
-                              {grado.nombre_grado}
-                            </span>
+                            <span className="truncate text-sm font-medium text-gray-800">{grado.nombre_grado}</span>
                             <div className="flex shrink-0 gap-1">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  openModal({
-                                    type: "grado",
-                                    mode: "edit",
-                                    nivel,
-                                    grado,
-                                  })
-                                }
+                                onClick={() => openModal({ type: 'grado', mode: 'edit', nivel, grado })}
                                 className={actionButtonClass}
                                 aria-label="Editar grado"
                               >
@@ -731,15 +642,25 @@ export default function NivelesGradosTab() {
       <CenteredFormModal
         open={Boolean(modal)}
         eyebrow={
-          modal?.type === "grado" ? "Grado académico" : "Nivel educativo"
+          modal?.type === 'grado'
+            ? 'Grado académico'
+            : 'Nivel educativo'
         }
-        title={modal?.mode === "edit" ? "Editar registro" : "Crear registro"}
+        title={
+          modal?.mode === 'edit'
+            ? 'Editar registro'
+            : 'Crear registro'
+        }
         description={
-          modal?.type === "grado"
+          modal?.type === 'grado'
             ? `Nivel: ${modal.nivel.nombre_nivel}`
-            : "Define el nombre que identificará este nivel educativo."
+            : 'Define el nombre que identificará este nivel educativo.'
         }
-        message={modal && mensaje ? mensaje.text : null}
+        message={
+          modal && mensaje
+            ? mensaje.text
+            : null
+        }
         messageTone={mensaje?.type}
         saving={saving}
         submitLabel="Guardar"
@@ -777,9 +698,15 @@ export default function NivelesGradosTab() {
           key={`${colegioGestionActualId}-${batchNivel.id_nivel}`}
           open
           nivel={batchNivel}
-          existingGrades={grados[batchNivel.id_nivel] || []}
+          existingGrades={
+            grados[batchNivel.id_nivel] || []
+          }
           saving={saving}
-          error={mensaje?.type === "error" ? mensaje.text : null}
+          error={
+            mensaje?.type === 'error'
+              ? mensaje.text
+              : null
+          }
           onClose={closeBatchModal}
           onSubmit={handleBatchSave}
         />
@@ -788,14 +715,14 @@ export default function NivelesGradosTab() {
       <ConfirmDialog
         open={Boolean(confirmDelete)}
         title={
-          confirmDelete?.type === "grado"
+          confirmDelete?.type === 'grado'
             ? `Retirar grado "${confirmDelete.grado.nombre_grado}"`
-            : `Retirar nivel "${confirmDelete?.nivel.nombre_nivel || ""}"`
+            : `Retirar nivel "${confirmDelete?.nivel.nombre_nivel || ''}"`
         }
         description={
-          confirmDelete?.type === "grado"
-            ? "Se retirará este grado solo de la institución actual. No afectará a otros colegios."
-            : "Se retirará este nivel de la institución actual si no tiene secciones vinculadas."
+          confirmDelete?.type === 'grado'
+            ? 'Se retirará este grado solo de la institución actual. No afectará a otros colegios.'
+            : 'Se retirará este nivel de la institución actual si no tiene secciones vinculadas.'
         }
         tone="danger"
         confirmLabel="Sí, retirar"

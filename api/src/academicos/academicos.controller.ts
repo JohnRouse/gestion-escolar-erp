@@ -30,10 +30,7 @@ const alumnoAvatarFileFilter = (_req: any, file: any, callback: any) => {
   const allowed = ['image/jpeg', 'image/png'];
 
   if (!allowed.includes(file.mimetype)) {
-    callback(
-      new BadRequestException('Solo se permiten imágenes JPG o PNG.'),
-      false,
-    );
+    callback(new BadRequestException('Solo se permiten imágenes JPG o PNG.'), false);
     return;
   }
 
@@ -133,42 +130,41 @@ export class AcademicosController {
 
   // ── GRADOS ───────────────────────────────────────────
   @Get('grados')
-  @UseGuards(AuthGuard('jwt'))
-  getGrados(
-    @Request() req,
-    @Query('nivel_id') nivelId: string,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.getGrados({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      nivelId: Number(nivelId),
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
-  }
+@UseGuards(AuthGuard('jwt'))
+getGrados(
+  @Request() req,
+  @Query('nivel_id') nivelId: string,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.getGrados({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    nivelId: Number(nivelId),
+    scope,
+    colegioId: colegioId ? Number(colegioId) : undefined,
+  });
+}
 
-  @Post('grados')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async createGrado(
-    @Request() req,
-    @Body()
-    body: { nombre_grado: string; id_nivel: number; id_colegio?: number },
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.crearGradoConfig({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : body.id_colegio,
-      nombreGrado: body.nombre_grado,
-      idNivel: Number(body.id_nivel),
-      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
-    });
-  }
+@Post('grados')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async createGrado(
+  @Request() req,
+  @Body() body: { nombre_grado: string; id_nivel: number; id_colegio?: number },
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.crearGradoConfig({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope,
+    colegioId: colegioId ? Number(colegioId) : body.id_colegio,
+    nombreGrado: body.nombre_grado,
+    idNivel: Number(body.id_nivel),
+    idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+  });
+}
 
   @Post('grados/lote')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -219,22 +215,22 @@ export class AcademicosController {
   }
 
   @Delete('grados/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
-  async deleteGrado(
-    @Param('id') id: string,
-    @Request() req,
-    @Query('scope') scope?: string,
-    @Query('colegio_id') colegioId?: string,
-  ) {
-    return this.academicosService.eliminarGradoConfig({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-      idGrado: Number(id),
-    });
-  }
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Admin')
+async deleteGrado(
+  @Param('id') id: string,
+  @Request() req,
+  @Query('scope') scope?: string,
+  @Query('colegio_id') colegioId?: string,
+) {
+  return this.academicosService.eliminarGradoConfig({
+    userId: req.user.userId,
+    rol: req.user.rol,
+    scope,
+    colegioId: colegioId ? Number(colegioId) : undefined,
+    idGrado: Number(id),
+  });
+}
 
   // ── PROGRESIÓN DE GRADOS ─────────────────────────────
   @Get('progresiones-grado')
@@ -245,12 +241,15 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.listarProgresionesGrado({
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .listarProgresionesGrado({
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Put('progresiones-grado/:idGradoOrigen')
@@ -264,7 +263,10 @@ export class AcademicosController {
     body: {
       id_colegio?: number;
       id_grado_destino?: number | null;
-      tipo_transicion?: 'Regular' | 'Cambio de nivel' | 'Egreso';
+      tipo_transicion?:
+        | 'Regular'
+        | 'Cambio de nivel'
+        | 'Egreso';
       es_terminal?: boolean;
       edad_normativa_destino?: number | null;
       fecha_corte_mes?: number;
@@ -274,38 +276,54 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.guardarProgresionGrado({
-      idGradoOrigen: Number(idGradoOrigen),
+    return this.academicosService
+      .guardarProgresionGrado({
+        idGradoOrigen:
+          Number(idGradoOrigen),
 
-      idGradoDestino:
-        body.id_grado_destino === null || body.id_grado_destino === undefined
-          ? null
-          : Number(body.id_grado_destino),
+        idGradoDestino:
+          body.id_grado_destino === null
+            || body.id_grado_destino
+              === undefined
+            ? null
+            : Number(
+                body.id_grado_destino,
+              ),
 
-      idColegio: body.id_colegio
-        ? Number(body.id_colegio)
-        : colegioId
+        idColegio:
+          body.id_colegio
+            ? Number(body.id_colegio)
+            : colegioId
+              ? Number(colegioId)
+              : undefined,
+
+        tipoTransicion:
+          body.tipo_transicion,
+
+        esTerminal:
+          body.es_terminal,
+
+        edadNormativaDestino:
+          body.edad_normativa_destino,
+
+        fechaCorteMes:
+          body.fecha_corte_mes,
+
+        fechaCorteDia:
+          body.fecha_corte_dia,
+
+        estado:
+          body.estado,
+
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
           ? Number(colegioId)
           : undefined,
-
-      tipoTransicion: body.tipo_transicion,
-
-      esTerminal: body.es_terminal,
-
-      edadNormativaDestino: body.edad_normativa_destino,
-
-      fechaCorteMes: body.fecha_corte_mes,
-
-      fechaCorteDia: body.fecha_corte_dia,
-
-      estado: body.estado,
-
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+      });
   }
+
 
   // ── SECCIONES ────────────────────────────────────────
   @Get('secciones')
@@ -538,19 +556,12 @@ export class AcademicosController {
     const fechaInicio = new Date(`${body.fecha_inicio}T00:00:00`);
     const fechaFin = new Date(`${body.fecha_fin}T00:00:00`);
 
-    if (
-      Number.isNaN(fechaInicio.getTime()) ||
-      Number.isNaN(fechaFin.getTime())
-    ) {
-      throw new BadRequestException(
-        'Las fechas del año lectivo no son válidas.',
-      );
+    if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+      throw new BadRequestException('Las fechas del año lectivo no son válidas.');
     }
 
     if (fechaFin <= fechaInicio) {
-      throw new BadRequestException(
-        'La fecha de fin debe ser posterior a la fecha de inicio.',
-      );
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
     }
 
     const duplicado = await this.prisma.anioLectivo.findFirst({
@@ -634,9 +645,7 @@ export class AcademicosController {
     const fechaFinFinal = data.fecha_fin || anio.fecha_fin;
 
     if (fechaFinFinal <= fechaInicioFinal) {
-      throw new BadRequestException(
-        'La fecha de fin debe ser posterior a la fecha de inicio.',
-      );
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio.');
     }
 
     if (body.estado !== undefined) data.estado = body.estado;
@@ -681,7 +690,9 @@ export class AcademicosController {
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
+      colegioId: colegioId
+        ? Number(colegioId)
+        : undefined,
     });
   }
 
@@ -705,14 +716,26 @@ export class AcademicosController {
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
+      colegioId: colegioId
+        ? Number(colegioId)
+        : undefined,
       q,
       estado,
-      nivelId: nivelId ? Number(nivelId) : undefined,
-      gradoId: gradoId ? Number(gradoId) : undefined,
-      seccionId: seccionId ? Number(seccionId) : undefined,
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      nivelId: nivelId
+        ? Number(nivelId)
+        : undefined,
+      gradoId: gradoId
+        ? Number(gradoId)
+        : undefined,
+      seccionId: seccionId
+        ? Number(seccionId)
+        : undefined,
+      page: page
+        ? Number(page)
+        : undefined,
+      limit: limit
+        ? Number(limit)
+        : undefined,
     });
   }
 
@@ -734,10 +757,18 @@ export class AcademicosController {
     });
   }
 
+
   // ── PROMOCIÓN Y RENOVACIÓN MASIVA ────────────────────
   @Get('lotes-promocion')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin', 'Secretaria', 'Director')
+  @UseGuards(
+    AuthGuard('jwt'),
+    RolesGuard,
+  )
+  @Roles(
+    'Admin',
+    'Secretaria',
+    'Director',
+  )
   listarLotesPromocion(
     @Request() req,
     @Query('scope')
@@ -765,34 +796,59 @@ export class AcademicosController {
     @Query('limit')
     limit?: string,
   ) {
-    return this.academicosService.listarLotesPromocion({
-      userId: req.user.userId,
+    return this.academicosService
+      .listarLotesPromocion({
+        userId:
+          req.user.userId,
 
-      rol: req.user.rol,
+        rol:
+          req.user.rol,
 
-      scope,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
 
-      q,
-      estado,
+        q,
+        estado,
 
-      anioOrigenId: anioOrigenId ? Number(anioOrigenId) : undefined,
+        anioOrigenId:
+          anioOrigenId
+            ? Number(anioOrigenId)
+            : undefined,
 
-      anioDestinoId: anioDestinoId ? Number(anioDestinoId) : undefined,
+        anioDestinoId:
+          anioDestinoId
+            ? Number(anioDestinoId)
+            : undefined,
 
-      seccionId: seccionId ? Number(seccionId) : undefined,
+        seccionId:
+          seccionId
+            ? Number(seccionId)
+            : undefined,
 
-      usuarioId: usuarioId ? Number(usuarioId) : undefined,
+        usuarioId:
+          usuarioId
+            ? Number(usuarioId)
+            : undefined,
 
-      fechaDesde,
-      fechaHasta,
+        fechaDesde,
+        fechaHasta,
 
-      page: page ? Number(page) : undefined,
+        page:
+          page
+            ? Number(page)
+            : undefined,
 
-      limit: limit ? Number(limit) : undefined,
-    });
+        limit:
+          limit
+            ? Number(limit)
+            : undefined,
+      });
   }
+
 
   @Get('lotes-promocion/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -803,15 +859,19 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.getLotePromocion({
-      idLote: Number(id),
+    return this.academicosService
+      .getLotePromocion({
+        idLote:
+          Number(id),
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Get('lotes-promocion/:id/reversion/validar')
@@ -823,17 +883,24 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.validarReversionLotePromocion({
-      idLote: Number(id),
+    return this.academicosService
+      .validarReversionLotePromocion({
+        idLote:
+          Number(id),
 
-      userId: req.user.userId,
+        userId:
+          req.user.userId,
 
-      rol: req.user.rol,
+        rol:
+          req.user.rol,
 
-      scope,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+      });
   }
 
   @Post('lotes-promocion/:id/reversion')
@@ -850,21 +917,30 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.revertirLotePromocion({
-      idLote: Number(id),
+    return this.academicosService
+      .revertirLotePromocion({
+        idLote:
+          Number(id),
 
-      confirmacion: body?.confirmacion,
+        confirmacion:
+          body?.confirmacion,
 
-      motivo: body?.motivo,
+        motivo:
+          body?.motivo,
 
-      userId: req.user.userId,
+        userId:
+          req.user.userId,
 
-      rol: req.user.rol,
+        rol:
+          req.user.rol,
 
-      scope,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+      });
   }
 
   @Post('lotes-promocion/:id/ejecutar')
@@ -880,20 +956,29 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.ejecutarLotePromocion({
-      idLote: Number(id),
+    return this.academicosService
+      .ejecutarLotePromocion({
+        idLote:
+          Number(id),
 
-      confirmacion: body.confirmacion,
+        confirmacion:
+          body.confirmacion,
 
-      userId: req.user.userId,
+        userId:
+          req.user.userId,
 
-      rol: req.user.rol,
+        rol:
+          req.user.rol,
 
-      scope,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId:
+          colegioId
+            ? Number(colegioId)
+            : undefined,
+      });
   }
+
 
   @Post('lotes-promocion/vista-previa')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -906,7 +991,9 @@ export class AcademicosController {
       id_anio_destino: number;
       id_seccion_origen: number;
 
-      estado_matricula_destino?: 'Reserva' | 'Pre-matriculado';
+      estado_matricula_destino?:
+        | 'Reserva'
+        | 'Pre-matriculado';
 
       destinos: {
         id_grado_destino: number;
@@ -918,32 +1005,50 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.generarVistaPreviaPromocion({
-      idAnioOrigen: Number(body.id_anio_origen),
+    return this.academicosService
+      .generarVistaPreviaPromocion({
+        idAnioOrigen:
+          Number(body.id_anio_origen),
 
-      idAnioDestino: Number(body.id_anio_destino),
+        idAnioDestino:
+          Number(body.id_anio_destino),
 
-      idSeccionOrigen: Number(body.id_seccion_origen),
+        idSeccionOrigen:
+          Number(body.id_seccion_origen),
 
-      estadoMatriculaDestino: body.estado_matricula_destino,
+        estadoMatriculaDestino:
+          body.estado_matricula_destino,
 
-      destinos: Array.isArray(body.destinos)
-        ? body.destinos.map((item) => ({
-            idGradoDestino: Number(item.id_grado_destino),
+        destinos:
+          Array.isArray(body.destinos)
+            ? body.destinos.map(
+                (item) => ({
+                  idGradoDestino:
+                    Number(
+                      item.id_grado_destino,
+                    ),
 
-            idSeccionDestino: Number(item.id_seccion_destino),
-          }))
-        : [],
+                  idSeccionDestino:
+                    Number(
+                      item.id_seccion_destino,
+                    ),
+                }),
+              )
+            : [],
 
-      observacion: body.observacion,
+        observacion:
+          body.observacion,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   // ── SECCIONES POR AÑO LECTIVO ────────────────────────
   @Get('secciones-anio')
@@ -962,19 +1067,25 @@ export class AcademicosController {
     @Query('colegio_id')
     colegioId?: string,
   ) {
-    return this.academicosService.listarSeccionesAnio({
-      idAnio: Number(anioId),
+    return this.academicosService
+      .listarSeccionesAnio({
+        idAnio:
+          Number(anioId),
 
-      idGrado: gradoId ? Number(gradoId) : undefined,
+        idGrado: gradoId
+          ? Number(gradoId)
+          : undefined,
 
-      estado,
+        estado,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Put('secciones-anio/configurar')
@@ -994,22 +1105,30 @@ export class AcademicosController {
     @Query('colegio_id')
     colegioId?: string,
   ) {
-    return this.academicosService.guardarSeccionAnio({
-      idAnio: Number(body.id_anio),
+    return this.academicosService
+      .guardarSeccionAnio({
+        idAnio:
+          Number(body.id_anio),
 
-      idSeccion: Number(body.id_seccion),
+        idSeccion:
+          Number(body.id_seccion),
 
-      estado: body.estado,
+        estado:
+          body.estado,
 
-      capacidadOverride: body.capacidad_override,
+        capacidadOverride:
+          body.capacidad_override,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   // ── MOVIMIENTOS DEL ESTUDIANTE ───────────────────────
   @Get('movimientos-estudiante')
@@ -1030,20 +1149,27 @@ export class AcademicosController {
     @Query('colegio_id')
     colegioId?: string,
   ) {
-    return this.academicosService.listarMovimientosEstudiante({
-      idEstudiante: estudianteId ? Number(estudianteId) : undefined,
+    return this.academicosService
+      .listarMovimientosEstudiante({
+        idEstudiante: estudianteId
+          ? Number(estudianteId)
+          : undefined,
 
-      idMatricula: matriculaId ? Number(matriculaId) : undefined,
+        idMatricula: matriculaId
+          ? Number(matriculaId)
+          : undefined,
 
-      tipo,
-      estado,
+        tipo,
+        estado,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Post('movimientos-estudiante')
@@ -1075,38 +1201,53 @@ export class AcademicosController {
     @Query('colegio_id')
     colegioId?: string,
   ) {
-    return this.academicosService.registrarMovimientoEstudiante({
-      idEstudiante: Number(body.id_estudiante),
+    return this.academicosService
+      .registrarMovimientoEstudiante({
+        idEstudiante:
+          Number(body.id_estudiante),
 
-      idMatricula: body.id_matricula ? Number(body.id_matricula) : undefined,
+        idMatricula: body.id_matricula
+          ? Number(body.id_matricula)
+          : undefined,
 
-      idColegioOrigen: body.id_colegio_origen
-        ? Number(body.id_colegio_origen)
-        : undefined,
+        idColegioOrigen:
+          body.id_colegio_origen
+            ? Number(body.id_colegio_origen)
+            : undefined,
 
-      idColegioDestino: body.id_colegio_destino
-        ? Number(body.id_colegio_destino)
-        : undefined,
+        idColegioDestino:
+          body.id_colegio_destino
+            ? Number(body.id_colegio_destino)
+            : undefined,
 
-      tipo: body.tipo,
+        tipo:
+          body.tipo,
 
-      fechaEfectiva: body.fecha_efectiva,
+        fechaEfectiva:
+          body.fecha_efectiva,
 
-      motivo: body.motivo,
+        motivo:
+          body.motivo,
 
-      institucionDestino: body.institucion_destino,
+        institucionDestino:
+          body.institucion_destino,
 
-      documentoUrl: body.documento_url,
+        documentoUrl:
+          body.documento_url,
 
-      documentoNombre: body.documento_nombre,
+        documentoNombre:
+          body.documento_nombre,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   // ── RECUPERACIÓN PEDAGÓGICA ──────────────────────────
   @Get('procesos-recuperacion')
@@ -1118,15 +1259,20 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.listarProcesosRecuperacion({
-      idAnio: anioId ? Number(anioId) : undefined,
+    return this.academicosService
+      .listarProcesosRecuperacion({
+        idAnio: anioId
+          ? Number(anioId)
+          : undefined,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Get('procesos-recuperacion/:id')
@@ -1138,15 +1284,18 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.getProcesoRecuperacion({
-      idProceso: Number(id),
+    return this.academicosService
+      .getProcesoRecuperacion({
+        idProceso: Number(id),
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Post('procesos-recuperacion')
@@ -1168,32 +1317,48 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.abrirProcesoRecuperacion({
-      idAnio: Number(body.id_anio),
+    return this.academicosService
+      .abrirProcesoRecuperacion({
+        idAnio:
+          Number(body.id_anio),
 
-      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+        idColegio:
+          body.id_colegio
+            ? Number(body.id_colegio)
+            : undefined,
 
-      fechaInicio: body.fecha_inicio,
+        fechaInicio:
+          body.fecha_inicio,
 
-      fechaFinOrdinaria: body.fecha_fin_ordinaria,
+        fechaFinOrdinaria:
+          body.fecha_fin_ordinaria,
 
-      permiteExtraordinario: body.permite_extraordinario,
+        permiteExtraordinario:
+          body.permite_extraordinario,
 
-      fechaFinExtraordinaria: body.fecha_fin_extraordinaria,
+        fechaFinExtraordinaria:
+          body.fecha_fin_extraordinaria,
 
-      motivoExtraordinario: body.motivo_extraordinario,
+        motivoExtraordinario:
+          body.motivo_extraordinario,
 
-      observacion: body.observacion,
+        observacion:
+          body.observacion,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
-  @Post('procesos-recuperacion/:id/' + 'sincronizar-alumnos')
+  @Post(
+    'procesos-recuperacion/:id/'
+    + 'sincronizar-alumnos',
+  )
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
   sincronizarAlumnosRecuperacion(
@@ -1202,18 +1367,25 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.sincronizarAlumnosRecuperacion({
-      idProceso: Number(id),
+    return this.academicosService
+      .sincronizarAlumnosRecuperacion({
+        idProceso: Number(id),
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
-  @Post('procesos-recuperacion/:idProceso/' + 'alumnos/:idAlumno/competencias')
+
+  @Post(
+    'procesos-recuperacion/:idProceso/'
+    + 'alumnos/:idAlumno/competencias',
+  )
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
   guardarCompetenciaRecuperacion(
@@ -1230,7 +1402,10 @@ export class AcademicosController {
       competencia_nombre: string;
       nivel_previo?: string;
       nivel_recuperacion?: string;
-      resultado: 'PENDIENTE' | 'APROBADO' | 'DESAPROBADO';
+      resultado:
+        | 'PENDIENTE'
+        | 'APROBADO'
+        | 'DESAPROBADO';
       fecha_evaluacion?: string;
       id_docente_evaluador?: number | null;
       institucion_evaluadora?: string;
@@ -1240,53 +1415,76 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.guardarCompetenciaRecuperacion({
-      idProceso: Number(idProceso),
+    return this.academicosService
+      .guardarCompetenciaRecuperacion({
+        idProceso:
+          Number(idProceso),
 
-      idRecuperacionAlumno: Number(idAlumno),
+        idRecuperacionAlumno:
+          Number(idAlumno),
 
-      idCompetencia: body.id_recuperacion_competencia
-        ? Number(body.id_recuperacion_competencia)
-        : undefined,
+        idCompetencia:
+          body.id_recuperacion_competencia
+            ? Number(
+                body.id_recuperacion_competencia,
+              )
+            : undefined,
 
-      idCurso:
-        body.id_curso === null || body.id_curso === undefined
-          ? null
-          : Number(body.id_curso),
+        idCurso:
+          body.id_curso === null
+            || body.id_curso === undefined
+            ? null
+            : Number(body.id_curso),
 
-      competenciaCodigo: body.competencia_codigo,
+        competenciaCodigo:
+          body.competencia_codigo,
 
-      competenciaNombre: body.competencia_nombre,
+        competenciaNombre:
+          body.competencia_nombre,
 
-      nivelPrevio: body.nivel_previo,
+        nivelPrevio:
+          body.nivel_previo,
 
-      nivelRecuperacion: body.nivel_recuperacion,
+        nivelRecuperacion:
+          body.nivel_recuperacion,
 
-      resultado: body.resultado,
+        resultado:
+          body.resultado,
 
-      fechaEvaluacion: body.fecha_evaluacion,
+        fechaEvaluacion:
+          body.fecha_evaluacion,
 
-      idDocenteEvaluador:
-        body.id_docente_evaluador === null ||
-        body.id_docente_evaluador === undefined
-          ? null
-          : Number(body.id_docente_evaluador),
+        idDocenteEvaluador:
+          body.id_docente_evaluador === null
+            || body.id_docente_evaluador
+              === undefined
+            ? null
+            : Number(
+                body.id_docente_evaluador,
+              ),
 
-      institucionEvaluadora: body.institucion_evaluadora,
+        institucionEvaluadora:
+          body.institucion_evaluadora,
 
-      documentoSustentoUrl: body.documento_sustento_url,
+        documentoSustentoUrl:
+          body.documento_sustento_url,
 
-      observacion: body.observacion,
+        observacion:
+          body.observacion,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
-  @Post('procesos-recuperacion/:id/cerrar')
+  @Post(
+    'procesos-recuperacion/:id/cerrar',
+  )
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Director')
   cerrarProcesoRecuperacion(
@@ -1299,18 +1497,24 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.cerrarProcesoRecuperacion({
-      idProceso: Number(id),
+    return this.academicosService
+      .cerrarProcesoRecuperacion({
+        idProceso:
+          Number(id),
 
-      observacion: body.observacion,
+        observacion:
+          body.observacion,
 
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
 
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   // ── CIERRE ACADÉMICO ─────────────────────────────────
   @Get('cierres-academicos')
@@ -1322,13 +1526,18 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.listarCierresAcademicos({
-      idAnio: anioId ? Number(anioId) : undefined,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .listarCierresAcademicos({
+        idAnio: anioId
+          ? Number(anioId)
+          : undefined,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Post('cierres-academicos/ordinario')
@@ -1345,15 +1554,20 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.abrirCierreAcademicoOrdinario({
-      idAnio: Number(body.id_anio),
-      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
-      observacion: body.observacion,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .abrirCierreAcademicoOrdinario({
+        idAnio: Number(body.id_anio),
+        idColegio: body.id_colegio
+          ? Number(body.id_colegio)
+          : undefined,
+        observacion: body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Post('cierres-academicos/:id/cerrar')
@@ -1369,15 +1583,19 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.cerrarCierreAcademicoOrdinario({
-      idCierre: Number(id),
-      observacion: body.observacion,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .cerrarCierreAcademicoOrdinario({
+        idCierre: Number(id),
+        observacion: body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   @Patch('matriculas/:id/situacion-final')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -1387,24 +1605,34 @@ export class AcademicosController {
     @Request() req,
     @Body()
     body: {
-      situacion: 'PENDIENTE' | 'PRO' | 'PER' | 'RR';
+      situacion:
+        | 'PENDIENTE'
+        | 'PRO'
+        | 'PER'
+        | 'RR';
       es_egresado?: boolean;
       observacion?: string;
     },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.actualizarSituacionFinalMatricula({
-      idMatricula: Number(id),
-      situacion: body.situacion,
-      esEgresado: body.es_egresado,
-      observacion: body.observacion,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .actualizarSituacionFinalMatricula({
+        idMatricula: Number(id),
+        situacion: body.situacion,
+        esEgresado:
+          body.es_egresado,
+        observacion:
+          body.observacion,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
+
 
   @Patch('matriculas/:id/continuidad')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -1426,18 +1654,24 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    return this.academicosService.actualizarContinuidadMatricula({
-      idMatricula: Number(id),
-      continuidad: body.continuidad,
-      idAnioContinuidad: body.id_anio_continuidad
-        ? Number(body.id_anio_continuidad)
-        : undefined,
-      motivo: body.motivo,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: colegioId ? Number(colegioId) : undefined,
-    });
+    return this.academicosService
+      .actualizarContinuidadMatricula({
+        idMatricula: Number(id),
+        continuidad: body.continuidad,
+        idAnioContinuidad:
+          body.id_anio_continuidad
+            ? Number(
+                body.id_anio_continuidad,
+              )
+            : undefined,
+        motivo: body.motivo,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: colegioId
+          ? Number(colegioId)
+          : undefined,
+      });
   }
 
   @Patch('alumnos/:id/estado-institucional')
@@ -1455,18 +1689,23 @@ export class AcademicosController {
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
-    const idColegio = Number(body.id_colegio || colegioId || 0);
+    const idColegio = Number(
+      body.id_colegio
+      || colegioId
+      || 0,
+    );
 
-    return this.academicosService.cambiarEstadoAlumnoInstitucional({
-      idEstudiante: Number(id),
-      idColegio,
-      estado: body.estado,
-      motivo: body.motivo,
-      userId: req.user.userId,
-      rol: req.user.rol,
-      scope,
-      colegioId: idColegio,
-    });
+    return this.academicosService
+      .cambiarEstadoAlumnoInstitucional({
+        idEstudiante: Number(id),
+        idColegio,
+        estado: body.estado,
+        motivo: body.motivo,
+        userId: req.user.userId,
+        rol: req.user.rol,
+        scope,
+        colegioId: idColegio,
+      });
   }
 
   @Post('alumnos/:id/avatar')
@@ -1492,14 +1731,13 @@ export class AcademicosController {
       throw new BadRequestException('Selecciona una imagen JPG o PNG.');
     }
 
-    const alumnoArchivo =
-      await this.academicosService.getCodigoAlumnoParaArchivo({
-        idEstudiante: Number(id),
-        userId: req.user.userId,
-        rol: req.user.rol,
-        scope,
-        colegioId: colegioId ? Number(colegioId) : undefined,
-      });
+    const alumnoArchivo = await this.academicosService.getCodigoAlumnoParaArchivo({
+      idEstudiante: Number(id),
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+    });
 
     const savedImage = await this.storageService.saveImage(file, {
       folder: 'alumnos',
@@ -1521,7 +1759,10 @@ export class AcademicosController {
   @Put('alumnos/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin', 'Secretaria')
-  updateAlumno(@Param('id') id: string, @Body() dto: Partial<CreateAlumnoDto>) {
+  updateAlumno(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateAlumnoDto>,
+  ) {
     return this.academicosService.updateAlumno(Number(id), dto);
   }
 
@@ -2097,8 +2338,7 @@ export class AcademicosController {
   async actualizarPeriodoAcademico(
     @Param('id') id: string,
     @Request() req,
-    @Body()
-    body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
+    @Body() body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
@@ -2118,8 +2358,7 @@ export class AcademicosController {
   async actualizarUnidadAcademica(
     @Param('id') id: string,
     @Request() req,
-    @Body()
-    body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
+    @Body() body: { nombre?: string; fecha_inicio?: string; fecha_fin?: string },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
@@ -2343,7 +2582,10 @@ export class AcademicosController {
 
   @Get('docente/secciones')
   @UseGuards(AuthGuard('jwt'))
-  async getSeccionesDocente(@Request() req, @Query('anio_id') anioId?: string) {
+  async getSeccionesDocente(
+    @Request() req,
+    @Query('anio_id') anioId?: string,
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: req.user.userId },
       include: {
@@ -2456,9 +2698,7 @@ export class AcademicosController {
       (scope === 'all' ? undefined : permitidoIds[0]);
 
     if (targetId && !permitidoIds.includes(targetId)) {
-      throw new BadRequestException(
-        'No tienes acceso al colegio seleccionado.',
-      );
+      throw new BadRequestException('No tienes acceso al colegio seleccionado.');
     }
 
     const colegio = targetId
@@ -2512,8 +2752,7 @@ export class AcademicosController {
   @Roles('Admin')
   async createArea(
     @Request() req,
-    @Body()
-    body: { nombre_area: string; id_colegio?: number; id_tenant?: number },
+    @Body() body: { nombre_area: string; id_colegio?: number; id_tenant?: number },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
   ) {
