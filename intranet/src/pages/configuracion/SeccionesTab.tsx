@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSchool } from '../../contexts/SchoolContext';
-import { useToast } from '../../contexts/ToastContext';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import CenteredFormModal from '../../components/CenteredFormModal';
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useAuth } from "../../contexts/AuthContext";
+import { useSchool } from "../../contexts/SchoolContext";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import CenteredFormModal from "../../components/CenteredFormModal";
 import {
   AlertCircle,
   Building2,
@@ -15,7 +15,7 @@ import {
   Trash2,
   UserRoundCheck,
   Users,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface ColegioBasico {
   id_colegio: number;
@@ -42,7 +42,7 @@ interface Seccion {
   letra: string;
   id_grado: number;
   id_aula: number;
-  grado: { nombre_grado: string; nivel: { nombre_nivel: string } };
+  grado: Grado;
   aula: { nombre_aula: string; capacidad: number };
   _count?: { matriculas: number };
   tutor?: TutorBasico | null;
@@ -74,36 +74,44 @@ interface AnioLectivo {
   estado: string;
 }
 
-type ModalState =
-  | { mode: 'create' }
-  | { mode: 'edit'; seccion: Seccion };
+type ApplyTarget = "grado" | "nivel";
+
+type ModalState = { mode: "create" } | { mode: "edit"; seccion: Seccion };
 
 const panelClass =
-  'rounded-[1.5rem] border border-gray-200/70 bg-white/90 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.5)]';
+  "rounded-[1.5rem] border border-gray-200/70 bg-white/90 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.5)]";
 const iconButtonClass =
-  'inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-gray-400 transition hover:border-gray-200 hover:bg-white hover:text-gray-700';
+  "inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-gray-400 transition hover:border-gray-200 hover:bg-white hover:text-gray-700";
 
 export default function SeccionesTab() {
   const { token } = useAuth();
-  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { colegios, activeScope, activeColegio, queryString, scopeLabel } =
+    useSchool();
   const { showToast } = useToast();
 
   const colegioConfigId =
-    activeScope.tipo === 'colegio' && activeColegio?.id_colegio
+    activeScope.tipo === "colegio" && activeColegio?.id_colegio
       ? activeColegio.id_colegio
       : null;
 
   // ════ Estados (importante: declarar todos los useState antes de cualquier useMemo que los consuma) ════
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [grados, setGrados] = useState<Grado[]>([]);
-  const [nivelSeleccionado, setNivelSeleccionado] = useState<number | null>(null);
-  const [gradoSeleccionado, setGradoSeleccionado] = useState<number | null>(null);
+  const [nivelSeleccionado, setNivelSeleccionado] = useState<number | null>(
+    null,
+  );
+  const [gradoSeleccionado, setGradoSeleccionado] = useState<number | null>(
+    null,
+  );
   const [secciones, setSecciones] = useState<Seccion[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
-  const [letra, setLetra] = useState('');
+  const [letra, setLetra] = useState("");
   const [saving, setSaving] = useState(false);
-  const [mensaje, setMensaje] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [mensaje, setMensaje] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Seccion | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [docentes, setDocentes] = useState<DocenteTutor[]>([]);
@@ -116,11 +124,14 @@ export default function SeccionesTab() {
 
   const [anios, setAnios] = useState<AnioLectivo[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState<number | null>(null);
-  const [capacidad, setCapacidad] = useState('30');
-  const [colegioGestionId, setColegioGestionId] = useState('');
+  const [capacidad, setCapacidad] = useState("30");
+  const [aplicarA, setAplicarA] = useState<ApplyTarget>("grado");
+  const [seccionesNivel, setSeccionesNivel] = useState<Seccion[] | null>(null);
+  const [colegioGestionId, setColegioGestionId] = useState("");
 
   // ════ Variables derivadas (después de los estados) ════
-  const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
+  const mostrarSelectorInstitucion =
+    activeScope.tipo === "todos" && colegios.length > 1;
 
   const colegioGestionActualId = Number(
     mostrarSelectorInstitucion
@@ -129,17 +140,21 @@ export default function SeccionesTab() {
   );
 
   const scopedQuery = useMemo(() => {
-    const params = new URLSearchParams(queryString.startsWith('?') ? queryString.slice(1) : '');
+    const params = new URLSearchParams(
+      queryString.startsWith("?") ? queryString.slice(1) : "",
+    );
 
     if (colegioGestionActualId) {
-      params.set('colegio_id', String(colegioGestionActualId));
+      params.set("colegio_id", String(colegioGestionActualId));
     }
 
     return `?${params.toString()}`;
   }, [queryString, colegioGestionActualId]);
 
   const nombreColegioGestion = useMemo(() => {
-    const colegio = colegios.find((item) => item.id_colegio === colegioGestionActualId);
+    const colegio = colegios.find(
+      (item) => item.id_colegio === colegioGestionActualId,
+    );
     return colegio?.nombre || colegio?.nombre_corto || scopeLabel;
   }, [colegios, colegioGestionActualId, scopeLabel]);
 
@@ -163,13 +178,20 @@ export default function SeccionesTab() {
       .get(`/api/academicos/docentes${scopedQuery}`, authHeader)
       .then((res) => setDocentes(Array.isArray(res.data) ? res.data : []))
       .catch(() =>
-        setMensaje({ type: 'error', text: 'No se pudieron cargar los docentes para tutoría.' }),
+        setMensaje({
+          type: "error",
+          text: "No se pudieron cargar los docentes para tutoría.",
+        }),
       );
   }, [token, authHeader, scopedQuery]);
 
   // ════ Efectos iniciales ════
   useEffect(() => {
-    if (mostrarSelectorInstitucion && !colegioGestionId && colegios[0]?.id_colegio) {
+    if (
+      mostrarSelectorInstitucion &&
+      !colegioGestionId &&
+      colegios[0]?.id_colegio
+    ) {
       setColegioGestionId(String(colegios[0].id_colegio));
     }
   }, [mostrarSelectorInstitucion, colegioGestionId, colegios]);
@@ -180,7 +202,12 @@ export default function SeccionesTab() {
     axios
       .get(`/api/academicos/niveles${scopedQuery}`, authHeader)
       .then((res) => setNiveles(res.data))
-      .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los niveles.' }));
+      .catch(() =>
+        setMensaje({
+          type: "error",
+          text: "No se pudieron cargar los niveles.",
+        }),
+      );
   }, [token, authHeader, scopedQuery]);
 
   // Cargar años lectivos
@@ -194,27 +221,34 @@ export default function SeccionesTab() {
         setAnios(data);
 
         const disponibles = data.filter((item) => {
-          const estado = String(item.estado || '')
+          const estado = String(item.estado || "")
             .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
 
-          return !['cerrado', 'archivado'].includes(estado);
+          return !["cerrado", "archivado"].includes(estado);
         });
 
         const preferido =
           disponibles.find((item) =>
-            String(item.estado || '').toLowerCase().includes('curso'),
+            String(item.estado || "")
+              .toLowerCase()
+              .includes("curso"),
           ) ||
           disponibles.find((item) =>
-            String(item.estado || '').toLowerCase().includes('matr'),
+            String(item.estado || "")
+              .toLowerCase()
+              .includes("matr"),
           ) ||
           disponibles[0];
 
         setAnioSeleccionado(preferido?.id_anio || null);
       })
       .catch(() =>
-        setMensaje({ type: 'error', text: 'No se pudieron cargar los años lectivos.' }),
+        setMensaje({
+          type: "error",
+          text: "No se pudieron cargar los años lectivos.",
+        }),
       );
   }, [token, authHeader, scopedQuery]);
 
@@ -235,7 +269,7 @@ export default function SeccionesTab() {
       return;
     }
 
-    const separator = scopedQuery ? '&' : '?';
+    const separator = scopedQuery ? "&" : "?";
 
     axios
       .get(
@@ -247,7 +281,12 @@ export default function SeccionesTab() {
         setGradoSeleccionado(null);
         setSecciones([]);
       })
-      .catch(() => setMensaje({ type: 'error', text: 'No se pudieron cargar los grados.' }));
+      .catch(() =>
+        setMensaje({
+          type: "error",
+          text: "No se pudieron cargar los grados.",
+        }),
+      );
   }, [nivelSeleccionado, token, authHeader, scopedQuery]);
 
   const cargarSecciones = async () => {
@@ -255,13 +294,16 @@ export default function SeccionesTab() {
     setLoading(true);
     try {
       const res = await axios.get(
-        `/api/academicos/secciones${scopedQuery ? `${scopedQuery}&` : '?'}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
+        `/api/academicos/secciones${scopedQuery ? `${scopedQuery}&` : "?"}grado_id=${gradoSeleccionado}&anio_id=${anioSeleccionado}`,
         authHeader,
       );
       setSecciones(res.data);
     } catch {
       setSecciones([]);
-      setMensaje({ type: 'error', text: 'No se pudieron cargar las secciones.' });
+      setMensaje({
+        type: "error",
+        text: "No se pudieron cargar las secciones.",
+      });
     } finally {
       setLoading(false);
     }
@@ -273,15 +315,33 @@ export default function SeccionesTab() {
   }, [gradoSeleccionado, anioSeleccionado, token, scopedQuery]);
 
   // ════ Acciones ════
-  const openCreate = () => {
-    setModal({ mode: 'create' });
-    setLetra('');
-    setCapacidad('30');
+  const openCreate = async () => {
+    if (!token || !nivelSeleccionado || !gradoSeleccionado) return;
+
+    setModal({ mode: "create" });
+    setLetra("A");
+    setCapacidad("30");
+    setAplicarA("grado");
+    setSeccionesNivel(null);
     setMensaje(null);
+
+    try {
+      const response = await axios.get(
+        `/api/academicos/secciones${scopedQuery}`,
+        authHeader,
+      );
+
+      setSeccionesNivel(Array.isArray(response.data) ? response.data : []);
+    } catch {
+      setMensaje({
+        type: "error",
+        text: "No se pudieron verificar las secciones existentes.",
+      });
+    }
   };
 
   const openEdit = (seccion: Seccion) => {
-    setModal({ mode: 'edit', seccion });
+    setModal({ mode: "edit", seccion });
     setLetra(seccion.letra);
     setMensaje(null);
   };
@@ -289,52 +349,134 @@ export default function SeccionesTab() {
   const closeModal = () => {
     if (saving) return;
     setModal(null);
-    setLetra('');
+    setLetra("");
+    setAplicarA("grado");
+    setSeccionesNivel(null);
   };
 
   const handleSave = async () => {
-    if (!token || !gradoSeleccionado || !modal) return;
-    const cleanLetter = letra.trim().toUpperCase();
+    if (!token || !gradoSeleccionado || !nivelSeleccionado || !modal) {
+      return;
+    }
 
-    if (!cleanLetter) {
-      setMensaje({ type: 'error', text: 'Ingresa una letra para la sección.' });
+    const cleanLetter = letra.trim().toUpperCase();
+    const capacidadNumero = Number(capacidad);
+
+    if (cleanLetter.length !== 1) {
+      setMensaje({
+        type: "error",
+        text: "La sección debe tener una sola letra o código.",
+      });
+      return;
+    }
+
+    if (
+      modal.mode === "edit" &&
+      secciones.some(
+        (seccion) =>
+          seccion.id_seccion !== modal.seccion.id_seccion &&
+          seccion.letra.trim().toUpperCase() === cleanLetter,
+      )
+    ) {
+      setMensaje({
+        type: "error",
+        text: `La sección "${cleanLetter}" ya existe en este grado.`,
+      });
+      return;
+    }
+
+    if (
+      modal.mode === "create" &&
+      (!Number.isInteger(capacidadNumero) ||
+        capacidadNumero < 1 ||
+        capacidadNumero > 127)
+    ) {
+      setMensaje({
+        type: "error",
+        text: "La capacidad debe estar entre 1 y 127.",
+      });
+      return;
+    }
+
+    if (modal.mode === "create" && seccionesNivel === null) {
+      setMensaje({
+        type: "error",
+        text: "Espera mientras se verifican las secciones existentes.",
+      });
+      return;
+    }
+
+    if (modal.mode === "create" && gradosPendientes.length === 0) {
+      setMensaje({
+        type: "error",
+        text: `La sección "${cleanLetter}" ya existe en todos los grados seleccionados.`,
+      });
       return;
     }
 
     setSaving(true);
     setMensaje(null);
+
     try {
-      if (modal.mode === 'edit') {
+      let creadas = 0;
+      let omitidas = 0;
+
+      if (modal.mode === "edit") {
         await axios.put(
           `/api/academicos/secciones/${modal.seccion.id_seccion}`,
           { letra: cleanLetter },
           authHeader,
         );
       } else {
-        await axios.post(
-          `/api/academicos/secciones${scopedQuery}`,
+        const response = await axios.post(
+          `/api/academicos/secciones/lote${scopedQuery}`,
           {
             letra: cleanLetter,
-            id_grado: gradoSeleccionado,
+            aplicar_a: aplicarA,
+            id_grado: aplicarA === "grado" ? gradoSeleccionado : undefined,
+            id_nivel: aplicarA === "nivel" ? nivelSeleccionado : undefined,
             id_colegio: colegioGestionActualId || undefined,
-            id_tenant: tenant?.id_tenant || undefined,
-            capacidad: Number(capacidad) || 30,
+            capacidad: capacidadNumero,
           },
           authHeader,
         );
+
+        creadas = Number(response.data?.creadas || 0);
+        omitidas = Number(response.data?.omitidas || 0);
       }
 
       await cargarSecciones();
+
+      const textoResultado =
+        modal.mode === "edit"
+          ? "Sección actualizada correctamente."
+          : omitidas > 0
+            ? `${creadas} sección(es) creada(s). ${omitidas} ya existía(n) y fueron omitida(s).`
+            : `${creadas} sección(es) creada(s) correctamente.`;
+
       setModal(null);
-      setLetra('');
-      setMensaje({ type: 'success', text: 'Sección guardada correctamente.' });
+      setLetra("");
+      setAplicarA("grado");
+      setSeccionesNivel(null);
+
+      setMensaje({
+        type: "success",
+        text: textoResultado,
+      });
+
       showToast({
-        type: 'success',
-        title: 'Sección guardada',
-        message: `Sección guardada para ${scopeLabel}.`,
+        type: "success",
+        title:
+          modal.mode === "edit"
+            ? "Sección actualizada"
+            : "Secciones configuradas",
+        message: textoResultado,
       });
     } catch (err: any) {
-      setMensaje({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar la sección.' });
+      setMensaje({
+        type: "error",
+        text: err.response?.data?.message || "No se pudo guardar la sección.",
+      });
     } finally {
       setSaving(false);
     }
@@ -357,30 +499,23 @@ export default function SeccionesTab() {
       );
 
       setSecciones((prev) =>
-        prev.filter(
-          (item) =>
-            item.id_seccion !==
-            seccion.id_seccion,
-        ),
+        prev.filter((item) => item.id_seccion !== seccion.id_seccion),
       );
 
       setMensaje({
-        type: 'success',
-        text: 'Sección eliminada correctamente.',
+        type: "success",
+        text: "Sección eliminada correctamente.",
       });
 
       showToast({
-        type: 'success',
-        title: 'Sección eliminada',
-        message:
-          'La sección fue retirada correctamente.',
+        type: "success",
+        title: "Sección eliminada",
+        message: "La sección fue retirada correctamente.",
       });
     } catch (err: any) {
       setMensaje({
-        type: 'error',
-        text:
-          err.response?.data?.message ||
-          'No se pudo eliminar la sección.',
+        type: "error",
+        text: err.response?.data?.message || "No se pudo eliminar la sección.",
       });
     } finally {
       setConfirming(false);
@@ -389,28 +524,35 @@ export default function SeccionesTab() {
   };
 
   const getNombreDocenteTutor = (docente?: DocenteTutor | null) => {
-    if (!docente) return '';
+    if (!docente) return "";
 
     return (
       docente.nombre ||
-      `${docente.persona?.nombres || ''} ${docente.persona?.apellido_paterno || ''} ${docente.persona?.apellido_materno || ''}`
-        .replace(/\s+/g, ' ')
+      `${docente.persona?.nombres || ""} ${docente.persona?.apellido_paterno || ""} ${docente.persona?.apellido_materno || ""}`
+        .replace(/\s+/g, " ")
         .trim()
     );
   };
 
   const solicitarCambioTutor = (seccion: Seccion, idDocenteRaw: string) => {
     const idDocente = idDocenteRaw ? Number(idDocenteRaw) : null;
-    const docente = idDocente ? docentes.find((item) => item.id_persona === idDocente) : null;
+    const docente = idDocente
+      ? docentes.find((item) => item.id_persona === idDocente)
+      : null;
 
     setTutorPendiente({
       seccion,
       idDocente,
-      nombreTutor: idDocente ? getNombreDocenteTutor(docente) || 'docente seleccionado' : 'Sin tutor asignado',
+      nombreTutor: idDocente
+        ? getNombreDocenteTutor(docente) || "docente seleccionado"
+        : "Sin tutor asignado",
     });
   };
 
-  const asignarTutorSeccion = async (seccion: Seccion, idDocente: number | null) => {
+  const asignarTutorSeccion = async (
+    seccion: Seccion,
+    idDocente: number | null,
+  ) => {
     if (!token) return;
 
     setGuardandoTutorId(seccion.id_seccion);
@@ -426,19 +568,23 @@ export default function SeccionesTab() {
       await cargarSecciones();
 
       setMensaje({
-        type: 'success',
-        text: idDocente ? 'Tutor asignado correctamente.' : 'Tutor retirado correctamente.',
+        type: "success",
+        text: idDocente
+          ? "Tutor asignado correctamente."
+          : "Tutor retirado correctamente.",
       });
 
       showToast({
-        type: 'success',
-        title: idDocente ? 'Tutor asignado' : 'Tutor retirado',
-        message: `${seccion.grado?.nombre_grado || 'Sección'} "${seccion.letra}" actualizada.`,
+        type: "success",
+        title: idDocente ? "Tutor asignado" : "Tutor retirado",
+        message: `${seccion.grado?.nombre_grado || "Sección"} "${seccion.letra}" actualizada.`,
       });
     } catch (err: any) {
       setMensaje({
-        type: 'error',
-        text: err.response?.data?.message || 'No se pudo actualizar el tutor de la sección.',
+        type: "error",
+        text:
+          err.response?.data?.message ||
+          "No se pudo actualizar el tutor de la sección.",
       });
     } finally {
       setGuardandoTutorId(null);
@@ -454,32 +600,98 @@ export default function SeccionesTab() {
   };
 
   // ════ Lecturas derivadas ════
-  const nivelActivo = niveles.find((nivel) => nivel.id_nivel === nivelSeleccionado);
-  const gradoActivo = grados.find((grado) => grado.id_grado === gradoSeleccionado);
-  const capacidadTotal = secciones.reduce((total, sec) => total + Number(sec.aula?.capacidad || 0), 0);
-  const matriculadosTotal = secciones.reduce((total, sec) => total + Number(sec._count?.matriculas || 0), 0);
-  const ocupacion = capacidadTotal > 0 ? Math.round((matriculadosTotal / capacidadTotal) * 100) : 0;
+  const nivelActivo = niveles.find(
+    (nivel) => nivel.id_nivel === nivelSeleccionado,
+  );
+  const gradoActivo = grados.find(
+    (grado) => grado.id_grado === gradoSeleccionado,
+  );
+  const codigoSeccion = letra.trim().toUpperCase();
+
+  const gradosObjetivo =
+    aplicarA === "nivel" ? grados : gradoActivo ? [gradoActivo] : [];
+
+  const gradosConCodigo = new Set(
+    (seccionesNivel || [])
+      .filter((seccion) => seccion.letra.trim().toUpperCase() === codigoSeccion)
+      .map((seccion) => seccion.grado.id_grado),
+  );
+
+  const gradosExistentes = gradosObjetivo.filter((grado) =>
+    gradosConCodigo.has(grado.id_grado),
+  );
+
+  const gradosPendientes = gradosObjetivo.filter(
+    (grado) => !gradosConCodigo.has(grado.id_grado),
+  );
+
+  const capacidadNumero = Number(capacidad);
+
+  const edicionDuplicada =
+    modal?.mode === "edit" &&
+    secciones.some(
+      (seccion) =>
+        seccion.id_seccion !== modal.seccion.id_seccion &&
+        seccion.letra.trim().toUpperCase() === codigoSeccion,
+    );
+
+  const creacionInvalida =
+    modal?.mode === "create" &&
+    (seccionesNivel === null ||
+      codigoSeccion.length !== 1 ||
+      !Number.isInteger(capacidadNumero) ||
+      capacidadNumero < 1 ||
+      capacidadNumero > 127 ||
+      gradosPendientes.length === 0);
+
+  const etiquetaGuardar =
+    modal?.mode === "create"
+      ? gradosPendientes.length === 1
+        ? "Agregar 1 sección"
+        : `Agregar ${gradosPendientes.length} secciones`
+      : "Guardar cambios";
+  const capacidadTotal = secciones.reduce(
+    (total, sec) => total + Number(sec.aula?.capacidad || 0),
+    0,
+  );
+  const matriculadosTotal = secciones.reduce(
+    (total, sec) => total + Number(sec._count?.matriculas || 0),
+    0,
+  );
+  const ocupacion =
+    capacidadTotal > 0
+      ? Math.round((matriculadosTotal / capacidadTotal) * 100)
+      : 0;
   const docentesOrdenados = useMemo(() => {
     return [...docentes].sort((a, b) => {
-      const nombreA = a.nombre || `${a.persona?.nombres || ''} ${a.persona?.apellido_paterno || ''}`;
-      const nombreB = b.nombre || `${b.persona?.nombres || ''} ${b.persona?.apellido_paterno || ''}`;
-      return nombreA.localeCompare(nombreB, 'es-PE');
+      const nombreA =
+        a.nombre ||
+        `${a.persona?.nombres || ""} ${a.persona?.apellido_paterno || ""}`;
+      const nombreB =
+        b.nombre ||
+        `${b.persona?.nombres || ""} ${b.persona?.apellido_paterno || ""}`;
+      return nombreA.localeCompare(nombreB, "es-PE");
     });
   }, [docentes]);
-
 
   // ════ Interfaz ════
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">Secciones</h3>
-          <p className="mt-1 text-sm text-gray-500">Filtra por nivel y grado para administrar aulas, aforo y grupos.</p>
+          <h3 className="text-lg font-semibold tracking-[-0.01em] text-gray-950">
+            Secciones
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Filtra por nivel y grado para administrar aulas, aforo y grupos.
+          </p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          disabled={!gradoSeleccionado || !anioSeleccionado || !colegioGestionActualId}
+          disabled={
+            !gradoSeleccionado || !anioSeleccionado || !colegioGestionActualId
+          }
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(76,110,245,0.95)] transition hover:-translate-y-0.5 hover:bg-accent-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
         >
           <Plus size={17} /> Nueva sección
@@ -506,7 +718,8 @@ export default function SeccionesTab() {
           </label>
 
           <p className="mt-2 text-xs font-semibold text-gray-500">
-            En vista consolidada, primero elige una institución para no mezclar años, grados ni secciones.
+            En vista consolidada, primero elige una institución para no mezclar
+            años, grados ni secciones.
           </p>
         </section>
       )}
@@ -514,11 +727,17 @@ export default function SeccionesTab() {
       <div className={`${panelClass} p-4`}>
         <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nivel educativo</label>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-500">
+              Nivel educativo
+            </label>
             <select
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-              value={nivelSeleccionado || ''}
-              onChange={(event) => setNivelSeleccionado(event.target.value ? Number(event.target.value) : null)}
+              value={nivelSeleccionado || ""}
+              onChange={(event) =>
+                setNivelSeleccionado(
+                  event.target.value ? Number(event.target.value) : null,
+                )
+              }
             >
               <option value="">Seleccionar nivel</option>
               {niveles.map((nivel) => (
@@ -530,12 +749,18 @@ export default function SeccionesTab() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-500">Grado</label>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-500">
+              Grado
+            </label>
             <select
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-              value={gradoSeleccionado || ''}
+              value={gradoSeleccionado || ""}
               disabled={!nivelSeleccionado}
-              onChange={(event) => setGradoSeleccionado(event.target.value ? Number(event.target.value) : null)}
+              onChange={(event) =>
+                setGradoSeleccionado(
+                  event.target.value ? Number(event.target.value) : null,
+                )
+              }
             >
               <option value="">Seleccionar grado</option>
               {grados.map((grado) => (
@@ -547,26 +772,38 @@ export default function SeccionesTab() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-500">Año lectivo</label>
+            <label className="mb-1.5 block text-xs font-semibold text-gray-500">
+              Año lectivo
+            </label>
             <select
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700 outline-none transition focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10"
-              value={anioSeleccionado || ''}
-              onChange={(event) => setAnioSeleccionado(event.target.value ? Number(event.target.value) : null)}
+              value={anioSeleccionado || ""}
+              onChange={(event) =>
+                setAnioSeleccionado(
+                  event.target.value ? Number(event.target.value) : null,
+                )
+              }
             >
               <option value="">Seleccionar año</option>
               {aniosFiltrados.map((anio) => (
                 <option key={anio.id_anio} value={anio.id_anio}>
                   {anio.nombre_anio} · {anio.estado}
-                  {mostrarSelectorInstitucion && anio.colegio?.nombre ? ` · ${anio.colegio.nombre}` : ''}
+                  {mostrarSelectorInstitucion && anio.colegio?.nombre
+                    ? ` · ${anio.colegio.nombre}`
+                    : ""}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm lg:min-w-64">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Vista actual</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Vista actual
+            </p>
             <p className="mt-1 truncate font-semibold text-gray-900">
-              {nombreColegioGestion} · {nivelActivo?.nombre_nivel || 'Sin nivel'} {gradoActivo ? `· ${gradoActivo.nombre_grado}` : ''}
+              {nombreColegioGestion} ·{" "}
+              {nivelActivo?.nombre_nivel || "Sin nivel"}{" "}
+              {gradoActivo ? `· ${gradoActivo.nombre_grado}` : ""}
             </p>
           </div>
         </div>
@@ -575,32 +812,51 @@ export default function SeccionesTab() {
       {mensaje && !modal && (
         <div
           className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium ${
-            mensaje.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-red-200 bg-red-50 text-red-700'
+            mensaje.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
           }`}
         >
-          {mensaje.type === 'success' ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
+          {mensaje.type === "success" ? (
+            <CheckCircle2 size={17} />
+          ) : (
+            <AlertCircle size={17} />
+          )}
           {mensaje.text}
         </div>
       )}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className={`${panelClass} p-4`}>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Secciones</p>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{secciones.length}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+            Secciones
+          </p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
+            {secciones.length}
+          </p>
           <p className="mt-1 text-sm text-gray-500">Registradas en el grado</p>
         </div>
         <div className={`${panelClass} p-4`}>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Matriculados</p>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{matriculadosTotal}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+            Matriculados
+          </p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
+            {matriculadosTotal}
+          </p>
           <p className="mt-1 text-sm text-gray-500">Alumnos asignados</p>
         </div>
         <div className={`${panelClass} p-4`}>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Ocupación</p>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">{ocupacion}%</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+            Ocupación
+          </p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-gray-950">
+            {ocupacion}%
+          </p>
           <div className="mt-3 h-2 rounded-full bg-gray-100">
-            <div className="h-full rounded-full bg-accent-500" style={{ width: `${Math.min(100, ocupacion)}%` }} />
+            <div
+              className="h-full rounded-full bg-accent-500"
+              style={{ width: `${Math.min(100, ocupacion)}%` }}
+            />
           </div>
         </div>
       </div>
@@ -608,20 +864,32 @@ export default function SeccionesTab() {
       {loading ? (
         <div className="skeleton h-44 rounded-3xl" />
       ) : !gradoSeleccionado ? (
-        <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}>
+        <div
+          className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}
+        >
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
             <Building2 size={25} />
           </div>
-          <h4 className="text-base font-semibold text-gray-900">Selecciona un nivel y grado</h4>
-          <p className="mt-1 max-w-md text-sm text-gray-500">Luego podrás crear, editar o revisar las secciones disponibles.</p>
+          <h4 className="text-base font-semibold text-gray-900">
+            Selecciona un nivel y grado
+          </h4>
+          <p className="mt-1 max-w-md text-sm text-gray-500">
+            Luego podrás crear, editar o revisar las secciones disponibles.
+          </p>
         </div>
       ) : secciones.length === 0 ? (
-        <div className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}>
+        <div
+          className={`${panelClass} flex flex-col items-center justify-center px-6 py-14 text-center`}
+        >
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
             <Users size={25} />
           </div>
-          <h4 className="text-base font-semibold text-gray-900">No hay secciones para este grado</h4>
-          <p className="mt-1 max-w-md text-sm text-gray-500">Crea la primera sección para empezar a matricular alumnos.</p>
+          <h4 className="text-base font-semibold text-gray-900">
+            No hay secciones para este grado
+          </h4>
+          <p className="mt-1 max-w-md text-sm text-gray-500">
+            Crea la primera sección para empezar a matricular alumnos.
+          </p>
         </div>
       ) : (
         <div className={`${panelClass} overflow-hidden`}>
@@ -629,33 +897,58 @@ export default function SeccionesTab() {
             <table className="w-full min-w-[1120px] text-sm">
               <thead className="bg-gray-50/80">
                 <tr className="border-b border-gray-100">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Sección</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Aula</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Capacidad</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Matriculados</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Tutor asignado</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Acciones</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Sección
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Aula
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Capacidad
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Matriculados
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Tutor asignado
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {secciones.map((sec) => (
-                  <tr key={sec.id_seccion} className="align-middle transition hover:bg-gray-50/70">
+                  <tr
+                    key={sec.id_seccion}
+                    className="align-middle transition hover:bg-gray-50/70"
+                  >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-sm font-bold text-accent-600">
                           {sec.letra}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{sec.grado?.nombre_grado || 'Grado'} “{sec.letra}”</p>
+                          <p className="font-semibold text-gray-900">
+                            {sec.grado?.nombre_grado || "Grado"} “{sec.letra}”
+                          </p>
                           <p className="text-xs text-gray-500">
-                            {sec.grado?.nivel?.nombre_nivel || nivelActivo?.nombre_nivel || 'Nivel'}
-                            {sec.colegio?.nombre ? ` · ${sec.colegio.nombre}` : ''}
+                            {sec.grado?.nivel?.nombre_nivel ||
+                              nivelActivo?.nombre_nivel ||
+                              "Nivel"}
+                            {sec.colegio?.nombre
+                              ? ` · ${sec.colegio.nombre}`
+                              : ""}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{sec.aula?.nombre_aula || 'Sin aula'}</td>
-                    <td className="px-4 py-4 text-center font-medium text-gray-700">{sec.aula?.capacidad || '—'}</td>
+                    <td className="px-4 py-4 text-gray-600">
+                      {sec.aula?.nombre_aula || "Sin aula"}
+                    </td>
+                    <td className="px-4 py-4 text-center font-medium text-gray-700">
+                      {sec.aula?.capacidad || "—"}
+                    </td>
                     <td className="px-4 py-4 text-center">
                       <span className="inline-flex items-center justify-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
                         <Users size={14} /> {sec._count?.matriculas ?? 0}
@@ -682,20 +975,25 @@ export default function SeccionesTab() {
 
                           <select
                             className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-wait disabled:opacity-60"
-                            value={sec.tutor?.id_docente || ''}
+                            value={sec.tutor?.id_docente || ""}
                             disabled={guardandoTutorId === sec.id_seccion}
-                            onChange={(event) => solicitarCambioTutor(sec, event.target.value)}
+                            onChange={(event) =>
+                              solicitarCambioTutor(sec, event.target.value)
+                            }
                           >
                             <option value="">Sin tutor asignado</option>
                             {docentesOrdenados.map((docente) => {
                               const nombre =
                                 docente.nombre ||
-                                `${docente.persona?.nombres || ''} ${docente.persona?.apellido_paterno || ''} ${docente.persona?.apellido_materno || ''}`
-                                  .replace(/\s+/g, ' ')
+                                `${docente.persona?.nombres || ""} ${docente.persona?.apellido_paterno || ""} ${docente.persona?.apellido_materno || ""}`
+                                  .replace(/\s+/g, " ")
                                   .trim();
 
                               return (
-                                <option key={docente.id_persona} value={docente.id_persona}>
+                                <option
+                                  key={docente.id_persona}
+                                  value={docente.id_persona}
+                                >
                                   {nombre}
                                 </option>
                               );
@@ -705,17 +1003,21 @@ export default function SeccionesTab() {
                           <div
                             className={`mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ${
                               sec.tutor?.nombre
-                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
-                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100'
+                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                                : "bg-slate-50 text-slate-500 ring-1 ring-slate-100"
                             }`}
                           >
                             <span
                               className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                                sec.tutor?.nombre ? 'bg-emerald-500' : 'bg-slate-300'
+                                sec.tutor?.nombre
+                                  ? "bg-emerald-500"
+                                  : "bg-slate-300"
                               }`}
                             />
                             <span className="truncate">
-                              {sec.tutor?.nombre ? `Tutor actual: ${sec.tutor.nombre}` : 'Sin tutor activo'}
+                              {sec.tutor?.nombre
+                                ? `Tutor actual: ${sec.tutor.nombre}`
+                                : "Sin tutor activo"}
                             </span>
                           </div>
                         </div>
@@ -723,7 +1025,11 @@ export default function SeccionesTab() {
                     </td>
                     <td className="px-4 py-4 align-middle text-right">
                       <div className="flex justify-end gap-1">
-                        <button type="button" onClick={() => openEdit(sec)} className={iconButtonClass}>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(sec)}
+                          className={iconButtonClass}
+                        >
                           <Pencil size={15} />
                         </button>
                         <button
@@ -745,25 +1051,25 @@ export default function SeccionesTab() {
 
       <CenteredFormModal
         open={Boolean(modal)}
-        eyebrow="Sección"
+        eyebrow="Configuración académica"
         title={
-          modal?.mode === 'edit'
-            ? 'Editar sección'
-            : 'Nueva sección'
+          modal?.mode === "edit" ? "Editar sección" : "Configurar secciones"
         }
         description={
-          gradoActivo?.nombre_grado
-            || 'Grado seleccionado'
+          modal?.mode === "create" && aplicarA === "nivel"
+            ? nivelActivo?.nombre_nivel || "Nivel seleccionado"
+            : gradoActivo?.nombre_grado || "Grado seleccionado"
         }
-        message={
-          modal && mensaje
-            ? mensaje.text
-            : null
-        }
+        message={modal && mensaje ? mensaje.text : null}
         messageTone={mensaje?.type}
         saving={saving}
-        submitLabel="Guardar"
-        maxWidthClassName="max-w-md"
+        submitDisabled={
+          modal?.mode === "create"
+            ? Boolean(creacionInvalida)
+            : codigoSeccion.length !== 1 || edicionDuplicada
+        }
+        submitLabel={etiquetaGuardar}
+        maxWidthClassName="max-w-2xl"
         onClose={closeModal}
         onSubmit={handleSave}
       >
@@ -776,38 +1082,173 @@ export default function SeccionesTab() {
             <input
               className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold uppercase text-gray-800 outline-none transition-colors duration-150 placeholder:normal-case placeholder:text-gray-400 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
               value={letra}
-              onChange={(event) =>
-                setLetra(
-                  event.target.value.toUpperCase(),
-                )
-              }
+              onChange={(event) => setLetra(event.target.value.toUpperCase())}
               placeholder="Ej. A"
-              maxLength={3}
+              maxLength={1}
               autoFocus
             />
+
+            {modal?.mode === "edit" && edicionDuplicada && (
+              <span className="mt-1.5 block text-xs font-semibold text-red-600">
+                La sección “{codigoSeccion}” ya existe en este grado.
+              </span>
+            )}
           </label>
 
-          {modal?.mode === 'create' && (
-            <label>
-              <span className="mb-1.5 block text-xs font-semibold text-gray-500">
-                Capacidad del aula
-              </span>
+          {modal?.mode === "create" && (
+            <>
+              <fieldset>
+                <legend className="mb-2 block text-xs font-semibold text-gray-500">
+                  Aplicar la sección a
+                </legend>
 
-              <input
-                className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
-                value={capacidad}
-                inputMode="numeric"
-                onChange={(event) =>
-                  setCapacidad(
-                    event.target.value.replace(
-                      /[^0-9]/g,
-                      '',
-                    ),
-                  )
-                }
-                placeholder="30"
-              />
-            </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${
+                      aplicarA === "grado"
+                        ? "border-blue-300 bg-blue-50 ring-4 ring-blue-500/10"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="aplicar-seccion"
+                        value="grado"
+                        checked={aplicarA === "grado"}
+                        onChange={() => {
+                          setAplicarA("grado");
+                          setMensaje(null);
+                        }}
+                        className="mt-1"
+                      />
+
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          Solo el grado actual
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {gradoActivo?.nombre_grado || "Grado seleccionado"}
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${
+                      aplicarA === "nivel"
+                        ? "border-blue-300 bg-blue-50 ring-4 ring-blue-500/10"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="aplicar-seccion"
+                        value="nivel"
+                        checked={aplicarA === "nivel"}
+                        onChange={() => {
+                          setAplicarA("nivel");
+                          setMensaje(null);
+                        }}
+                        className="mt-1"
+                      />
+
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          Todos los grados del nivel
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {nivelActivo?.nombre_nivel || "Nivel seleccionado"}
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </fieldset>
+
+              <label>
+                <span className="mb-1.5 block text-xs font-semibold text-gray-500">
+                  Capacidad por aula
+                </span>
+
+                <input
+                  className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-gray-800 outline-none transition-colors duration-150 focus:border-accent-300 focus:bg-white focus:ring-4 focus:ring-accent-500/10 motion-reduce:transition-none"
+                  value={capacidad}
+                  inputMode="numeric"
+                  onChange={(event) =>
+                    setCapacidad(event.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  placeholder="30"
+                />
+
+                <span className="mt-1.5 block text-xs text-gray-400">
+                  Se aplicará la misma capacidad a cada aula creada.
+                </span>
+              </label>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">
+                      Vista previa
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-800">
+                      Sección “{codigoSeccion || "—"}”
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-600">
+                    {seccionesNivel === null
+                      ? "Verificando"
+                      : `${gradosPendientes.length} por crear`}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {gradosObjetivo.map((grado) => {
+                    const existe = gradosConCodigo.has(grado.id_grado);
+
+                    return (
+                      <div
+                        key={grado.id_grado}
+                        className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${
+                          existe
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-emerald-200 bg-emerald-50"
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-gray-800">
+                          {grado.nombre_grado}
+                        </span>
+
+                        <span
+                          className={`text-[11px] font-black ${
+                            existe ? "text-amber-700" : "text-emerald-700"
+                          }`}
+                        >
+                          {existe ? "Ya existe" : "Se creará"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {seccionesNivel !== null && gradosExistentes.length > 0 && (
+                  <p
+                    className={`mt-3 rounded-xl px-3 py-2 text-xs font-semibold ${
+                      gradosPendientes.length === 0
+                        ? "bg-red-50 text-red-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {gradosPendientes.length === 0
+                      ? `La sección “${codigoSeccion}” ya existe en todos los grados seleccionados.`
+                      : `${gradosExistentes.length} grado(s) ya tiene(n) esta sección y serán omitidos.`}
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </CenteredFormModal>
@@ -817,15 +1258,15 @@ export default function SeccionesTab() {
         eyebrow="Tutoría"
         title={
           tutorPendiente?.idDocente
-            ? 'Confirmar asignación de tutor'
-            : 'Confirmar retiro de tutor'
+            ? "Confirmar asignación de tutor"
+            : "Confirmar retiro de tutor"
         }
         description={
           tutorPendiente
             ? tutorPendiente.idDocente
-              ? `Se asignará a ${tutorPendiente.nombreTutor} como tutor de ${tutorPendiente.seccion.grado?.nombre_grado || 'la sección'} "${tutorPendiente.seccion.letra}".`
-              : `La sección ${tutorPendiente.seccion.grado?.nombre_grado || ''} "${tutorPendiente.seccion.letra}" quedará sin tutor asignado.`
-            : ''
+              ? `Se asignará a ${tutorPendiente.nombreTutor} como tutor de ${tutorPendiente.seccion.grado?.nombre_grado || "la sección"} "${tutorPendiente.seccion.letra}".`
+              : `La sección ${tutorPendiente.seccion.grado?.nombre_grado || ""} "${tutorPendiente.seccion.letra}" quedará sin tutor asignado.`
+            : ""
         }
         tone="neutral"
         confirmLabel="Sí, confirmar"
@@ -841,8 +1282,8 @@ export default function SeccionesTab() {
         open={Boolean(confirmDelete)}
         title={
           confirmDelete
-            ? `Eliminar sección ${confirmDelete.grado?.nombre_grado || ''} "${confirmDelete.letra}"`
-            : 'Eliminar sección'
+            ? `Eliminar sección ${confirmDelete.grado?.nombre_grado || ""} "${confirmDelete.letra}"`
+            : "Eliminar sección"
         }
         description="Esta acción retirará la sección si no tiene registros protegidos. No se recomienda eliminar secciones con historial."
         tone="danger"
