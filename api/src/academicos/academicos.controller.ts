@@ -368,6 +368,43 @@ async deleteGrado(
     });
   }
 
+  @Post('secciones/lote')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin')
+  async createSeccionesLote(
+    @Request()
+    req: {
+      user: {
+        userId: number;
+        rol: string;
+      };
+    },
+    @Body()
+    body: {
+      letra: string;
+      aplicar_a: 'grado' | 'nivel';
+      id_grado?: number;
+      id_nivel?: number;
+      id_colegio?: number;
+      capacidad?: number;
+    },
+    @Query('scope') scope?: string,
+    @Query('colegio_id') colegioId?: string,
+  ) {
+    return this.academicosService.crearSeccionesLoteConfig({
+      userId: req.user.userId,
+      rol: req.user.rol,
+      scope,
+      colegioId: colegioId ? Number(colegioId) : undefined,
+      letra: body.letra,
+      aplicarA: body.aplicar_a,
+      idGrado: body.id_grado ? Number(body.id_grado) : undefined,
+      idNivel: body.id_nivel ? Number(body.id_nivel) : undefined,
+      idColegio: body.id_colegio ? Number(body.id_colegio) : undefined,
+      capacidad: body.capacidad ? Number(body.capacidad) : undefined,
+    });
+  }
+
   @Put('secciones/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('Admin')
