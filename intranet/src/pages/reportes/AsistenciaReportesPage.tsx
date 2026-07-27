@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   AlertTriangle,
@@ -12,10 +11,10 @@ import {
   RefreshCw,
   School,
   UsersRound,
-  X,
   XCircle,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchool } from '../../contexts/SchoolContext';
 
@@ -131,13 +130,6 @@ function formatDate(value: string) {
     month: '2-digit',
     year: 'numeric',
   });
-}
-
-function isPdfFile(file?: ArchivoPreview | null) {
-  const url = String(file?.url || '').toLowerCase();
-  const mime = String(file?.mime || '').toLowerCase();
-
-  return mime.includes('pdf') || url.includes('.pdf');
 }
 
 function KpiCard({
@@ -718,46 +710,13 @@ export default function AsistenciaReportesPage() {
         </>
       )}
 
-      {archivoPreview && createPortal((
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
-                  Documento de sustento
-                </p>
-                <h3 className="mt-1 text-base font-black text-slate-950">
-                  {archivoPreview.nombre || 'Archivo adjunto'}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setArchivoPreview(null)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-700 hover:border-slate-900"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="min-h-[60vh] overflow-auto bg-slate-100 p-4">
-              {isPdfFile(archivoPreview) ? (
-                <iframe
-                  src={archivoPreview.url}
-                  title={archivoPreview.nombre || 'Documento de sustento'}
-                  className="h-[72vh] w-full rounded-sm border border-slate-200 bg-white"
-                />
-              ) : (
-                <img
-                  src={archivoPreview.url}
-                  alt={archivoPreview.nombre || 'Documento de sustento'}
-                  className="mx-auto max-h-[72vh] max-w-full rounded-sm bg-white object-contain shadow-sm"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      ), document.body)}
+      <AttachmentPreviewDialog
+        preview={archivoPreview}
+        eyebrow="Documento de sustento"
+        onClose={() =>
+          setArchivoPreview(null)
+        }
+      />
     </div>
   );
 }
