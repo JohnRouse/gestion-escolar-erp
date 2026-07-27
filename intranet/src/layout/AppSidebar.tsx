@@ -448,7 +448,7 @@ export default function AppSidebar() {
       document.activeElement as HTMLButtonElement,
     );
 
-    let nextIndex = currentIndex;
+    let nextIndex: number;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
