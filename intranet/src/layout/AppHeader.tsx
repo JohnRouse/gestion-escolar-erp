@@ -1,69 +1,28 @@
 import {
   useEffect,
   useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Bell,
   Check,
   ChevronDown,
-  HelpCircle,
   RotateCcw,
   Loader2,
   ImagePlus,
-  LogOut,
   Menu,
-  Settings,
-  User,
-  Zap,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import { useSidebar } from '../contexts/SidebarContext';
-import { assetUrl } from '../utils/assets';
 import HeaderGlobalSearch from '../components/header/HeaderGlobalSearch';
+import HeaderUserMenu from '../components/header/HeaderUserMenu';
 import InstitutionMark from '../components/InstitutionMark';
-
-function obtenerPartesNombre(nombre?: string | null): string[] {
-  return (nombre || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-function obtenerApellidoPaterno(nombre?: string | null): string {
-  const partes = obtenerPartesNombre(nombre);
-
-  if (partes.length >= 4) return partes[partes.length - 2];
-  if (partes.length >= 2) return partes[1];
-
-  return partes[0] || 'Usuario';
-}
-
-function obtenerInicialesUsuario(nombre?: string | null): string {
-  const partes = obtenerPartesNombre(nombre);
-  const primeraInicial = partes[0]?.slice(0, 1) || 'U';
-  const apellidoPaterno = obtenerApellidoPaterno(nombre);
-  const apellidoInicial = apellidoPaterno?.slice(0, 1) || '';
-
-  return `${primeraInicial}${apellidoInicial}`.toUpperCase();
-}
-
-function obtenerNombreCortoUsuario(nombre?: string | null): string {
-  const partes = obtenerPartesNombre(nombre);
-  const primerNombre = partes[0] || 'Usuario';
-  const apellidoPaterno = obtenerApellidoPaterno(nombre);
-
-  if (!apellidoPaterno || apellidoPaterno === primerNombre) return primerNombre;
-
-  return `${primerNombre} ${apellidoPaterno}`;
-}
 
 const iconButtonClass =
   'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
 
 export default function AppHeader() {
-  const { user, logout, token, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const {
     tenant,
     colegios,
@@ -78,9 +37,7 @@ export default function AppHeader() {
   } = useSchool();
 
   const { toggle } = useSidebar();
-  const navigate = useNavigate();
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
 
   const [
@@ -93,25 +50,7 @@ export default function AppHeader() {
     setSchoolLogoError,
   ] = useState('');
 
-  const userName = user?.nombre || 'Usuario';
-  const userShortName = obtenerNombreCortoUsuario(userName);
-  const userInitials = obtenerInicialesUsuario(userName);
   const userRole = user?.rol || 'Admin';
-
-  const canManageBranding =
-    ['Admin', 'Director'].includes(
-      userRole,
-    );
-
-  const userEmail = (user as any)?.email || (user as any)?.correo || 'admin@smv.edu.pe';
-
-  const avatarUrl =
-    (user as any)?.avatar_url ||
-    (user as any)?.foto_url ||
-    (user as any)?.foto_perfil_url ||
-    null;
-
-  const avatarSrc = assetUrl(avatarUrl);
 
   const canShowSchoolSelector = colegios.length > 0;
   const activeTipo = activeScope?.tipo || 'todos';
@@ -202,18 +141,11 @@ export default function AppHeader() {
       }
     };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-    setDropdownOpen(false);
-    setSchoolDropdownOpen(false);
-  };
 useEffect(() => {
     const handleKeyDown = (
       event: KeyboardEvent,
     ) => {
       if (event.key === 'Escape') {
-        setDropdownOpen(false);
         setSchoolDropdownOpen(false);
       }
     };
@@ -270,7 +202,6 @@ useEffect(() => {
                 type="button"
                 onClick={() => {
                   setSchoolDropdownOpen((value) => !value);
-                  setDropdownOpen(false);
                 }}
                 className="header-school-trigger group hidden h-11 max-w-sm items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm sm:flex"
               >
@@ -299,7 +230,6 @@ useEffect(() => {
                 type="button"
                 onClick={() => {
                   setSchoolDropdownOpen((value) => !value);
-                  setDropdownOpen(false);
                 }}
                 aria-label="Cambiar institución"
                 className={`${iconButtonClass} sm:hidden`}
@@ -518,140 +448,24 @@ useEffect(() => {
 
           <HeaderGlobalSearch
             onOpen={() => {
-              setDropdownOpen(false);
               setSchoolDropdownOpen(false);
             }}
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Ver notificaciones" className={`${iconButtonClass} relative`}>
+          <button
+            type="button"
+            aria-label="Ver notificaciones"
+            className={`${iconButtonClass} relative`}
+          >
             <Bell size={18} strokeWidth={2} />
             <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
           </button>
 
-          <div className="relative ml-1">
-            <button
-              type="button"
-              onClick={() => {
-                setDropdownOpen((value) => !value);
-                setSchoolDropdownOpen(false);
-              }}
-              aria-expanded={dropdownOpen}
-              className="group flex h-11 items-center gap-2.5 rounded-2xl border border-transparent bg-transparent py-1 pl-1 pr-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200/70 hover:bg-slate-50"
-            >
-              {avatarSrc ? (
-                <img
-                  src={avatarSrc}
-                  alt={userName}
-                  className="h-9 w-9 rounded-xl bg-white object-cover ring-1 ring-slate-200/70"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-950 ring-1 ring-slate-200/70">
-                  {userInitials}
-                </span>
-              )}
-
-              <div className="hidden min-w-0 text-left leading-tight sm:block">
-                <p className="max-w-28 truncate text-sm font-semibold text-slate-900">{userShortName}</p>
-                <p className="max-w-28 truncate text-xs font-medium text-slate-500">{userRole}</p>
-              </div>
-
-              <ChevronDown
-                size={16}
-                className={`hidden text-slate-400 transition-transform duration-200 sm:block ${dropdownOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {dropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                <div className="header-dropdown-enter absolute right-0 z-[1000] mt-3 w-80 overflow-hidden rounded border border-slate-300 bg-white shadow-xl">
-                  <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      {avatarSrc ? (
-                        <img
-                          src={avatarSrc}
-                          alt={userName}
-                          className="h-12 w-12 rounded-xl bg-white object-cover ring-1 ring-slate-200/70"
-                        />
-                      ) : (
-                        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-sm font-black text-slate-950 ring-1 ring-slate-200/70">
-                          {userInitials}
-                        </span>
-                      )}
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-950">{userName}</p>
-                        <p className="truncate text-xs font-medium text-slate-600">{userEmail}</p>
-                      </div>
-                    </div>
-
-                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
-                      <Zap size={12} /> {userRole}
-                    </span>
-                  </div>
-
-                  <div className="p-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDropdownOpen(false);
-                        navigate('/perfil');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <User size={16} />
-                      </span>
-                      Editar perfil
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDropdownOpen(false);
-                        navigate('/configuracion');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                        <Settings size={16} />
-                      </span>
-                      Configuración
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDropdownOpen(false);
-                        alert('Soporte: contacta al administrador.');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:text-slate-950"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-                        <HelpCircle size={16} />
-                      </span>
-                      Soporte
-                    </button>
-                  </div>
-
-                  <div className="border-t border-slate-100 p-2">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-all duration-200 hover:bg-red-50"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                        <LogOut size={16} />
-                      </span>
-                      Cerrar sesión
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <HeaderUserMenu
+            onOpen={() => setSchoolDropdownOpen(false)}
+          />
         </div>
 
       </div>
