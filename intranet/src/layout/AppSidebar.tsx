@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ElementType,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -14,184 +13,10 @@ import { useSchool } from '../contexts/SchoolContext';
 import InstitutionMark from '../components/InstitutionMark';
 import { canAccessTutoria } from '../config/accessRules';
 import {
-  ChevronDown,
-  PanelLeft,
-  LayoutDashboard,
-  UserPlus,
-  Wallet,
-  Mail,
-  Users,
-  Presentation,
-  FileText,
-  CheckSquare,
-  Settings,
-  UserCircle,
-  CalendarDays,
-  MessageSquareHeart,
-  HeartPulse,
-  ChartColumn,
-  Bell,
-  GraduationCap,
-  Sparkles,
-  BookOpenCheck,
-} from 'lucide-react';
-
-interface NavLeaf {
-  title: string;
-  path: string;
-}
-
-interface NavChild {
-  title: string;
-  path?: string;
-  children?: NavLeaf[];
-}
-
-interface NavItem {
-  title: string;
-  icon: ElementType;
-  path?: string;
-  roles?: string[];
-  children?: NavChild[];
-}
-
-const menuPrincipal: NavItem[] = [
-  { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['Admin', 'Secretaria', 'Director', 'Profesor'] },
-];
-
-const menuAcademico: NavItem[] = [
-  {
-    title: 'Matrícula',
-    icon: UserPlus,
-    path: '/matricula',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      { title: 'Registrar matrícula', path: '/matricula' },
-      { title: 'Renovación individual', path: '/matricula/renovacion' },
-      { title: 'Promoción masiva', path: '/matricula/promocion-masiva' },
-      { title: 'Historial de matrículas', path: '/matricula/historial' },
-    ],
-  },
-  {
-    title: 'Notas',
-    icon: FileText,
-    path: '/notas',
-    roles: ['Profesor', 'Admin', 'Director'],
-    children: [
-      { title: 'Registro', path: '/notas' },
-    ],
-  },
-  { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin', 'Director'] },
-  { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria', 'Director'] },
-  { title: 'Horario', icon: GraduationCap, path: '/horario', roles: ['Profesor'] },
-];
-
-const menuTutoria: NavItem[] = [
-  {
-    title: 'Tutoría',
-    icon: BookOpenCheck,
-    path: '/tutoria',
-    roles: ['Profesor', 'Admin', 'Director'],
-  },
-];
-
-const menuComunidad: NavItem[] = [
-  {
-    title: 'Comunidad escolar',
-    icon: Users,
-    path: '/comunidad/alumnos',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      { title: 'Alumnos', path: '/comunidad/alumnos' },
-      { title: 'Apoderados', path: '/comunidad/apoderados' },
-    ],
-  },
-];
-
-const menuPersonal: NavItem[] = [
-  { title: 'Docentes', icon: Presentation, path: '/docentes', roles: ['Admin', 'Director'] },
-  { title: 'Staff', icon: UserCircle, path: '/staff', roles: ['Admin', 'Director'] },
-  { title: 'Citas', icon: MessageSquareHeart, path: '/citas', roles: ['Admin', 'Secretaria'] },
-];
-
-const menuBienestar: NavItem[] = [
-  { title: 'Enfermería', icon: HeartPulse, path: '/enfermeria', roles: ['Admin'] },
-];
-
-const menuComunicacion: NavItem[] = [
-  { title: 'Circulares', icon: Mail, path: '/circulares', roles: ['Admin', 'Secretaria', 'Director'] },
-  { title: 'Notificaciones', icon: Bell, path: '/notificaciones', roles: ['Admin'] },
-];
-
-const menuFinanzas: NavItem[] = [
-  {
-    title: 'Tesorería',
-    icon: Wallet,
-    path: '/tesoreria',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      {
-        title: 'Operaciones',
-        children: [
-          {
-            title: 'Centro de pagos',
-            path: '/tesoreria/cobranzas',
-          },
-          {
-            title: 'Agenda de cobranzas',
-            path: '/tesoreria/agenda-cobranzas',
-          },
-          {
-            title: 'Estado de cuenta',
-            path: '/tesoreria/estado-cuenta',
-          },
-          {
-            title: 'Validar pagos',
-            path: '/tesoreria/validar-pagos',
-          },
-          {
-            title: 'Pagos recibidos',
-            path: '/tesoreria/pagos-recibidos',
-          },
-        ],
-      },
-      {
-        title: 'Configuración',
-        children: [
-          {
-            title: 'Configurar pensiones',
-            path: '/tesoreria/configuracion',
-          },
-          {
-            title: 'Pagos extraordinarios',
-            path: '/tesoreria/pagos-extraordinarios',
-          },
-          {
-            title: 'Datos para cobrar',
-            path: '/tesoreria/datos-cobro',
-          },
-        ],
-      },
-    ],
-  },
-];
-
-const menuReportes: NavItem[] = [
-  {
-    title: 'Reportes',
-    icon: ChartColumn,
-    path: '/reportes',
-    roles: ['Admin', 'Director'],
-    children: [
-      { title: 'Panel general', path: '/reportes' },
-      { title: 'Asistencia global', path: '/reportes/asistencia' },
-    ],
-  },
-];
-
-const menuConfiguracion: NavItem[] = [
-  { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin', 'Director'] },
-];
+  sidebarMenuGroups,
+  type NavItem,
+} from '../config/sidebarNavigation';
+import { ChevronDown, PanelLeft, Sparkles } from 'lucide-react';
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -255,18 +80,12 @@ export default function AppSidebar() {
           return canAccessTutoria(user);
         });
 
-    return [
-      { titulo: 'Principal', items: filterByRole(menuPrincipal) },
-      { titulo: 'Académico', items: filterByRole(menuAcademico) },
-      { titulo: 'Tutoría', items: filterByRole(menuTutoria) },
-      { titulo: 'Comunidad escolar', items: filterByRole(menuComunidad) },
-      { titulo: 'Personal', items: filterByRole(menuPersonal) },
-      { titulo: 'Bienestar', items: filterByRole(menuBienestar) },
-      { titulo: 'Comunicación', items: filterByRole(menuComunicacion) },
-      { titulo: 'Finanzas', items: filterByRole(menuFinanzas) },
-      { titulo: 'Reportes', items: filterByRole(menuReportes) },
-      { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
-    ].filter((cat) => cat.items.length > 0);
+    return sidebarMenuGroups
+      .map((group) => ({
+        ...group,
+        items: filterByRole(group.items),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [user]);
 
   const isRouteActive = (path?: string) => {
