@@ -189,10 +189,9 @@ export default function HeaderUserMenu({ onOpen }: HeaderUserMenuProps) {
 
       {open && (
         <>
-          <button
-            type="button"
-            aria-label="Cerrar menú de usuario"
-            className="fixed inset-0 z-40 cursor-default"
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-40"
             onClick={() => closeMenu()}
           />
 
