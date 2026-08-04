@@ -177,9 +177,18 @@ def main() -> int:
                 "quedaron referencias antiguas: " + ", ".join(remaining)
             )
 
-        if text.count("HeaderUserMenu") != 2:
+        import_line = (
+            "import HeaderUserMenu from "
+            "'../components/header/HeaderUserMenu';"
+        )
+        if text.count(import_line) != 1:
             raise RuntimeError(
-                "HeaderUserMenu debe aparecer exactamente en el import y en el JSX"
+                "la importación de HeaderUserMenu no aparece exactamente una vez"
+            )
+
+        if text.count("<HeaderUserMenu") != 1:
+            raise RuntimeError(
+                "el JSX de HeaderUserMenu no aparece exactamente una vez"
             )
 
         HEADER.write_text(text, encoding="utf-8")
