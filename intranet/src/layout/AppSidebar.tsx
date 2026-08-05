@@ -109,12 +109,38 @@ export default function AppSidebar() {
   useEffect(() => {
     const activeParent = categorias
       .flatMap((categoria) => categoria.items)
-      .find((item) => item.children?.length && isRouteActive(item.path));
+      .find((item) => {
+        if (
+          !item.children?.length ||
+          !item.path
+        ) {
+          return false;
+        }
 
-    if (activeParent && !isCollapsed) {
-      setExpanded(activeParent.title);
+        return (
+          location.pathname === item.path ||
+          location.pathname.startsWith(
+            `${item.path}/`,
+          )
+        );
+      });
+
+    if (!activeParent || isCollapsed) {
+      return;
     }
-  }, [categorias, location.pathname, isCollapsed]);
+
+    const timerId = window.setTimeout(() => {
+      setExpanded(activeParent.title);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [
+    categorias,
+    location.pathname,
+    isCollapsed,
+  ]);
 
   const handleNavigate = (path?: string) => {
     if (!path) return;
@@ -241,7 +267,13 @@ export default function AppSidebar() {
   };
 
   useEffect(() => {
-    setHoveredItem(null);
+    const timerId = window.setTimeout(() => {
+      setHoveredItem(null);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, [
     isCollapsed,
     location.pathname,
