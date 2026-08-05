@@ -93,6 +93,7 @@ interface User {
   avatar_url?: string | null;
   email?: string | null;
   correo?: string | null;
+  telefono?: string | null;
   contexto?: UserContexto;
 }
 

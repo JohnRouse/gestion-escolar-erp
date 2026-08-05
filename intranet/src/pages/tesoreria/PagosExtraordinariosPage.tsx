@@ -14,7 +14,6 @@ import {
   School,
   Send,
   Sparkles,
-  Users,
 } from 'lucide-react';
 
 interface Nivel {

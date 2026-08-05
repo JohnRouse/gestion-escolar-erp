@@ -1,4 +1,7 @@
-import { FormEvent, useState } from 'react';
+import {
+  useState,
+  type FormEvent,
+} from 'react';
 import axios from 'axios';
 import { AlertCircle, CheckCircle2, Loader2, Send, Upload, X } from 'lucide-react';
 

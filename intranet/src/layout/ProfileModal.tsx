@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Camera, Save, Lock, Edit, Check, Loader2 } from 'lucide-react';
+import { X, Camera, Save, Lock, Edit, Loader2 } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;

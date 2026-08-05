@@ -124,16 +124,6 @@ const estadoUi: Record<
   },
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return '—';
-
-  return new Date(value).toLocaleDateString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
 const prioridadAnio = (estado?: string) => {
   const value = String(estado || '')
     .toLowerCase()

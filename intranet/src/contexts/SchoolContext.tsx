@@ -228,20 +228,25 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     );
   }, [activeScope, colegios]);
 
-  const queryParams = useMemo(() => {
+  const queryParams = useMemo<
+    Record<string, string | number>
+  >(() => {
+    const params: Record<
+      string,
+      string | number
+    > = {};
+
     if (activeScope.tipo === 'todos') {
-      return {
-        scope: 'all',
-      };
+      params.scope = 'all';
+      return params;
     }
 
     if (activeScope.id_colegio) {
-      return {
-        colegio_id: activeScope.id_colegio,
-      };
+      params.colegio_id =
+        activeScope.id_colegio;
     }
 
-    return {};
+    return params;
   }, [activeScope]);
 
   const queryString = useMemo(() => {

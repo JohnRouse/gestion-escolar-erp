@@ -105,7 +105,7 @@ export default function ValidarPagosPage() {
   const [deuda, setDeuda] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [registrando, setRegistrando] = useState(false);
-  const [aplicando, setAplicando] = useState(false);
+  const [, setAplicando] = useState(false);
   const [pagoRecibido, setPagoRecibido] = useState<any | null>(null);
   const [modoSinCodigo, setModoSinCodigo] = useState(false);
 

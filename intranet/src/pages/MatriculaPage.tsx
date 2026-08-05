@@ -9,7 +9,7 @@ import AccessibleDialog from '../components/AccessibleDialog';
 import { useToast } from '../contexts/ToastContext';
 import LocationSelects from '../components/LocationSelects';
 import {
-  AlertCircle, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Circle, Clock,
+  AlertCircle, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Clock,
   GraduationCap, Loader2, MapPin, Phone, Search, ShieldCheck, UserPlus, Users, X,
   PencilLine,
 } from 'lucide-react';
@@ -116,7 +116,6 @@ const edadTexto = (fecha?: string | null) => { const edad = edadNumero(fecha); i
 const generoTexto = (genero?: string | null) => { if (!genero) return '—'; if (genero === 'F') return 'Femenino'; if (genero === 'M') return 'Masculino'; return genero; };
 const formatFechaHora = (value: string) => new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const formatMoney = (value: number | string | null | undefined) => `S/ ${Number(value || 0).toFixed(2)}`;
-const getCodigoInstitucional = (matricula: { id_colegio?: number | null; estudiante?: { codigo_estudiante?: string | null; codigos_colegio?: CodigoColegio[] } }) => { const codigoColegio = matricula.estudiante?.codigos_colegio?.find((item) => item.id_colegio === matricula.id_colegio); return codigoColegio?.codigo || matricula.estudiante?.codigo_estudiante || 'Sin código'; };
 const getCodigoMatricula = (matricula: { id_matricula: number; codigo_matricula?: string | null }) => matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`;
 const getCodigoDetalleMatricula = (detalle: any) => { if (!detalle) return 'Sin código'; const codigoColegio = detalle.estudiante?.codigos_colegio?.find((item: CodigoColegio) => item.id_colegio === detalle.id_colegio); return codigoColegio?.codigo || detalle.estudiante?.codigo_estudiante || 'Sin código'; };
 const validarFechaNacimientoFrontend = (fecha?: string) => { if (!fecha) return 'Ingresa la fecha de nacimiento.'; const nacimiento = new Date(`${fecha}T00:00:00`); const hoy = new Date(); const minima = new Date('1990-01-01T00:00:00'); if (Number.isNaN(nacimiento.getTime())) return 'La fecha de nacimiento no es válida.'; if (nacimiento > hoy) return 'La fecha de nacimiento no puede ser futura.'; if (nacimiento < minima) return 'La fecha de nacimiento parece demasiado antigua. Revisa el dato.'; return null; };
@@ -309,6 +308,8 @@ export default function MatriculaPage() {
   }, [matriculaSearchParams, dni]);
 
   const estudiante = alumno?.estudiantes?.[0] || null;
+  const matriculasEstudiante =
+    estudiante?.matriculas ?? [];
   const estadosMatriculaBloqueantes = ['Activo','Pre-matriculado','Reserva','Pendiente','Observado'];
 
   const colegioDestinoQuery = useMemo(() => { if (activeScope.tipo === 'colegio') return queryString; if (colegioDestinoId) return `?colegio_id=${colegioDestinoId}`; return queryString; }, [activeScope.tipo, colegioDestinoId, queryString]);
@@ -1241,7 +1242,7 @@ export default function MatriculaPage() {
                   <Info icon={Phone} label="Teléfono" value={alumno.telefono || '—'} />
                   <Info icon={MapPin} label="Distrito" value={alumno.distrito || '—'} />
                 </div>
-                {estudiante?.matriculas?.length > 0 && (
+                {matriculasEstudiante.length > 0 && (
                   <div className="matricula-visible-history">
                     <div className="matricula-visible-history__heading">
                       <div>
@@ -1252,12 +1253,12 @@ export default function MatriculaPage() {
                       </div>
 
                       <strong>
-                        {estudiante.matriculas.length}
+                        {matriculasEstudiante.length}
                       </strong>
                     </div>
 
                     <div className="matricula-visible-history__list">
-                      {estudiante.matriculas.map((matricula) => (
+                      {matriculasEstudiante.map((matricula) => (
                         <div
                           key={matricula.id_matricula}
                           className="matricula-visible-history__item"
