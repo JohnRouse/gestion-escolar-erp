@@ -9,7 +9,6 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  BookOpenCheck,
   CheckCircle2,
   ClipboardList,
   Eye,
@@ -101,12 +100,6 @@ export default function PlantillasEvaluacionTab() {
   const mostrarSelectorInstitucion = activeScope.tipo === 'todos' && colegios.length > 1;
   const colegioSeleccionadoId = Number(mostrarSelectorInstitucion ? colegioGestionId : activeColegio?.id_colegio || colegioGestionId || colegios[0]?.id_colegio || 0);
   const tipoDefault = tipos[0]?.id_tipo_eval;
-
-  const nombreColegio = (id?: number | null) => {
-    if (!id) return 'Institución no definida';
-    const colegio = colegios.find((item) => item.id_colegio === id);
-    return colegio?.nombre || colegio?.nombre_corto || `Institución #${id}`;
-  };
 
   const aniosFiltrados = useMemo(() => anios.filter((anio) => !colegioSeleccionadoId || anio.id_colegio === colegioSeleccionadoId || !anio.id_colegio), [anios, colegioSeleccionadoId]);
   const cursosFiltrados = useMemo(() => cursos.filter((curso: any) => !colegioSeleccionadoId || !curso.id_colegio || curso.id_colegio === colegioSeleccionadoId), [cursos, colegioSeleccionadoId]);

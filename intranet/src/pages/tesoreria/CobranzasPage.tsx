@@ -277,16 +277,6 @@ export default function CobranzasPage() {
     mensaje: '',
   });
 
-  const totalVisible = useMemo(() => {
-    return registros.reduce((sum, item) => {
-      if (estado === 'Pagado') return sum + Number(item.pagado || 0);
-      if (estado === 'Todos') {
-        return sum + (item.estado_pago === 'Pagado' ? Number(item.pagado || 0) : Number(item.saldo || 0));
-      }
-      return sum + Number(item.saldo || 0);
-    }, 0);
-  }, [registros, estado]);
-
   const alumnoGrupos = useMemo<AlumnoGrupo[]>(() => {
     const map = new Map<string, AlumnoGrupo>();
 
@@ -435,13 +425,6 @@ export default function CobranzasPage() {
       : estado === 'Todos'
         ? 'Registros de pago'
         : 'Deudas pendientes';
-
-  const montoLabel =
-    estado === 'Pagado'
-      ? 'Monto pagado'
-      : estado === 'Todos'
-        ? 'Monto visible'
-        : 'Monto pendiente';
 
   const fetchRegistros = async () => {
     if (!token) return;
@@ -718,8 +701,6 @@ export default function CobranzasPage() {
               grupo.matricula.seccion?.letra || '-'
             }"`;
             const abierto = expandedAlumnos[grupo.key] ?? false;
-            const pagadoGrupo = grupo.estadoResumen === 'Pagado';
-
             const resumenTone =
               grupo.estadoResumen === 'Vencido'
                 ? 'rose'

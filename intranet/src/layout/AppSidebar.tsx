@@ -3,195 +3,22 @@ import {
   useMemo,
   useRef,
   useState,
-  type ElementType,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useSchool } from '../contexts/SchoolContext';
 import InstitutionMark from '../components/InstitutionMark';
+import SidebarCollapsedFlyout from '../components/sidebar/SidebarCollapsedFlyout';
+import SidebarNavigationItem from '../components/sidebar/SidebarNavigationItem';
 import { canAccessTutoria } from '../config/accessRules';
 import {
-  ChevronDown,
-  PanelLeft,
-  LayoutDashboard,
-  UserPlus,
-  Wallet,
-  Mail,
-  Users,
-  Presentation,
-  FileText,
-  CheckSquare,
-  Settings,
-  UserCircle,
-  CalendarDays,
-  MessageSquareHeart,
-  HeartPulse,
-  ChartColumn,
-  Bell,
-  GraduationCap,
-  Sparkles,
-  BookOpenCheck,
-} from 'lucide-react';
-
-interface NavLeaf {
-  title: string;
-  path: string;
-}
-
-interface NavChild {
-  title: string;
-  path?: string;
-  children?: NavLeaf[];
-}
-
-interface NavItem {
-  title: string;
-  icon: ElementType;
-  path?: string;
-  roles?: string[];
-  children?: NavChild[];
-}
-
-const menuPrincipal: NavItem[] = [
-  { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['Admin', 'Secretaria', 'Director', 'Profesor'] },
-];
-
-const menuAcademico: NavItem[] = [
-  {
-    title: 'Matrícula',
-    icon: UserPlus,
-    path: '/matricula',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      { title: 'Registrar matrícula', path: '/matricula' },
-      { title: 'Renovación individual', path: '/matricula/renovacion' },
-      { title: 'Promoción masiva', path: '/matricula/promocion-masiva' },
-      { title: 'Historial de matrículas', path: '/matricula/historial' },
-    ],
-  },
-  {
-    title: 'Notas',
-    icon: FileText,
-    path: '/notas',
-    roles: ['Profesor', 'Admin', 'Director'],
-    children: [
-      { title: 'Registro', path: '/notas' },
-    ],
-  },
-  { title: 'Asistencia', icon: CheckSquare, path: '/asistencia', roles: ['Profesor', 'Admin', 'Director'] },
-  { title: 'Calendario', icon: CalendarDays, path: '/calendario', roles: ['Admin', 'Secretaria', 'Director'] },
-  { title: 'Horario', icon: GraduationCap, path: '/horario', roles: ['Profesor'] },
-];
-
-const menuTutoria: NavItem[] = [
-  {
-    title: 'Tutoría',
-    icon: BookOpenCheck,
-    path: '/tutoria',
-    roles: ['Profesor', 'Admin', 'Director'],
-  },
-];
-
-const menuComunidad: NavItem[] = [
-  {
-    title: 'Comunidad escolar',
-    icon: Users,
-    path: '/comunidad/alumnos',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      { title: 'Alumnos', path: '/comunidad/alumnos' },
-      { title: 'Apoderados', path: '/comunidad/apoderados' },
-    ],
-  },
-];
-
-const menuPersonal: NavItem[] = [
-  { title: 'Docentes', icon: Presentation, path: '/docentes', roles: ['Admin', 'Director'] },
-  { title: 'Staff', icon: UserCircle, path: '/staff', roles: ['Admin', 'Director'] },
-  { title: 'Citas', icon: MessageSquareHeart, path: '/citas', roles: ['Admin', 'Secretaria'] },
-];
-
-const menuBienestar: NavItem[] = [
-  { title: 'Enfermería', icon: HeartPulse, path: '/enfermeria', roles: ['Admin'] },
-];
-
-const menuComunicacion: NavItem[] = [
-  { title: 'Circulares', icon: Mail, path: '/circulares', roles: ['Admin', 'Secretaria', 'Director'] },
-  { title: 'Notificaciones', icon: Bell, path: '/notificaciones', roles: ['Admin'] },
-];
-
-const menuFinanzas: NavItem[] = [
-  {
-    title: 'Tesorería',
-    icon: Wallet,
-    path: '/tesoreria',
-    roles: ['Admin', 'Secretaria', 'Director'],
-    children: [
-      {
-        title: 'Operaciones',
-        children: [
-          {
-            title: 'Centro de pagos',
-            path: '/tesoreria/cobranzas',
-          },
-          {
-            title: 'Agenda de cobranzas',
-            path: '/tesoreria/agenda-cobranzas',
-          },
-          {
-            title: 'Estado de cuenta',
-            path: '/tesoreria/estado-cuenta',
-          },
-          {
-            title: 'Validar pagos',
-            path: '/tesoreria/validar-pagos',
-          },
-          {
-            title: 'Pagos recibidos',
-            path: '/tesoreria/pagos-recibidos',
-          },
-        ],
-      },
-      {
-        title: 'Configuración',
-        children: [
-          {
-            title: 'Configurar pensiones',
-            path: '/tesoreria/configuracion',
-          },
-          {
-            title: 'Pagos extraordinarios',
-            path: '/tesoreria/pagos-extraordinarios',
-          },
-          {
-            title: 'Datos para cobrar',
-            path: '/tesoreria/datos-cobro',
-          },
-        ],
-      },
-    ],
-  },
-];
-
-const menuReportes: NavItem[] = [
-  {
-    title: 'Reportes',
-    icon: ChartColumn,
-    path: '/reportes',
-    roles: ['Admin', 'Director'],
-    children: [
-      { title: 'Panel general', path: '/reportes' },
-      { title: 'Asistencia global', path: '/reportes/asistencia' },
-    ],
-  },
-];
-
-const menuConfiguracion: NavItem[] = [
-  { title: 'Configuración', icon: Settings, path: '/configuracion', roles: ['Admin', 'Director'] },
-];
+  sidebarMenuGroups,
+  type NavItem,
+} from '../config/sidebarNavigation';
+import { PanelLeft, Sparkles } from 'lucide-react';
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -255,18 +82,12 @@ export default function AppSidebar() {
           return canAccessTutoria(user);
         });
 
-    return [
-      { titulo: 'Principal', items: filterByRole(menuPrincipal) },
-      { titulo: 'Académico', items: filterByRole(menuAcademico) },
-      { titulo: 'Tutoría', items: filterByRole(menuTutoria) },
-      { titulo: 'Comunidad escolar', items: filterByRole(menuComunidad) },
-      { titulo: 'Personal', items: filterByRole(menuPersonal) },
-      { titulo: 'Bienestar', items: filterByRole(menuBienestar) },
-      { titulo: 'Comunicación', items: filterByRole(menuComunicacion) },
-      { titulo: 'Finanzas', items: filterByRole(menuFinanzas) },
-      { titulo: 'Reportes', items: filterByRole(menuReportes) },
-      { titulo: 'Configuración', items: filterByRole(menuConfiguracion) },
-    ].filter((cat) => cat.items.length > 0);
+    return sidebarMenuGroups
+      .map((group) => ({
+        ...group,
+        items: filterByRole(group.items),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [user]);
 
   const isRouteActive = (path?: string) => {
@@ -288,12 +109,38 @@ export default function AppSidebar() {
   useEffect(() => {
     const activeParent = categorias
       .flatMap((categoria) => categoria.items)
-      .find((item) => item.children?.length && isRouteActive(item.path));
+      .find((item) => {
+        if (
+          !item.children?.length ||
+          !item.path
+        ) {
+          return false;
+        }
 
-    if (activeParent && !isCollapsed) {
-      setExpanded(activeParent.title);
+        return (
+          location.pathname === item.path ||
+          location.pathname.startsWith(
+            `${item.path}/`,
+          )
+        );
+      });
+
+    if (!activeParent || isCollapsed) {
+      return;
     }
-  }, [categorias, location.pathname, isCollapsed]);
+
+    const timerId = window.setTimeout(() => {
+      setExpanded(activeParent.title);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [
+    categorias,
+    location.pathname,
+    isCollapsed,
+  ]);
 
   const handleNavigate = (path?: string) => {
     if (!path) return;
@@ -301,6 +148,21 @@ export default function AppSidebar() {
     setHoveredItem(null);
     navigate(path);
     close();
+  };
+
+  const handleCollapsedPanelClick = (
+    event: ReactMouseEvent<HTMLDivElement>,
+  ) => {
+    if (!isCollapsed) return;
+
+    const target = event.target as HTMLElement;
+    const interactive = target.closest(
+      'button, a, input, label, select, textarea, [role="menuitem"]',
+    );
+
+    if (interactive) return;
+
+    toggleCollapse();
   };
 
   const clearFlyoutCloseTimer = () => {
@@ -405,7 +267,13 @@ export default function AppSidebar() {
   };
 
   useEffect(() => {
-    setHoveredItem(null);
+    const timerId = window.setTimeout(() => {
+      setHoveredItem(null);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, [
     isCollapsed,
     location.pathname,
@@ -476,273 +344,6 @@ export default function AppSidebar() {
     menuItems[nextIndex]?.focus();
   };
 
-  const Tooltip = ({ title }: { title: string }) => (
-    <span className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-[80] -translate-y-1/2 whitespace-nowrap rounded-2xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-xl shadow-slate-950/15 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:translate-x-1 group-focus-visible:opacity-100">
-      {title}
-    </span>
-  );
-
-  const renderItem = (item: NavItem) => {
-    const hasChildren = Boolean(item.children?.length);
-    const isActive =
-      isRouteActive(item.path) ||
-      getChildPaths(item).some((path) =>
-        isRouteActive(path),
-      );
-    const Icon = item.icon;
-
-    if (hasChildren) {
-      const isExpanded = expanded === item.title;
-
-      return (
-        <div key={item.title} className="relative">
-          <button
-            type="button"
-            onMouseEnter={(event) =>
-              openCollapsedFlyout(
-                item,
-                event.currentTarget,
-              )
-            }
-            onMouseLeave={() =>
-              scheduleFlyoutClose()
-            }
-            onFocus={(event) =>
-              openCollapsedFlyout(
-                item,
-                event.currentTarget,
-              )
-            }
-            onBlur={(event) => {
-              const nextTarget =
-                event.relatedTarget as Node | null;
-
-              if (
-                nextTarget &&
-                flyoutRef.current?.contains(
-                  nextTarget,
-                )
-              ) {
-                return;
-              }
-
-              scheduleFlyoutClose();
-            }}
-            onKeyDown={(event) => {
-              if (!isCollapsed) return;
-
-              if (
-                event.key === 'ArrowRight' ||
-                event.key === 'ArrowDown' ||
-                event.key === 'Enter' ||
-                event.key === ' '
-              ) {
-                event.preventDefault();
-
-                openCollapsedFlyout(
-                  item,
-                  event.currentTarget,
-                  true,
-                );
-              } else if (event.key === 'Escape') {
-                event.preventDefault();
-                closeCollapsedFlyout(true);
-              }
-            }}
-            onClick={(event) => {
-              if (isCollapsed) {
-                openCollapsedFlyout(
-                  item,
-                  event.currentTarget,
-                  true,
-                );
-                return;
-              }
-
-              setExpanded(
-                isExpanded ? null : item.title,
-              );
-            }}
-            aria-haspopup={
-              isCollapsed ? 'menu' : undefined
-            }
-            aria-controls={
-              isCollapsed
-                ? 'sidebar-collapsed-flyout'
-                : undefined
-            }
-            aria-expanded={
-              isCollapsed
-                ? hoveredItem?.title === item.title
-                : isExpanded
-            }
-            className={cx(
-              'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
-              isCollapsed ? 'justify-center px-0' : 'justify-between px-3',
-              isActive
-                ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
-                : 'text-slate-500 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950'
-            )}
-          >
-            <span className={cx('flex min-w-0 items-center', isCollapsed ? 'justify-center' : 'gap-3')}>
-              <span
-                className={cx(
-                  'sidebar-nav-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-                  isActive ? 'bg-transparent text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
-                )}
-              >
-                <Icon size={18} strokeWidth={2} />
-              </span>
-              {!isCollapsed && <span className="truncate">{item.title}</span>}
-            </span>
-
-            {!isCollapsed && (
-              <ChevronDown
-                size={16}
-                className={cx(
-                  'shrink-0 transition-transform duration-200',
-                  isExpanded && 'rotate-180',
-                  isActive ? 'text-white/70' : 'text-slate-400'
-                )}
-              />
-            )}
-
-          </button>
-
-          {isExpanded && !isCollapsed && (
-            <div className="relative ml-5 mt-2 space-y-2 border-l border-slate-200 pl-3">
-              {item.children!.map((child) => {
-                const groupedChildren =
-                  child.children || [];
-
-                if (groupedChildren.length > 0) {
-                  const groupActive =
-                    groupedChildren.some(
-                      (nestedChild) =>
-                        isChildActive(
-                          nestedChild.path,
-                        ),
-                    );
-
-                  return (
-                    <div
-                      key={child.title}
-                      className="space-y-1"
-                    >
-                      <p
-                        className={cx(
-                          'sidebar-group-label px-3 pt-2 text-[10px] font-black uppercase',
-                          groupActive
-                            ? 'text-blue-700'
-                            : 'text-slate-400',
-                        )}
-                      >
-                        {child.title}
-                      </p>
-
-                      <div className="space-y-1">
-                        {groupedChildren.map(
-                          (nestedChild) => {
-                            const activeChild =
-                              isChildActive(
-                                nestedChild.path,
-                              );
-
-                            return (
-                              <button
-                                key={
-                                  nestedChild.title
-                                }
-                                type="button"
-                                onClick={() =>
-                                  handleNavigate(
-                                    nestedChild.path,
-                                  )
-                                }
-                                className={cx(
-                                  'sidebar-subitem flex min-h-9 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
-                                  activeChild
-                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
-                                )}
-                              >
-                                <span className="truncate">
-                                  {
-                                    nestedChild.title
-                                  }
-                                </span>
-                              </button>
-                            );
-                          },
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (!child.path) return null;
-
-                const activeChild =
-                  isChildActive(child.path);
-
-                return (
-                  <button
-                    key={child.title}
-                    type="button"
-                    onClick={() =>
-                      handleNavigate(child.path)
-                    }
-                    className={cx(
-                      'sidebar-subitem relative flex min-h-8 w-full items-center rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200',
-                      activeChild
-                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
-                    )}
-                  >
-                    {activeChild && (
-                      <span className="absolute -left-[17px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-blue-600 ring-4 ring-white" />
-                    )}
-
-                    <span className="truncate">
-                      {child.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <button
-        key={item.title}
-        type="button"
-        onClick={() => handleNavigate(item.path)}
-        title={isCollapsed ? item.title : undefined}
-        className={cx(
-          'sidebar-nav-item group relative flex h-11 w-full items-center rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
-          isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
-          isActive
-            ? 'bg-slate-950 text-white shadow-sm shadow-slate-950/10'
-            : 'text-slate-500 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950'
-        )}
-      >
-        <span
-          className={cx(
-            'sidebar-nav-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-            isActive ? 'bg-transparent text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-slate-900'
-          )}
-        >
-          <Icon size={18} strokeWidth={2} />
-        </span>
-        {!isCollapsed && <span className="truncate">{item.title}</span>}
-        {isCollapsed && <Tooltip title={item.title} />}
-      </button>
-    );
-  };
-
   return (
     <>
       {isOpen && (
@@ -761,7 +362,15 @@ export default function AppSidebar() {
           isCollapsed ? 'w-[5.5rem]' : 'w-72'
         )}
       >
-        <div className="flex h-[calc(100vh-24px)] flex-col rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl overflow-hidden">
+        <div
+          data-sidebar-expand-surface={isCollapsed ? 'true' : undefined}
+          onClick={handleCollapsedPanelClick}
+          className={cx(
+            'flex h-[calc(100vh-24px)] flex-col overflow-hidden rounded-[1.75rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_70px_-55px_rgba(15,23,42,0.65)] ring-1 ring-white/80 backdrop-blur-xl',
+            isCollapsed &&
+              'cursor-col-resize [&_button]:cursor-pointer',
+          )}
+        >
           <div className="sidebar-brand">
             <button
               type="button"
@@ -816,21 +425,6 @@ export default function AppSidebar() {
             )}
           </div>
 
-          {isCollapsed && (
-
-            <div className="flex justify-center border-b border-slate-100 py-2">
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 active:scale-95"
-                title="Expandir menú"
-                aria-label="Expandir menú lateral"
-              >
-                <PanelLeft size={18} className="rotate-180" />
-              </button>
-            </div>
-          )}
-
           <nav
             aria-label="Navegación principal"
             className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-5 scrollbar-hide"
@@ -846,7 +440,44 @@ export default function AppSidebar() {
                   <div className="mx-auto my-2 h-px w-7 rounded-full bg-slate-200" />
                 )}
 
-                <div className="space-y-1">{categoria.items.map(renderItem)}</div>
+                <div className="space-y-1">
+                  {categoria.items.map((item) => (
+                    <SidebarNavigationItem
+                      key={item.title}
+                      item={item}
+                      isCollapsed={isCollapsed}
+                      isExpanded={expanded === item.title}
+                      isActive={
+                        isRouteActive(item.path) ||
+                        getChildPaths(item).some((path) =>
+                          isRouteActive(path),
+                        )
+                      }
+                      isFlyoutOpen={
+                        hoveredItem?.title === item.title
+                      }
+                      flyoutRef={flyoutRef}
+                      onNavigate={handleNavigate}
+                      onToggleExpanded={() =>
+                        setExpanded(
+                          expanded === item.title
+                            ? null
+                            : item.title,
+                        )
+                      }
+                      onOpenCollapsedFlyout={
+                        openCollapsedFlyout
+                      }
+                      onScheduleFlyoutClose={
+                        scheduleFlyoutClose
+                      }
+                      onCloseCollapsedFlyout={
+                        closeCollapsedFlyout
+                      }
+                      isChildActive={isChildActive}
+                    />
+                  ))}
+                </div>
               </section>
             ))}
           </nav>
@@ -872,191 +503,19 @@ export default function AppSidebar() {
       </aside>
 
       {isCollapsed &&
-        hoveredItem?.children?.length &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <aside
-            ref={flyoutRef}
-            id="sidebar-collapsed-flyout"
-            role="menu"
-            tabIndex={-1}
-            className="sidebar-hover-flyout"
-            style={{
-              top: flyoutPosition.top,
-              left: flyoutPosition.left,
-            }}
-            onMouseEnter={
-              clearFlyoutCloseTimer
-            }
-            onMouseLeave={() =>
-              scheduleFlyoutClose()
-            }
-            onFocus={
-              clearFlyoutCloseTimer
-            }
-            onBlur={(event) => {
-              const nextTarget =
-                event.relatedTarget as Node | null;
-
-              if (
-                nextTarget &&
-                (
-                  flyoutRef.current?.contains(
-                    nextTarget,
-                  ) ||
-                  flyoutTriggerRef.current?.contains(
-                    nextTarget,
-                  )
-                )
-              ) {
-                return;
-              }
-
-              scheduleFlyoutClose();
-            }}
+        hoveredItem?.children?.length && (
+          <SidebarCollapsedFlyout
+            item={hoveredItem}
+            position={flyoutPosition}
+            optionCount={getChildPaths(hoveredItem).length}
+            flyoutRef={flyoutRef}
+            triggerRef={flyoutTriggerRef}
+            onKeepOpen={clearFlyoutCloseTimer}
+            onScheduleClose={scheduleFlyoutClose}
+            onNavigate={handleNavigate}
             onKeyDown={handleFlyoutKeyDown}
-            aria-label={`Opciones de ${hoveredItem.title}`}
-          >
-            <div className="sidebar-hover-flyout__header">
-              <div>
-                <p className="sidebar-hover-flyout__eyebrow">
-                  Menú
-                </p>
-
-                <h3>
-                  {hoveredItem.title}
-                </h3>
-              </div>
-
-              <span>
-                {
-                  getChildPaths(
-                    hoveredItem,
-                  ).length
-                }{' '}
-                opciones
-              </span>
-            </div>
-
-            <div className="sidebar-hover-flyout__content">
-              {hoveredItem.children.map(
-                (child) => {
-                  const nestedChildren =
-                    child.children || [];
-
-                  if (
-                    nestedChildren.length > 0
-                  ) {
-                    return (
-                      <section
-                        key={child.title}
-                        className="sidebar-hover-flyout__group"
-                      >
-                        <p className="sidebar-hover-flyout__group-title">
-                          {child.title}
-                        </p>
-
-                        <div>
-                          {nestedChildren.map(
-                            (
-                              nestedChild,
-                            ) => {
-                              const active =
-                                isChildActive(
-                                  nestedChild.path,
-                                );
-
-                              return (
-                                <button
-                                  key={
-                                    nestedChild.title
-                                  }
-                                  type="button"
-                                  role="menuitem"
-                                  aria-current={
-                                    active
-                                      ? 'page'
-                                      : undefined
-                                  }
-                                  onClick={() =>
-                                    handleNavigate(
-                                      nestedChild.path,
-                                    )
-                                  }
-                                  className={cx(
-                                    'sidebar-hover-flyout__item',
-                                    active &&
-                                      'sidebar-hover-flyout__item--active',
-                                  )}
-                                >
-                                  <span>
-                                    {
-                                      nestedChild.title
-                                    }
-                                  </span>
-
-                                  <span
-                                    aria-hidden="true"
-                                    className="sidebar-hover-flyout__arrow"
-                                  >
-                                    →
-                                  </span>
-                                </button>
-                              );
-                            },
-                          )}
-                        </div>
-                      </section>
-                    );
-                  }
-
-                  if (!child.path) {
-                    return null;
-                  }
-
-                  const active =
-                    isChildActive(
-                      child.path,
-                    );
-
-                  return (
-                    <button
-                      key={child.title}
-                      type="button"
-                      role="menuitem"
-                      aria-current={
-                        active
-                          ? 'page'
-                          : undefined
-                      }
-                      onClick={() =>
-                        handleNavigate(
-                          child.path,
-                        )
-                      }
-                      className={cx(
-                        'sidebar-hover-flyout__item',
-                        active &&
-                          'sidebar-hover-flyout__item--active',
-                      )}
-                    >
-                      <span>
-                        {child.title}
-                      </span>
-
-                      <span
-                        aria-hidden="true"
-                        className="sidebar-hover-flyout__arrow"
-                      >
-                        →
-                      </span>
-                    </button>
-                  );
-                },
-              )}
-            </div>
-          </aside>,
-          document.body,
+            isChildActive={isChildActive}
+          />
         )}
     </>
   );

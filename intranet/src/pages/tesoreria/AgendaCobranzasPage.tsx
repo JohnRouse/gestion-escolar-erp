@@ -162,7 +162,7 @@ export default function AgendaCobranzasPage() {
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('Todos');
-  const [copied, setCopied] = useState<Record<number, boolean>>({});
+  const [copied] = useState<Record<number, boolean>>({});
 
   // Editor de mensaje
   const [mensajeItem, setMensajeItem] = useState<AgendaItem | null>(null);

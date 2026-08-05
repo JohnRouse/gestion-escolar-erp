@@ -84,7 +84,7 @@ function formatCurrency(value: number) {
 
 export default function ConceptosPagoTab() {
   const { token } = useAuth();
-  const { colegios, activeColegio, activeScope, tenant, queryString, scopeLabel } = useSchool();
+  const { colegios, activeColegio, activeScope, tenant, queryString } = useSchool();
   const { showToast } = useToast();
 
   const nombreInputRef = useRef<HTMLInputElement | null>(null);
@@ -99,7 +99,7 @@ export default function ConceptosPagoTab() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
-  const [esPension, setEsPension] = useState(true);
+  const [, setEsPension] = useState(true);
   const [tipoConcepto, setTipoConcepto] = useState('MATRICULA');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('todos');
@@ -175,9 +175,6 @@ export default function ConceptosPagoTab() {
 
   const pensiones = conceptos.filter(
     (concepto) => (concepto.tipo_concepto || (concepto.es_pension ? 'PENSION' : 'MATRICULA')) === 'PENSION',
-  );
-  const otros = conceptos.filter(
-    (concepto) => (concepto.tipo_concepto || (concepto.es_pension ? 'PENSION' : 'MATRICULA')) !== 'PENSION',
   );
   const totalPensiones = pensiones.reduce((total, concepto) => total + Number(concepto.monto_base || 0), 0);
 

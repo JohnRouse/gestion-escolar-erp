@@ -64,7 +64,16 @@ export default function CircularesPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-semibold text-white">{c.titulo}</p>
-                    <p className="text-xs text-slate-400">{new Date(c.fecha_creacion).toLocaleDateString('es-PE')} — 🎯 Dirigido a: {c.destinatarios?.map(d => d.nivel?.nombre_nivel).join(', ') || 'General'}</p>
+                    <p className="text-xs text-slate-400">{new Date(c.fecha_creacion).toLocaleDateString('es-PE')} — 🎯 Dirigido a: {c.destinatarios?.map(
+                      (
+                        d: {
+                          nivel?: {
+                            nombre_nivel?: string;
+                          };
+                        },
+                      ) =>
+                        d.nivel?.nombre_nivel,
+                    ).join(', ') || 'General'}</p>
                   </div>
                   <button onClick={() => setShowDetail(c)} className="text-yellow-500"><Eye size={16} /></button>
                 </div>

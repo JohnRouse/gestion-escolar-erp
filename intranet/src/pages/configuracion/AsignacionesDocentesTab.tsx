@@ -107,12 +107,10 @@ const formatearDocente = (docente: DocenteApi) => {
 
 export default function AsignacionesDocentesTab() {
   const { token } = useAuth();
-  const { tenant, colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
+  const { colegios, activeScope, activeColegio, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
 
   const authHeader = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
-  const colegioConfigId = activeScope.tipo === 'colegio' && activeColegio?.id_colegio ? activeColegio.id_colegio : null;
-
   const [docentes, setDocentes] = useState<DocenteApi[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [secciones, setSecciones] = useState<Seccion[]>([]);

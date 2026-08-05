@@ -73,21 +73,6 @@ const inputClass = communityInputClass;
 const fullName = (p: ApoderadoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
 
-const getCodigo = (e: ApoderadoItem['estudiantes'][number]['estudiante']) =>
-  e.codigos_colegio?.[0]?.codigo || e.codigo_estudiante || 'Sin código';
-
-// Badge de estado de matrícula del hijo
-const estadoBadge: Record<string, string> = {
-  Activo: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  Reserva: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-  Anulado: 'bg-red-50 text-red-600 ring-1 ring-red-200',
-  'Pre-matriculado': 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
-  Inactivo: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
-};
-
-const getEstadoBadge = (estado?: string) =>
-  estadoBadge[estado || ''] || 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
-
 const apoderadoEstado = (apoderado: ApoderadoItem) => {
   if (!apoderado.credencial?.existe) return 'sin_credencial';
   return apoderado.credencial.estado ? 'activo' : 'inactivo';

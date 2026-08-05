@@ -14,14 +14,12 @@ import {
   BookOpenCheck,
   UsersRound,
   ClipboardList,
-  GraduationCap,
   X,
   Sparkles,
   Table2,
   School,
   Calendar,
   BookOpen,
-  Zap,
   Printer,
   LockKeyhole,
   UnlockKeyhole,
@@ -236,7 +234,7 @@ function getNotaColor(value: unknown) {
 
 export default function NotasPage() {
   const { token, user } = useAuth();
-  const { queryParams, scopeLabel, activeScope } = useSchool();
+  const { queryParams, activeScope } = useSchool();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [salonSeleccionado, setSalonSeleccionado] = useState('');
   const [asignacionId, setAsignacionId] = useState<number | null>(null);
