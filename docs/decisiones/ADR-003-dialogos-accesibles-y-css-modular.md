@@ -2,7 +2,10 @@
 
 ## Estado
 
-Propuesto.
+Aceptado.
+
+Aceptado el 14 de agosto de 2026 después de comprobar que la decisión ya se
+encuentra aplicada en la arquitectura vigente de diálogos.
 
 ## Contexto
 
@@ -116,3 +119,24 @@ Descartada por riesgo elevado de regresiones y dependencia del orden actual.
 ## Reversión
 
 Mantener commits pequeños y conservar temporalmente las implementaciones anteriores hasta validar cada migración.
+
+## Evidencia de adopción
+
+La decisión dejó de ser únicamente una propuesta.
+
+Actualmente:
+
+- `AccessibleDialog.tsx` actúa como primitiva transversal.
+- `ConfirmDialog.tsx` compone la primitiva.
+- `CenteredFormModal.tsx` compone la primitiva.
+- `CommunityDetailModal.tsx` compone la primitiva.
+- `CommunityEditModal.tsx` reutiliza `CenteredFormModal`.
+- La migración del resto de diálogos continúa de manera gradual.
+
+La aceptación del ADR no significa que todos los modales hayan sido migrados.
+
+`ReportarPagoModal.tsx` permanece como uno de los principales consumidores
+pendientes de unificación.
+
+La parte de CSS modular incluida en esta decisión continúa siendo una
+migración progresiva y no debe interpretarse como finalizada.
