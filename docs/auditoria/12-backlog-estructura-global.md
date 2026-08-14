@@ -130,7 +130,7 @@ anteriores y esta sección, prevalece esta actualización.
 | `CenteredFormModal.tsx` | Migrado | Utiliza `AccessibleDialog` y mantiene una interfaz funcional reutilizable para formularios. |
 | `CommunityDetailModal.tsx` | Migrado | Compone `AccessibleDialog`. |
 | `CommunityEditModal.tsx` | Migrado | Compone `CenteredFormModal` y por transitividad utiliza la base accesible. |
-| `ReportarPagoModal.tsx` | Pendiente prioritario | Mantiene una estructura modal independiente y debe ser el siguiente diálogo en migrarse. |
+| `ReportarPagoModal.tsx` | Migrado | Utiliza `AccessibleDialog`; se corrigió además el desmontaje prematuro del estado de éxito y se eliminó el tipado `any` local. |
 | `ComprobantePagoModal.tsx` | Pendiente de revisión | Debe comprobarse contra la primitiva vigente antes de modificarlo. |
 | `ContinuidadMatriculaModal.tsx` | Pendiente de revisión | Debe comprobarse contra la primitiva vigente antes de modificarlo. |
 | Header global | Refactorizado parcialmente | El PR #16 separó selector institucional y menú de usuario. Falta continuar validación visual y de accesibilidad. |
@@ -141,9 +141,9 @@ anteriores y esta sección, prevalece esta actualización.
 
 ### Próxima prioridad
 
-La siguiente unidad de trabajo de la unificación global es
-`intranet/src/components/publico/ReportarPagoModal.tsx`.
+Auditar `ComprobantePagoModal`, `ContinuidadMatriculaModal` y los overlays
+locales restantes para identificar cuál mantiene mayor deuda transversal.
 
-La migración debe preservar el flujo funcional actual y sustituir únicamente
-la infraestructura modal duplicada por los patrones compartidos ya
-establecidos.
+No seleccionar el siguiente componente únicamente por el orden histórico del
+backlog; primero debe compararse su implementación vigente con
+`AccessibleDialog`.

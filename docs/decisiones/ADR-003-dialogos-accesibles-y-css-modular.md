@@ -131,12 +131,14 @@ Actualmente:
 - `CenteredFormModal.tsx` compone la primitiva.
 - `CommunityDetailModal.tsx` compone la primitiva.
 - `CommunityEditModal.tsx` reutiliza `CenteredFormModal`.
+- `ReportarPagoModal.tsx` utiliza `AccessibleDialog`.
 - La migración del resto de diálogos continúa de manera gradual.
 
 La aceptación del ADR no significa que todos los modales hayan sido migrados.
 
-`ReportarPagoModal.tsx` permanece como uno de los principales consumidores
-pendientes de unificación.
+La migración de `ReportarPagoModal.tsx` confirmó la aplicabilidad de la
+primitiva también en el portal público y permitió corregir un defecto previo
+en el ciclo de éxito/refresco.
 
 La parte de CSS modular incluida en esta decisión continúa siendo una
 migración progresiva y no debe interpretarse como finalizada.
