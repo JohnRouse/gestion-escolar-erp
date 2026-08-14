@@ -302,7 +302,7 @@ El plan se encuentra parcialmente ejecutado.
 | 1. Base de diálogo accesible | Implementada | Existe `AccessibleDialog.tsx`. |
 | 2. `ConfirmDialog` | Implementada | Compone `AccessibleDialog`. |
 | 3. `CenteredFormModal` | Implementada | Compone `AccessibleDialog`. |
-| 4. `ReportarPagoModal` | Siguiente | Continúa con implementación modal independiente. |
+| 4. `ReportarPagoModal` | Implementada | Migrado a `AccessibleDialog`; flujo de éxito corregido y tipado local saneado. |
 | 5. Modales restantes | Parcial | Comunidad ya posee consumidores de la base; otros modales requieren revisión. |
 | 6. Header | Parcial | Refactorizado en PR #16; falta validación transversal final. |
 | 7. Sidebar | Parcial | Refactorizado en PR #16; falta validación transversal final. |
@@ -324,5 +324,5 @@ Antes de modificar un componente debe comprobarse:
 4. qué deuda sigue siendo real;
 5. qué documentación debe actualizarse junto con la implementación.
 
-La próxima implementación prevista es la migración de
-`ReportarPagoModal` hacia la infraestructura de diálogo compartida.
+La siguiente fase es auditar los diálogos restantes y seleccionar la
+próxima migración según deuda real, consumidores y riesgo funcional.

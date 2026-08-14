@@ -86,28 +86,31 @@ Estos componentes ya participan de la infraestructura oficial.
 
 ### `ReportarPagoModal`
 
-Estado: **siguiente prioridad**.
+Estado: **migrado**.
 
-Hallazgos vigentes:
+El componente utiliza `AccessibleDialog` como infraestructura oficial.
 
-- mantiene overlay y panel propios;
-- conserva cierre y estructura independientes;
-- todavía contiene tipos `any`;
-- no consume `AccessibleDialog`;
-- duplica decisiones visuales que ya poseen una fuente compartida.
+La migración:
 
-La siguiente fase debe migrarlo sin alterar el flujo de reporte de pagos.
+- eliminó el overlay y panel modal propios;
+- eliminó los tipos `any` locales;
+- incorporó semántica, focus trap, Escape, overlay y retorno de foco mediante
+  la primitiva compartida;
+- impide cerrar el diálogo mientras se envía el comprobante;
+- normalizó las etiquetas funcionales a un mínimo de 12 px;
+- mejoró la interacción accesible del selector de archivos;
+- mantiene las validaciones funcionales existentes;
+- conserva creación y corrección de reportes;
+- mantiene el callback `onSuccess`.
 
-Debe preservarse:
+Durante la auditoría se confirmó además un defecto funcional previo:
 
-- creación/corrección del reporte;
-- validaciones del formulario;
-- adjunto de comprobante;
-- estado de envío;
-- mensaje de éxito;
-- callback `onSuccess`;
-- cierre posterior al éxito, si tras la revisión sigue considerándose el
-  comportamiento correcto.
+`onSuccess` se ejecutaba inmediatamente después del envío, provocando que el
+padre refrescara la consulta y desmontara el modal antes de que el usuario
+pudiera percibir correctamente el estado de éxito.
+
+El comportamiento vigente muestra primero la confirmación de envío y ejecuta
+el refresco al cerrar o aceptar dicha confirmación.
 
 ### Otros diálogos
 
@@ -198,24 +201,26 @@ Debe abordarse durante la auditoría funcional del módulo Matrícula.
 
 ## 10. Próxima tarea
 
-Migrar `intranet/src/components/publico/ReportarPagoModal.tsx` a la
-infraestructura oficial de diálogos.
+Auditar los diálogos todavía pendientes antes de seleccionar la siguiente
+migración.
 
-Antes de escribir código se debe revisar:
+Los candidatos inmediatos son:
 
-- API pública actual;
-- flujo de estados;
-- estructura visual;
-- cierre tras éxito;
+- `ComprobantePagoModal`;
+- `ContinuidadMatriculaModal`;
+- overlays locales que continúen implementando infraestructura modal propia.
+
+La siguiente elección debe basarse en el código vigente y no únicamente en el
+backlog histórico.
+
+Para cada candidato se debe comprobar:
+
+- consumidores reales;
+- infraestructura modal utilizada;
 - accesibilidad;
+- comportamiento de cierre;
+- estado de carga;
 - responsive;
-- tipos de `pago` y `alumno`;
-- consumidores del componente.
-
-Después de la migración:
-
-- ejecutar TypeScript/build;
-- ejecutar ESLint dirigido;
-- ejecutar `git diff --check`;
-- revisar el diff funcional;
-- actualizar este documento y el registro documental correspondiente.
+- duplicación visual;
+- deuda TypeScript/ESLint;
+- reglas funcionales que deban preservarse.
