@@ -48,6 +48,7 @@ Las conversaciones y análisis externos pueden ayudar durante el desarrollo, per
 - [Mapa de carga CSS](auditoria/14-mapa-carga-css-y-fragmentacion.md)
 - [Hallazgos confirmados](auditoria/15-hallazgos-confirmados-estructura-global.md)
 - [Plan de unificación global](auditoria/16-plan-unificacion-estructura-global.md)
+- [Estado actual de componentes globales](auditoria/17-estado-actual-componentes-globales.md)
 
 ## Auditoría integral del repositorio
 

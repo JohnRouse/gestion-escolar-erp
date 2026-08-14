@@ -292,3 +292,37 @@ La reversión debe permitir:
 10. CSS por módulos.
 11. Tokens.
 12. Auditoría visual por página.
+
+## 18. Estado de ejecución — 14 de agosto de 2026
+
+El plan se encuentra parcialmente ejecutado.
+
+| Fase | Estado | Evidencia actual |
+|---|---|---|
+| 1. Base de diálogo accesible | Implementada | Existe `AccessibleDialog.tsx`. |
+| 2. `ConfirmDialog` | Implementada | Compone `AccessibleDialog`. |
+| 3. `CenteredFormModal` | Implementada | Compone `AccessibleDialog`. |
+| 4. `ReportarPagoModal` | Siguiente | Continúa con implementación modal independiente. |
+| 5. Modales restantes | Parcial | Comunidad ya posee consumidores de la base; otros modales requieren revisión. |
+| 6. Header | Parcial | Refactorizado en PR #16; falta validación transversal final. |
+| 7. Sidebar | Parcial | Refactorizado en PR #16; falta validación transversal final. |
+| 8. Animaciones globales | Pendiente de reconciliación | Existe documentación específica, pero debe compararse con consumidores actuales. |
+| 9. Tipografía compartida | Pendiente | Debe abordarse desde componentes fuente, no mediante reemplazos masivos. |
+| 10. CSS por módulos | Pendiente | Mantener migración gradual. |
+| 11. Tokens | Pendiente | Debe reducirse la coexistencia de familias de tokens antes de declarar una fuente definitiva. |
+| 12. Auditoría visual por página | Pendiente | Se realizará después de estabilizar patrones transversales. |
+
+### Regla de continuación
+
+No reiniciar las fases ya implementadas.
+
+Antes de modificar un componente debe comprobarse:
+
+1. qué documentó la auditoría histórica;
+2. cuál es el estado actual del código;
+3. si ya existe una fuente compartida válida;
+4. qué deuda sigue siendo real;
+5. qué documentación debe actualizarse junto con la implementación.
+
+La próxima implementación prevista es la migración de
+`ReportarPagoModal` hacia la infraestructura de diálogo compartida.

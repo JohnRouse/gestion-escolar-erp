@@ -1,5 +1,15 @@
 # Matriz de componentes compartidos
 
+> [!IMPORTANT]
+> Esta matriz corresponde a una fotografía estática realizada antes de las
+> refactorizaciones posteriores de componentes globales.
+>
+> Se conserva como evidencia histórica de la auditoría original y sus métricas
+> no deben interpretarse como inventario vigente.
+>
+> Para conocer el estado actual consultar
+> [`17-estado-actual-componentes-globales.md`](17-estado-actual-componentes-globales.md).
+
 ## 1. Interpretación
 
 Esta tabla permite localizar componentes que podrían estar propagando patrones inconsistentes a varias páginas.
