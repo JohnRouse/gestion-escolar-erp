@@ -110,7 +110,8 @@ padre refrescara la consulta y desmontara el modal antes de que el usuario
 pudiera percibir correctamente el estado de éxito.
 
 El comportamiento vigente muestra primero la confirmación de envío y ejecuta
-el refresco al cerrar o aceptar dicha confirmación.
+el refresco cuando la confirmación se cierra manualmente o mediante el
+autocierre de 1200 ms que ya existía en el flujo anterior.
 
 ### Otros diálogos
 

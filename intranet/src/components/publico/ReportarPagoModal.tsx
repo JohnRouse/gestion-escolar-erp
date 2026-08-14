@@ -95,10 +95,16 @@ export default function ReportarPagoModal({
       successButtonRef.current?.focus({ preventScroll: true });
     });
 
+    const timer = window.setTimeout(() => {
+      onClose();
+      onSuccess?.();
+    }, 1200);
+
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
     };
-  }, [sent]);
+  }, [sent, onClose, onSuccess]);
 
   const cerrar = () => {
     if (loading) return;

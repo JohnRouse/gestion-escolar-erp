@@ -25,10 +25,10 @@ El componente:
 Además existía un defecto en el flujo posterior al envío.
 
 Después de registrar correctamente el comprobante, el modal ejecutaba
-`onSuccess` inmediatamente.
+`onSuccess` inmediatamente y además programaba su cierre 1200 ms después.
 
-El consumidor respondía refrescando la consulta pública, que temporalmente
-establecía `data` en `null`.
+El consumidor respondía al `onSuccess` refrescando la consulta pública, que
+temporalmente establecía `data` en `null`.
 
 Como el render del modal dependía de esa información, podía desmontarse antes
 de que el usuario percibiera correctamente el mensaje de éxito.
@@ -51,11 +51,13 @@ El componente:
 Después de un envío correcto:
 
 1. se muestra el estado de éxito;
-2. el diálogo permanece visible;
-3. el usuario puede leer la confirmación;
-4. al cerrar o pulsar `Entendido`, se cierra el modal;
-5. después se ejecuta `onSuccess`;
-6. el consumidor refresca el estado de pagos.
+2. el diálogo permanece visible durante el periodo de confirmación;
+3. el usuario puede cerrar inmediatamente con `Entendido`, Escape, el botón de
+   cierre o el overlay;
+4. si no interviene, se conserva el autocierre de 1200 ms del flujo anterior;
+5. al producirse el cierre se ejecuta `onSuccess`;
+6. el consumidor refresca el estado de pagos después de que el éxito haya sido
+   perceptible.
 
 ## 5. Reglas funcionales preservadas
 
