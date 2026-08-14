@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -34,7 +39,28 @@ import {
   communityInputClass,
 } from '../../components/community/CommunityUI';
 
-type Meta = { total: number; page: number; limit: number; totalPages: number };
+type Meta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+type ApoderadoMatricula = {
+  estado_matricula?: string | null;
+  colegio?: {
+    nombre?: string | null;
+  } | null;
+  seccion?: {
+    letra?: string | null;
+    grado?: {
+      nombre_grado?: string | null;
+      nivel?: {
+        nombre_nivel?: string | null;
+      } | null;
+    } | null;
+  } | null;
+};
 
 type ApoderadoItem = {
   id_persona: number;
@@ -55,7 +81,7 @@ type ApoderadoItem = {
       id_persona: number; codigo_estudiante: string; avatar_url?: string | null;
       codigos_colegio?: { id_colegio: number; codigo: string }[];
       persona: { dni: string; nombres: string; apellido_paterno: string; apellido_materno: string };
-      matriculas?: any[];
+      matriculas?: ApoderadoMatricula[];
     };
   }[];
 };
@@ -69,6 +95,24 @@ type ApoderadoForm = {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const inputClass = communityInputClass;
+
+const getAxiosErrorMessage = (
+  error: unknown,
+  fallback: string,
+) => {
+  if (
+    axios.isAxiosError<{
+      message?: string;
+    }>(error)
+  ) {
+    return (
+      error.response?.data?.message ||
+      fallback
+    );
+  }
+
+  return fallback;
+};
 
 const fullName = (p: ApoderadoItem['persona']) =>
   `${p.nombres} ${p.apellido_paterno} ${p.apellido_materno}`.trim();
@@ -152,63 +196,140 @@ export default function ApoderadosPage() {
     return query ? `?${query}` : '';
   }, [debouncedQ, page, queryString]);
 
-  useEffect(() => { fetchApoderados(); }, [params, token]);
+  const fetchApoderados = useCallback(
+    async () => {
+      if (!token) return;
 
-  const fetchApoderados = async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await axios.get(`/api/academicos/apoderados/listado${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setData(res.data?.data || []);
-      setMeta(res.data?.meta || { total: 0, page: 1, limit: 10, totalPages: 1 });
-    } catch {
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
 
-  const abrirDetalle = async (id: number) => {
-    if (!token) return;
-    setDetalleOpen(true);
-    setDetalleLoading(true);
-    setDetalleCredencial(null);
-    setMensaje(null);
-    try {
-      const res = await axios.get(
-        `/api/academicos/apoderados/${id}/detalle${queryString}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setDetalle(res.data);
-    } catch (error: any) {
-      setMensaje(error.response?.data?.message || 'No se pudo cargar el apoderado.');
-      setDetalleOpen(false);
-    } finally {
-      setDetalleLoading(false);
-    }
-  };
+      try {
+        const res = await axios.get(
+          `/api/academicos/apoderados/listado${params}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        setData(res.data?.data || []);
+        setMeta(
+          res.data?.meta || {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 1,
+          },
+        );
+      } catch {
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [params, token],
+  );
 
   useEffect(() => {
-    const search = new URLSearchParams(location.search);
-    const apoderadoParamId = Number(search.get('apoderado') || 0);
-
-    if (!apoderadoParamId || !token) return;
-
-    void abrirDetalle(apoderadoParamId);
-
-    search.delete('apoderado');
-    const nextSearch = search.toString();
-
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : '',
+    const timerId = window.setTimeout(
+      () => {
+        void fetchApoderados();
       },
-      { replace: true },
+      0,
     );
-  }, [location.search, navigate, token]);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [fetchApoderados]);
+
+  const abrirDetalle = useCallback(
+    async (id: number) => {
+      if (!token) return;
+
+      setDetalleOpen(true);
+      setDetalleLoading(true);
+      setDetalleCredencial(null);
+      setMensaje(null);
+
+      try {
+        const res = await axios.get(
+          `/api/academicos/apoderados/${id}/detalle${queryString}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        setDetalle(res.data);
+      } catch (error: unknown) {
+        setMensaje(
+          getAxiosErrorMessage(
+            error,
+            'No se pudo cargar el apoderado.',
+          ),
+        );
+
+        setDetalleOpen(false);
+      } finally {
+        setDetalleLoading(false);
+      }
+    },
+    [queryString, token],
+  );
+
+  useEffect(() => {
+    const search =
+      new URLSearchParams(
+        location.search,
+      );
+
+    const apoderadoParamId = Number(
+      search.get('apoderado') || 0,
+    );
+
+    if (!apoderadoParamId || !token) {
+      return;
+    }
+
+    const timerId = window.setTimeout(
+      () => {
+        void abrirDetalle(
+          apoderadoParamId,
+        );
+
+        search.delete('apoderado');
+
+        const nextSearch =
+          search.toString();
+
+        navigate(
+          {
+            pathname:
+              location.pathname,
+            search: nextSearch
+              ? `?${nextSearch}`
+              : '',
+          },
+          {
+            replace: true,
+          },
+        );
+      },
+      0,
+    );
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [
+    abrirDetalle,
+    location.pathname,
+    location.search,
+    navigate,
+    token,
+  ]);
 
   const abrirEdicion = () => {
     if (!detalle) return;
@@ -230,10 +351,20 @@ export default function ApoderadosPage() {
       await fetchApoderados();
       setMensaje('Datos del apoderado actualizados correctamente.');
       showToast({ type: 'success', title: 'Apoderado actualizado', message: 'Los datos se actualizaron correctamente.' });
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'No se pudo actualizar el apoderado.';
+    } catch (error: unknown) {
+      const errorMessage =
+        getAxiosErrorMessage(
+          error,
+          'No se pudo actualizar el apoderado.',
+        );
+
       setMensaje(errorMessage);
-      showToast({ type: 'error', title: 'No se pudo actualizar', message: errorMessage });
+
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar',
+        message: errorMessage,
+      });
     } finally {
       setSaving(false);
     }
@@ -419,20 +550,24 @@ export default function ApoderadosPage() {
 
                 setData((prev) =>
                   prev.map((item) =>
-                    detalle && item.id_persona === detalle.id_persona
+                    detalle &&
+                    item.id_persona ===
+                      detalle.id_persona
                       ? {
                           ...item,
                           credencial: {
-                            ...(item as any).credencial,
-                            existe: nextCredencial.existe,
-                            estado: nextCredencial.estado,
-                            label: nextCredencial.existe
-                              ? nextCredencial.estado
-                                ? 'Activo'
-                                : 'Inactivo'
-                              : 'Sin credencial',
+                            existe:
+                              nextCredencial.existe,
+                            estado:
+                              nextCredencial.estado,
+                            label:
+                              nextCredencial.existe
+                                ? nextCredencial.estado
+                                  ? 'Activo'
+                                  : 'Inactivo'
+                                : 'Sin credencial',
                           },
-                        } as any
+                        }
                       : item,
                   ),
                 );

@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type ElementType,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -70,8 +79,117 @@ type Seccion = {
   grado: { nombre_grado: string; nivel?: { nombre_nivel: string } };
 };
 
-type ReglaEdad = { edad: number; permiteExcepcionTraslado: boolean; label: string };
-type CodigoColegio = { id_estudiante: number; id_colegio: number; codigo: string };
+type ReglaEdad = {
+  edad: number;
+  permiteExcepcionTraslado: boolean;
+  label: string;
+};
+
+type CodigoColegio = {
+  id_estudiante: number;
+  id_colegio: number;
+  codigo: string;
+};
+
+type MatriculaAlumno =
+  Alumno['estudiantes'][number]['matriculas'][number];
+
+type DetalleApoderadoRelacion = {
+  id_apoderado: number;
+  parentesco: string;
+  apoderado: {
+    persona: {
+      dni?: string | null;
+      nombres: string;
+      apellido_paterno: string;
+      telefono?: string | null;
+      correo?: string | null;
+      distrito?: string | null;
+      departamento?: string | null;
+      direccion?: string | null;
+    };
+  };
+};
+
+type CronogramaDetalle = {
+  id_cronograma: number;
+  fecha_vencimiento: string;
+  estado_pago: string;
+  concepto: {
+    nombre_concepto: string;
+    monto_base:
+      | number
+      | string
+      | null;
+  };
+};
+
+type DetalleMatricula = {
+  id_matricula: number;
+  id_colegio?: number | null;
+  estado_matricula: string;
+  fecha_matricula: string;
+  colegio?: {
+    nombre?: string | null;
+  } | null;
+  anio?: {
+    nombre_anio?: string | null;
+    fecha_inicio?: string | null;
+  } | null;
+  seccion?: {
+    letra?: string | null;
+    grado?: {
+      nombre_grado?: string | null;
+      nivel?: {
+        nombre_nivel?: string | null;
+      } | null;
+    } | null;
+    aula?: {
+      nombre_aula?: string | null;
+    } | null;
+  } | null;
+  registrado_por?: {
+    persona?: {
+      nombres: string;
+      apellido_paterno: string;
+    } | null;
+  } | null;
+  estudiante?: {
+    codigo_estudiante?: string | null;
+    codigos_colegio?: CodigoColegio[];
+    persona: {
+      dni?: string | null;
+      nombres: string;
+      apellido_paterno: string;
+      apellido_materno?: string | null;
+      fecha_nacimiento?: string | null;
+      genero?: string | null;
+      telefono?: string | null;
+      correo?: string | null;
+      direccion?: string | null;
+      departamento?: string | null;
+      provincia?: string | null;
+      distrito?: string | null;
+    };
+    apoderados?: DetalleApoderadoRelacion[];
+  } | null;
+  resumen_financiero?: {
+    estado_pago_matricula?: string | null;
+    total_programado?:
+      | number
+      | string
+      | null;
+    total_pagado?:
+      | number
+      | string
+      | null;
+    saldo?:
+      | number
+      | string
+      | null;
+  } | null;
+  cronogramas?: CronogramaDetalle[];
+};
 
 interface UltimaMatricula {
   id_matricula: number; codigo_matricula?: string | null; id_colegio?: number | null;
@@ -117,8 +235,46 @@ const generoTexto = (genero?: string | null) => { if (!genero) return '—'; if 
 const formatFechaHora = (value: string) => new Date(value).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const formatMoney = (value: number | string | null | undefined) => `S/ ${Number(value || 0).toFixed(2)}`;
 const getCodigoMatricula = (matricula: { id_matricula: number; codigo_matricula?: string | null }) => matricula.codigo_matricula || `MAT-${String(matricula.id_matricula).padStart(6, '0')}`;
-const getCodigoDetalleMatricula = (detalle: any) => { if (!detalle) return 'Sin código'; const codigoColegio = detalle.estudiante?.codigos_colegio?.find((item: CodigoColegio) => item.id_colegio === detalle.id_colegio); return codigoColegio?.codigo || detalle.estudiante?.codigo_estudiante || 'Sin código'; };
+const getCodigoDetalleMatricula = (
+  detalle: DetalleMatricula | null,
+) => {
+  if (!detalle) return 'Sin código';
+
+  const codigoColegio =
+    detalle.estudiante
+      ?.codigos_colegio
+      ?.find(
+        (item) =>
+          item.id_colegio ===
+          detalle.id_colegio,
+      );
+
+  return (
+    codigoColegio?.codigo ||
+    detalle.estudiante
+      ?.codigo_estudiante ||
+    'Sin código'
+  );
+};
 const validarFechaNacimientoFrontend = (fecha?: string) => { if (!fecha) return 'Ingresa la fecha de nacimiento.'; const nacimiento = new Date(`${fecha}T00:00:00`); const hoy = new Date(); const minima = new Date('1990-01-01T00:00:00'); if (Number.isNaN(nacimiento.getTime())) return 'La fecha de nacimiento no es válida.'; if (nacimiento > hoy) return 'La fecha de nacimiento no puede ser futura.'; if (nacimiento < minima) return 'La fecha de nacimiento parece demasiado antigua. Revisa el dato.'; return null; };
+
+const getAxiosErrorMessage = (
+  error: unknown,
+  fallback: string,
+) => {
+  if (
+    axios.isAxiosError<{
+      message?: string;
+    }>(error)
+  ) {
+    return (
+      error.response?.data?.message ||
+      fallback
+    );
+  }
+
+  return fallback;
+};
 
 // ─── Enrollment progress ────────────────────────────────────────────────────
 
@@ -283,7 +439,12 @@ export default function MatriculaPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
-  const [detalleMatricula, setDetalleMatricula] = useState<any | null>(null);
+  const [
+    detalleMatricula,
+    setDetalleMatricula,
+  ] = useState<DetalleMatricula | null>(
+    null,
+  );
   const [cronogramaOpen, setCronogramaOpen] = useState(false);
   const [modalEditarAlumno, setModalEditarAlumno] = useState(false);
   const [modalEditarApoderado, setModalEditarApoderado] = useState(false);
@@ -350,7 +511,29 @@ export default function MatriculaPage() {
   const getEstadoOperativoAnioFrontend = (anio?: Anio | null) => { const estado = String(anio?.estado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); if (['cerrado','archivado'].includes(estado)) return 'Cerrado'; if (estado.includes('planificacion')) return 'Planificación'; if (estado.includes('matricula') || estado === 'abierto') return 'Matrícula abierta'; if (estado === 'activo' || estado.includes('curso')) return 'En curso'; return anio?.estado || 'Planificación'; };
   const esAnioDisponibleParaRegistro = (anio?: Anio | null) => { if (!anio) return false; const estadoOperativo = getEstadoOperativoAnioFrontend(anio); if (estadoOperativo === 'Cerrado' || estadoOperativo === 'Archivado') return false; if (anio.fecha_fin) { const fechaFin = new Date(`${String(anio.fecha_fin).slice(0, 10)}T23:59:59`); if (!Number.isNaN(fechaFin.getTime()) && fechaFin < new Date()) return false; } return true; };
   const getAnioCorteFrontend = () => { const desdeNombre = anioSeleccionado?.nombre_anio?.match(/\d{4}/)?.[0]; if (desdeNombre) return Number(desdeNombre); if (anioSeleccionado?.fecha_inicio) { const fecha = new Date(anioSeleccionado.fecha_inicio); if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear(); } return new Date().getFullYear(); };
-  const getAnioCorteMatriculaFrontend = (matricula: any) => { const desdeNombre = matricula?.anio?.nombre_anio?.match(/\d{4}/)?.[0]; if (desdeNombre) return Number(desdeNombre); if (matricula?.anio?.fecha_inicio) { const fecha = new Date(matricula.anio.fecha_inicio); if (!Number.isNaN(fecha.getTime())) return fecha.getFullYear(); } return null; };
+  const getAnioCorteMatriculaFrontend = (
+    matricula: MatriculaAlumno,
+  ) => {
+    const desdeNombre =
+      matricula.anio?.nombre_anio
+        ?.match(/\d{4}/)?.[0];
+
+    if (desdeNombre) {
+      return Number(desdeNombre);
+    }
+
+    if (matricula.anio?.fecha_inicio) {
+      const fecha = new Date(
+        matricula.anio.fecha_inicio,
+      );
+
+      if (!Number.isNaN(fecha.getTime())) {
+        return fecha.getFullYear();
+      }
+    }
+
+    return null;
+  };
 
   const aniosDisponibles = useMemo(() => anios.filter((anio) => esAnioDisponibleParaRegistro(anio)), [anios]);
 
@@ -436,8 +619,75 @@ export default function MatriculaPage() {
 
   const colegioDestinoRequerido = useMemo(() => activeScope.tipo === 'todos' && !colegioDestinoId, [activeScope.tipo, colegioDestinoId]);
 
-  const formatMatriculaActiva = (matricula: any) => { if (!matricula) return ''; const colegio = matricula.colegio?.nombre || 'colegio registrado'; const anio = matricula.anio?.nombre_anio || 'año lectivo'; const grado = matricula.seccion?.grado?.nombre_grado || 'grado'; const letra = matricula.seccion?.letra || '-'; const nivel = matricula.seccion?.grado?.nivel?.nombre_nivel || 'nivel'; const estado = matricula.estado_matricula || 'matriculado'; if (estado === 'Reserva') return `Este alumno ya tiene una reserva registrada en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`; if (estado === 'Pre-matriculado') return `Este alumno ya está pre-matriculado en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`; if (estado === 'Activo') return `Este alumno ya tiene una matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`; return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`; };
-  const irADetalleMatriculaActiva = (matricula: any) => { if (!matricula?.id_matricula) return; const params = new URLSearchParams(); params.set('matricula_id', String(matricula.id_matricula)); if (matricula.id_colegio) params.set('colegio_id', String(matricula.id_colegio)); navigate(`/matricula/historial?${params.toString()}`); };
+  const formatMatriculaActiva = (
+    matricula: MatriculaAlumno | null,
+  ) => {
+    if (!matricula) return '';
+
+    const colegio =
+      matricula.colegio?.nombre ||
+      'colegio registrado';
+
+    const anio =
+      matricula.anio?.nombre_anio ||
+      'año lectivo';
+
+    const grado =
+      matricula.seccion?.grado
+        ?.nombre_grado ||
+      'grado';
+
+    const letra =
+      matricula.seccion?.letra || '-';
+
+    const nivel =
+      matricula.seccion?.grado
+        ?.nivel?.nombre_nivel ||
+      'nivel';
+
+    const estado =
+      matricula.estado_matricula ||
+      'matriculado';
+
+    if (estado === 'Reserva') {
+      return `Este alumno ya tiene una reserva registrada en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+    }
+
+    if (estado === 'Pre-matriculado') {
+      return `Este alumno ya está pre-matriculado en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+    }
+
+    if (estado === 'Activo') {
+      return `Este alumno ya tiene una matrícula activa en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+    }
+
+    return `Este alumno ya figura como ${estado} en ${colegio}, ${grado} "${letra}" · ${nivel}, ${anio}.`;
+  };
+
+  const irADetalleMatriculaActiva = (
+    matricula: MatriculaAlumno | null,
+  ) => {
+    if (!matricula?.id_matricula) return;
+
+    const params =
+      new URLSearchParams();
+
+    params.set(
+      'matricula_id',
+      String(matricula.id_matricula),
+    );
+
+    if (matricula.id_colegio) {
+      params.set(
+        'colegio_id',
+        String(matricula.id_colegio),
+      );
+    }
+
+    navigate(
+      `/matricula/historial?${params.toString()}`,
+    );
+  };
 
   const mensajeValidacionMatricula = useMemo(() => { if (colegioDestinoRequerido) return { tipo: 'info' as const, texto: 'Selecciona el colegio destino. Estás trabajando con todos los colegios.' }; if (!alumno) return { tipo: 'info' as const, texto: 'Busca o registra primero al alumno que deseas matricular.' }; if (!apoderados.length) return { tipo: 'warning' as const, texto: 'El alumno debe tener al menos un apoderado vinculado antes de registrar la matrícula.' }; if (!anioId) return { tipo: 'info' as const, texto: 'Selecciona el año lectivo de la matrícula.' }; if (!seccionId) return { tipo: 'info' as const, texto: 'Selecciona el grado y sección donde se registrará al alumno.' }; if (avisoPeriodoMatricula?.bloquea) return { tipo: avisoPeriodoMatricula.tipo as 'error'|'warning'|'info', texto: avisoPeriodoMatricula.texto }; if (errorEdadNormativa) return { tipo: 'error' as const, texto: errorEdadNormativa }; if (avisoPeriodoMatricula) return { tipo: avisoPeriodoMatricula.tipo as 'error'|'warning'|'info', texto: avisoPeriodoMatricula.texto }; return null; }, [colegioDestinoRequerido, alumno, apoderados.length, anioId, seccionId, avisoPeriodoMatricula, errorEdadNormativa]);
 
@@ -479,13 +729,239 @@ export default function MatriculaPage() {
     activeScope.id_colegio,
     matriculaSearchParams,
   ]);
-  useEffect(() => { if (token) fetchBase(); }, [token, colegioDestinoId, queryString]);
-  useEffect(() => { if (token && anioId) fetchSecciones(Number(anioId)); }, [token, anioId, colegioDestinoId, queryString]);
+  const fetchSecciones = useCallback(
+    async (idAnio: number) => {
+      if (!token) return;
 
-  const fetchBase = async () => { if (!token) return; setLoadingBase(true); try { const [ultimasRes, aniosRes] = await Promise.all([ axios.get(`/api/academicos/matriculas/ultimas${colegioDestinoQuery}`, { headers: { Authorization: `Bearer ${token}` } }), axios.get(`/api/academicos/anios${colegioDestinoQuery}`, { headers: { Authorization: `Bearer ${token}` } }), ]); const aniosData: Anio[] = aniosRes.data || []; setUltimas((ultimasRes.data || []).slice(0, 5)); setAnios(aniosData); const estadoNorm = (estado?: string) => String(estado||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const fechaNoVencida = (a: Anio) => { if (!a.fecha_fin) return true; const f = new Date(`${String(a.fecha_fin).slice(0,10)}T23:59:59`); return Number.isNaN(f.getTime()) || f >= new Date(); }; const aniosRegistrables = aniosData.filter((a) => !['cerrado','archivado'].includes(estadoNorm(a.estado)) && fechaNoVencida(a)); const activo = aniosRegistrables.find((a) => estadoNorm(a.estado).includes('matricula')) || aniosRegistrables.find((a) => estadoNorm(a.estado) === 'abierto') || aniosRegistrables.find((a) => estadoNorm(a.estado).includes('curso')) || aniosRegistrables.find((a) => estadoNorm(a.estado) === 'activo') || aniosRegistrables.find((a) => estadoNorm(a.estado).includes('planificacion')) || aniosRegistrables[0]; const resolved = activo ? activo.id_anio : ''; setAnioId((current) => current || resolved); if (resolved) await fetchSecciones(Number(resolved)); } catch { setUltimas([]); setAnios([]); setSecciones([]); } finally { setLoadingBase(false); } };
-  const fetchSecciones = async (idAnio: number) => { if (!token) return; const query = buildQuery(colegioDestinoQuery, { anio_id: idAnio }); try { const res = await axios.get(`/api/academicos/secciones${query}`, { headers: { Authorization: `Bearer ${token}` } }); setSecciones(res.data || []); } catch { setSecciones([]); } };
+      const query = buildQuery(
+        colegioDestinoQuery,
+        {
+          anio_id: idAnio,
+        },
+      );
 
-  const abrirDetalleMatricula = async (idMatricula: number) => { if (!token) return;  setDetalleOpen(true); setDetalleLoading(true); setDetalleMatricula(null); setCronogramaOpen(false); try { const res = await axios.get(`/api/academicos/matriculas/${idMatricula}/detalle${colegioDestinoQuery}`, { headers: { Authorization: `Bearer ${token}` } }); setDetalleMatricula(res.data); } catch (error: any) { setMensaje(error.response?.data?.message || 'No se pudo cargar el detalle de matrícula.'); setDetalleOpen(false); } finally { setDetalleLoading(false); } };
+      try {
+        const res = await axios.get(
+          `/api/academicos/secciones${query}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        setSecciones(res.data || []);
+      } catch {
+        setSecciones([]);
+      }
+    },
+    [
+      colegioDestinoQuery,
+      token,
+    ],
+  );
+
+  const fetchBase = useCallback(
+    async () => {
+      if (!token) return;
+
+      setLoadingBase(true);
+
+      try {
+        const [
+          ultimasRes,
+          aniosRes,
+        ] = await Promise.all([
+          axios.get(
+            `/api/academicos/matriculas/ultimas${colegioDestinoQuery}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          ),
+          axios.get(
+            `/api/academicos/anios${colegioDestinoQuery}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          ),
+        ]);
+
+        const aniosData: Anio[] =
+          aniosRes.data || [];
+
+        setUltimas(
+          (ultimasRes.data || []).slice(
+            0,
+            5,
+          ),
+        );
+
+        setAnios(aniosData);
+
+        const estadoNorm = (
+          estado?: string,
+        ) =>
+          String(estado || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(
+              /[\u0300-\u036f]/g,
+              '',
+            );
+
+        const fechaNoVencida = (
+          anio: Anio,
+        ) => {
+          if (!anio.fecha_fin) {
+            return true;
+          }
+
+          const fecha = new Date(
+            `${String(
+              anio.fecha_fin,
+            ).slice(
+              0,
+              10,
+            )}T23:59:59`,
+          );
+
+          return (
+            Number.isNaN(
+              fecha.getTime(),
+            ) ||
+            fecha >= new Date()
+          );
+        };
+
+        const aniosRegistrables =
+          aniosData.filter(
+            (anio) =>
+              ![
+                'cerrado',
+                'archivado',
+              ].includes(
+                estadoNorm(
+                  anio.estado,
+                ),
+              ) &&
+              fechaNoVencida(
+                anio,
+              ),
+          );
+
+        const activo =
+          aniosRegistrables.find(
+            (anio) =>
+              estadoNorm(
+                anio.estado,
+              ).includes(
+                'matricula',
+              ),
+          ) ||
+          aniosRegistrables.find(
+            (anio) =>
+              estadoNorm(
+                anio.estado,
+              ) === 'abierto',
+          ) ||
+          aniosRegistrables.find(
+            (anio) =>
+              estadoNorm(
+                anio.estado,
+              ).includes(
+                'curso',
+              ),
+          ) ||
+          aniosRegistrables.find(
+            (anio) =>
+              estadoNorm(
+                anio.estado,
+              ) === 'activo',
+          ) ||
+          aniosRegistrables.find(
+            (anio) =>
+              estadoNorm(
+                anio.estado,
+              ).includes(
+                'planificacion',
+              ),
+          ) ||
+          aniosRegistrables[0];
+
+        const resolved =
+          activo
+            ? activo.id_anio
+            : '';
+
+        setAnioId(
+          (current) =>
+            current || resolved,
+        );
+
+        if (resolved) {
+          await fetchSecciones(
+            Number(resolved),
+          );
+        }
+      } catch {
+        setUltimas([]);
+        setAnios([]);
+        setSecciones([]);
+      } finally {
+        setLoadingBase(false);
+      }
+    },
+    [
+      colegioDestinoQuery,
+      fetchSecciones,
+      token,
+    ],
+  );
+
+  useEffect(() => {
+    const timerId =
+      window.setTimeout(
+        () => {
+          void fetchBase();
+        },
+        0,
+      );
+
+    return () => {
+      window.clearTimeout(
+        timerId,
+      );
+    };
+  }, [fetchBase]);
+
+  useEffect(() => {
+    if (!anioId) return;
+
+    const timerId =
+      window.setTimeout(
+        () => {
+          void fetchSecciones(
+            Number(anioId),
+          );
+        },
+        0,
+      );
+
+    return () => {
+      window.clearTimeout(
+        timerId,
+      );
+    };
+  }, [
+    anioId,
+    fetchSecciones,
+  ]);
+
+  const abrirDetalleMatricula = async (idMatricula: number) => { if (!token) return;  setDetalleOpen(true); setDetalleLoading(true); setDetalleMatricula(null); setCronogramaOpen(false); try { const res = await axios.get(`/api/academicos/matriculas/${idMatricula}/detalle${colegioDestinoQuery}`, { headers: { Authorization: `Bearer ${token}` } }); setDetalleMatricula(res.data); } catch (error: unknown) { setMensaje(getAxiosErrorMessage(error, 'No se pudo cargar el detalle de matrícula.')); setDetalleOpen(false); } finally { setDetalleLoading(false); } };
   
   const cerrarDetalleMatricula = () => {
     setDetalleOpen(false);
@@ -517,7 +993,7 @@ export default function MatriculaPage() {
     setModalEditarApoderado(true);
   };
 
-  const buscarAlumnoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoAlumno(true); setMensaje(null); setApoderados([]); try { const query = puedeVerConsolidado ? '&scope=all' : colegioDestinoQuery ? `&${colegioDestinoQuery.replace('?','')}` : ''; const res = await axios.get(`/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setMensaje(null); } catch (err: any) { setAlumno(null); setMensaje(err.response?.data?.message || 'No se encontró el alumno.'); } finally { setBuscandoAlumno(false); } };
+  const buscarAlumnoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoAlumno(true); setMensaje(null); setApoderados([]); try { const query = puedeVerConsolidado ? '&scope=all' : colegioDestinoQuery ? `&${colegioDestinoQuery.replace('?','')}` : ''; const res = await axios.get(`/api/academicos/alumnos/buscar?dni=${dniBusqueda.trim()}${query}`, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setSeccionId(''); setNivelFiltro(''); setGradoFiltro(''); setMensaje(null); } catch (error: unknown) { setAlumno(null); setMensaje(getAxiosErrorMessage(error, 'No se encontró el alumno.')); } finally { setBuscandoAlumno(false); } };
   const buscarAlumno = () => buscarAlumnoPorDni(dni);
 
   /*
@@ -601,14 +1077,14 @@ export default function MatriculaPage() {
     autoSearchKey,
   ]);
 
-  const buscarApoderadoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoApoderado(true); setMensaje(null); try { const res = await axios.get(`/api/academicos/apoderados/buscar?dni=${dniBusqueda.trim()}`, { headers: { Authorization: `Bearer ${token}` } }); setApoderadoEncontrado(res.data); return res.data; } catch (err: any) { setApoderadoEncontrado(null); setMensaje(err.response?.data?.message || 'No se encontró el apoderado.'); return null; } finally { setBuscandoApoderado(false); } };
+  const buscarApoderadoPorDni = async (dniBusqueda: string) => { if (!token || !dniBusqueda.trim()) return; setBuscandoApoderado(true); setMensaje(null); try { const res = await axios.get(`/api/academicos/apoderados/buscar?dni=${dniBusqueda.trim()}`, { headers: { Authorization: `Bearer ${token}` } }); setApoderadoEncontrado(res.data); return res.data; } catch (error: unknown) { setApoderadoEncontrado(null); setMensaje(getAxiosErrorMessage(error, 'No se encontró el apoderado.')); return null; } finally { setBuscandoApoderado(false); } };
   const buscarApoderado = () => buscarApoderadoPorDni(apoderadoDni);
 
-  const agregarApoderado = async (apoderado: Apoderado) => { if (!estudiante?.id_persona || !token) { setMensaje('Primero debes buscar o registrar un alumno.'); return; } if (apoderados.some((item) => item.id_persona === apoderado.id_persona)) { setMensaje('Este apoderado ya está vinculado al alumno.'); return; } const parentescoSeleccionado = apoderado.parentesco || parentesco || 'Apoderado'; try { await axios.post(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados`, { id_apoderado: apoderado.id_persona, parentesco: parentescoSeleccionado }, { headers: { Authorization: `Bearer ${token}` } }); setApoderados([...apoderados, { ...apoderado, parentesco: parentescoSeleccionado }]); setMensaje(null); showToast({ type: 'success', title: 'Apoderado vinculado', message: `${parentescoSeleccionado} agregado correctamente.` }); setApoderadoEncontrado(null); setApoderadoDni(''); setParentesco('Madre'); } catch (error: any) { setMensaje(error.response?.data?.message || 'No se pudo vincular el apoderado.'); } };
+  const agregarApoderado = async (apoderado: Apoderado) => { if (!estudiante?.id_persona || !token) { setMensaje('Primero debes buscar o registrar un alumno.'); return; } if (apoderados.some((item) => item.id_persona === apoderado.id_persona)) { setMensaje('Este apoderado ya está vinculado al alumno.'); return; } const parentescoSeleccionado = apoderado.parentesco || parentesco || 'Apoderado'; try { await axios.post(`/api/academicos/alumnos/${estudiante.id_persona}/apoderados`, { id_apoderado: apoderado.id_persona, parentesco: parentescoSeleccionado }, { headers: { Authorization: `Bearer ${token}` } }); setApoderados([...apoderados, { ...apoderado, parentesco: parentescoSeleccionado }]); setMensaje(null); showToast({ type: 'success', title: 'Apoderado vinculado', message: `${parentescoSeleccionado} agregado correctamente.` }); setApoderadoEncontrado(null); setApoderadoDni(''); setParentesco('Madre'); } catch (error: unknown) { setMensaje(getAxiosErrorMessage(error, 'No se pudo vincular el apoderado.')); } };
 
-  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; if (tipo === 'alumno' && !colegioDestinoDefinido) { setErrorPersona('Selecciona primero la institución destino. La ficha se guardará como borrador institucional hasta confirmar la matrícula.'); return; } const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? `/api/academicos/alumnos${colegioDestinoQuery}` : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); setModalAlumno(false); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Borrador guardado', message: 'La ficha quedó guardada como registro incompleto hasta confirmar la matrícula.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); setModalApoderado(false); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo guardar el registro.'); } finally { setSavingPersona(false); } };
+  const crearPersona = async (tipo: 'alumno' | 'apoderado') => { if (!token) return; if (tipo === 'alumno' && !colegioDestinoDefinido) { setErrorPersona('Selecciona primero la institución destino. La ficha se guardará como borrador institucional hasta confirmar la matrícula.'); return; } const form = tipo === 'alumno' ? formAlumno : formApoderado; if (!form.dni || !form.nombres || !form.apellido_paterno || !form.apellido_materno) { setErrorPersona('Completa DNI, nombres y apellidos.'); return; } if (tipo === 'alumno') { const errorFecha = validarFechaNacimientoFrontend(form.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.post(tipo === 'alumno' ? `/api/academicos/alumnos${colegioDestinoQuery}` : '/api/academicos/apoderados', { ...form, pais: form.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); if (tipo === 'alumno') { setDni(form.dni); setModalAlumno(false); setFormAlumno(emptyAlumno); showToast({ type: 'success', title: 'Borrador guardado', message: 'La ficha quedó guardada como registro incompleto hasta confirmar la matrícula.' }); await buscarAlumnoPorDni(form.dni); } else { const parentescoNuevo = parentesco || 'Apoderado'; const apoderadoCreado: Apoderado = { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, dni: res.data?.persona?.dni || form.dni, nombres: res.data?.persona?.nombres || form.nombres, apellido_paterno: res.data?.persona?.apellido_paterno || form.apellido_paterno, apellido_materno: res.data?.persona?.apellido_materno || form.apellido_materno, telefono: res.data?.persona?.telefono || form.telefono, correo: res.data?.persona?.correo || form.correo, direccion: res.data?.persona?.direccion || form.direccion, pais: res.data?.persona?.pais || form.pais, departamento: res.data?.persona?.departamento || form.departamento, provincia: res.data?.persona?.provincia || form.provincia, distrito: res.data?.persona?.distrito || form.distrito, parentesco: parentescoNuevo, apoderado: { id_persona: res.data?.apoderado?.id_persona || res.data?.persona?.id_persona, ocupacion: res.data?.apoderado?.ocupacion || form.ocupacion } }; setApoderadoDni(form.dni); setModalApoderado(false); setFormApoderado(emptyApoderado); showToast({ type: 'success', title: 'Apoderado registrado', message: 'La ficha del apoderado se guardó correctamente.' }); if (estudiante?.id_persona) await agregarApoderado(apoderadoCreado); else setApoderadoEncontrado(apoderadoCreado); } } catch (error: unknown) { setErrorPersona(getAxiosErrorMessage(error, 'No se pudo guardar el registro.')); } finally { setSavingPersona(false); } };
 
-  const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setModalEditarAlumno(false); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (err: any) { setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el alumno.'); } finally { setSavingPersona(false); } };
+  const editarAlumno = async () => { if (!token || !estudiante?.id_persona) return; const errorFecha = validarFechaNacimientoFrontend(formAlumno.fecha_nacimiento); if (errorFecha) { setErrorPersona(errorFecha); return; } setSavingPersona(true); setErrorPersona(null); try { const res = await axios.put(`/api/academicos/alumnos/${estudiante.id_persona}`, { ...formAlumno, pais: formAlumno.pais || 'Perú' }, { headers: { Authorization: `Bearer ${token}` } }); setAlumno(res.data); setApoderados(apoderadosDesdeAlumno(res.data)); setModalEditarAlumno(false); setMensaje(null); showToast({ type: 'success', title: 'Alumno actualizado', message: 'Los datos del alumno se actualizaron correctamente.' }); } catch (error: unknown) { setErrorPersona(getAxiosErrorMessage(error, 'No se pudo actualizar el alumno.')); } finally { setSavingPersona(false); } };
 
   const editarApoderado = async () => {
     if (!token || !apoderadoEditando) return;
@@ -665,8 +1141,13 @@ export default function MatriculaPage() {
         title: 'Apoderado actualizado',
         message: 'Los datos del apoderado se actualizaron correctamente.',
       });
-    } catch (err: any) {
-      setErrorPersona(err.response?.data?.message || 'No se pudo actualizar el apoderado.');
+    } catch (error: unknown) {
+      setErrorPersona(
+        getAxiosErrorMessage(
+          error,
+          'No se pudo actualizar el apoderado.',
+        ),
+      );
     } finally {
       setSavingPersona(false);
     }
@@ -792,7 +1273,7 @@ export default function MatriculaPage() {
     setConfirmOpen(false);
   };
 
-  const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (err: any) { const errorMessage = err.response?.data?.message || 'No se pudo registrar la matrícula.'; setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
+  const registrarMatricula = async () => { if (!token || !estudiante || !anioId || !seccionId) return; setMatriculando(true); setMensaje(null); try { const res = await axios.post(`/api/academicos/matriculas${colegioDestinoQuery}`, { id_estudiante: estudiante.id_persona, id_anio: Number(anioId), id_seccion: Number(seccionId), id_colegio: Number(colegioDestinoId || activeColegio?.id_colegio), apoderados: apoderados.map((a) => ({ id_apoderado: a.id_persona, parentesco: a.parentesco || 'Apoderado' })), excepcion_traslado: excepcionTraslado, tipo_ingreso: tipoIngreso, colegio_procedencia: colegioProcedencia, codigo_modular_procedencia: codigoModularProcedencia, grado_procedencia: gradoProcedencia, observacion_procedencia: observacionProcedencia }, { headers: { Authorization: `Bearer ${token}` } }); const estadoGuardado = res.data?.estado_matricula || tipoIngreso; showToast({ type: 'success', title: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'Reserva registrada' : 'Pre-matrícula registrada', message: estadoGuardado === 'Reserva' || tipoIngreso === 'Reserva' ? 'La reserva se guardó correctamente.' : 'La pre-matrícula se guardó correctamente.' }); setConfirmOpen(false); limpiarFlujoMatricula(); await fetchBase(); } catch (error: unknown) { const errorMessage = getAxiosErrorMessage(error, 'No se pudo registrar la matrícula.'); setMensaje(errorMessage); showToast({ type: 'error', title: 'No se pudo registrar', message: errorMessage }); setConfirmOpen(false); } finally { setMatriculando(false); } };
 
 
 
@@ -1566,12 +2047,13 @@ export default function MatriculaPage() {
                                         'El apoderado fue retirado de la ficha del alumno.',
                                     });
                                   } catch (
-                                    error: any
+                                    error: unknown
                                   ) {
                                     setMensaje(
-                                      error.response?.data
-                                        ?.message ||
+                                      getAxiosErrorMessage(
+                                        error,
                                         'No se pudo desvincular el apoderado.',
+                                      ),
                                     );
                                   }
                                 }}
@@ -2478,7 +2960,7 @@ export default function MatriculaPage() {
                   <SectionBox title="Apoderados">
                     <div className="space-y-3">
                       {detalleMatricula.estudiante?.apoderados?.length ? (
-                        detalleMatricula.estudiante.apoderados.map((relacion: any) => (
+                        detalleMatricula.estudiante.apoderados.map((relacion) => (
                           <div key={relacion.id_apoderado} className="rounded-xl bg-white p-4 ring-1 ring-neutral-200/60">
                             <p className="text-sm font-medium text-neutral-800">{relacion.parentesco}: {relacion.apoderado.persona.nombres} {relacion.apoderado.persona.apellido_paterno}</p>
                             <div className="mt-3 grid gap-2 text-xs text-neutral-500 md:grid-cols-2">
@@ -2510,7 +2992,7 @@ export default function MatriculaPage() {
                     {cronogramaOpen && (
                       <div className="mt-4 space-y-2">
                         {detalleMatricula.cronogramas?.length ? (
-                          detalleMatricula.cronogramas.map((item: any) => (
+                          detalleMatricula.cronogramas.map((item) => (
                             <div key={item.id_cronograma} className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-neutral-200/60 sm:flex-row sm:items-center sm:justify-between">
                               <div><p className="text-sm font-medium text-neutral-800">{item.concepto.nombre_concepto}</p><p className="mt-0.5 text-xs text-neutral-400">Vencimiento: {new Date(item.fecha_vencimiento).toLocaleDateString('es-PE')} · Monto: {formatMoney(item.concepto.monto_base)}</p></div>
                               <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${getEstadoCls(item.estado_pago)}`}>{item.estado_pago}</span>
@@ -2528,7 +3010,21 @@ export default function MatriculaPage() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function Card({ icon: Icon, title, subtitle, children, action }: { icon: any; title: string; subtitle: string; children: any; action?: any }) {
+type CardProps = {
+  icon: ElementType;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  action?: ReactNode;
+};
+
+function Card({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+  action,
+}: CardProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3.5">
@@ -2545,7 +3041,17 @@ function Card({ icon: Icon, title, subtitle, children, action }: { icon: any; ti
 
 function Empty({ text }: { text: string }) { return (<div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/50 p-5 text-center"><p className="text-sm text-neutral-400">{text}</p></div>); }
 
-function Info({ icon: Icon, label, value }: any) {
+type InfoProps = {
+  icon: ElementType;
+  label: string;
+  value: ReactNode;
+};
+
+function Info({
+  icon: Icon,
+  label,
+  value,
+}: InfoProps) {
   return (
     <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
       <div className="flex items-center gap-1.5 text-neutral-400"><Icon size={13} /><p className="text-[11px] font-semibold uppercase tracking-widest">{label}</p></div>
@@ -2578,7 +3084,13 @@ function DetailBox({ label, value, white = false }: { label: string; value: stri
   );
 }
 
-function SectionBox({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionBox({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <div className="rounded-xl bg-neutral-50 p-4 ring-1 ring-neutral-200/60">
       <h4 className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">{title}</h4>
@@ -2586,6 +3098,25 @@ function SectionBox({ title, children }: { title: string; children: React.ReactN
     </div>
   );
 }
+
+type PersonaModalProps = {
+  title: string;
+  form: PersonaForm;
+  setForm: Dispatch<
+    SetStateAction<PersonaForm>
+  >;
+  error: string | null;
+  loading: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  alumno?: boolean;
+  apoderado?: boolean;
+  aviso?: ReactNode;
+  parentesco?: string;
+  onParentescoChange?: (
+    value: string,
+  ) => void;
+};
 
 function PersonaModal({
   title,
@@ -2600,7 +3131,7 @@ function PersonaModal({
   aviso,
   parentesco,
   onParentescoChange,
-}: any) {
+}: PersonaModalProps) {
   const set = (
     key: keyof PersonaForm,
     value: string,
