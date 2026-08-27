@@ -39,3 +39,9 @@ api/uploads/
 *.bak-*
 *.bak_*
 REFACTOR_AUDIT.md
+
+# Entorno local de agentes IA
+.codex/
+graphify-out/
+.playwright-mcp/
+dashboard-admin.png
