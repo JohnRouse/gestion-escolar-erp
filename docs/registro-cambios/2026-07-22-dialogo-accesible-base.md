@@ -82,3 +82,26 @@ Se comprobaron satisfactoriamente:
 - No se migraron todavía otros modales.
 - No se corrigió la deuda global de TypeScript.
 - No se abordó la división de paquetes de Vite.
+
+## 8. Corrección transversal de retorno de foco
+
+Fecha de validación: 2026-08-28.
+
+Se corrigieron dos defectos confirmados en la infraestructura compartida:
+
+- React puede aplicar `autoFocus` durante el commit antes de que los efectos de
+  `AccessibleDialog` capturen el foco externo. La primitiva conserva ahora el
+  último elemento enfocado fuera de cada instancia y evita que el foco nativo
+  de un descendiente sustituya ese origen.
+- El `mousedown` del overlay continuaba su acción predeterminada después de
+  desmontar el portal y sobrescribía el retorno de foco con `body`. El overlay
+  previene esa acción predeterminada antes de solicitar el cierre.
+
+`initialFocusRef` continúa siendo la opción recomendada cuando el consumidor
+necesita declarar explícitamente el foco inicial. El `autoFocus` nativo queda
+soportado para compatibilidad, pero no reemplaza a `initialFocusRef` cuando el
+destino debe ser estable y explícito.
+
+La corrección mantiene Escape, botón de cierre, Cancelar, `preventClose`, focus
+trap, bloqueo de scroll y reducción de movimiento. Se validaron un consumidor
+directo, `ConfirmDialog` y `CenteredFormModal` sin modificar sus contratos.

@@ -54,6 +54,13 @@ Responsabilidades actuales:
 - alto máximo basado en viewport;
 - reducción de movimiento.
 
+La revisión transversal del 28 de agosto de 2026 corrigió el retorno de foco
+cuando un consumidor usa `autoFocus` nativo y cuando el cierre ocurre mediante
+el `mousedown` del overlay. La primitiva conserva el último foco externo por
+instancia y el overlay previene su acción predeterminada antes del cierre.
+`initialFocusRef` sigue siendo el contrato recomendado para un destino inicial
+explícito; `autoFocus` se conserva como compatibilidad.
+
 Es la fuente oficial para nuevas implementaciones de diálogo.
 
 ### `ConfirmDialog`
@@ -125,14 +132,9 @@ infraestructura oficial:
 - los diálogos no pueden cerrarse mientras sus operaciones están activas;
 - se validaron en 1440 × 900 y 390 × 844, con teclado, foco visible, Escape,
   overlay, scroll bloqueado y reducción de movimiento;
-- el retorno de foco por Escape y Cancelar en la gestión de evaluaciones quedó
-  resuelto dirigiendo el foco inicial mediante `initialFocusRef`; se evitó
-  `autoFocus` nativo porque se ejecuta antes de que el efecto de
-  `AccessibleDialog` capture el foco externo;
-- el cierre por overlay todavía deja el foco en `body`: el `mousedown` continúa
-  después del cleanup y sobrescribe la restauración; queda pendiente de revisión
-  general en la primitiva compartida;
-- la primitiva compartida no se modificó en este cambio;
+- la gestión de evaluaciones dirige el foco inicial mediante `initialFocusRef`;
+- la corrección transversal de `AccessibleDialog` confirmó retorno de foco por
+  Escape, Cancelar, botón de cierre y overlay;
 - la base local de demostración no contenía un registro cerrado, por lo que el
   formulario de reapertura no pudo abrirse sin alterar datos persistentes.
 
