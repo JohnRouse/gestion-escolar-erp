@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchool } from '../contexts/SchoolContext';
 import PageHeader from '../components/PageHeader';
+import AccessibleDialog from '../components/AccessibleDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import {
   Plus,
@@ -253,7 +254,7 @@ export default function NotasPage() {
 
   // ── Estados del modal de evaluación ──
   const [modalOpen, setModalOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
+  const nuevaEvalDescRef = useRef<HTMLInputElement>(null);
   const [nuevaEvalDesc, setNuevaEvalDesc] = useState('');
   const [nuevaEvalTipoGrilla, setNuevaEvalTipoGrilla] = useState<TipoGrilla>('TRABAJO EN CLASE');
   const [evaluacionesModal, setEvaluacionesModal] = useState<EvaluacionModalItem[]>([]);
@@ -264,6 +265,7 @@ export default function NotasPage() {
   // Estados de cierre/reapertura de registro (ya existentes)
   const [procesandoRegistro, setProcesandoRegistro] = useState(false);
   const [motivoReapertura, setMotivoReapertura] = useState('');
+  const motivoReaperturaRef = useRef<HTMLTextAreaElement>(null);
   const [confirmAction, setConfirmAction] = useState<null | {
     tipo: 'cerrar' | 'reabrir';
     titulo: string;
@@ -628,7 +630,6 @@ export default function NotasPage() {
 
   // ── Modal: abrir con orden lógico ──
   const openModal = () => {
-    setIsClosing(false);
     setNuevaEvalDesc('');
     setNuevaEvalTipoGrilla('TRABAJO EN CLASE');
     setEvaluacionesModal(
@@ -646,8 +647,13 @@ export default function NotasPage() {
   };
 
   const closeModal = () => {
-    setIsClosing(true);
-    setTimeout(() => { setModalOpen(false); setIsClosing(false); }, 200);
+    setModalOpen(false);
+  };
+
+  const cancelarAccionRegistro = () => {
+    if (procesandoRegistro) return;
+
+    setConfirmAction(null);
   };
 
   // ── Funciones para modal por lote ──
@@ -838,11 +844,6 @@ export default function NotasPage() {
     }
   };
 
-  const ejecutarConfirmAction = () => {
-    if (confirmAction?.tipo === 'cerrar') cerrarRegistroNotas();
-    if (confirmAction?.tipo === 'reabrir') reabrirRegistroNotas();
-  };
-
   const eliminarEvaluacion = async () => {
     const idEval = evaluacionAEliminarId;
 
@@ -897,15 +898,6 @@ export default function NotasPage() {
   return (
     <div className="carbon-notas-page w-full space-y-6">
       <style>{`
-        @keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modalOverlayOut { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes modalPanelIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes modalPanelOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(16px) scale(0.98); } }
-        .modal-overlay-enter { animation: modalOverlayIn 0.2s ease-out forwards; }
-        .modal-overlay-exit { animation: modalOverlayOut 0.15s ease-in forwards; }
-        .modal-panel-enter { animation: modalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .modal-panel-exit { animation: modalPanelOut 0.15s ease-in forwards; }
-
         @media print {
           body { background: white !important; }
           aside, header, nav, .no-print { display: none !important; }
@@ -1428,32 +1420,55 @@ export default function NotasPage() {
       )}
 
       {/* ═══ Modal de Nueva Evaluación (por lote) ═══ */}
-      {modalOpen && (
-        <div className={`no-print fixed inset-0 z-[80] flex items-center justify-center p-4 ${isClosing ? 'modal-overlay-exit' : 'modal-overlay-enter'}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-          <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
-          <div className={`relative bg-white rounded-2xl shadow-2xl ring-1 ring-neutral-200/50 w-full max-w-lg overflow-hidden flex flex-col ${isClosing ? 'modal-panel-exit' : 'modal-panel-enter'}`}>
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5 flex-shrink-0">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100"><Plus size={13} /> Nueva evaluación</div>
-                <h2 className="text-xl font-semibold text-neutral-900 tracking-tight">Agregar evaluación</h2>
-                <p className="mt-1 text-sm text-neutral-400">{periodoActual?.label || 'Periodo'}, {unidadActual?.label || 'Unidad'}.</p>
-              </div>
-              <button type="button" onClick={closeModal} className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all duration-150 hover:bg-neutral-200 hover:text-neutral-600 flex-shrink-0"><X size={16} /></button>
-            </div>
+      <AccessibleDialog
+        open={modalOpen}
+        eyebrow="Nueva evaluación"
+        title="Agregar evaluación"
+        description={`${periodoActual?.label || 'Periodo'}, ${unidadActual?.label || 'Unidad'}.`}
+        icon={<Plus size={20} aria-hidden="true" />}
+        onClose={closeModal}
+        preventClose={guardandoModal}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar gestión de evaluaciones"
+        initialFocusRef={nuevaEvalDescRef}
+        maxWidthClassName="max-w-lg"
+        panelClassName="no-print"
+        bodyClassName="space-y-5 px-6 py-5"
+        footerClassName="gap-3 bg-neutral-50/50 px-6 py-4"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={guardandoModal}
+              className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancelar
+            </button>
 
-            {/* Modal Body */}
-            <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+            <button
+              type="button"
+              onClick={guardarCambiosEvaluacionesModal}
+              disabled={!hayCambiosModal || guardandoModal || !notasEditables}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            >
+              {guardandoModal ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {guardandoModal ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          </>
+        }
+      >
               <div className="grid gap-4 sm:grid-cols-[1fr_190px]">
                 <div>
                   <label className={labelClass}>Descripción</label>
                   <input
+                    ref={nuevaEvalDescRef}
                     type="text"
                     value={nuevaEvalDesc}
                     onChange={(e) => setNuevaEvalDesc(e.target.value)}
                     className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none transition-all duration-150 placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
                     placeholder="Ej. Cuaderno, Exposición, Práctica 1, Examen..."
-                    autoFocus
                   />
                 </div>
 
@@ -1588,90 +1603,70 @@ export default function NotasPage() {
                   )}
                 </div>
               </div>
-            </div>
+      </AccessibleDialog>
 
-            {/* Modal Footer */}
-            <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 bg-neutral-50/50 px-6 py-4 sm:flex-row sm:justify-end flex-shrink-0">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all duration-150 hover:bg-neutral-50 hover:border-neutral-300"
-              >
-                Cancelar
-              </button>
+      <ConfirmDialog
+        open={confirmAction?.tipo === 'cerrar'}
+        eyebrow="Registro de notas"
+        title={confirmAction?.tipo === 'cerrar' ? confirmAction.titulo : ''}
+        description={confirmAction?.tipo === 'cerrar' ? confirmAction.descripcion : undefined}
+        tone="warning"
+        confirmLabel={confirmAction?.tipo === 'cerrar' ? confirmAction.textoBoton : 'Cerrar registro'}
+        cancelLabel="Cancelar"
+        loading={procesandoRegistro}
+        onCancel={cancelarAccionRegistro}
+        onConfirm={cerrarRegistroNotas}
+      />
 
-              <button
-                type="button"
-                onClick={guardarCambiosEvaluacionesModal}
-                disabled={!hayCambiosModal || guardandoModal || !notasEditables}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-              >
-                {guardandoModal ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                {guardandoModal ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmación para cerrar/reabrir */}
-      {confirmAction && (
-        <div
-          className="no-print fixed inset-0 z-[90] flex items-center justify-center p-4 modal-overlay-enter"
-          onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction(null); }}
-        >
-          <div className="absolute inset-0 bg-neutral-950/40 backdrop-blur-sm" />
-
-          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-neutral-200/60 modal-panel-enter">
+      <AccessibleDialog
+        open={confirmAction?.tipo === 'reabrir'}
+        eyebrow="Registro de notas"
+        title={confirmAction?.tipo === 'reabrir' ? confirmAction.titulo : ''}
+        description={confirmAction?.tipo === 'reabrir' ? confirmAction.descripcion : undefined}
+        icon={<UnlockKeyhole size={22} aria-hidden="true" />}
+        onClose={cancelarAccionRegistro}
+        preventClose={procesandoRegistro}
+        closeOnEscape
+        closeOnOverlay
+        closeLabel="Cerrar reapertura del registro"
+        initialFocusRef={motivoReaperturaRef}
+        maxWidthClassName="max-w-md"
+        panelClassName="no-print"
+        bodyClassName="px-6 py-5"
+        footer={
+          <>
             <button
               type="button"
-              onClick={() => setConfirmAction(null)}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 transition-all hover:bg-neutral-200 hover:text-neutral-600"
+              onClick={cancelarAccionRegistro}
+              disabled={procesandoRegistro}
+              className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <X size={16} />
+              Cancelar
             </button>
 
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-100">
-              {confirmAction.tipo === 'cerrar' ? <LockKeyhole size={22} /> : <UnlockKeyhole size={22} />}
-            </div>
-
-            <h3 className="mt-4 text-lg font-black text-slate-950">{confirmAction.titulo}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{confirmAction.descripcion}</p>
-
-            {confirmAction.tipo === 'reabrir' && (
-              <div className="mt-4">
-                <label className={labelClass}>Motivo de reapertura</label>
-                <textarea
-                  value={motivoReapertura}
-                  onChange={(e) => setMotivoReapertura(e.target.value)}
-                  className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                  placeholder="Ej. Corrección solicitada por Dirección."
-                />
-              </div>
-            )}
-
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmAction(null)}
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={ejecutarConfirmAction}
-                disabled={procesandoRegistro}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {procesandoRegistro ? <Loader2 size={16} className="animate-spin" /> : null}
-                {confirmAction.textoBoton}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={reabrirRegistroNotas}
+              disabled={procesandoRegistro}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.9)] transition-all hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {procesandoRegistro ? <Loader2 size={16} className="animate-spin" /> : null}
+              {confirmAction?.tipo === 'reabrir' ? confirmAction.textoBoton : 'Reabrir registro'}
+            </button>
+          </>
+        }
+      >
+        <label htmlFor="motivo-reapertura" className={labelClass}>Motivo de reapertura</label>
+        <textarea
+          ref={motivoReaperturaRef}
+          id="motivo-reapertura"
+          value={motivoReapertura}
+          onChange={(e) => setMotivoReapertura(e.target.value)}
+          disabled={procesandoRegistro}
+          className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+          placeholder="Ej. Corrección solicitada por Dirección."
+        />
+      </AccessibleDialog>
       <ConfirmDialog
         open={evaluacionAEliminarId !== null}
         eyebrow="Registro de notas"

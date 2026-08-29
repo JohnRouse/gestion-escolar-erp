@@ -115,6 +115,27 @@ autocierre de 1200 ms que ya existía en el flujo anterior.
 
 ### Otros diálogos
 
+`NotasPage` migró sus diálogos de gestión por lote, cierre y reapertura a la
+infraestructura oficial:
+
+- la gestión de evaluaciones y la reapertura componen `AccessibleDialog`;
+- el cierre del registro compone `ConfirmDialog`;
+- se preservaron creación, reordenamiento, guardado, cierre, reapertura y motivo
+  opcional;
+- los diálogos no pueden cerrarse mientras sus operaciones están activas;
+- se validaron en 1440 × 900 y 390 × 844, con teclado, foco visible, Escape,
+  overlay, scroll bloqueado y reducción de movimiento;
+- el retorno de foco por Escape y Cancelar en la gestión de evaluaciones quedó
+  resuelto dirigiendo el foco inicial mediante `initialFocusRef`; se evitó
+  `autoFocus` nativo porque se ejecuta antes de que el efecto de
+  `AccessibleDialog` capture el foco externo;
+- el cierre por overlay todavía deja el foco en `body`: el `mousedown` continúa
+  después del cleanup y sobrescribe la restauración; queda pendiente de revisión
+  general en la primitiva compartida;
+- la primitiva compartida no se modificó en este cambio;
+- la base local de demostración no contenía un registro cerrado, por lo que el
+  formulario de reapertura no pudo abrirse sin alterar datos persistentes.
+
 Pendientes de revisión individual antes de modificarse:
 
 - `ContinuidadMatriculaModal`;
