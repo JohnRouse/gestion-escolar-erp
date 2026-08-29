@@ -127,6 +127,17 @@ export default function AccessibleDialog({
   const dialogRef =
     useRef<HTMLElement | null>(null);
 
+  // Capture a best-effort pre-commit snapshot for dialogs that
+  // mount already open. React may apply a descendant's native
+  // autoFocus before layout/passive effects run.
+  const previouslyFocusedElementRef =
+    useRef<HTMLElement | null>(
+      typeof document !== 'undefined' &&
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null,
+    );
+
   const onCloseRef = useRef(onClose);
 
   const closeOptionsRef = useRef({
@@ -149,6 +160,52 @@ export default function AccessibleDialog({
   ]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const trackExternalFocus = (
+      event: FocusEvent,
+    ) => {
+      const target =
+        event.target instanceof HTMLElement
+          ? event.target
+          : null;
+
+      const owningDialog =
+        target?.closest<HTMLElement>(
+          '[data-accessible-dialog-id]',
+        );
+
+      if (
+        dialogRef.current ||
+        !target ||
+        owningDialog?.dataset.accessibleDialogId ===
+          titleId
+      ) {
+        return;
+      }
+
+      previouslyFocusedElementRef.current =
+        target;
+    };
+
+    document.addEventListener(
+      'focusin',
+      trackExternalFocus,
+      true,
+    );
+
+    return () => {
+      document.removeEventListener(
+        'focusin',
+        trackExternalFocus,
+        true,
+      );
+    };
+  }, [titleId]);
+
+  useEffect(() => {
     if (
       !open ||
       typeof document === 'undefined'
@@ -163,10 +220,7 @@ export default function AccessibleDialog({
     }
 
     const previouslyFocusedElement =
-      document.activeElement instanceof
-      HTMLElement
-        ? document.activeElement
-        : null;
+      previouslyFocusedElementRef.current;
 
     lockBodyScroll();
 
@@ -348,7 +402,9 @@ export default function AccessibleDialog({
           duration-200
           motion-reduce:animate-none
         "
-        onMouseDown={() => {
+        onMouseDown={(event) => {
+          event.preventDefault();
+
           if (closeOnOverlay) {
             requestClose();
           }
@@ -357,6 +413,7 @@ export default function AccessibleDialog({
 
       <section
         ref={dialogRef}
+        data-accessible-dialog-id={titleId}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
