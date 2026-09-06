@@ -73,3 +73,10 @@ Debe crearse un ADR cuando una decisión afecte:
 - Procesos masivos.
 - Despliegue.
 - Librerías principales.
+
+## 6. Infraestructura transversal de diálogos
+
+La corrección de teclado anidado de AccessibleDialog está implementada y
+validada con Playwright sobre componentes reales en una fixture aislada.
+No implica una certificación de todos los consumidores ni de sus operaciones
+de negocio. [Pruebas y límites](registro-cambios/2026-09-05-accessible-dialog-teclado-anidado.md).

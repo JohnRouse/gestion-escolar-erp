@@ -223,3 +223,10 @@ No se debe:
 - Cambiar el significado de colores entre módulos.
 - Utilizar controles ambiguos.
 - Mostrar contenido que aparezca de golpe después de una carga prolongada.
+
+## 17. Teclado de diálogos superpuestos
+
+AccessibleDialog entrega Escape y Tab/Shift+Tab exclusivamente a la capa superior.
+Si esta impide el cierre, Escape no debe cerrar una capa inferior. Al cerrar el
+hijo se devuelve el foco a su origen en el padre y se conserva el scroll lock
+hasta cerrar el último diálogo. Véase el [escenario transversal](escenarios/dialogos-anidados-teclado.md).

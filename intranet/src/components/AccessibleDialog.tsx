@@ -1,6 +1,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   type ReactNode,
   type RefObject,
@@ -17,6 +18,66 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
   '[contenteditable="true"]',
 ].join(',');
+
+type DialogLayer = {
+  dialog: HTMLElement;
+  handleKeyDown: (event: KeyboardEvent) => void;
+  returnFocus: HTMLElement | null;
+};
+
+// All portals share the same z-index. Their DOM order is their paint order,
+// including dialogs mounted together (React effects need not run in that order).
+const dialogLayers: DialogLayer[] = [];
+
+function topmostDialog() {
+  return dialogLayers[dialogLayers.length - 1];
+}
+
+function dispatchDialogKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape' || event.key === 'Tab') {
+    // Select once: a synchronous close must never deliver this event again
+    // to the newly exposed parent.
+    topmostDialog()?.handleKeyDown(event);
+  }
+}
+
+function registerDialog(layer: DialogLayer) {
+  const nextIndex = dialogLayers.findIndex((current) =>
+    Boolean(layer.dialog.compareDocumentPosition(current.dialog) &
+      Node.DOCUMENT_POSITION_FOLLOWING),
+  );
+  dialogLayers.splice(nextIndex < 0 ? dialogLayers.length : nextIndex, 0, layer);
+  if (dialogLayers.length === 1) {
+    document.addEventListener('keydown', dispatchDialogKeyDown, true);
+  }
+}
+
+function unregisterDialog(layer: DialogLayer) {
+  const wasTopmost = topmostDialog() === layer;
+  const index = dialogLayers.indexOf(layer);
+  if (index < 0) return;
+  dialogLayers.splice(index, 1);
+
+  // If a lower dialog disappears first, preserve its external focus origin
+  // for children whose opener is about to disappear with it.
+  for (const remaining of dialogLayers) {
+    if (remaining.returnFocus && layer.dialog.contains(remaining.returnFocus)) {
+      remaining.returnFocus = layer.returnFocus;
+    }
+  }
+
+  if (dialogLayers.length === 0) {
+    document.removeEventListener('keydown', dispatchDialogKeyDown, true);
+  }
+  if (!wasTopmost) return;
+
+  const next = topmostDialog();
+  const origin = layer.returnFocus;
+  const target = origin?.isConnected && (!next || next.dialog.contains(origin))
+    ? origin
+    : next && (getFocusableElements(next.dialog)[0] ?? next.dialog);
+  target?.focus({ preventScroll: true });
+}
 
 let openDialogCount = 0;
 let originalBodyOverflow = '';
@@ -138,6 +199,10 @@ export default function AccessibleDialog({
         : null,
     );
 
+  // StrictMode replays layout effects without recreating the DOM or native
+  // autoFocus. Keep that target only while it belongs to this open panel.
+  const initialFocusElementRef = useRef<HTMLElement | null>(null);
+
   const onCloseRef = useRef(onClose);
 
   const closeOptionsRef = useRef({
@@ -145,11 +210,11 @@ export default function AccessibleDialog({
     preventClose,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     closeOptionsRef.current = {
       closeOnEscape,
       preventClose,
@@ -205,7 +270,7 @@ export default function AccessibleDialog({
     };
   }, [titleId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       !open ||
       typeof document === 'undefined'
@@ -224,46 +289,18 @@ export default function AccessibleDialog({
 
     lockBodyScroll();
 
-    const animationFrame =
-      window.requestAnimationFrame(() => {
-        const activeElement =
-          document.activeElement instanceof
-            HTMLElement &&
-          dialog.contains(document.activeElement)
-            ? document.activeElement
-            : null;
-
-        const autoFocusElement =
-          dialog.querySelector<HTMLElement>(
-            '[autofocus]',
-          );
-
-        const firstFocusable =
-          initialFocusRef?.current ??
-          activeElement ??
-          autoFocusElement ??
-          getFocusableElements(dialog)[0] ??
-          dialog;
-
-        firstFocusable.focus({
-          preventScroll: true,
-        });
-      });
-
     const handleKeyDown = (
       event: KeyboardEvent,
     ) => {
       const options =
         closeOptionsRef.current;
 
-      if (
-        event.key === 'Escape' &&
-        options.closeOnEscape &&
-        !options.preventClose
-      ) {
+      if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        onCloseRef.current();
+        if (options.closeOnEscape && !options.preventClose) {
+          onCloseRef.current();
+        }
         return;
       }
 
@@ -295,7 +332,8 @@ export default function AccessibleDialog({
 
       if (
         !activeElement ||
-        !dialog.contains(activeElement)
+        !dialog.contains(activeElement) ||
+        activeElement === dialog
       ) {
         event.preventDefault();
 
@@ -336,40 +374,47 @@ export default function AccessibleDialog({
       }
     };
 
-    document.addEventListener(
-      'keydown',
+    const layer: DialogLayer = {
+      dialog,
       handleKeyDown,
-      true,
-    );
+      returnFocus: previouslyFocusedElement,
+    };
+    registerDialog(layer);
+
+    if (topmostDialog() === layer) {
+      const activeElement =
+        document.activeElement instanceof
+          HTMLElement &&
+        dialog.contains(document.activeElement)
+          ? document.activeElement
+          : null;
+
+      const autoFocusElement =
+        dialog.querySelector<HTMLElement>(
+          '[autofocus]',
+        );
+
+      const firstFocusable =
+        initialFocusRef?.current ??
+        activeElement ??
+        (initialFocusElementRef.current && dialog.contains(initialFocusElementRef.current)
+          ? initialFocusElementRef.current
+          : null) ??
+        autoFocusElement ??
+        getFocusableElements(dialog)[0] ??
+        dialog;
+
+      initialFocusElementRef.current = firstFocusable;
+      firstFocusable.focus({
+        preventScroll: true,
+      });
+    }
 
     return () => {
-      window.cancelAnimationFrame(
-        animationFrame,
-      );
-
-      document.removeEventListener(
-        'keydown',
-        handleKeyDown,
-        true,
-      );
-
+      unregisterDialog(layer);
       unlockBodyScroll();
-
-      if (
-        previouslyFocusedElement &&
-        document.contains(
-          previouslyFocusedElement,
-        )
-      ) {
-        previouslyFocusedElement.focus({
-          preventScroll: true,
-        });
-      }
     };
-  }, [
-    open,
-    initialFocusRef,
-  ]);
+  }, [open, initialFocusRef]);
 
   if (
     !open ||

@@ -63,6 +63,12 @@ explícito; `autoFocus` se conserva como compatibilidad.
 
 Es la fuente oficial para nuevas implementaciones de diálogo.
 
+La corrección del 5 de septiembre de 2026 centraliza Escape y Tab/Shift+Tab
+para que solo los procese el diálogo superior, incluso si este bloquea su cierre.
+Mantiene retorno de foco y scroll anidado, incluyendo desmontajes y StrictMode.
+La validación se realizó con Playwright sobre la primitiva y sus wrappers en
+una fixture sin API. [Diseño, resultados y límites](../registro-cambios/2026-09-05-accessible-dialog-teclado-anidado.md).
+
 ### `ConfirmDialog`
 
 Estado: **migrado**.
@@ -138,9 +144,12 @@ infraestructura oficial:
 - la base local de demostración no contenía un registro cerrado, por lo que el
   formulario de reapertura no pudo abrirse sin alterar datos persistentes.
 
+`ContinuidadMatriculaModal` fue revisado y no requiere migración: ya compone
+transitivamente la infraestructura oficial mediante `CommunityEditModal` →
+`CenteredFormModal` → `AccessibleDialog`.
+
 Pendientes de revisión individual antes de modificarse:
 
-- `ContinuidadMatriculaModal`;
 - `ComprobantePagoModal`;
 - otros overlays locales detectados durante la auditoría por página.
 
@@ -231,7 +240,6 @@ migración.
 Los candidatos inmediatos son:
 
 - `ComprobantePagoModal`;
-- `ContinuidadMatriculaModal`;
 - overlays locales que continúen implementando infraestructura modal propia.
 
 La siguiente elección debe basarse en el código vigente y no únicamente en el
