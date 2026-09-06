@@ -40,3 +40,7 @@ Cada escenario debe incluir:
 - Acceso no autorizado.
 - Recurso de otro tenant.
 - Caída temporal del servicio.
+
+## Escenarios documentados
+
+- [Teclado en diálogos anidados](dialogos-anidados-teclado.md).

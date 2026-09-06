@@ -27,3 +27,7 @@ Cada cambio debe utilizar la plantilla:
 Ejemplo:
 
 `2026-07-21-promocion-entre-instituciones.md`
+
+## Correcciones transversales
+
+- [2026-09-05: teclado exclusivo del diálogo superior](2026-09-05-accessible-dialog-teclado-anidado.md).
