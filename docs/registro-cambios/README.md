@@ -31,3 +31,4 @@ Ejemplo:
 ## Correcciones transversales
 
 - [2026-09-05: teclado exclusivo del diálogo superior](2026-09-05-accessible-dialog-teclado-anidado.md).
+- [2026-09-05: conservación de foco al abrir comprobantes de pago](2026-09-05-comprobante-pago-foco-disparador.md).

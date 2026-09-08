@@ -453,7 +453,7 @@ export default function CobranzasPage() {
   };
 
   const verComprobante = async (idTransaccion?: number | null) => {
-    if (!token || !idTransaccion) return;
+    if (!token || !idTransaccion || loadingComprobante !== null) return;
 
     setLoadingComprobante(idTransaccion);
 
@@ -877,8 +877,20 @@ export default function CobranzasPage() {
                               <button
                                 type="button"
                                 onClick={() => verComprobante(deuda.ultimo_pago?.id_transaccion)}
-                                disabled={!deuda.ultimo_pago?.id_transaccion || loadingComprobante === deuda.ultimo_pago?.id_transaccion}
-                                className="centro-pago-action centro-pago-action-comprobante inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-50"
+                                disabled={
+                                  !deuda.ultimo_pago?.id_transaccion ||
+                                  (
+                                    loadingComprobante !== null &&
+                                    loadingComprobante !== deuda.ultimo_pago?.id_transaccion
+                                  )
+                                }
+                                aria-disabled={
+                                  loadingComprobante === deuda.ultimo_pago?.id_transaccion || undefined
+                                }
+                                aria-busy={
+                                  loadingComprobante === deuda.ultimo_pago?.id_transaccion || undefined
+                                }
+                                className="centro-pago-action centro-pago-action-comprobante aria-disabled:opacity-50 inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 text-sm font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 disabled:opacity-50"
                               >
                                 {loadingComprobante === deuda.ultimo_pago?.id_transaccion ? (
                                   <Loader2 size={16} className="animate-spin" />
