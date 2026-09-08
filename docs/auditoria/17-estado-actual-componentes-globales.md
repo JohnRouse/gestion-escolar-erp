@@ -148,9 +148,15 @@ infraestructura oficial:
 transitivamente la infraestructura oficial mediante `CommunityEditModal` →
 `CenteredFormModal` → `AccessibleDialog`.
 
+`ComprobantePagoModal` también fue revisado y no requiere migración: ya compone
+`AccessibleDialog` directamente, con foco inicial explícito, Escape, overlay,
+retorno de foco, scroll lock y presentación específica para impresión. La
+auditoría detectó una corrección en su consumidor `CobranzasPage`: durante la
+carga del comprobante se conserva enfocable el control que inició la consulta y
+se bloquean nuevas consultas hasta finalizar la existente.
+
 Pendientes de revisión individual antes de modificarse:
 
-- `ComprobantePagoModal`;
 - otros overlays locales detectados durante la auditoría por página.
 
 No debe asumirse que todos necesitan refactorización hasta comparar su
@@ -239,7 +245,6 @@ migración.
 
 Los candidatos inmediatos son:
 
-- `ComprobantePagoModal`;
 - overlays locales que continúen implementando infraestructura modal propia.
 
 La siguiente elección debe basarse en el código vigente y no únicamente en el
