@@ -1,3 +1,4 @@
+import { StaffModule } from './staff/staff.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { AcademicosModule } from './academicos/academicos.module';
@@ -24,6 +25,7 @@ import { TutoriaModule } from './tutoria/tutoria.module';
 @Module({
   imports: [
     PrismaModule,
+    StaffModule,
     AuthModule,
     AcademicosModule,
     FinanzasModule,
@@ -44,8 +46,6 @@ import { TutoriaModule } from './tutoria/tutoria.module';
     ColegiosModule,
   ],
   controllers: [],
-  providers: [
-    { provide: APP_INTERCEPTOR, useClass: ActividadInterceptor },
-  ],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: ActividadInterceptor }],
 })
 export class AppModule {}

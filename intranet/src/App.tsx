@@ -1,3 +1,4 @@
+import StaffPage from './pages/staff/StaffPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -91,21 +92,7 @@ function AppRoutes() {
         <Route path="/circulares" element={<CircularesPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
-        <Route
-          path="/staff"
-          element={
-            <ModuloPendientePage
-              modulo="Staff institucional"
-              descripcion="Administra personal administrativo, auxiliares, coordinación, soporte y otros colaboradores."
-              icon={moduloIcons.staff}
-              acciones={[
-                'Registrar personal no docente',
-                'Asignar rol institucional',
-                'Definir acceso por institución o sede',
-              ]}
-            />
-          }
-        />
+        <Route path="/staff" element={<ProtectedModuleRoute module="staff"><StaffPage /></ProtectedModuleRoute>} />
         <Route
           path="/citas"
           element={

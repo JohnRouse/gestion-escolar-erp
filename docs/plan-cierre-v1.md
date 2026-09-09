@@ -4,7 +4,7 @@
 
 Terminar una versión 1.0 utilizable de Gestión Escolar ERP priorizando, en este orden, funcionalidad escolar completa, Superadministración SaaS, unificación visual global, campaña E2E y hardening de lanzamiento. Los bloques deben entregar procesos que una institución pueda utilizar, evitando PR dedicados a detalles cosméticos sin impacto funcional.
 
-Inventario estático del 7 de septiembre de 2026 sobre la rama `chore/plan-cierre-v1`. El árbol de trabajo inicial estaba limpio. Esta fase solo produce este documento: no modifica aplicación, Prisma, migraciones ni base de datos; no ejecuta build, lint, Playwright, screenshots ni auditorías visuales; no hace commit, push ni cambio de rama.
+Inventario estático del 7 de septiembre de 2026 sobre la rama `chore/plan-cierre-v1`. El árbol de trabajo inicial estaba limpio. La fase inicial solo produjo este documento: no modifica aplicación, Prisma, migraciones ni base de datos; no ejecuta build, lint, Playwright, screenshots ni auditorías visuales; no hace commit, push ni cambio de rama.
 
 ## 2. Criterio de V1
 
@@ -18,13 +18,13 @@ El alcance `Todos los colegios` significa los colegios autorizados **del tenant 
 
 ## 3. Estado general
 
-El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Hay vacíos concretos en Staff, Citas internas, Enfermería, bandeja interna de Notificaciones, gestión de identidades/instituciones y operación SaaS.
+El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Staff institucional ya tiene flujo operativo real y aceptación dirigida del primer incremento V1. Hay vacíos concretos en Citas internas, Enfermería, bandeja interna de Notificaciones, gestión de identidades/instituciones y operación SaaS.
 
 Super SaaS está en **base estructural**, con entidades y contexto reutilizables; no hay una consola operativa. Tener `Tenant.plan`, roles o un selector de colegio no equivale a disponer de planes, suscripciones y administración global.
 
 El portal Next.js `padres/` contiene páginas reales; su login llama a `/api/auth/login`, que actualmente rechaza roles externos, y `JwtStrategy` también rechaza apoderados. Esto documenta una incompatibilidad de integración observable en código; no se ejecutó el portal ni se verificó un despliegue.
 
-La documentación está por detrás de la implementación: `docs/06-estado-del-proyecto.md` conserva estados de «requiere inventario» y `docs/modulos/` contiene únicamente `README.md`. Esto no demuestra ausencia de toda documentación histórica: significa que falta la ficha vigente por módulo. No se recorrió el archivo histórico.
+La documentación está por detrás de la implementación: `docs/06-estado-del-proyecto.md` conserva estados de «requiere inventario» y el inventario inicial encontró únicamente `README.md` en `docs/modulos/`; ahora Staff dispone de ficha, escenario y registro de aceptación vigentes. Esto no demuestra ausencia de toda documentación histórica: significa que falta la ficha vigente por módulo. No se recorrió el archivo histórico.
 
 ### Método y límites
 
@@ -85,7 +85,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 | Módulo | Frontend | Backend | Persistencia | Flujo | Estado | Prioridad | Falta principal |
 |---|---|---|---|---|---|---|---|
 | Docentes | sí | sí | sí | completo | CASI COMPLETO | P0 | Documentar CRUD y asignación institucional; aceptación de activación y credenciales. **A:** aparente sí. **D:** Persona, Usuarios, colegios, cursos. |
-| Staff | parcial | parcial | sí | parcial | PARCIAL | P0 | Crear gestión interna de altas/edición/asignación; hay modelo, directorio y contexto, pero /staff es pendiente. **A:** revisar. **D:** Usuarios, colegios, secciones. |
+| Staff | sí | sí | sí | completo | COMPLETO | P0 | Primer incremento institucional aceptado: listado, búsqueda, alta/edición, disponibilidad de citas y creación/asociación de credenciales con membresías. [Contrato y límites](modulos/staff.md), [aceptación dirigida](registro-cambios/2026-09-07-staff-identidad-v1.md). **A:** validada en alcance dirigido. **D:** Persona, Usuarios, colegios, secciones. |
 | Citas | parcial | parcial | sí | parcial | PARCIAL | P0 | Construir agenda interna, estados/acuerdos y autorización de participante; conectar solicitud del portal. **A:** revisar. **D:** Staff, Apoderados, Notificaciones, autenticación externa. |
 
 ### Bienestar
@@ -171,7 +171,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 | Autenticación y selección de tenant/colegio | sí | parcial | sí | parcial | PARCIAL | P0 | Cerrar selección explícita de tenant, consolidado dentro de él, rol contextual y acceso externo separado. **A:** revisar. **D:** Usuario, Rol, UsuarioTenant, UsuarioColegio. |
 | Registro NFC | no | parcial | sí | parcial | PARCIAL | P1 | Conservar base RegistroNFC/API; integración física y experiencia de operación quedan después de P0. **A:** revisar. **D:** Alumnos, Asistencia, dispositivos. |
 
-**Recuento:** 65 capacidades: COMPLETO: 0, CASI COMPLETO: 37, PARCIAL: 18, ESQUELETO: 7, NO INICIADO: 3. No se asignan porcentajes de avance. Cero COMPLETO refleja falta de certificación/documentación suficiente en este inventario, no ausencia de funcionalidad.
+**Recuento:** 65 capacidades: COMPLETO: 1, CASI COMPLETO: 37, PARCIAL: 17, ESQUELETO: 7, NO INICIADO: 3. No se asignan porcentajes de avance. La única reclasificación posterior al inventario es Staff: aceptación dirigida y documentación suficientes para su primer incremento institucional. No se reauditaron las otras 64 capacidades ni se certifica la campaña E2E integral.
 
 ## 5. Bloqueadores P0
 
@@ -180,7 +180,7 @@ Los P0 se agrupan por resultado. Las 58 filas P0 de la matriz incluyen capacidad
 1. **Identidad y alcance confiables para operar:** administración de usuarios/membresías, roles por contexto, tenant activo explícito y validación de pertenencia en las operaciones modificadas. El consolidado actual puede reunir membresías de diferentes tenants; debe limitarse al seleccionado. La distinción operador SaaS/administrador escolar y la suspensión efectiva son requisitos funcionales de plataforma.
 2. **Cerrar el año escolar:** completar las etapas operativas de cierre, recuperación y movimientos; aceptar matrícula/renovación, promoción entre colegios del mismo tenant y reversión sobre base aislada. Ya hay modelos, endpoints y transacciones de promoción: no crear un motor paralelo.
 3. **Notas autorizadas y continuidad con Tutoría:** asegurar que el actor pueda operar la asignación, unidad y alumno recibidos; mantener cierres, reaperturas, conducta/comentarios y libreta existentes. No confundir un guard de rol general con permiso sobre una asignación.
-4. **Completar módulos escolares pendientes:** gestión de Staff, agenda institucional de Citas, Enfermería, bandeja de Notificaciones y gestión de eventos. Integrar avisos y acceso por institución; conservar trazabilidad de salud y acuerdos según su sensibilidad.
+4. **Completar módulos escolares pendientes:** agenda institucional de Citas, Enfermería, bandeja de Notificaciones y gestión de eventos. Integrar avisos y acceso por institución; conservar trazabilidad de salud y acuerdos según su sensibilidad.
 5. **Conectar el apoderado con los flujos escolares:** resolver acceso externo y autorización por vínculo sin abrir indiscriminadamente la intranet. Aprovechar el portal existente para consulta académica, comunicaciones, solicitud de citas y pagos. Es una propuesta explícita de alcance V1, necesaria para completar estos recorridos, no una reescritura del portal.
 6. **Tesorería de extremo a extremo:** aceptar generación/publicación de obligaciones, cobro manual, identificación/validación/aplicación de pagos, ajustes de estado, saldo, comprobante e historial. Completar autorización en operaciones antiguas por ID, en particular edición de conceptos, y acceso a consulta/reporte público. No se exige una pasarela externa ni un webhook bancario automático para V1.
 7. **Configuración utilizable sin SQL manual:** instituciones, usuarios y permisos; enlazar catálogos, periodos, asignaciones y conceptos ya existentes con el alta y preparación del año. Aceptar Asistencia global y Libreta como salidas operativas; los paneles analíticos existentes pueden documentarse después de P0.
@@ -250,7 +250,7 @@ El orden respeta funcionalidad escolar → SaaS → visual → E2E → hardening
 | **6 — Campaña E2E completa** | Ejecutar recorridos del apartado 9, corregir regresiones y repetir las áreas afectadas hasta aceptación. | Candidato de versión con evidencia de los procesos completos por rol, tenant y colegio. | Bloques 1–5; entorno y base aislados. |
 | **7 — Hardening y lanzamiento V1** | Seguridad/operación final, migraciones, recuperación, observabilidad, despliegue y documentación de versión. | Release desplegable, recuperable y operable con criterios de salida cumplidos. | E2E aceptado; repetir pruebas afectadas por cambios de hardening y smoke del candidato final. |
 
-**Primer incremento del bloque 1:** gestión de usuarios/membresías institucionales y Staff. Entregar listado, alta/edición, activación, asignación al colegio y rol permitido, reutilizando Persona/Usuario/Staff. Esto desbloquea Citas, responsables de Enfermería y configuración de tutores; evita construir esos módulos sobre altas manuales. A continuación conectar la agenda de Citas y la bandeja de Notificaciones, resolver acceso externo y completar los demás flujos del bloque. Los cierres existentes se verifican y completan, no se rediseñan.
+**Primer incremento del bloque 1 — Staff COMPLETO:** listado, búsqueda, alta/edición institucional, disponibilidad de citas y creación/asociación de credenciales con membresías mínimas, reutilizando Persona/Usuario/Staff. La aceptación dirigida aprobó 20/20 pruebas backend en MySQL aislado, builds y ESLint dirigidos, y Playwright de escritorio/móvil, permisos y accesibilidad funcional; ficha, escenario y registro reflejan el contrato final. `permite_citas` no es activación laboral: Staff no tiene estado laboral. Ciclo laboral, traslados, identidad compartida, regularización histórica y administración/reactivación general de membresías quedan fuera de este incremento; la auditoría operativa depende de retención de logs y su persistencia se atiende en el cierre transversal. Esto no declara completo Usuarios/Roles ni el bloque 1. **Siguiente incremento recomendado:** agenda institucional de Citas conectada a Staff, con autorización de participantes; continuar después con Notificaciones y acceso externo según las dependencias del bloque.
 
 Cada bloque termina con demostración funcional, pruebas proporcionales y documentación vigente del resultado. Los PR pueden dividir un bloque grande en funcionalidades completas, sin esperar un único PR gigantesco ni abrir un PR por ajuste minúsculo.
 
@@ -322,7 +322,7 @@ Las operaciones sensibles deben conservar actor, fecha, tenant/colegio, acción,
 
 | Categoría | Tratamiento |
 |---|---|
-| **A — Funcionalidad realmente faltante** | Staff administrativo, Citas internas, Enfermería, bandeja interna, gestión de eventos completa, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
+| **A — Funcionalidad realmente faltante** | Citas internas, Enfermería, bandeja interna, gestión de eventos completa, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
 | **B — Implementación sin documentación vigente suficiente** | Renovación, promoción con preview/ejecución/reversión, historial de pagos, cartera/agenda, pensiones/campañas, Tutoría/libreta/PDF, catálogos/plantillas, Dashboard y Analíticas. Actualizar fichas y reglas al cerrar cada bloque; no afirmar que carecen de toda referencia histórica. |
 | **C — Deuda técnica no bloqueante** | Lint histórico, tipados amplios sin fallo de flujo demostrado, reorganización de archivos, descomposición de servicios grandes y limpieza general. Solo atender lo necesario para mantener/cerrar la funcionalidad modificada. |
 | **D — Deuda visual** | Ajustes cosméticos, densidad y variaciones de CSS se concentran en bloque 5 por patrones globales; no producen PR individuales salvo fallo de uso real. |
@@ -348,7 +348,7 @@ La versión 1.0 está terminada cuando:
 
 El inventario queda entregado al producir únicamente este plan y ejecutar las validaciones autorizadas: `git diff --check`, `graphify update .`, `git status --short`, `git diff --stat` y `git diff -- docs/plan-cierre-v1.md`. Un archivo nuevo sin seguimiento no aparece en el diff/stat normal de Git hasta incorporarlo al índice; se debe informar esa limitación sin hacer staging, commit ni push por este inventario.
 
-### Resultado de validación del inventario
+### Resultado de validación del inventario inicial (histórico)
 
 - `git diff --check`: sin salida ni errores; al estar este documento sin seguimiento, el comando no comprueba su contenido como diff de un archivo versionado.
 - `graphify update .`: finalizó con código 0, sin LLM; reconstruyó 3.016 nodos, 6.301 relaciones y 220 comunidades. Actualizó sus artefactos locales sin cambios adicionales visibles en Git. La actualización AST no incorpora semánticamente este plan.
