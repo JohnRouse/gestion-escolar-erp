@@ -2,9 +2,11 @@
 
 ## Estado y propósito
 
-Primer incremento V1: gestión institucional de Staff en `/staff`, con listado,
-búsqueda, alta, edición y credenciales internas. Reutiliza Persona, Usuario, Rol,
-Staff, UsuarioTenant y UsuarioColegio. Implementado y aceptado mediante pruebas dirigidas; resultados en el registro de cambio.
+Gestión institucional V1 de Staff en `/staff`, con listado, búsqueda, alta,
+edición y credenciales internas. Reutiliza Persona, Usuario, Rol, Staff,
+UsuarioTenant y UsuarioColegio. La función y su incremento visual responsive
+están implementados y aceptados mediante validaciones dirigidas; resultados en
+los registros de cambio.
 
 ## Roles y alcance
 
@@ -104,11 +106,19 @@ La conservación depende de la recolección y retención de logs del despliegue;
 una caída entre commit y emisión no queda cubierta por una outbox persistente.
 Ese límite permanece explícito para el cierre transversal de auditoría.
 
-La UI incluye carga, vacío, error/reintento, bloqueo al guardar y Toast de éxito/error.
-El cambio de alcance descarta el formulario y resultados del alcance anterior.
-Usa PageHeader, AccessibleDialog, Toast, `.card`, `.btn`, `.input` y skeletons
-existentes; no añade CSS ni sistema de diseño. No añade animaciones propias;
-las de carga respetan reducción de movimiento y las de diálogo/Toast son compartidas.
+La UI incluye carga estructural, vacío diferenciado, error/reintento, recarga
+parcial, bloqueo al guardar y Toast de éxito/error. El cambio de alcance descarta
+el formulario y resultados del alcance anterior. El directorio usa un patrón
+híbrido: lista tabular de densidad administrativa desde escritorio y fichas
+estructuradas en tablet/móvil, sin comprimir una tabla. Nombre y DNI forman la
+identidad primaria; cargo, área, institución y citas conservan jerarquía secundaria.
+
+El formulario reutiliza AccessibleDialog con encabezado y pie estables, scroll
+interno y tres grupos: identidad personal, asignación institucional y acceso al
+sistema. PageHeader, Toast y skeletons compartidos se mantienen. Los controles
+usan la paleta y estados funcionales vigentes, foco visible y áreas táctiles de
+44 px; no se añade CSS, librería ni animación propia. Las transiciones se limitan
+a color durante interacción y se eliminan con reducción de movimiento.
 
 ## Pruebas y límites
 
@@ -120,6 +130,13 @@ las de carga respetan reducción de movimiento y las de diálogo/Toast son compa
   flujo de Admin, alta/edición, disponibilidad de citas, Profesor rechazado,
   foco, Escape, zoom y errores de consola. Resultado final en registro de cambio.
 - [Procedimiento reproducible](../../intranet/tests/staff/README.md).
+- Incremento visual V1: build y ESLint dirigidos; revisión Chrome con API
+  sintética de solo lectura en 1440×900, 1280×800, 768×900, 390×844 y equivalente
+  de zoom 200 % en 720×450. Sin desbordamiento horizontal ni errores de consola;
+  diálogo dentro del viewport, scroll interno, foco atrapado, Escape/retorno de
+  foco y reducción de movimiento comprobados. Las capturas fueron temporales y
+  no se versionan. El E2E transaccional previo no se reconstruyó porque su harness
+  exige una instancia MySQL aislada; las reglas y el cliente API no cambiaron.
 - Pendientes reales: ciclo laboral activo/inactivo de Staff (requiere decisión de
   modelo), traslados con historial, edición de identidad compartida, regularización
   de Staff sin pertenencia demostrable, administración/reactivación de membresías
@@ -128,3 +145,4 @@ las de carga respetan reducción de movimiento y las de diálogo/Toast son compa
 ## Historial
 
 [Primer incremento V1](../registro-cambios/2026-09-07-staff-identidad-v1.md).
+[Experiencia visual y responsive V1](../registro-cambios/2026-09-09-staff-ux-v1.md).
