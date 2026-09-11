@@ -1,28 +1,71 @@
 import axios from 'axios';
 export type StaffPersona = {
-  id_persona?: number; dni: string; nombres: string; apellido_paterno: string;
-  apellido_materno: string; fecha_nacimiento: string; telefono?: string | null; correo?: string | null;
+  id_persona?: number;
+  dni: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  fecha_nacimiento: string;
+  direccion?: string | null;
+  departamento?: string | null;
+  provincia?: string | null;
+  distrito?: string | null;
+  telefono?: string | null;
+  correo?: string | null;
+};
+export type StaffAccess = {
+  username: string;
+  estado: boolean;
+  rol: { nombre_rol: string };
+  tenants: { estado: string }[];
+  colegios: { estado: string }[];
 };
 export type StaffItem = {
-  id_staff: number; id_persona: number; id_colegio: number | null; cargo: string; area: string;
-  permite_citas: boolean; es_tutor: boolean; id_seccion: number | null; persona: StaffPersona;
+  id_staff: number;
+  id_persona: number;
+  id_colegio: number | null;
+  cargo: string;
+  area: string;
+  permite_citas: boolean;
+  persona: StaffPersona;
   colegio: { id_colegio: number; nombre: string } | null;
-  seccion: { id_seccion: number; id_colegio: number | null; colegio: { nombre: string } | null } | null;
-  accesos?: { username: string; estado: boolean; rol: { nombre_rol: string }; tenants: { estado: string }[]; colegios: { estado: string }[] }[];
+  seccion: {
+    id_seccion: number;
+    id_colegio: number | null;
+    colegio: { nombre: string } | null;
+  } | null;
+  accesos?: StaffAccess[];
 };
 export type StaffPayload = {
-  id_colegio: number; cargo: string; area: string; permite_citas: boolean; motivo: string;
-  persona?: StaffPersona; acceso?: { username: string; rol: string; password?: string };
+  id_colegio: number;
+  cargo: string;
+  area: string;
+  permite_citas: boolean;
+  motivo?: string;
+  persona?: StaffPersona;
+  acceso?: { username: string; rol: string; password?: string };
 };
 export function staffApi(token: string | null, params: Record<string, string | number>) {
   const config = { params, headers: { Authorization: `Bearer ${token}` } };
   return {
-    list: async (q: string, citas: string, page: number, signal: AbortSignal) => (await axios.get<{ data: StaffItem[]; meta: { total: number; totalPages: number } }>('/api/staff', { ...config, params: { ...params, q, ...(citas ? { citas } : {}), page }, signal })).data,
+    list: async (q: string, citas: string, page: number, signal: AbortSignal) =>
+      (
+        await axios.get<{
+          data: StaffItem[];
+          meta: { total: number; totalPages: number };
+        }>('/api/staff', {
+          ...config,
+          params: { ...params, q, ...(citas ? { citas } : {}), page },
+          signal,
+        })
+      ).data,
     detail: async (id: number) => (await axios.get<StaffItem>(`/api/staff/${id}`, config)).data,
-    lookup: async (dni: string) => (await axios.get<StaffPersona | null>(`/api/staff/personas/${dni}`, config)).data || null,
-    save: async (body: StaffPayload, id?: number) => id
-      ? (await axios.put<StaffItem>(`/api/staff/${id}`, body, config)).data
-      : (await axios.post<StaffItem>('/api/staff', body, config)).data,
+    lookup: async (dni: string) =>
+      (await axios.get<StaffPersona | null>(`/api/staff/personas/${dni}`, config)).data || null,
+    save: async (body: StaffPayload, id?: number) =>
+      id
+        ? (await axios.put<StaffItem>(`/api/staff/${id}`, body, config)).data
+        : (await axios.post<StaffItem>('/api/staff', body, config)).data,
   };
 }
 export function staffError(error: unknown) {

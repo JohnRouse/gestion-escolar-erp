@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   getDepartamentosPeru,
   getDistritosPeru,
@@ -48,6 +49,7 @@ export default function LocationSelects({
   wrapperClassName = 'grid gap-4 md:grid-cols-3',
   disabled = false,
 }: LocationSelectsProps) {
+  const idPrefix = useId();
   const pais = value.pais || 'Perú';
 
   const departamentos = getDepartamentosPeru();
@@ -61,9 +63,12 @@ export default function LocationSelects({
 
   return (
     <div className={wrapperClassName}>
-      <label>
-        <span className={labelClass}>Departamento</span>
+      <div>
+        <label className={labelClass} htmlFor={`${idPrefix}-departamento`}>
+          Departamento
+        </label>
         <select
+          id={`${idPrefix}-departamento`}
           value={departamento}
           disabled={disabled}
           onChange={(event) => {
@@ -83,11 +88,14 @@ export default function LocationSelects({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label>
-        <span className={labelClass}>Provincia</span>
+      <div>
+        <label className={labelClass} htmlFor={`${idPrefix}-provincia`}>
+          Provincia
+        </label>
         <select
+          id={`${idPrefix}-provincia`}
           value={provincia}
           disabled={disabled || !departamento}
           onChange={(event) => {
@@ -107,11 +115,14 @@ export default function LocationSelects({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label>
-        <span className={labelClass}>Distrito</span>
+      <div>
+        <label className={labelClass} htmlFor={`${idPrefix}-distrito`}>
+          Distrito
+        </label>
         <select
+          id={`${idPrefix}-distrito`}
           value={distrito}
           disabled={disabled || !departamento || !provincia}
           onChange={(event) => {
@@ -131,7 +142,7 @@ export default function LocationSelects({
             </option>
           ))}
         </select>
-      </label>
+      </div>
     </div>
   );
 }

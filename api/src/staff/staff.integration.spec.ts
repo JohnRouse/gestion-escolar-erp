@@ -42,13 +42,16 @@ describe('Staff HTTP + isolated database', () => {
     cargo: 'Auxiliar',
     area: 'Bienestar',
     permite_citas: true,
-    motivo: 'Alta de prueba aislada',
     persona: {
       dni: String(93000000 + ++seq),
       nombres: 'Nuevo',
       apellido_paterno: 'Miembro',
       apellido_materno: 'Staff',
       fecha_nacimiento: '1990-03-10',
+      direccion: 'Av. Pruebas 123',
+      departamento: 'Lima',
+      provincia: 'Lima',
+      distrito: 'Lima',
     },
     ...overrides,
   });
@@ -140,6 +143,8 @@ describe('Staff HTTP + isolated database', () => {
     await post({ ...body(), id_colegio: undefined }).expect(400);
     await post({ ...body(), permite_citas: 'false' }).expect(400);
     await post({ ...body(), estado: false }).expect(400);
+    await post({ ...body(), es_tutor: true }).expect(400);
+    await post({ ...body(), id_seccion: 1 }).expect(400);
     await post(body({ persona: { ...body().persona!, dni: 'bad' } })).expect(
       400,
     );
@@ -150,8 +155,22 @@ describe('Staff HTTP + isolated database', () => {
       .expect(400);
     await get('/staff').query({ page: -1 }).expect(400);
   });
+  it('requires a motive only when granting ERP access', async () => {
+    const input = body({
+      acceso: {
+        username: 'staff.without-motive',
+        rol: 'Secretaria',
+        password: staffTestPassword,
+      },
+    });
+    await post(input).expect(400);
+    expect(
+      await db.persona.findUnique({ where: { dni: input.persona!.dni } }),
+    ).toBeNull();
+  });
   it('creates Persona + Staff + Usuario + both memberships and login works', async () => {
     const input = body({
+      motivo: 'Requiere operar procesos administrativos',
       acceso: {
         username: 'staff.new',
         rol: 'Secretaria',
@@ -162,17 +181,57 @@ describe('Staff HTTP + isolated database', () => {
     created = res.body as typeof created;
     const user = await db.usuario.findUniqueOrThrow({
       where: { username: 'staff.new' },
-      include: { tenants: true, colegios: true },
+      include: { tenants: true, colegios: true, persona: true },
     });
     expect(user.id_persona).toBe(created.id_persona);
     expect(user.tenants[0].estado).toBe('Activo');
     expect(user.colegios[0].estado).toBe('Activo');
     expect(user.password_hash).not.toBe(staffTestPassword);
+    expect(user.persona).toMatchObject({
+      direccion: 'Av. Pruebas 123',
+      departamento: 'Lima',
+      provincia: 'Lima',
+      distrito: 'Lima',
+    });
     await request(server)
       .post('/auth/login')
       .send({ username: 'staff.new', password: staffTestPassword })
       .expect(200);
     expect(JSON.stringify(res.body)).not.toContain(user.password_hash);
+  });
+  it('keeps academic-only tutors out of Staff and reuses the Persona for a real institutional role', async () => {
+    const before = await get('/staff').expect(200);
+    expect(
+      (before.body as { data: { id_staff: number }[] }).data.map(
+        (item) => item.id_staff,
+      ),
+    ).not.toContain(f.technicalTutor.id_staff);
+
+    const professor = f.actorPersonas.Profesor;
+    const response = await post(
+      body({
+        cargo: 'Coordinador académico',
+        area: 'Coordinación académica',
+        persona: { ...body().persona!, dni: professor.dni },
+      }),
+    ).expect(201);
+    const saved = await db.staff.findUniqueOrThrow({
+      where: { id_persona: professor.id_persona },
+    });
+    const responseBody = response.body as { id_persona: number };
+
+    expect(responseBody.id_persona).toBe(professor.id_persona);
+    expect(saved).toMatchObject({
+      id_staff: f.technicalTutor.id_staff,
+      es_miembro_staff: true,
+      es_tutor: true,
+      cargo: 'Coordinador académico',
+      area: 'Coordinación académica',
+    });
+    expect(await db.persona.count({ where: { dni: professor.dni } })).toBe(1);
+    expect(
+      await db.staff.count({ where: { id_persona: professor.id_persona } }),
+    ).toBe(1);
   });
   it('edits institutional fields and appointment availability, preserving identity and tutor flags', async () => {
     await db.staff.update({
@@ -289,6 +348,7 @@ describe('Staff HTTP + isolated database', () => {
       body({
         id_colegio: f.second.id_colegio,
         persona: { ...body().persona!, dni: persona.dni },
+        motivo: 'Necesita acceso al segundo colegio',
         acceso: { username: user.username, rol: 'Profesor' },
       }),
     ).expect(201);
@@ -325,6 +385,7 @@ describe('Staff HTTP + isolated database', () => {
     await post(
       body({
         persona: { ...body().persona!, dni: persona.dni },
+        motivo: 'Necesita iniciar labores en el ERP',
         acceso: { username: user.username, rol: 'Profesor' },
       }),
     ).expect(201);
@@ -402,6 +463,7 @@ describe('Staff HTTP + isolated database', () => {
     });
     const input = body({
       persona: undefined,
+      motivo: 'Asociar la cuenta al colegio del Staff',
       acceso: { username: user.username, rol: 'Secretaria' },
     });
     await put(created.id_staff, input).expect(409);
@@ -435,6 +497,7 @@ describe('Staff HTTP + isolated database', () => {
     await post(body(), 'Director').expect(201);
     await post(
       body({
+        motivo: 'Asignar privilegios administrativos',
         acceso: {
           username: 'staff.elevation',
           rol: 'Admin',
@@ -446,6 +509,7 @@ describe('Staff HTTP + isolated database', () => {
   });
   it('rolls back new Persona and Staff when username conflicts', async () => {
     const input = body({
+      motivo: 'Asignar acceso administrativo',
       acceso: {
         username: 'staff.admin',
         rol: 'Admin',
@@ -461,6 +525,7 @@ describe('Staff HTTP + isolated database', () => {
   });
   it('rolls back all five entities on a late failure', async () => {
     const input = body({
+      motivo: 'Asignar acceso docente',
       acceso: {
         username: 'staff.rollback',
         rol: 'Profesor',
@@ -495,14 +560,16 @@ describe('Staff HTTP + isolated database', () => {
       1,
     );
   });
-  it('audits actor, date, institution, before/after and motive without secrets', () => {
+  it('audits actor, date, institution, before/after and an automatic routine motive without secrets', () => {
     const entries = audit.mock.calls
       .map((call) => String(call[0]))
       .filter((x) => x.includes('staff.editar'));
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.join()).toContain('anterior');
     expect(entries.join()).toContain('posterior');
-    expect(entries.join()).toContain('motivo');
+    expect(entries.join()).toContain(
+      '"motivo":"Actualización rutinaria de Staff"',
+    );
     expect(entries.join()).not.toMatch(/password_hash|Staff-fixture/);
   });
   it('service itself rejects a professor even without the HTTP role guard', async () => {

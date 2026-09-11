@@ -1,14 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
-import {
-  BadgeCheck,
-  BriefcaseBusiness,
-  Check,
-  CircleUserRound,
-  KeyRound,
-  Loader2,
-  Search,
-} from 'lucide-react';
+import { BadgeCheck, BriefcaseBusiness, Check, CircleUserRound, KeyRound, Loader2, MapPin, Search } from 'lucide-react';
 import AccessibleDialog from '../../components/AccessibleDialog';
+import LocationSelects from '../../components/LocationSelects';
 import { useToast } from '../../contexts/ToastContext';
 import { staffError, type staffApi, type StaffItem, type StaffPersona } from './staffApi';
 
@@ -28,6 +21,10 @@ const blankPersona: StaffPersona = {
   apellido_paterno: '',
   apellido_materno: '',
   fecha_nacimiento: '',
+  direccion: '',
+  departamento: '',
+  provincia: '',
+  distrito: '',
   telefono: '',
   correo: '',
 };
@@ -37,21 +34,11 @@ const inputClassName =
 
 const labelClassName = 'block text-sm font-medium text-slate-800';
 
-export default function StaffForm({
-  item,
-  api,
-  rol,
-  colegios,
-  defaultColegio,
-  onClose,
-  onSaved,
-}: Props) {
+export default function StaffForm({ item, api, rol, colegios, defaultColegio, onClose, onSaved }: Props) {
   const [persona, setPersona] = useState<StaffPersona>(item?.persona ?? blankPersona);
   const [checkedDni, setCheckedDni] = useState('');
   const [reused, setReused] = useState(Boolean(item));
-  const [colegio, setColegio] = useState(
-    String(item?.id_colegio ?? item?.seccion?.id_colegio ?? defaultColegio ?? ''),
-  );
+  const [colegio, setColegio] = useState(String(item?.id_colegio ?? item?.seccion?.id_colegio ?? defaultColegio ?? ''));
   const [cargo, setCargo] = useState(item?.cargo ?? '');
   const [area, setArea] = useState(item?.area ?? '');
   const [citas, setCitas] = useState(item?.permite_citas ?? true);
@@ -65,9 +52,9 @@ export default function StaffForm({
   const firstInput = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const personalLocked = reused || (!item && checkedDni !== persona.dni);
+  const hasExistingAccess = Boolean(item?.accesos?.length);
   const documentReady = !item && Boolean(persona.dni) && checkedDni === persona.dni;
-  const field = (key: keyof StaffPersona, value: string) =>
-    setPersona((current) => ({ ...current, [key]: value }));
+  const field = (key: keyof StaffPersona, value: string) => setPersona((current) => ({ ...current, [key]: value }));
 
   async function lookup() {
     if (!/^\d{8}$/.test(persona.dni)) {
@@ -105,7 +92,6 @@ export default function StaffForm({
           cargo,
           area,
           permite_citas: citas,
-          motivo,
           ...(!item
             ? {
                 persona: {
@@ -114,6 +100,10 @@ export default function StaffForm({
                   apellido_paterno: persona.apellido_paterno,
                   apellido_materno: persona.apellido_materno,
                   fecha_nacimiento: persona.fecha_nacimiento.slice(0, 10),
+                  ...(persona.direccion ? { direccion: persona.direccion } : {}),
+                  ...(persona.departamento ? { departamento: persona.departamento } : {}),
+                  ...(persona.provincia ? { provincia: persona.provincia } : {}),
+                  ...(persona.distrito ? { distrito: persona.distrito } : {}),
                   ...(persona.telefono ? { telefono: persona.telefono } : {}),
                   ...(persona.correo ? { correo: persona.correo } : {}),
                 },
@@ -121,6 +111,7 @@ export default function StaffForm({
             : {}),
           ...(access
             ? {
+                motivo,
                 acceso: {
                   username,
                   rol: accessRole,
@@ -134,9 +125,7 @@ export default function StaffForm({
       setPassword('');
       showToast({
         type: 'success',
-        message: item
-          ? 'Staff actualizado correctamente.'
-          : 'Miembro de Staff registrado correctamente.',
+        message: item ? 'Staff actualizado correctamente.' : 'Miembro de Staff registrado correctamente.',
       });
       onSaved();
     } catch (requestError) {
@@ -156,7 +145,7 @@ export default function StaffForm({
       description={
         item
           ? 'Actualiza su función institucional y las opciones disponibles.'
-          : 'Registra identidad, asignación institucional y acceso interno opcional.'
+          : 'Registra identidad, asignación institucional y una cuenta ERP opcional.'
       }
       icon={
         <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 ring-1 ring-blue-100">
@@ -249,9 +238,7 @@ export default function StaffForm({
             {reused && (
               <div className="flex gap-3 rounded-md bg-blue-50 px-3.5 py-3 text-sm leading-5 text-blue-900 ring-1 ring-blue-100">
                 <BadgeCheck size={18} className="mt-0.5 shrink-0 text-blue-700" aria-hidden="true" />
-                <p>
-                  Persona existente. Sus datos se conservan porque también pueden utilizarse en otros módulos.
-                </p>
+                <p>Persona existente. Sus datos se conservan porque también pueden utilizarse en otros módulos.</p>
               </div>
             )}
             {documentReady && !reused && (
@@ -335,6 +322,51 @@ export default function StaffForm({
                 />
               </label>
             </div>
+
+            <div className="pt-2">
+              <div className="mb-4 flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                  <MapPin size={17} aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">Domicilio</span>
+                  <span className="mt-0.5 block text-sm leading-5 text-slate-600">
+                    Ubicación y dirección de la Persona. Estos datos son independientes de su cargo.
+                  </span>
+                </span>
+              </div>
+              <LocationSelects
+                value={{
+                  pais: 'Perú',
+                  departamento: persona.departamento ?? '',
+                  provincia: persona.provincia ?? '',
+                  distrito: persona.distrito ?? '',
+                }}
+                onChange={(location) =>
+                  setPersona((current) => ({
+                    ...current,
+                    departamento: location.departamento ?? '',
+                    provincia: location.provincia ?? '',
+                    distrito: location.distrito ?? '',
+                  }))
+                }
+                disabled={personalLocked}
+                labelClass={labelClassName}
+                selectClass={inputClassName}
+                wrapperClassName="grid grid-cols-1 gap-4 sm:grid-cols-3"
+              />
+              <label className={`${labelClassName} mt-4`}>
+                Dirección
+                <input
+                  className={inputClassName}
+                  autoComplete="street-address"
+                  maxLength={255}
+                  value={persona.direccion ?? ''}
+                  readOnly={personalLocked}
+                  onChange={(event) => field('direccion', event.target.value)}
+                />
+              </label>
+            </div>
           </div>
         </fieldset>
 
@@ -342,7 +374,7 @@ export default function StaffForm({
           <SectionHeading
             icon={<BriefcaseBusiness size={18} aria-hidden="true" />}
             title="Asignación institucional"
-            description="Define dónde trabaja, cuál es su función y si recibe citas."
+            description="Define su cargo institucional, separado de cualquier función académica registrada en Docentes."
           />
 
           <div className="mt-5 space-y-4">
@@ -399,27 +431,21 @@ export default function StaffForm({
               label="Permite citas"
               description="Este miembro podrá aparecer como disponible en los flujos de citas."
             />
-
-            {item?.es_tutor && (
-              <p className="rounded-md bg-slate-50 px-3.5 py-3 text-sm leading-6 text-slate-700 ring-1 ring-slate-200">
-                Tutoría y sección asignada se conservan. Su gestión se realiza en el módulo académico.
-              </p>
-            )}
           </div>
         </fieldset>
 
         <fieldset disabled={busy} className="py-6">
           <SectionHeading
             icon={<KeyRound size={18} aria-hidden="true" />}
-            title="Acceso al sistema"
-            description="Consulta los accesos existentes o crea una credencial interna opcional."
+            title="Acceso al ERP"
+            description="La ficha Staff registra el cargo laboral. La cuenta de usuario es independiente y solo se necesita para iniciar sesión."
           />
 
           <div className="mt-5 space-y-4">
             {item?.accesos?.length ? (
               <div className="overflow-hidden rounded-md border border-slate-200">
                 <p className="border-b border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.045em] text-slate-600">
-                  Accesos vinculados
+                  {item.accesos.length === 1 ? 'Cuenta de usuario vinculada' : 'Cuentas de usuario vinculadas'}
                 </p>
                 <ul className="divide-y divide-slate-200">
                   {item.accesos.map((account) => {
@@ -428,14 +454,14 @@ export default function StaffForm({
                       account.tenants[0]?.estado === 'Activo' &&
                       account.colegios[0]?.estado === 'Activo';
                     return (
-                      <li
-                        key={account.username}
-                        className="flex flex-col gap-1 px-3.5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <span className="break-all font-medium text-slate-900">{account.username}</span>
-                        <span className="text-slate-600">
-                          {account.rol.nombre_rol} · {active ? 'Acceso activo' : 'Acceso incompleto o inactivo'}
-                        </span>
+                      <li key={account.username} className="grid gap-3 px-3.5 py-3 text-sm sm:grid-cols-3">
+                        <AccessValue label="Usuario" value={account.username} breakAll />
+                        <AccessValue label="Rol" value={account.rol.nombre_rol} />
+                        <AccessValue
+                          label="Estado"
+                          value={active ? 'Acceso activo' : 'Acceso incompleto o inactivo'}
+                          status={active ? 'active' : 'inactive'}
+                        />
                       </li>
                     );
                   })}
@@ -443,20 +469,24 @@ export default function StaffForm({
               </div>
             ) : null}
 
-            <ToggleRow
-              checked={access}
-              onChange={(checked) => {
-                setAccess(checked);
-                setPassword('');
-              }}
-              label="Crear o asociar acceso interno"
-              description="Actívalo solo si esta persona necesita ingresar al ERP."
-            />
+            {!hasExistingAccess && (
+              <ToggleRow
+                checked={access}
+                onChange={(checked) => {
+                  setAccess(checked);
+                  setPassword('');
+                  setMotivo('');
+                }}
+                label="Dar acceso al ERP"
+                description="Crea o vincula una cuenta de usuario para esta Persona sin cambiar su condición de Staff."
+              />
+            )}
 
             {access && (
               <div className="space-y-4 border-l-2 border-blue-200 pl-4 sm:pl-5">
                 <p className="text-sm leading-6 text-slate-600">
-                  Para asociar una cuenta existente, usa su usuario y rol y deja vacía la contraseña. No se cambian contraseñas ni se reactivan membresías inactivas.
+                  Para asociar una cuenta existente, usa su usuario y rol y deja vacía la contraseña. No se cambian
+                  contraseñas ni se reactivan membresías inactivas.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className={labelClassName}>
@@ -479,12 +509,7 @@ export default function StaffForm({
                       value={accessRole}
                       onChange={(event) => setAccessRole(event.target.value)}
                     >
-                      {[
-                        'Secretaria',
-                        'Profesor',
-                        'Director',
-                        ...(rol === 'Admin' ? ['Admin'] : []),
-                      ].map((role) => (
+                      {['Secretaria', 'Profesor', 'Director', ...(rol === 'Admin' ? ['Admin'] : [])].map((role) => (
                         <option key={role}>{role}</option>
                       ))}
                     </select>
@@ -505,43 +530,60 @@ export default function StaffForm({
                     Usa al menos 8 caracteres y un máximo de 72 bytes. Déjala vacía para asociar una cuenta existente.
                   </span>
                 </label>
+                <label className={labelClassName}>
+                  Motivo para otorgar acceso *
+                  <textarea
+                    className={`${inputClassName} min-h-24 resize-y`}
+                    required
+                    minLength={3}
+                    maxLength={300}
+                    value={motivo}
+                    placeholder="Explica por qué necesita ingresar al ERP o asumir este rol."
+                    onChange={(event) => setMotivo(event.target.value)}
+                  />
+                  <span className="mt-1.5 block text-xs leading-5 text-slate-600">
+                    Se exige por tratarse de una operación sensible de acceso y rol.
+                  </span>
+                </label>
               </div>
             )}
           </div>
         </fieldset>
-
-        <div className="py-6">
-          <label className={labelClassName}>
-            Motivo del registro o cambio *
-            <textarea
-              className={`${inputClassName} min-h-24 resize-y`}
-              required
-              minLength={3}
-              maxLength={300}
-              value={motivo}
-              disabled={busy}
-              placeholder="Explica brevemente el motivo para conservar la trazabilidad."
-              onChange={(event) => setMotivo(event.target.value)}
-            />
-            <span className="mt-1.5 block text-xs leading-5 text-slate-600">
-              Este texto acompaña el registro de auditoría de la operación.
-            </span>
-          </label>
-        </div>
       </form>
     </AccessibleDialog>
   );
 }
 
-function SectionHeading({
-  icon,
-  title,
-  description,
+function AccessValue({
+  label,
+  value,
+  breakAll = false,
+  status,
 }: {
-  icon: ReactNode;
-  title: string;
-  description: string;
+  label: string;
+  value: string;
+  breakAll?: boolean;
+  status?: 'active' | 'inactive';
 }) {
+  return (
+    <span className="min-w-0">
+      <span className="block text-xs font-semibold uppercase tracking-[0.045em] text-slate-500">{label}</span>
+      <span
+        className={`mt-1 inline-flex text-sm font-semibold ${
+          status === 'active'
+            ? 'rounded-md bg-emerald-50 px-2 py-1 text-emerald-800 ring-1 ring-emerald-200'
+            : status === 'inactive'
+              ? 'rounded-md bg-slate-100 px-2 py-1 text-slate-700 ring-1 ring-slate-200'
+              : `text-slate-900 ${breakAll ? 'break-all' : ''}`
+        }`}
+      >
+        {value}
+      </span>
+    </span>
+  );
+}
+
+function SectionHeading({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
     <legend className="w-full">
       <span className="flex items-start gap-3">
@@ -550,9 +592,7 @@ function SectionHeading({
         </span>
         <span>
           <span className="block text-base font-semibold text-slate-950">{title}</span>
-          <span className="mt-0.5 block text-sm font-normal leading-5 text-slate-600">
-            {description}
-          </span>
+          <span className="mt-0.5 block text-sm font-normal leading-5 text-slate-600">{description}</span>
         </span>
       </span>
     </legend>

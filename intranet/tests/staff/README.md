@@ -37,8 +37,10 @@ Desde la raíz (Playwright instalado fuera del repositorio):
 Usa Chrome local (`CHROME_PATH` opcional), escritorio 1440×900 y móvil 390×844,
 además de reflow a 768/1280, equivalente de zoom de navegador 200% mediante viewport CSS reducido, teclado, foco y reducción de movimiento.
 Capturas sintéticas se guardan en `/tmp/staff-v1-*.png`. Login Admin real,
-listado/búsqueda/validaciones, alta con credenciales, edición y disponibilidad de
-citas off/on. Staff no tiene estado laboral: no se simula activar/inactivar.
+listado/búsqueda/validaciones, alta con domicilio y acceso ERP, presentación de
+usuario/rol/estado, edición rutinaria sin motivo libre y disponibilidad de citas
+off/on. También verifica que Tutor no aparezca en la UX de Staff. Staff no tiene
+estado laboral: no se simula activar/inactivar.
 Profesor no accede por URL ni escritura HTTP. Recursos externos decorativos
 fuera de la aplicación se sustituyen por respuestas vacías; API y datos son reales.
 

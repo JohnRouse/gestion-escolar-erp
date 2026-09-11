@@ -24,6 +24,10 @@ const personaSelect = {
   apellido_paterno: true,
   apellido_materno: true,
   fecha_nacimiento: true,
+  direccion: true,
+  departamento: true,
+  provincia: true,
+  distrito: true,
   telefono: true,
   correo: true,
 } satisfies Prisma.PersonaSelect;
@@ -105,6 +109,7 @@ export class StaffService {
     // Legacy records are admitted only when a concrete school or section proves ownership.
     return {
       AND: [
+        { es_miembro_staff: true },
         { OR: [{ id_tenant: scope.tenantId }, { id_tenant: null }] },
         {
           OR: [
@@ -228,14 +233,29 @@ export class StaffService {
       where: { dni },
       select: {
         ...personaSelect,
-        staff: { select: { id_staff: true } },
+        staff: {
+          select: {
+            id_staff: true,
+            id_tenant: true,
+            id_colegio: true,
+            es_miembro_staff: true,
+            seccion: { select: { id_colegio: true } },
+          },
+        },
         usuarios: {
           select: {
             tenants: { select: { id_tenant: true } },
             colegios: { select: { id_colegio: true } },
           },
         },
-        docentes: { select: { id_persona: true } },
+        docentes: {
+          select: {
+            asignaciones: { select: { id_colegio: true } },
+            especialidades: {
+              select: { area: { select: { id_colegio: true } } },
+            },
+          },
+        },
         estudiantes: { select: { id_persona: true } },
         apoderados: { select: { id_persona: true } },
       },
@@ -246,17 +266,46 @@ export class StaffService {
         u.tenants.some((t) => t.id_tenant === scope.tenantId) &&
         u.colegios.some((c) => scope.colegioIds.includes(c.id_colegio)),
     );
+    const permittedDocente = persona.docentes.some(
+      (docente) =>
+        docente.asignaciones.some(
+          (asignacion) =>
+            asignacion.id_colegio !== null &&
+            scope.colegioIds.includes(asignacion.id_colegio),
+        ) ||
+        docente.especialidades.some(
+          (especialidad) =>
+            especialidad.area.id_colegio !== null &&
+            scope.colegioIds.includes(especialidad.area.id_colegio),
+        ),
+    );
+    const institutionalStaff = persona.staff.find(
+      (staff) => staff.es_miembro_staff,
+    );
+    const permittedTechnicalStaff = persona.staff.some(
+      (staff) =>
+        !staff.es_miembro_staff &&
+        (staff.id_tenant === scope.tenantId || staff.id_tenant === null) &&
+        scope.colegioIds.includes(
+          staff.id_colegio ?? staff.seccion?.id_colegio ?? -1,
+        ),
+    );
     const unlinked =
       persona.usuarios.every((u) => !u.tenants.length && !u.colegios.length) &&
       !persona.docentes.length &&
       !persona.estudiantes.length &&
       !persona.apoderados.length &&
       !persona.staff.length;
-    if (!permittedUser && !unlinked)
+    if (
+      !permittedUser &&
+      !permittedDocente &&
+      !permittedTechnicalStaff &&
+      !unlinked
+    )
       throw new ConflictException(
         'El documento ya está registrado. Solicita la vinculación a un administrador de su institución.',
       );
-    if (persona.staff.length)
+    if (institutionalStaff)
       throw new ConflictException(
         'Esta persona ya pertenece a Staff. Edita el registro existente.',
       );
@@ -267,6 +316,10 @@ export class StaffService {
       apellido_paterno: persona.apellido_paterno,
       apellido_materno: persona.apellido_materno,
       fecha_nacimiento: persona.fecha_nacimiento,
+      direccion: persona.direccion,
+      departamento: persona.departamento,
+      provincia: persona.provincia,
+      distrito: persona.distrito,
       telefono: persona.telefono,
       correo: persona.correo,
     };
@@ -423,6 +476,10 @@ export class StaffService {
             throw new ForbiddenException(
               'Selecciona un colegio destino autorizado dentro del alcance activo.',
             );
+          if (body.acceso && !body.motivo?.trim())
+            throw new BadRequestException(
+              'Explica el motivo para dar acceso al ERP o asignar el rol seleccionado.',
+            );
           const before = id ? await this.record(db, scope, id) : null;
           if (before && body.persona)
             throw new BadRequestException(
@@ -468,17 +525,45 @@ export class StaffService {
             permite_citas: body.permite_citas,
             id_colegio: body.id_colegio,
             id_tenant: scope.tenantId,
+            es_miembro_staff: true,
           };
-          const after = before
-            ? await db.staff.update({
-                where: { id_staff: before.id_staff },
+          const technicalTutor = before
+            ? null
+            : await db.staff.findUnique({
+                where: { id_persona: idPersona },
+                include: staffInclude,
+              });
+          if (technicalTutor?.es_miembro_staff)
+            throw new ConflictException(
+              'Esta persona ya pertenece a Staff. Edita el registro existente.',
+            );
+          if (
+            technicalTutor &&
+            !(
+              (technicalTutor.id_tenant === scope.tenantId ||
+                technicalTutor.id_tenant === null) &&
+              scope.colegioIds.includes(
+                technicalTutor.id_colegio ??
+                  technicalTutor.seccion?.id_colegio ??
+                  -1,
+              )
+            )
+          )
+            throw new ConflictException(
+              'La asignación académica existente pertenece a otro contexto institucional.',
+            );
+          const after = await (before || technicalTutor
+            ? db.staff.update({
+                where: {
+                  id_staff: (before ?? technicalTutor)!.id_staff,
+                },
                 data,
                 include: staffInclude,
               })
-            : await db.staff.create({
+            : db.staff.create({
                 data: { ...data, id_persona: idPersona },
                 include: staffInclude,
-              });
+              }));
           const acceso = body.acceso
             ? await this.ensureAccess(
                 db,
@@ -488,7 +573,7 @@ export class StaffService {
                 body.acceso,
               )
             : null;
-          return { before, after, acceso };
+          return { before: before ?? technicalTutor, after, acceso };
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -503,7 +588,11 @@ export class StaffService {
           fecha: new Date().toISOString(),
           tenant: query.tenant_id,
           colegio: body.id_colegio,
-          motivo: body.motivo,
+          motivo:
+            body.motivo?.trim() ||
+            (id
+              ? 'Actualización rutinaria de Staff'
+              : 'Alta rutinaria de Staff'),
           anterior: result.before,
           posterior: result.after,
           acceso: result.acceso,

@@ -42,6 +42,11 @@ Denominaciones recomendadas:
 
 Cada sección puede tener un tutor asignado durante un año lectivo.
 
+Ser Docente o Tutor no convierte a una Persona en miembro de Staff. Una Persona
+puede pertenecer a ambos dominios cuando ejerce adicionalmente un cargo
+institucional no docente. La tutoría se presenta y administra desde Docentes o
+desde el dominio académico correspondiente, nunca desde la gestión de Staff.
+
 Solo deben acceder:
 
 - Tutor asignado.

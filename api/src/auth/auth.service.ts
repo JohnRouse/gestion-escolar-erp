@@ -294,7 +294,8 @@ export class AuthService {
 
     const rol = user.rol.nombre_rol;
     const docente = user.persona.docentes?.[0] || null;
-    const staff = user.persona.staff?.[0] || null;
+    const staffRecord = user.persona.staff?.[0] || null;
+    const staff = staffRecord?.es_miembro_staff ? staffRecord : null;
 
     const saas = await this.getSaasContext(user.id_usuario, rol);
 
@@ -325,24 +326,25 @@ export class AuthService {
     }));
 
     const seccionesTutoria =
-      staff?.es_tutor && staff.seccion
+      staffRecord?.es_tutor && staffRecord.seccion
         ? [
             {
-              id_seccion: staff.seccion.id_seccion,
-              id_tenant: staff.id_tenant,
+              id_seccion: staffRecord.seccion.id_seccion,
+              id_tenant:
+                staffRecord.seccion?.id_tenant || staffRecord.id_tenant,
               id_colegio:
-                staff.id_colegio ||
-                staff.seccion?.id_colegio ||
-                staff.colegio?.id_colegio ||
+                staffRecord.seccion?.id_colegio ||
+                staffRecord.id_colegio ||
+                staffRecord.colegio?.id_colegio ||
                 null,
               colegio:
-                staff.colegio?.nombre ||
-                staff.seccion?.colegio?.nombre ||
+                staffRecord.seccion?.colegio?.nombre ||
+                staffRecord.colegio?.nombre ||
                 null,
-              seccion: this.formatSeccion(staff.seccion),
-              grado: staff.seccion.grado.nombre_grado,
-              nivel: staff.seccion.grado.nivel.nombre_nivel,
-              letra: staff.seccion.letra,
+              seccion: this.formatSeccion(staffRecord.seccion),
+              grado: staffRecord.seccion.grado.nombre_grado,
+              nivel: staffRecord.seccion.grado.nivel.nombre_nivel,
+              letra: staffRecord.seccion.letra,
             },
           ]
         : [];

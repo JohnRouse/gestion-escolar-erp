@@ -42,6 +42,14 @@ export class StaffPersonaDto {
   @MaxLength(100)
   apellido_materno!: string;
   @IsDateString({ strict: true }) fecha_nacimiento!: string;
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(255) direccion?: string;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(80)
+  departamento?: string;
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(80) provincia?: string;
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(80) distrito?: string;
   @IsOptional() @Transform(trim) @IsString() @MaxLength(20) telefono?: string;
   @IsOptional() @Transform(trim) @IsEmail() @MaxLength(150) correo?: string;
 }
@@ -55,7 +63,12 @@ export class StaffWriteDto {
   @Transform(trim) @IsString() @MinLength(1) @MaxLength(100) cargo!: string;
   @Transform(trim) @IsString() @MinLength(1) @MaxLength(50) area!: string;
   @IsBoolean() permite_citas!: boolean;
-  @Transform(trim) @IsString() @MinLength(3) @MaxLength(300) motivo!: string;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(300)
+  motivo?: string;
   @IsOptional()
   @ValidateNested()
   @Type(() => StaffPersonaDto)

@@ -18,9 +18,7 @@ import { staffApi, staffError, type StaffItem } from './staffApi';
 import StaffForm from './StaffForm';
 
 const fullName = (item: StaffItem) =>
-  [item.persona.nombres, item.persona.apellido_paterno, item.persona.apellido_materno]
-    .filter(Boolean)
-    .join(' ');
+  [item.persona.nombres, item.persona.apellido_paterno, item.persona.apellido_materno].filter(Boolean).join(' ');
 
 const initials = (item: StaffItem) =>
   [item.persona.nombres, item.persona.apellido_paterno]
@@ -33,28 +31,15 @@ const schoolName = (item: StaffItem) =>
 
 export default function StaffPage() {
   const { token, user } = useAuth();
-  const { activeScope, queryParams, scopeLabel } = useSchool();
+  const { activeScope, queryParams } = useSchool();
 
   // Remount on scope changes to discard stale results and any open draft.
   return (
-    <StaffContent
-      key={`${activeScope.id_tenant}:${JSON.stringify(queryParams)}`}
-      token={token}
-      rol={user?.rol ?? ''}
-      scopeLabel={scopeLabel}
-    />
+    <StaffContent key={`${activeScope.id_tenant}:${JSON.stringify(queryParams)}`} token={token} rol={user?.rol ?? ''} />
   );
 }
 
-function StaffContent({
-  token,
-  rol,
-  scopeLabel,
-}: {
-  token: string | null;
-  rol: string;
-  scopeLabel: string;
-}) {
+function StaffContent({ token, rol }: { token: string | null; rol: string }) {
   const { activeScope, tenant, queryParams, colegios } = useSchool();
   const { showToast } = useToast();
   const api = useMemo(
@@ -133,9 +118,8 @@ function StaffContent({
       <PageHeader
         eyebrow="Personal"
         title="Staff institucional"
-        description="Consulta y administra al personal de gestión, sus funciones y su acceso interno."
+        description="Consulta y administra al personal de gestión, sus funciones y sus cuentas de acceso al ERP."
         icon={Users}
-        meta={[{ label: 'Alcance', value: scopeLabel }]}
         actions={
           <button
             type="button"
@@ -149,18 +133,13 @@ function StaffContent({
         }
       />
 
-      <section
-        className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4"
-        aria-labelledby="staff-filters-title"
-      >
+      <section className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4" aria-labelledby="staff-filters-title">
         <h2 id="staff-filters-title" className="sr-only">
           Buscar y filtrar Staff
         </h2>
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_230px_auto] md:items-end">
           <label className="block min-w-0">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">
-              Buscar personal
-            </span>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Buscar personal</span>
             <span className="relative block">
               <Search
                 size={17}
@@ -184,9 +163,7 @@ function StaffContent({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">
-              Disponibilidad de citas
-            </span>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Disponibilidad de citas</span>
             <select
               className="h-11 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition-colors duration-150 hover:border-slate-400 focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 motion-reduce:transition-none"
               aria-label="Citas"
@@ -262,9 +239,7 @@ function StaffContent({
               {hasFilters ? 'No encontramos coincidencias' : 'Aún no hay miembros de Staff'}
             </h3>
             <p className="mt-1 max-w-lg text-sm leading-6 text-slate-600">
-              {hasFilters
-                ? 'No hay resultados para estos filtros.'
-                : 'No hay miembros de Staff en este alcance.'}
+              {hasFilters ? 'No hay resultados para estos filtros.' : 'No hay miembros de Staff en este alcance.'}
             </p>
             {hasFilters ? (
               <button
@@ -375,18 +350,14 @@ function StaffRow({
       </div>
 
       <div className="min-w-0 border-t border-slate-100 pt-3 lg:border-0 lg:pt-0">
-        <p className="text-xs font-semibold uppercase tracking-[0.045em] text-slate-500 lg:hidden">
-          Función
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.045em] text-slate-500 lg:hidden">Función</p>
         <p className="mt-1 break-words text-sm font-semibold text-slate-900 lg:mt-0">{item.cargo}</p>
         <p className="mt-0.5 break-words text-sm text-slate-600">{item.area}</p>
       </div>
 
       {showSchool && (
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.045em] text-slate-500 lg:hidden">
-            Institución
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.045em] text-slate-500 lg:hidden">Institución</p>
           <p className="mt-1 break-words text-sm text-slate-800 lg:mt-0" title={schoolName(item)}>
             {schoolName(item)}
           </p>
@@ -404,11 +375,6 @@ function StaffRow({
           <CalendarCheck size={14} aria-hidden="true" />
           {item.permite_citas ? 'Permite citas' : 'No permite citas'}
         </span>
-        {item.es_tutor && (
-          <span className="inline-flex min-h-7 items-center rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">
-            Tutor asignado
-          </span>
-        )}
       </div>
 
       <div className="flex justify-stretch lg:justify-end">
@@ -437,7 +403,10 @@ function StaffLoading({ showSchool }: { showSchool: boolean }) {
         ))}
       </div>
       {[1, 2, 3, 4].map((key) => (
-        <div key={key} className="flex min-h-24 items-center gap-4 border-b border-slate-200 px-4 py-4 last:border-0 sm:px-5">
+        <div
+          key={key}
+          className="flex min-h-24 items-center gap-4 border-b border-slate-200 px-4 py-4 last:border-0 sm:px-5"
+        >
           <span className="erp-skeleton-circle motion-reduce:animate-none" />
           <div className="flex-1 space-y-3">
             <span className="erp-skeleton-line block w-2/5 motion-reduce:animate-none" />
