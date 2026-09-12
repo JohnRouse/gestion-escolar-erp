@@ -409,7 +409,8 @@ export class DashboardService {
     }
 
     const docente = usuario.persona.docentes?.[0] || null;
-    const staff = usuario.persona.staff?.[0] || null;
+    const staffRecord = usuario.persona.staff?.[0] || null;
+    const staff = staffRecord?.es_miembro_staff ? staffRecord : null;
 
     const asignaciones = (docente?.asignaciones || []).map((asignacion) => ({
       id_asignacion: asignacion.id_asignacion,
@@ -434,25 +435,25 @@ export class DashboardService {
     }));
 
     const tutoria =
-      staff?.es_tutor && staff.seccion
+      staffRecord?.es_tutor && staffRecord.seccion
         ? {
             es_tutor: true,
             secciones: [
               {
-                id_seccion: staff.seccion.id_seccion,
+                id_seccion: staffRecord.seccion.id_seccion,
                 id_colegio:
-                  staff.id_colegio ||
-                  staff.seccion?.id_colegio ||
-                  staff.colegio?.id_colegio ||
+                  staffRecord.seccion?.id_colegio ||
+                  staffRecord.id_colegio ||
+                  staffRecord.colegio?.id_colegio ||
                   null,
                 colegio:
-                  staff.colegio?.nombre ||
-                  staff.seccion?.colegio?.nombre ||
+                  staffRecord.seccion?.colegio?.nombre ||
+                  staffRecord.colegio?.nombre ||
                   null,
-                seccion: this.formatSeccion(staff.seccion),
-                grado: staff.seccion.grado.nombre_grado,
-                nivel: staff.seccion.grado.nivel.nombre_nivel,
-                letra: staff.seccion.letra,
+                seccion: this.formatSeccion(staffRecord.seccion),
+                grado: staffRecord.seccion.grado.nombre_grado,
+                nivel: staffRecord.seccion.grado.nivel.nombre_nivel,
+                letra: staffRecord.seccion.letra,
               },
             ],
           }

@@ -21,6 +21,7 @@ export async function staffFixture(db: PrismaService) {
   await db.$transaction(
     async (tx) => {
       await tx.staff.deleteMany();
+      await tx.docente.deleteMany();
       await tx.usuarioColegio.deleteMany();
       await tx.usuarioTenant.deleteMany();
       await tx.usuario.deleteMany();
@@ -54,6 +55,7 @@ export async function staffFixture(db: PrismaService) {
   });
   const password_hash = await bcrypt.hash(staffTestPassword, 10);
   const actors: Record<string, number> = {};
+  const actorPersonas: Record<string, { id_persona: number; dni: string }> = {};
   let counter = 0;
   for (const name of ['Admin', 'Director', 'Profesor', 'Secretaria']) {
     const rol = await db.rol.create({ data: { nombre_rol: name } });
@@ -66,6 +68,7 @@ export async function staffFixture(db: PrismaService) {
         fecha_nacimiento: new Date('1985-01-01'),
       },
     });
+    actorPersonas[name] = persona;
     const user = await db.usuario.create({
       data: {
         username: `staff.${name.toLowerCase()}`,
@@ -123,6 +126,20 @@ export async function staffFixture(db: PrismaService) {
     foreign,
     otherTenant.id_tenant,
   );
+  await db.docente.create({
+    data: { id_persona: actorPersonas.Profesor.id_persona },
+  });
+  const technicalTutor = await db.staff.create({
+    data: {
+      id_persona: actorPersonas.Profesor.id_persona,
+      id_tenant: tenant.id_tenant,
+      id_colegio: school.id_colegio,
+      cargo: 'Tutor',
+      area: 'Tutoría',
+      es_tutor: true,
+      es_miembro_staff: false,
+    },
+  });
   return {
     tenant,
     otherTenant,
@@ -131,8 +148,10 @@ export async function staffFixture(db: PrismaService) {
     denied,
     foreign,
     actors,
+    actorPersonas,
     legacy,
     forbidden,
     foreignStaff,
+    technicalTutor,
   };
 }

@@ -44,3 +44,4 @@ Cada escenario debe incluir:
 ## Escenarios documentados
 
 - [Teclado en diálogos anidados](dialogos-anidados-teclado.md).
+- [Identidad, alcance y separación funcional de Staff](staff-identidad-alcance.md).

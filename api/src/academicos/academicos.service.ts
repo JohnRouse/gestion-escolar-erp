@@ -2244,28 +2244,43 @@ colegio_nombre: sec.colegio?.nombre || null,
         },
       });
 
-      await tx.staff.upsert({
-        where: {
-          id_persona: docente.id_persona,
-        },
-        update: {
-          id_tenant: seccion.id_tenant || scope.tenantId,
-          id_colegio: seccion.id_colegio,
-          id_seccion: seccion.id_seccion,
-          es_tutor: true,
-          permite_citas: true,
-        },
-        create: {
-          id_persona: docente.id_persona,
-          id_tenant: seccion.id_tenant || scope.tenantId,
-          id_colegio: seccion.id_colegio,
-          id_seccion: seccion.id_seccion,
-          cargo: 'Tutor',
-          area: 'Tutoría',
-          es_tutor: true,
-          permite_citas: true,
-        },
+      const staffExistente = await tx.staff.findUnique({
+        where: { id_persona: docente.id_persona },
+        select: { id_staff: true, es_miembro_staff: true },
       });
+
+      if (staffExistente) {
+        await tx.staff.update({
+          where: { id_staff: staffExistente.id_staff },
+          data: {
+            // A double-function Persona keeps the institutional Staff scope.
+            // A technical-only row continues following its academic section.
+            ...(staffExistente.es_miembro_staff
+              ? {}
+              : {
+                  id_tenant: seccion.id_tenant || scope.tenantId,
+                  id_colegio: seccion.id_colegio,
+                }),
+            id_seccion: seccion.id_seccion,
+            es_tutor: true,
+            permite_citas: true,
+          },
+        });
+      } else {
+        await tx.staff.create({
+          data: {
+            id_persona: docente.id_persona,
+            id_tenant: seccion.id_tenant || scope.tenantId,
+            id_colegio: seccion.id_colegio,
+            id_seccion: seccion.id_seccion,
+            cargo: 'Tutor',
+            area: 'Tutoría',
+            es_tutor: true,
+            es_miembro_staff: false,
+            permite_citas: true,
+          },
+        });
+      }
     });
 
     const nombreTutor = `${docente.persona.nombres || ''} ${docente.persona.apellido_paterno || ''} ${docente.persona.apellido_materno || ''}`
@@ -6082,7 +6097,14 @@ const existente = await this.prisma.persona.findUnique({
       item.id_colegio && colegioIds.includes(item.id_colegio),
     );
 
-    return porEspecialidad || porAsignacion;
+    const porTutoria = (docente.persona?.staff || []).some(
+      (item: any) =>
+        item.es_tutor &&
+        item.seccion?.id_colegio &&
+        colegioIds.includes(item.seccion.id_colegio),
+    );
+
+    return porEspecialidad || porAsignacion || porTutoria;
   }
 
   private mapDocenteCrudGestion(docente: any) {
@@ -6099,6 +6121,7 @@ const existente = await this.prisma.persona.findUnique({
 
     const colegios = new Map<number, string>();
     const secciones = new Map<number, any>();
+    const tutorias = new Map<number, any>();
 
     for (const esp of docente.especialidades || []) {
       const colegio = esp.area?.colegio;
@@ -6125,6 +6148,29 @@ const existente = await this.prisma.persona.findUnique({
           nivel: asignacion.seccion?.grado?.nivel?.nombre_nivel || null,
           colegio: colegio?.nombre || colegio?.nombre_corto || null,
         });
+      }
+    }
+
+    for (const asignacionTutoria of persona.staff || []) {
+      const seccionTutoria = asignacionTutoria.seccion;
+      if (!asignacionTutoria.es_tutor || !seccionTutoria?.id_seccion) continue;
+
+      const colegioTutoria = seccionTutoria.colegio || asignacionTutoria.colegio;
+      const seccionNombre = seccionTutoria.grado
+        ? `${seccionTutoria.grado.nombre_grado} "${seccionTutoria.letra}"`
+        : seccionTutoria.letra || 'Sección';
+
+      tutorias.set(seccionTutoria.id_seccion, {
+        id_seccion: seccionTutoria.id_seccion,
+        seccion: seccionNombre,
+        nivel: seccionTutoria.grado?.nivel?.nombre_nivel || null,
+        colegio: colegioTutoria?.nombre || colegioTutoria?.nombre_corto || null,
+      });
+      if (colegioTutoria?.id_colegio) {
+        colegios.set(
+          colegioTutoria.id_colegio,
+          colegioTutoria.nombre || colegioTutoria.nombre_corto || 'Colegio',
+        );
       }
     }
 
@@ -6167,7 +6213,7 @@ const existente = await this.prisma.persona.findUnique({
       })),
       secciones_count: secciones.size,
       secciones_resumen: Array.from(secciones.values()),
-      tutorias_resumen: [],
+      tutorias_resumen: Array.from(tutorias.values()),
       asignaciones_resumen: (docente.asignaciones || []).slice(0, 8).map((item: any) => ({
         id_asignacion: item.id_asignacion,
         curso: item.curso?.nombre_curso || 'Curso',
@@ -6186,13 +6232,28 @@ const existente = await this.prisma.persona.findUnique({
     };
   }
 
-  private docenteIncludeCrud() {
+  private docenteIncludeCrud(colegioIds: number[]) {
     return {
       persona: {
         include: {
           usuarios: {
             include: {
               rol: true,
+            },
+          },
+          staff: {
+            where: {
+              es_tutor: true,
+              seccion: { id_colegio: { in: colegioIds } },
+            },
+            include: {
+              colegio: true,
+              seccion: {
+                include: {
+                  colegio: true,
+                  grado: { include: { nivel: true } },
+                },
+              },
             },
           },
         },
@@ -6284,6 +6345,16 @@ const existente = await this.prisma.persona.findUnique({
                 },
               },
             },
+            {
+              persona: {
+                staff: {
+                  some: {
+                    es_tutor: true,
+                    seccion: { id_colegio: { in: colegioIds } },
+                  },
+                },
+              },
+            },
           ],
         },
       ],
@@ -6358,7 +6429,7 @@ const existente = await this.prisma.persona.findUnique({
         where,
         skip,
         take: limit,
-        include: this.docenteIncludeCrud(),
+        include: this.docenteIncludeCrud(colegioIds),
         orderBy: {
           id_persona: 'desc',
         },
@@ -6383,14 +6454,14 @@ const existente = await this.prisma.persona.findUnique({
       colegioId: params.colegioId,
     });
 
+    const colegioIds = contexto.colegioId ? [contexto.colegioId] : contexto.permitidoIds;
+
     const docente = await this.prisma.docente.findUnique({
       where: { id_persona: params.idDocente },
-      include: this.docenteIncludeCrud(),
+      include: this.docenteIncludeCrud(colegioIds),
     });
 
     if (!docente) throw new NotFoundException('Docente no encontrado.');
-
-    const colegioIds = contexto.colegioId ? [contexto.colegioId] : contexto.permitidoIds;
 
     if (!this.docentePerteneceScopeCrud(docente, colegioIds)) {
       throw new BadRequestException('No tienes acceso a este docente.');
@@ -18577,66 +18648,59 @@ const existente = await this.prisma.persona.findUnique({
         )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
       };
 
-      if (
-        staff.cargo === 'Docente' ||
-        staff.cargo === 'Tutor' ||
-        staff.cargo === 'Profesor de Taller' ||
-        staff.cargo === 'Auxiliar de Educación'
-      ) {
-        const docente = await this.prisma.docente.findUnique({
-          where: { id_persona: staff.id_persona },
-          include: {
-            asignaciones: {
-              where: {
-                id_seccion: { in: seccionIds },
-                id_anio: { in: anioIds },
-              },
-              include: { curso: true },
+      const docente = await this.prisma.docente.findUnique({
+        where: { id_persona: staff.id_persona },
+        include: {
+          asignaciones: {
+            where: {
+              id_seccion: { in: seccionIds },
+              id_anio: { in: anioIds },
             },
-            horarios: {
-              where: {
-                id_seccion: { in: seccionIds },
-                id_anio: { in: anioIds },
-              },
-              include: { curso: true },
-              orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
-            },
+            include: { curso: true },
           },
-        });
+          horarios: {
+            where: {
+              id_seccion: { in: seccionIds },
+              id_anio: { in: anioIds },
+            },
+            include: { curso: true },
+            orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
+          },
+        },
+      });
 
-        if (docente) {
-          item.cursos = [
-            ...new Set(
-              docente.asignaciones.map((a) => a.curso.nombre_curso),
-            ),
-          ];
+      if (docente) {
+        item.cursos = [
+          ...new Set(
+            docente.asignaciones.map((a) => a.curso.nombre_curso),
+          ),
+        ];
 
-          const diasSemana = [
-            'Lunes',
-            'Martes',
-            'Miércoles',
-            'Jueves',
-            'Viernes',
-          ];
+        const diasSemana = [
+          'Lunes',
+          'Martes',
+          'Miércoles',
+          'Jueves',
+          'Viernes',
+        ];
 
-          const horarioPorDia: Record<
-            string,
-            { hora_inicio: string; hora_fin: string; curso: string }[]
-          > = {};
+        const horarioPorDia: Record<
+          string,
+          { hora_inicio: string; hora_fin: string; curso: string }[]
+        > = {};
 
-          for (const h of docente.horarios) {
-            const dia = diasSemana[h.dia_semana - 1];
-            if (!horarioPorDia[dia]) horarioPorDia[dia] = [];
+        for (const h of docente.horarios) {
+          const dia = diasSemana[h.dia_semana - 1];
+          if (!horarioPorDia[dia]) horarioPorDia[dia] = [];
 
-            horarioPorDia[dia].push({
-              hora_inicio: h.hora_inicio,
-              hora_fin: h.hora_fin,
-              curso: h.curso.nombre_curso,
-            });
-          }
-
-          item.horario = horarioPorDia;
+          horarioPorDia[dia].push({
+            hora_inicio: h.hora_inicio,
+            hora_fin: h.hora_fin,
+            curso: h.curso.nombre_curso,
+          });
         }
+
+        item.horario = horarioPorDia;
       }
 
       resultado.push(item);

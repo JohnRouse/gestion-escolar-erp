@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -15,7 +16,12 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 import { Roles, RolesGuard } from '../auth/roles.guard';
-import { StaffListDto, StaffScopeDto, StaffWriteDto } from './staff.dto';
+import {
+  StaffAccessManageDto,
+  StaffListDto,
+  StaffScopeDto,
+  StaffWriteDto,
+} from './staff.dto';
 import { STAFF_MANAGEMENT_ROLES, StaffService } from './staff.service';
 
 type StaffRequest = Request & { user: { userId: number } };
@@ -62,5 +68,14 @@ export class StaffController {
     @Body() body: StaffWriteDto,
   ) {
     return this.staff.save(req.user.userId, query, body, id);
+  }
+  @Patch(':id/accesos/:usuarioId') manageAccess(
+    @Req() req: StaffRequest,
+    @Query() query: StaffScopeDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Body() body: StaffAccessManageDto,
+  ) {
+    return this.staff.manageAccess(req.user.userId, query, id, usuarioId, body);
   }
 }

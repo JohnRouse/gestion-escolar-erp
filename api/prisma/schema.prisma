@@ -1159,15 +1159,16 @@ model Horario {
 }
 
 model Staff {
-  id_staff      Int     @id @default(autoincrement())
-  id_tenant     Int?
-  id_colegio    Int?
-  id_persona    Int     @unique
-  cargo         String  @db.VarChar(100)
-  area          String  @db.VarChar(50)
-  id_seccion    Int?
-  es_tutor      Boolean @default(false)
-  permite_citas Boolean @default(true)
+  id_staff         Int     @id @default(autoincrement())
+  id_tenant        Int?
+  id_colegio       Int?
+  id_persona       Int     @unique
+  cargo            String  @db.VarChar(100)
+  area             String  @db.VarChar(50)
+  id_seccion       Int?
+  es_tutor         Boolean @default(false)
+  permite_citas    Boolean @default(true)
+  es_miembro_staff Boolean @default(true)
 
   tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
   colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])

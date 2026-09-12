@@ -30,5 +30,6 @@ Ejemplo:
 
 ## Correcciones transversales
 
+- [2026-09-09: separación funcional entre Docentes y Staff](2026-09-09-separacion-docentes-staff-v1.md).
 - [2026-09-05: teclado exclusivo del diálogo superior](2026-09-05-accessible-dialog-teclado-anidado.md).
 - [2026-09-05: conservación de foco al abrir comprobantes de pago](2026-09-05-comprobante-pago-foco-disparador.md).

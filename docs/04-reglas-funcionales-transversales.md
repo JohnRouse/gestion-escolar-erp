@@ -42,6 +42,11 @@ Denominaciones recomendadas:
 
 Cada sección puede tener un tutor asignado durante un año lectivo.
 
+Ser Docente o Tutor no convierte a una Persona en miembro de Staff. Una Persona
+puede pertenecer a ambos dominios cuando ejerce adicionalmente un cargo
+institucional no docente. La tutoría se presenta y administra desde Docentes o
+desde el dominio académico correspondiente, nunca desde la gestión de Staff.
+
 Solo deben acceder:
 
 - Tutor asignado.
@@ -124,3 +129,18 @@ Deben utilizarse estados como:
 - Revertido.
 - Cerrado.
 - Cancelado.
+
+## 10. Persona compartida y credenciales internas
+
+- Persona conserva una identidad canónica para Staff, Docentes, Usuarios y los
+  demás dominios que la referencian.
+- Corregir Persona desde Staff actualiza el mismo registro solo cuando Admin o
+  Director tiene autoridad sobre todos sus contextos institucionales conocidos.
+- DNI tiene exactamente ocho dígitos, es único y una colisión se rechaza sin
+  crear otra Persona.
+- Username, rol, restablecimiento de contraseña y estado de acceso son acciones
+  sensibles y requieren motivo explícito.
+- Director no puede crear/elevar a Admin ni operar una cuenta Admin. Ninguna
+  acción de Staff concede privilegios de Superadministración SaaS.
+- Una contraseña se reemplaza mediante bcrypt; nunca se consulta, recupera,
+  muestra ni registra en auditoría.

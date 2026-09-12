@@ -1381,7 +1381,7 @@ async function main() {
     matriculas2027.push({ ...matricula, persona: personaEstudiante });
   }
 
-  // Staff tutor de 5to A
+  // Asignación técnica legacy de Tutoría. No representa pertenencia a Staff.
   await prisma.staff.upsert({
     where: { id_persona: personaDocente1.id_persona },
     update: {
@@ -1391,6 +1391,7 @@ async function main() {
       area: 'Primaria',
       id_seccion: 15,
       es_tutor: true,
+      es_miembro_staff: false,
       permite_citas: true,
     },
     create: {
@@ -1401,6 +1402,7 @@ async function main() {
       area: 'Primaria',
       id_seccion: 15,
       es_tutor: true,
+      es_miembro_staff: false,
       permite_citas: true,
     },
   });

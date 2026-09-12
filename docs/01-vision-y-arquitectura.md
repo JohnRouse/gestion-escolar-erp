@@ -201,6 +201,11 @@ Los secretos, credenciales y archivos privados no deben almacenarse en GitHub.
 - Staff.
 - Citas.
 
+Docentes representa funciones académicas; Staff representa cargos
+administrativos, directivos o de soporte. Una Persona puede pertenecer a uno o
+a ambos dominios sin duplicar su identidad, pero enseñar o ser tutor no la
+convierte por sí solo en miembro de Staff.
+
 ### Bienestar
 
 - Enfermería.
