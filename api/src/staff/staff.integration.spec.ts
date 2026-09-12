@@ -233,7 +233,7 @@ describe('Staff HTTP + isolated database', () => {
       await db.staff.count({ where: { id_persona: professor.id_persona } }),
     ).toBe(1);
   });
-  it('edits institutional fields and appointment availability, preserving identity and tutor flags', async () => {
+  it('edits canonical Persona and institutional fields, preserving identity and tutor flags', async () => {
     await db.staff.update({
       where: { id_staff: created.id_staff },
       data: { es_tutor: true },
@@ -261,7 +261,37 @@ describe('Staff HTTP + isolated database', () => {
       created.id_staff,
       body({ persona: undefined, permite_citas: true }),
     ).expect(200);
-    await put(created.id_staff, body()).expect(400);
+    const currentPersona = await db.persona.findUniqueOrThrow({
+      where: { id_persona: created.id_persona },
+    });
+    await put(
+      created.id_staff,
+      body({
+        persona: {
+          dni: currentPersona.dni,
+          nombres: currentPersona.nombres,
+          apellido_paterno: currentPersona.apellido_paterno,
+          apellido_materno: currentPersona.apellido_materno,
+          fecha_nacimiento: currentPersona.fecha_nacimiento
+            .toISOString()
+            .slice(0, 10),
+          telefono: '999555111',
+          direccion: 'Jr. Identidad canónica 456',
+          departamento: currentPersona.departamento,
+          provincia: currentPersona.provincia,
+          distrito: currentPersona.distrito,
+          correo: currentPersona.correo,
+        },
+      }),
+    ).expect(200);
+    expect(
+      await db.persona.findUniqueOrThrow({
+        where: { id_persona: created.id_persona },
+      }),
+    ).toMatchObject({
+      telefono: '999555111',
+      direccion: 'Jr. Identidad canónica 456',
+    });
     await put(
       created.id_staff,
       body({ persona: undefined, id_colegio: f.second.id_colegio }),

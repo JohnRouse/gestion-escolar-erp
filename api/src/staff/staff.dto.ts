@@ -17,6 +17,12 @@ import {
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
+export const STAFF_ACCESS_ROLES = [
+  'Admin',
+  'Director',
+  'Secretaria',
+  'Profesor',
+] as const;
 export class StaffScopeDto {
   @Type(() => Number) @IsInt() @Min(1) tenant_id!: number;
   @IsOptional() @IsIn(['all']) scope?: string;
@@ -42,21 +48,69 @@ export class StaffPersonaDto {
   @MaxLength(100)
   apellido_materno!: string;
   @IsDateString({ strict: true }) fecha_nacimiento!: string;
-  @IsOptional() @Transform(trim) @IsString() @MaxLength(255) direccion?: string;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(255)
+  direccion?: string | null;
   @IsOptional()
   @Transform(trim)
   @IsString()
   @MaxLength(80)
-  departamento?: string;
-  @IsOptional() @Transform(trim) @IsString() @MaxLength(80) provincia?: string;
-  @IsOptional() @Transform(trim) @IsString() @MaxLength(80) distrito?: string;
-  @IsOptional() @Transform(trim) @IsString() @MaxLength(20) telefono?: string;
-  @IsOptional() @Transform(trim) @IsEmail() @MaxLength(150) correo?: string;
+  departamento?: string | null;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(80)
+  provincia?: string | null;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(80)
+  distrito?: string | null;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(20)
+  telefono?: string | null;
+  @IsOptional()
+  @Transform(trim)
+  @IsEmail()
+  @MaxLength(150)
+  correo?: string | null;
 }
 export class StaffAccesoDto {
   @Transform(trim) @Matches(/^[a-zA-Z0-9._@-]{3,50}$/) username!: string;
-  @IsIn(['Admin', 'Director', 'Secretaria', 'Profesor']) rol!: string;
+  @IsIn(STAFF_ACCESS_ROLES) rol!: string;
   @IsOptional() @IsString() @MinLength(8) @MaxLength(72) password?: string;
+}
+export class StaffAccessManageDto {
+  @IsIn([
+    'editar_usuario',
+    'cambiar_rol',
+    'restablecer_password',
+    'cambiar_estado',
+  ])
+  accion!:
+    | 'editar_usuario'
+    | 'cambiar_rol'
+    | 'restablecer_password'
+    | 'cambiar_estado';
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(300)
+  motivo!: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @Matches(/^[a-zA-Z0-9._@-]{3,50}$/)
+  username?: string;
+
+  @IsOptional() @IsIn(STAFF_ACCESS_ROLES) rol?: string;
+  @IsOptional() @IsString() @MinLength(8) @MaxLength(72) password?: string;
+  @IsOptional() @IsBoolean() estado?: boolean;
 }
 export class StaffWriteDto {
   @IsInt() @Min(1) id_colegio!: number;

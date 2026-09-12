@@ -91,3 +91,67 @@ describe.each([
     expect(transactionStaff.create).not.toHaveBeenCalled();
   });
 });
+
+describe('Tutoría visible en el directorio de Docentes', () => {
+  const mapDocente = (staffAssignments: object[]) => {
+    const service = new AcademicosService({} as PrismaService);
+    return (
+      service as unknown as {
+        mapDocenteCrudGestion: (docente: object) => {
+          tutorias_resumen: { seccion: string }[];
+        };
+      }
+    ).mapDocenteCrudGestion({
+      id_persona: 20,
+      fecha_ingreso: null,
+      persona: {
+        dni: '12345678',
+        nombres: 'Docente',
+        apellido_paterno: 'Prueba',
+        apellido_materno: 'Tutoría',
+        usuarios: [],
+        staff: staffAssignments,
+      },
+      especialidades: [],
+      asignaciones: [],
+      _count: { asignaciones: 0, horarios: 0 },
+    });
+  };
+
+  it('expone Tutor únicamente desde una asignación académica real', () => {
+    const docente = mapDocente([
+      {
+        es_tutor: true,
+        colegio: null,
+        seccion: {
+          id_seccion: 100,
+          letra: 'A',
+          colegio: { id_colegio: 10, nombre: 'Colegio académico' },
+          grado: {
+            nombre_grado: '5to Grado',
+            nivel: { nombre_nivel: 'Primaria' },
+          },
+        },
+      },
+    ]);
+
+    expect(docente.tutorias_resumen).toEqual([
+      expect.objectContaining({ seccion: '5to Grado "A"' }),
+    ]);
+  });
+
+  it('no expone Tutor cuando el docente no tiene Tutoría asignada', () => {
+    const docente = mapDocente([
+      {
+        es_tutor: false,
+        colegio: null,
+        seccion: {
+          id_seccion: 100,
+          letra: 'A',
+        },
+      },
+    ]);
+
+    expect(docente.tutorias_resumen).toEqual([]);
+  });
+});

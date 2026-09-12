@@ -3,13 +3,21 @@ import { BadgeCheck, BriefcaseBusiness, Check, CircleUserRound, KeyRound, Loader
 import AccessibleDialog from '../../components/AccessibleDialog';
 import LocationSelects from '../../components/LocationSelects';
 import { useToast } from '../../contexts/ToastContext';
-import { staffError, type staffApi, type StaffItem, type StaffPersona } from './staffApi';
+import StaffAccessDialog from './StaffAccessDialog';
+import {
+  staffError,
+  type staffApi,
+  type StaffAccess,
+  type StaffAccessAction,
+  type StaffItem,
+  type StaffPersona,
+} from './staffApi';
 
 type Props = {
   item: StaffItem | null;
   api: ReturnType<typeof staffApi>;
   rol: string;
-  colegios: { id_colegio: number; nombre: string }[];
+  colegios: { id_colegio: number; nombre: string; rol_colegio?: string }[];
   defaultColegio?: number | null;
   onClose: () => void;
   onSaved: () => void;
@@ -47,14 +55,34 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
   const [accessRole, setAccessRole] = useState('Secretaria');
   const [password, setPassword] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [accesses, setAccesses] = useState<StaffAccess[]>(item?.accesos ?? []);
+  const [accessDialog, setAccessDialog] = useState<{
+    account: StaffAccess;
+    mode: 'edit' | 'password';
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const firstInput = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
-  const personalLocked = reused || (!item && checkedDni !== persona.dni);
-  const hasExistingAccess = Boolean(item?.accesos?.length);
+  const personalLocked = !item && (reused || checkedDni !== persona.dni);
+  const hasExistingAccess = Boolean(accesses.length);
   const documentReady = !item && Boolean(persona.dni) && checkedDni === persona.dni;
+  const actorRole = colegios.find((school) => String(school.id_colegio) === colegio)?.rol_colegio ?? rol;
   const field = (key: keyof StaffPersona, value: string) => setPersona((current) => ({ ...current, [key]: value }));
+
+  const personaPayload = (): StaffPersona => ({
+    dni: persona.dni,
+    nombres: persona.nombres,
+    apellido_paterno: persona.apellido_paterno,
+    apellido_materno: persona.apellido_materno,
+    fecha_nacimiento: persona.fecha_nacimiento.slice(0, 10),
+    direccion: persona.direccion?.trim() || null,
+    departamento: persona.departamento?.trim() || null,
+    provincia: persona.provincia?.trim() || null,
+    distrito: persona.distrito?.trim() || null,
+    telefono: persona.telefono?.trim() || null,
+    correo: persona.correo?.trim() || null,
+  });
 
   async function lookup() {
     if (!/^\d{8}$/.test(persona.dni)) {
@@ -92,23 +120,7 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
           cargo,
           area,
           permite_citas: citas,
-          ...(!item
-            ? {
-                persona: {
-                  dni: persona.dni,
-                  nombres: persona.nombres,
-                  apellido_paterno: persona.apellido_paterno,
-                  apellido_materno: persona.apellido_materno,
-                  fecha_nacimiento: persona.fecha_nacimiento.slice(0, 10),
-                  ...(persona.direccion ? { direccion: persona.direccion } : {}),
-                  ...(persona.departamento ? { departamento: persona.departamento } : {}),
-                  ...(persona.provincia ? { provincia: persona.provincia } : {}),
-                  ...(persona.distrito ? { distrito: persona.distrito } : {}),
-                  ...(persona.telefono ? { telefono: persona.telefono } : {}),
-                  ...(persona.correo ? { correo: persona.correo } : {}),
-                },
-              }
-            : {}),
+          persona: personaPayload(),
           ...(access
             ? {
                 motivo,
@@ -134,6 +146,20 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
       showToast({ type: 'error', message });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function manageAccess(account: StaffAccess, action: StaffAccessAction) {
+    if (!item) return;
+    try {
+      const updated = await api.manageAccess(item.id_staff, account.id_usuario, action);
+      setAccesses(updated.accesos ?? []);
+      setAccessDialog(null);
+      showToast({ type: 'success', message: 'Acceso al ERP actualizado correctamente.' });
+    } catch (requestError) {
+      const message = staffError(requestError);
+      showToast({ type: 'error', message });
+      throw new Error(message, { cause: requestError });
     }
   }
 
@@ -196,7 +222,7 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
             title="Identidad personal"
             description={
               item
-                ? 'Los datos compartidos de la persona se muestran en modo de consulta.'
+                ? 'Corrige la Persona canónica. Los módulos vinculados verán la misma información actualizada.'
                 : 'Primero comprueba el DNI para evitar registros duplicados.'
             }
           />
@@ -206,7 +232,7 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
               <label className={labelClassName}>
                 DNI *
                 <input
-                  ref={!item ? firstInput : undefined}
+                  ref={firstInput}
                   className={inputClassName}
                   inputMode="numeric"
                   autoComplete="off"
@@ -215,11 +241,12 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
                   required
                   pattern="[0-9]{8}"
                   maxLength={8}
-                  readOnly={Boolean(item)}
                   onChange={(event) => {
                     field('dni', event.target.value.replace(/\D/g, ''));
-                    setCheckedDni('');
-                    setReused(false);
+                    if (!item) {
+                      setCheckedDni('');
+                      setReused(false);
+                    }
                   }}
                 />
               </label>
@@ -235,7 +262,7 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
               )}
             </div>
 
-            {reused && (
+            {!item && reused && (
               <div className="flex gap-3 rounded-md bg-blue-50 px-3.5 py-3 text-sm leading-5 text-blue-900 ring-1 ring-blue-100">
                 <BadgeCheck size={18} className="mt-0.5 shrink-0 text-blue-700" aria-hidden="true" />
                 <p>Persona existente. Sus datos se conservan porque también pueden utilizarse en otros módulos.</p>
@@ -405,7 +432,6 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
               <label className={labelClassName}>
                 Cargo *
                 <input
-                  ref={item ? firstInput : undefined}
                   className={inputClassName}
                   value={cargo}
                   onChange={(event) => setCargo(event.target.value)}
@@ -442,26 +468,52 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
           />
 
           <div className="mt-5 space-y-4">
-            {item?.accesos?.length ? (
+            {accesses.length ? (
               <div className="overflow-hidden rounded-md border border-slate-200">
                 <p className="border-b border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.045em] text-slate-600">
-                  {item.accesos.length === 1 ? 'Cuenta de usuario vinculada' : 'Cuentas de usuario vinculadas'}
+                  {accesses.length === 1 ? 'Cuenta de usuario vinculada' : 'Cuentas de usuario vinculadas'}
                 </p>
                 <ul className="divide-y divide-slate-200">
-                  {item.accesos.map((account) => {
+                  {accesses.map((account) => {
                     const active =
                       account.estado &&
                       account.tenants[0]?.estado === 'Activo' &&
                       account.colegios[0]?.estado === 'Activo';
+                    const blocked = actorRole === 'Director' && account.rol.nombre_rol === 'Admin';
                     return (
-                      <li key={account.username} className="grid gap-3 px-3.5 py-3 text-sm sm:grid-cols-3">
-                        <AccessValue label="Usuario" value={account.username} breakAll />
-                        <AccessValue label="Rol" value={account.rol.nombre_rol} />
-                        <AccessValue
-                          label="Estado"
-                          value={active ? 'Acceso activo' : 'Acceso incompleto o inactivo'}
-                          status={active ? 'active' : 'inactive'}
-                        />
+                      <li key={account.id_usuario} className="px-3.5 py-4 text-sm">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <AccessValue label="Usuario" value={account.username} breakAll />
+                          <AccessValue label="Rol" value={account.rol.nombre_rol} />
+                          <AccessValue
+                            label="Estado"
+                            value={active ? 'Activo' : 'Inactivo'}
+                            status={active ? 'active' : 'inactive'}
+                          />
+                        </div>
+                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          <button
+                            type="button"
+                            className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none"
+                            disabled={blocked}
+                            onClick={() => setAccessDialog({ account, mode: 'edit' })}
+                          >
+                            Editar acceso
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none"
+                            disabled={blocked}
+                            onClick={() => setAccessDialog({ account, mode: 'password' })}
+                          >
+                            Restablecer contraseña
+                          </button>
+                        </div>
+                        {blocked && (
+                          <p className="mt-2 text-sm leading-5 text-amber-800">
+                            Solo Admin puede administrar esta cuenta.
+                          </p>
+                        )}
                       </li>
                     );
                   })}
@@ -509,7 +561,7 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
                       value={accessRole}
                       onChange={(event) => setAccessRole(event.target.value)}
                     >
-                      {['Secretaria', 'Profesor', 'Director', ...(rol === 'Admin' ? ['Admin'] : [])].map((role) => (
+                      {['Secretaria', 'Profesor', 'Director', ...(actorRole === 'Admin' ? ['Admin'] : [])].map((role) => (
                         <option key={role}>{role}</option>
                       ))}
                     </select>
@@ -550,6 +602,21 @@ export default function StaffForm({ item, api, rol, colegios, defaultColegio, on
           </div>
         </fieldset>
       </form>
+      {accessDialog && (
+        <StaffAccessDialog
+          key={`${accessDialog.account.id_usuario}:${accessDialog.mode}`}
+          account={accessDialog.account}
+          active={
+            accessDialog.account.estado &&
+            accessDialog.account.tenants[0]?.estado === 'Activo' &&
+            accessDialog.account.colegios[0]?.estado === 'Activo'
+          }
+          actorRole={actorRole}
+          mode={accessDialog.mode}
+          onClose={() => setAccessDialog(null)}
+          onAction={(action) => manageAccess(accessDialog.account, action)}
+        />
+      )}
     </AccessibleDialog>
   );
 }

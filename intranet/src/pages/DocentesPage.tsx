@@ -176,6 +176,14 @@ function tutorLabel(docente: DocenteItem) {
   return `Tutor de ${tutorias.map((item) => item.seccion).join(', ')}`;
 }
 
+function requestMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError<{ message?: string | string[] }>(error)) {
+    const message = error.response?.data?.message;
+    if (message) return Array.isArray(message) ? message.join(' · ') : message;
+  }
+  return fallback;
+}
+
 function toForm(docente: DocenteItem): DocenteForm {
   return {
     dni: docente.persona.dni || '',
@@ -261,8 +269,8 @@ export default function DocentesPage() {
         setDocentes(res.data?.data || []);
         setMeta(res.data?.meta || { total: 0, page: 1, limit: 12, totalPages: 1 });
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo cargar la lista de docentes.';
+    } catch (error: unknown) {
+      const message = requestMessage(error, 'No se pudo cargar la lista de docentes.');
       showToast({ type: 'error', title: 'Error al cargar', message });
       setDocentes([]);
     } finally {
@@ -285,11 +293,17 @@ export default function DocentesPage() {
   };
 
   useEffect(() => {
+    // Existing loader is intentionally triggered by the institutional query.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocentes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, token]);
 
   useEffect(() => {
+    // Existing loader is intentionally triggered by the institutional query.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAreas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasParams, token]);
 
   const openCreate = () => {
@@ -316,8 +330,8 @@ export default function DocentesPage() {
       });
 
       setSelected(res.data);
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo cargar el detalle del docente.';
+    } catch (error: unknown) {
+      const message = requestMessage(error, 'No se pudo cargar el detalle del docente.');
       showToast({ type: 'error', title: 'Error al cargar detalle', message });
     }
   };
@@ -424,8 +438,8 @@ export default function DocentesPage() {
       setModalOpen(false);
       setEditing(null);
       await fetchDocentes();
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo guardar el docente.';
+    } catch (error: unknown) {
+      const message = requestMessage(error, 'No se pudo guardar el docente.');
       showToast({ type: 'error', title: 'No se pudo guardar', message });
     } finally {
       setSaving(false);
@@ -452,8 +466,8 @@ export default function DocentesPage() {
       setDetalleOpen(false);
       setSelected(null);
       await fetchDocentes();
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo eliminar el docente.';
+    } catch (error: unknown) {
+      const message = requestMessage(error, 'No se pudo eliminar el docente.');
       showToast({ type: 'error', title: 'No se pudo eliminar', message });
     } finally {
       setSaving(false);
@@ -564,7 +578,14 @@ export default function DocentesPage() {
                     {initials(docente)}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-950">{docente.nombre_completo}</p>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="min-w-0 truncate text-sm font-black text-slate-950">{docente.nombre_completo}</p>
+                      {Boolean(docente.tutorias_resumen?.length) && (
+                        <span className="inline-flex shrink-0 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">
+                          Tutor
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 flex flex-wrap gap-x-2 gap-y-1 text-xs font-semibold text-slate-600">
                       <span>DNI {docente.persona.dni}</span>
                       {docente.persona.telefono && (

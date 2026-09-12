@@ -2,7 +2,12 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
-import { StaffListDto, StaffScopeDto, StaffWriteDto } from './staff.dto';
+import {
+  StaffAccessManageDto,
+  StaffListDto,
+  StaffScopeDto,
+  StaffWriteDto,
+} from './staff.dto';
 import { StaffService } from './staff.service';
 
 describe('StaffService routine and sensitive operations', () => {
@@ -25,6 +30,16 @@ describe('StaffService routine and sensitive operations', () => {
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it('requires an explicit motive for existing-account operations', async () => {
+    const dto = plainToInstance(StaffAccessManageDto, {
+      accion: 'editar_usuario',
+      username: 'staff.actualizado',
+    });
+
+    const errors = await validate(dto);
+    expect(errors.some((error) => error.property === 'motivo')).toBe(true);
   });
 
   it('rejects ERP access without a motive before writing any entity', async () => {

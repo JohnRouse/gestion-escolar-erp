@@ -14,11 +14,12 @@ export type StaffPersona = {
   correo?: string | null;
 };
 export type StaffAccess = {
+  id_usuario: number;
   username: string;
   estado: boolean;
   rol: { nombre_rol: string };
-  tenants: { estado: string }[];
-  colegios: { estado: string }[];
+  tenants: { id_tenant: number; estado: string }[];
+  colegios: { id_colegio: number; rol_colegio: string; estado: string }[];
 };
 export type StaffItem = {
   id_staff: number;
@@ -45,6 +46,15 @@ export type StaffPayload = {
   persona?: StaffPersona;
   acceso?: { username: string; rol: string; password?: string };
 };
+export type StaffAccessAction =
+  | {
+      accion: 'editar_usuario';
+      username: string;
+      motivo: string;
+    }
+  | { accion: 'cambiar_rol'; rol: string; motivo: string }
+  | { accion: 'restablecer_password'; password: string; motivo: string }
+  | { accion: 'cambiar_estado'; estado: boolean; motivo: string };
 export function staffApi(token: string | null, params: Record<string, string | number>) {
   const config = { params, headers: { Authorization: `Bearer ${token}` } };
   return {
@@ -66,6 +76,8 @@ export function staffApi(token: string | null, params: Record<string, string | n
       id
         ? (await axios.put<StaffItem>(`/api/staff/${id}`, body, config)).data
         : (await axios.post<StaffItem>('/api/staff', body, config)).data,
+    manageAccess: async (staffId: number, userId: number, body: StaffAccessAction) =>
+      (await axios.patch<StaffItem>(`/api/staff/${staffId}/accesos/${userId}`, body, config)).data,
   };
 }
 export function staffError(error: unknown) {
