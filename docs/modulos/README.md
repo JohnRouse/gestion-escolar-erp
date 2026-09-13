@@ -28,8 +28,8 @@ Cada módulo debe tener un documento propio utilizando `docs/plantillas/plantill
 ### Personal
 
 - Docentes.
-- Staff.
-- Citas.
+- [Staff](staff.md).
+- [Citas](citas.md).
 
 ### Bienestar
 

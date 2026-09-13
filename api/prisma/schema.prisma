@@ -88,6 +88,7 @@ model Usuario {
   resultados_recuperacion             RecuperacionAlumno[]          @relation("UsuarioRecuperacionResultado")
   competencias_recuperacion           RecuperacionCompetencia[]     @relation("UsuarioRecuperacionCompetencia")
   movimientos_estudiante              MovimientoEstudiante[]        @relation("UsuarioMovimientoEstudiante")
+  movimientos_citas                   CitaMovimiento[]              @relation("CitaMovimientoActor")
   lotes_promocion_creados             LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
   lotes_promocion_ejecutados          LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
   lotes_promocion_revertidos          LotePromocion[]               @relation("UsuarioLotePromocionReversion")
@@ -133,6 +134,7 @@ model Tenant {
   movimientos_alumnos   MovimientoEstudiante[]
   lotes_promocion       LotePromocion[]
   secciones_anio        SeccionAnio[]
+  citas                 Cita[]
 }
 
 model Colegio {
@@ -178,6 +180,7 @@ model Colegio {
   pagos_recibidos     PagoRecibido[]
   datos_cobro         DatosCobroColegio?
   criterios_tutoria   CriterioTutoria[]
+  citas               Cita[]
 
   progresiones_grado    GradoProgresion[]
   cierres_academicos    CierreAcademico[]
@@ -305,6 +308,7 @@ model Seccion {
   horarios     Horario[]
   staff        Staff[]
   albumes      Album[]
+  citas_agenda Cita[]
 
   lotes_promocion_origen     LotePromocion[]        @relation("LotePromocionSeccionOrigen")
   detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleSeccionOrigen")
@@ -460,6 +464,7 @@ model Docente {
   albumes                   Album[]
   comentariosBimestrales    ComentarioBimestral[]
   competencias_recuperacion RecuperacionCompetencia[] @relation("DocenteRecuperacionCompetencia")
+  citas                     Cita[]
 }
 
 model Estudiante {
@@ -571,6 +576,7 @@ model Matricula {
   detalles_lote_origen           LotePromocionDetalle[]          @relation("LoteDetalleMatriculaOrigen")
   detalles_lote_generada         LotePromocionDetalle[]          @relation("LoteDetalleMatriculaGenerada")
   ejecuciones_promocion_generada LotePromocionEjecucionDetalle[] @relation("EjecucionDetalleMatriculaGenerada")
+  citas                          Cita[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -1183,22 +1189,65 @@ model Staff {
 }
 
 model Cita {
-  id_cita      Int      @id @default(autoincrement())
-  id_staff     Int
-  id_apoderado Int
-  fecha        DateTime @db.Date
-  hora_inicio  String   @db.VarChar(5)
-  hora_fin     String   @db.VarChar(5)
-  motivo       String?  @db.Text
-  estado       String   @default("pendiente") @db.VarChar(30)
-  creado_en    DateTime @default(now())
+  id_cita               Int      @id @default(autoincrement())
+  id_tenant             Int?
+  id_colegio            Int?
+  id_staff              Int?
+  id_docente            Int?
+  id_apoderado          Int?
+  id_matricula          Int?
+  id_seccion            Int?
+  tipo                  String   @default("individual") @db.VarChar(20)
+  contexto_destinatario String   @default("staff") @db.VarChar(20)
+  funcion_destinatario  String?  @db.VarChar(150)
+  fecha                 DateTime @db.Date
+  hora_inicio           String   @db.VarChar(5)
+  hora_fin              String   @db.VarChar(5)
+  motivo                String?  @db.Text
+  estado                String   @default("pendiente") @db.VarChar(30)
+  creado_en             DateTime @default(now())
+  actualizado_en        DateTime @default(now()) @updatedAt
 
-  staff     Staff     @relation(fields: [id_staff], references: [id_staff])
-  apoderado Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+  tenant      Tenant?          @relation(fields: [id_tenant], references: [id_tenant])
+  colegio     Colegio?         @relation(fields: [id_colegio], references: [id_colegio])
+  staff       Staff?           @relation(fields: [id_staff], references: [id_staff])
+  docente     Docente?         @relation(fields: [id_docente], references: [id_persona])
+  apoderado   Apoderado?       @relation(fields: [id_apoderado], references: [id_persona])
+  matricula   Matricula?       @relation(fields: [id_matricula], references: [id_matricula])
+  seccion     Seccion?         @relation(fields: [id_seccion], references: [id_seccion])
+  movimientos CitaMovimiento[]
 
-  @@index([id_staff])
+  @@index([id_tenant, id_colegio, fecha])
+  @@index([id_staff, fecha])
+  @@index([id_docente, fecha])
   @@index([id_apoderado])
-  @@index([fecha])
+  @@index([id_matricula])
+  @@index([id_seccion, fecha])
+  @@index([tipo, fecha])
+  @@index([estado, fecha])
+}
+
+model CitaMovimiento {
+  id_movimiento        Int       @id @default(autoincrement())
+  id_cita              Int
+  id_usuario_actor     Int?
+  accion               String    @db.VarChar(30)
+  estado_anterior      String?   @db.VarChar(30)
+  estado_nuevo         String?   @db.VarChar(30)
+  fecha_anterior       DateTime? @db.Date
+  fecha_nueva          DateTime? @db.Date
+  hora_inicio_anterior String?   @db.VarChar(5)
+  hora_fin_anterior    String?   @db.VarChar(5)
+  hora_inicio_nueva    String?   @db.VarChar(5)
+  hora_fin_nueva       String?   @db.VarChar(5)
+  comentario           String?   @db.Text
+  creado_en            DateTime  @default(now())
+
+  cita  Cita     @relation(fields: [id_cita], references: [id_cita], onDelete: Restrict)
+  actor Usuario? @relation("CitaMovimientoActor", fields: [id_usuario_actor], references: [id_usuario], onDelete: SetNull)
+
+  @@index([id_cita, creado_en])
+  @@index([id_usuario_actor])
 }
 
 // ======================================================

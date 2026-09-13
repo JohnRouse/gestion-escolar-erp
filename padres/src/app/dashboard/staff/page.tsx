@@ -1,62 +1,48 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
-import SolicitarCitaModal from "@/components/SolicitarCitaModal";
+import SolicitarCitaModal, {
+  type CitaRecipient,
+} from "@/components/SolicitarCitaModal";
 
-interface HorarioDia {
-  hora_inicio: string;
-  hora_fin: string;
-  curso: string;
-}
-
-interface StaffItem {
-  id_staff: number;
-  id_persona: number;
-  nombre: string;
-  cargo: string;
-  area: string;
-  telefono: string | null;
-  cursos?: string[];
-  horario?: Record<string, HorarioDia[]>;
-  avatar_url: string;
-  permite_citas?: boolean;
-}
-
-const AREAS = [
-  { key: "todas", label: "Todos" },
-  { key: "academica", label: "Académica" },
-  { key: "administrativa", label: "Administrativa" },
-  { key: "salud", label: "Salud" },
-  { key: "servicios", label: "Servicios" },
-];
-
-const AREA_COLORS: Record<string, string> = {
-  academica: "bg-blue-100 text-blue-700",
-  administrativa: "bg-purple-100 text-purple-700",
-  salud: "bg-green-100 text-green-700",
-  servicios: "bg-orange-100 text-orange-700",
+type ChildEnrollment = {
+  id_matricula: number;
+  id_colegio: number;
+  colegio: string;
+  estudiante: {
+    id_estudiante: number;
+    nombre: string;
+    codigo: string;
+    seccion: string;
+    anio: string;
+  };
 };
 
-const capitalizar = (texto: string) =>
-  texto.charAt(0).toUpperCase() + texto.slice(1);
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+}
 
 export default function StaffPage() {
   const router = useRouter();
-  const [staff, setStaff] = useState<StaffItem[]>([]);
+  const [children, setChildren] = useState<ChildEnrollment[]>([]);
+  const [matriculaId, setMatriculaId] = useState<number | null>(null);
+  const [recipients, setRecipients] = useState<CitaRecipient[]>([]);
+  const [selected, setSelected] = useState<CitaRecipient | null>(null);
+  const [context, setContext] = useState("todos");
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const [selected, setSelected] = useState<StaffItem | null>(null);
-  const [filtroArea, setFiltroArea] = useState("todas");
-  const [solicitarCitaOpen, setSolicitarCitaOpen] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -64,232 +50,172 @@ export default function StaffPage() {
       router.push("/login");
       return;
     }
-
     axios
-      .get("/api/academicos/staff", {
+      .get<ChildEnrollment[]>("/api/citas/apoderado/hijos", {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setStaff(res.data))
-      .catch(() => setStaff([]))
+      .then((response) => {
+        setLoadingRecipients(Boolean(response.data[0]?.id_matricula));
+        setChildren(response.data);
+        setMatriculaId(response.data[0]?.id_matricula ?? null);
+      })
+      .catch(() => setError("No se pudieron cargar los estudiantes vinculados."))
       .finally(() => setLoading(false));
   }, [router]);
 
-  const filtrados: StaffItem[] = useMemo(() => {
-    if (filtroArea === "todas") return staff;
-    return staff.filter((s) => s.area === filtroArea);
-  }, [staff, filtroArea]);
+  useEffect(() => {
+    if (!matriculaId) return;
+    const token = localStorage.getItem("token");
+    axios
+      .get<CitaRecipient[]>("/api/citas/apoderado/destinatarios", {
+        params: { matricula_id: matriculaId },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setRecipients(response.data))
+      .catch(() => setError("No se pudieron cargar las personas disponibles para citas."))
+      .finally(() => setLoadingRecipients(false));
+  }, [matriculaId]);
 
-  const abrirWhatsApp = (telefono: string) => {
-    const mensaje = encodeURIComponent(
-      "Hola, le escribo desde la app del colegio."
-    );
-    window.open(`https://wa.me/51${telefono}?text=${mensaje}`, "_blank");
-  };
-
-  if (selected) {
-    return (
-      <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title={selected.nombre} />
-        <PageTransition>
-          <div className="px-5 pt-4 pb-28">
-            <button
-              onClick={() => setSelected(null)}
-              className="text-accent font-semibold text-sm mb-4 flex items-center gap-1"
-            >
-              <span className="material-symbols-rounded">arrow_back</span>{" "}
-              Volver
-            </button>
-
-            <div className="m-card p-5 text-center">
-              <img
-                src={selected.avatar_url}
-                alt={selected.nombre}
-                className="w-24 h-24 rounded-full mx-auto border-4 border-accent"
-              />
-              <h2 className="text-xl font-extrabold text-text mt-3">
-                {selected.nombre}
-              </h2>
-              <p className="text-sm text-text-secondary">{selected.cargo}</p>
-              <span
-                className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                  AREA_COLORS[selected.area] || "bg-gray-100 text-gray-600"
-                }`}
-              >
-                {capitalizar(selected.area)}
-              </span>
-
-              {selected.cursos && selected.cursos.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-1.5 mt-2">
-                  {selected.cursos.map((curso) => (
-                    <span
-                      key={curso}
-                      className="text-xs bg-accent-soft text-accent px-2.5 py-0.5 rounded-full font-bold"
-                    >
-                      {curso}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {selected.horario &&
-              Object.keys(selected.horario).length > 0 && (
-                <div className="m-card p-5 mt-4">
-                  <h3 className="text-sm font-bold text-text mb-3">
-                    Horario de Atención
-                  </h3>
-                  {Object.entries(selected.horario).map(([dia, bloques]) => (
-                    <div key={dia} className="mb-3">
-                      <p className="text-xs font-bold text-text-secondary mb-1">
-                        {dia}
-                      </p>
-                      {bloques.map((b, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between text-xs py-1 border-b border-border/50"
-                        >
-                          <span className="text-text">{b.curso}</span>
-                          <span className="text-text-muted">
-                            {b.hora_inicio} – {b.hora_fin}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-            {selected.telefono && (
-              <button
-                onClick={() => abrirWhatsApp(selected.telefono!)}
-                className="mt-4 w-full py-3 rounded-xl bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2"
-              >
-                <span>WhatsApp</span>
-              </button>
-            )}
-
-            {selected.permite_citas === true && (
-              <button
-                onClick={() => setSolicitarCitaOpen(true)}
-                className="mt-3 w-full py-3 rounded-xl bg-accent text-white font-bold text-sm"
-              >
-                Solicitar cita
-              </button>
-            )}
-          </div>
-        </PageTransition>
-
-        <SolicitarCitaModal
-          idStaff={selected.id_staff}
-          nombreStaff={selected.nombre}
-          horario={selected.horario}
-          isOpen={solicitarCitaOpen}
-          onClose={() => setSolicitarCitaOpen(false)}
-        />
-
-        <BottomNav />
-      </main>
-    );
-  }
-
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title="Directorio Académico" />
-        <div className="px-5 pt-4 pb-28 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-center gap-3">
-              <div className="skel w-12 h-12 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-4 w-32" />
-                <div className="skel h-3 w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
+  const visible = useMemo(
+    () =>
+      context === "todos"
+        ? recipients
+        : recipients.filter((item) => item.contexto === context),
+    [context, recipients],
+  );
+  const child = children.find((item) => item.id_matricula === matriculaId);
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Directorio Académico" />
+      <ScreenHeader title="Personas para citas" />
       <PageTransition>
-        <div className="px-5 pt-4 pb-28">
+        <div className="px-5 pb-28 pt-4">
           <button
+            type="button"
             onClick={() => router.push("/dashboard?open=servicios")}
-            className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"
+            className="mb-4 flex min-h-11 items-center gap-1 text-sm font-bold text-accent focus-visible:outline-2 focus-visible:outline-accent"
           >
-            <span className="material-symbols-rounded text-lg">arrow_back</span> Servicios
+            <span className="material-symbols-rounded text-lg" aria-hidden="true">arrow_back</span>
+            Servicios
           </button>
 
-          <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
-            {AREAS.map((area) => (
+          <section className="m-card p-4">
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-text-secondary">Solicitar sobre</span>
+              <select
+                className="input-underline min-h-11"
+                value={matriculaId ?? ""}
+                disabled={loading}
+                onChange={(event) => {
+                  const nextId = Number(event.target.value) || null;
+                  setMatriculaId(nextId);
+                  setContext("todos");
+                  setRecipients([]);
+                  setSelected(null);
+                  setError("");
+                  setLoadingRecipients(Boolean(nextId));
+                }}
+              >
+                <option value="">{loading ? "Cargando estudiantes…" : "Seleccionar estudiante"}</option>
+                {children.map((item) => (
+                  <option key={item.id_matricula} value={item.id_matricula}>
+                    {item.estudiante.nombre} · {item.colegio}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {child ? (
+              <p className="mt-2 text-sm leading-6 text-text-secondary">
+                {child.estudiante.seccion} · {child.estudiante.anio}
+              </p>
+            ) : null}
+          </section>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por función">
+            {[
+              ["todos", "Todos"],
+              ["docente", "Docentes"],
+              ["tutor", "Tutor"],
+              ["staff", "Staff"],
+            ].map(([key, label]) => (
               <button
-                key={area.key}
-                onClick={() => setFiltroArea(area.key)}
-                className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
-                  filtroArea === area.key
-                    ? "bg-accent text-white shadow-lg shadow-accent/20"
-                    : "bg-white text-text-secondary border border-border hover:bg-surface-alt"
+                key={key}
+                type="button"
+                onClick={() => setContext(key)}
+                className={`min-h-11 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-accent motion-reduce:transition-none ${
+                  context === key
+                    ? "bg-accent text-white"
+                    : "border border-border bg-white text-text-secondary"
                 }`}
               >
-                {area.label}
+                {label}
               </button>
             ))}
           </div>
 
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="m-card p-4 flex items-center gap-3">
-                  <div className="skel w-12 h-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <div className="skel h-4 w-32" />
-                    <div className="skel h-3 w-24" />
-                  </div>
+          <p className="mb-4 mt-2 text-sm leading-6 text-text-secondary">
+            Los docentes corresponden a la sección vigente. El Staff se muestra solo cuando acepta citas.
+          </p>
+
+          {success ? (
+            <p role="status" className="mb-4 rounded-xl bg-success-soft p-3 text-sm font-semibold text-success">
+              {success}
+            </p>
+          ) : null}
+          {error ? (
+            <div role="alert" className="m-card mb-4 p-4 text-sm font-semibold text-danger">
+              {error}
+            </div>
+          ) : null}
+
+          {loading || loadingRecipients ? (
+            <div className="space-y-3" role="status" aria-label="Cargando destinatarios">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="m-card flex items-center gap-3 p-4">
+                  <div className="skel h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-2"><div className="skel h-4 w-32" /><div className="skel h-3 w-24" /></div>
                 </div>
               ))}
             </div>
-          ) : filtrados.length === 0 ? (
-            <p className="text-center text-text-secondary py-10">
-              No hay personal asignado para sus hijos
-            </p>
+          ) : !matriculaId ? (
+            <p className="py-10 text-center text-sm text-text-secondary">Selecciona un estudiante para ver destinatarios válidos.</p>
+          ) : visible.length === 0 ? (
+            <p className="py-10 text-center text-sm text-text-secondary">No hay destinatarios disponibles para este filtro.</p>
           ) : (
-            filtrados.map((persona) => (
-              <button
-                key={persona.id_staff}
-                onClick={() => setSelected(persona)}
-                className="w-full text-left m-card p-4 flex items-center gap-3 press mb-3"
-              >
-                <img
-                  src={persona.avatar_url}
-                  alt={persona.nombre}
-                  className="w-12 h-12 rounded-full bg-accent-soft"
-                />
-                <div className="flex-1">
-                  <p className="font-extrabold text-text">{persona.nombre}</p>
-                  <p className="text-xs text-text-secondary">
-                    {persona.cargo}
-                    {persona.cursos && ` · ${persona.cursos.join(", ")}`}
-                  </p>
-                </div>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    AREA_COLORS[persona.area] || "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {capitalizar(persona.area)}
-                </span>
-                <span className="material-symbols-rounded text-text-muted">
-                  chevron_right
-                </span>
-              </button>
-            ))
+            <ul className="space-y-3">
+              {visible.map((item) => (
+                <li key={item.key} className="m-card flex items-center gap-3 p-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-extrabold text-accent" aria-hidden="true">
+                    {initials(item.nombre)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-extrabold text-text">{item.nombre}</p>
+                    <p className="mt-0.5 break-words text-sm text-text-secondary">{item.funcion}</p>
+                    <p className="mt-0.5 break-words text-sm text-text-muted">{item.detalle}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="min-h-11 shrink-0 rounded-xl bg-accent px-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    onClick={() => setSelected(item)}
+                  >
+                    Solicitar
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </PageTransition>
+
+      {selected && matriculaId ? (
+        <SolicitarCitaModal
+          idMatricula={matriculaId}
+          destinatario={selected}
+          isOpen
+          onClose={() => setSelected(null)}
+          onCreated={() => setSuccess("La solicitud quedó registrada y pendiente de confirmación.")}
+        />
+      ) : null}
       <BottomNav />
     </main>
   );

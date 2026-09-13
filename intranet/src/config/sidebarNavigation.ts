@@ -131,7 +131,7 @@ const menuPersonal: NavItem[] = [
     title: 'Citas',
     icon: MessageSquareHeart,
     path: '/citas',
-    roles: ['Admin', 'Secretaria'],
+    roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
   },
 ];
 

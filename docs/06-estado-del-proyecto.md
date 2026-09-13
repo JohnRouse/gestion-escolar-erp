@@ -42,6 +42,7 @@ Debe contar con:
 | Asistencia | Requiere inventario |
 | Calendario | Requiere inventario |
 | Tutoría | Implementación parcial; permisos pendientes de auditoría |
+| Citas | Citas individuales y reuniones de sección en pruebas; portal bloqueado por autenticación externa |
 | Tesorería | Implementación amplia; requiere inventario |
 | Reportes | Requiere inventario |
 | Configuración | Implementación amplia; requiere inventario |

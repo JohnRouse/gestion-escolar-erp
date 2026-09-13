@@ -1,4 +1,5 @@
 import StaffPage from './pages/staff/StaffPage';
+import CitasPage from './pages/citas/CitasPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -93,21 +94,7 @@ function AppRoutes() {
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
         <Route path="/staff" element={<ProtectedModuleRoute module="staff"><StaffPage /></ProtectedModuleRoute>} />
-        <Route
-          path="/citas"
-          element={
-            <ModuloPendientePage
-              modulo="Citas y entrevistas"
-              descripcion="Gestiona reuniones con padres, docentes, tutores o coordinación según disponibilidad."
-              icon={moduloIcons.citas}
-              acciones={[
-                'Programar citas por rol',
-                'Confirmar asistencia',
-                'Registrar acuerdos y observaciones',
-              ]}
-            />
-          }
-        />
+        <Route path="/citas" element={<ProtectedModuleRoute module="citas"><CitasPage /></ProtectedModuleRoute>} />
         <Route
           path="/enfermeria"
           element={

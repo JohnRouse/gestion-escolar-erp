@@ -1,255 +1,197 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import axios from "axios";
 
-interface HorarioDia {
-  hora_inicio: string;
-  hora_fin: string;
-  curso: string;
+export interface CitaRecipient {
+  key: string;
+  tipo: "staff" | "docente";
+  id_destinatario: number;
+  id_persona: number;
+  nombre: string;
+  contexto: "staff" | "docente" | "tutor";
+  funcion: string;
+  detalle: string;
 }
 
 interface SolicitarCitaModalProps {
-  idStaff: number;
-  nombreStaff: string;
-  horario?: Record<string, HorarioDia[]>; // horario del staff por día
+  idMatricula: number;
+  destinatario: CitaRecipient;
   isOpen: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }
 
-// Genera opciones cada 30 minutos entre dos horas
-function generarOpcionesHorarias(inicio: string, fin: string): string[] {
-  const opciones: string[] = [];
-  const [hIni, mIni] = inicio.split(":").map(Number);
-  const [hFin, mFin] = fin.split(":").map(Number);
-  let actual = hIni * 60 + mIni;
-  const finMinutos = hFin * 60 + mFin;
-
-  while (actual < finMinutos) {
-    const h = Math.floor(actual / 60);
-    const m = actual % 60;
-    opciones.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
-    actual += 30;
+function errorMessage(error: unknown) {
+  if (axios.isAxiosError<{ message?: string | string[] }>(error)) {
+    const message = error.response?.data?.message;
+    if (message) return Array.isArray(message) ? message.join(" · ") : message;
   }
-  return opciones;
+  return "No se pudo solicitar la cita.";
 }
-
-const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 
 export default function SolicitarCitaModal({
-  idStaff,
-  nombreStaff,
-  horario,
+  idMatricula,
+  destinatario,
   isOpen,
   onClose,
+  onCreated,
 }: SolicitarCitaModalProps) {
+  const dateRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [fecha, setFecha] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFin, setHoraFin] = useState("");
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const closeFromKeyboard = useEffectEvent(() => {
+    if (!enviando) onClose();
+  });
 
-  // Determinar el día de la semana de la fecha seleccionada
-  const diaSemana = useMemo(() => {
-    if (!fecha) return null;
-    const date = new Date(fecha + "T00:00:00");
-    return DIAS_SEMANA[date.getDay() - 1] || null; // getDay: 0=Dom, 1=Lun...
-  }, [fecha]);
-
-  // Obtener bloques del horario del staff para ese día
-  const bloquesDisponibles = useMemo(() => {
-    if (!horario || !diaSemana) return [];
-    return horario[diaSemana] || [];
-  }, [horario, diaSemana]);
-
-  // Generar opciones de hora según bloques o rango por defecto (07:00-19:00)
-  const opcionesHorarias = useMemo(() => {
-    if (bloquesDisponibles.length > 0) {
-      // Unir todos los intervalos de los bloques para crear opciones cada 30 min
-      const horas: string[] = [];
-      for (const bloque of bloquesDisponibles) {
-        horas.push(...generarOpcionesHorarias(bloque.hora_inicio, bloque.hora_fin));
+  useEffect(() => {
+    if (!isOpen) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(() => dateRef.current?.focus(), 0);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeFromKeyboard();
+        return;
       }
-      return [...new Set(horas)].sort();
-    }
-    // Rango por defecto
-    return generarOpcionesHorarias("07:00", "19:00");
-  }, [bloquesDisponibles]);
-
-  // Filtrar horas de fin: solo las posteriores a la hora de inicio seleccionada
-  const opcionesHoraFin = useMemo(() => {
-    if (!horaInicio) return opcionesHorarias;
-    return opcionesHorarias.filter((h) => h > horaInicio);
-  }, [horaInicio, opcionesHorarias]);
-
-  // Resetear horas al cambiar fecha
-  const handleFechaChange = (nuevaFecha: string) => {
-    setFecha(nuevaFecha);
-    setHoraInicio("");
-    setHoraFin("");
-  };
+      if (event.key !== "Tab") return;
+      const controls = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      document.body.style.overflow = previousOverflow;
+      returnFocusRef.current?.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleEnviar = async () => {
     setMensaje("");
-    if (!fecha || !horaInicio || !horaFin) {
-      setMensaje("Completa todos los campos");
+    if (!fecha || !horaInicio || !horaFin || horaInicio >= horaFin || motivo.trim().length < 3) {
+      setMensaje("Completa una fecha, un rango horario válido y el motivo.");
       return;
     }
-
     setEnviando(true);
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "/api/citas",
+        "/api/citas/apoderado",
         {
-          id_staff: idStaff,
+          id_matricula: idMatricula,
+          tipo_destinatario: destinatario.tipo,
+          id_destinatario: destinatario.id_destinatario,
+          contexto_destinatario: destinatario.contexto,
           fecha,
           hora_inicio: horaInicio,
           hora_fin: horaFin,
-          motivo,
+          motivo: motivo.trim(),
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      setMensaje("✅ Cita solicitada correctamente");
-      setTimeout(() => {
-        onClose();
-        setFecha("");
-        setHoraInicio("");
-        setHoraFin("");
-        setMotivo("");
-        setMensaje("");
-      }, 1500);
-    } catch (err: any) {
-      setMensaje(
-        "❌ " + (err.response?.data?.message || "Error al solicitar cita")
-      );
+      onCreated?.();
+      onClose();
+    } catch (error) {
+      setMensaje(errorMessage(error));
     } finally {
       setEnviando(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-5">
+      <button
+        type="button"
+        aria-label="Cerrar solicitud de cita"
         className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => !enviando && onClose()}
       />
-      <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] p-6 animate-slide-up max-w-[420px] mx-auto overflow-y-auto max-h-[85vh]">
-        <div className="mx-auto w-12 h-1.5 rounded-full bg-border mb-4" />
-        <h3 className="text-xl font-extrabold text-text">
-          Solicitar cita con {nombreStaff}
-        </h3>
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="solicitar-cita-title"
+        aria-describedby="solicitar-cita-help"
+        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-[460px] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:rounded-[28px]"
+      >
+        <header className="border-b border-border px-6 py-5">
+          <p className="text-sm font-semibold text-accent">Solicitud de cita</p>
+          <h3 id="solicitar-cita-title" className="mt-1 text-xl font-extrabold text-text">
+            {destinatario.nombre}
+          </h3>
+          <p className="mt-1 text-sm text-text-secondary">{destinatario.funcion}</p>
+        </header>
 
-        <div className="space-y-3 mt-4">
-          {/* Fecha */}
-          <div>
-            <label className="block text-xs font-semibold text-text-muted mb-1">
-              Fecha
-            </label>
+        <div className="space-y-4 overflow-y-auto px-6 py-5">
+          <p id="solicitar-cita-help" className="rounded-xl bg-accent-soft p-3 text-sm leading-6 text-text-secondary">
+            Propón un horario. El colegio o la persona destinataria deberá confirmarlo; el horario de clases no se muestra como disponibilidad.
+          </p>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-text-secondary">Fecha</span>
             <input
+              ref={dateRef}
               type="date"
-              className="input-underline"
+              className="input-underline min-h-11"
               value={fecha}
-              onChange={(e) => handleFechaChange(e.target.value)}
+              onChange={(event) => setFecha(event.target.value)}
               min={new Date().toISOString().split("T")[0]}
             />
-          </div>
-
-          {/* Horas */}
-          {fecha && (
-            <>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-text-muted mb-1">
-                    Hora inicio
-                  </label>
-                  <select
-                    className="input-underline"
-                    value={horaInicio}
-                    onChange={(e) => {
-                      setHoraInicio(e.target.value);
-                      setHoraFin(""); // reset fin al cambiar inicio
-                    }}
-                  >
-                    <option value="">Seleccionar</option>
-                    {opcionesHorarias.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-text-muted mb-1">
-                    Hora fin
-                  </label>
-                  <select
-                    className="input-underline"
-                    value={horaFin}
-                    onChange={(e) => setHoraFin(e.target.value)}
-                    disabled={!horaInicio}
-                  >
-                    <option value="">Seleccionar</option>
-                    {opcionesHoraFin.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {bloquesDisponibles.length > 0 && (
-                <p className="text-[10px] text-text-muted">
-                  Horario de {nombreStaff} el {diaSemana}:{" "}
-                  {bloquesDisponibles
-                    .map((b) => `${b.hora_inicio}–${b.hora_fin}`)
-                    .join(", ")}
-                </p>
-              )}
-            </>
-          )}
-
-          {/* Motivo */}
-          <div>
-            <label className="block text-xs font-semibold text-text-muted mb-1">
-              Motivo (opcional)
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-text-secondary">Hora inicial</span>
+              <input type="time" className="input-underline min-h-11" value={horaInicio} onChange={(event) => setHoraInicio(event.target.value)} />
             </label>
-            <textarea
-              className="input-underline min-h-[60px]"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej. Hablar sobre rendimiento académico"
-            />
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-text-secondary">Hora final</span>
+              <input type="time" className="input-underline min-h-11" value={horaFin} onChange={(event) => setHoraFin(event.target.value)} />
+            </label>
           </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-text-secondary">Motivo</span>
+            <textarea
+              className="input-underline min-h-24 resize-y"
+              value={motivo}
+              maxLength={2000}
+              onChange={(event) => setMotivo(event.target.value)}
+              placeholder="Describe brevemente el motivo"
+            />
+          </label>
+          {mensaje ? <p className="text-sm font-semibold text-danger" role="alert">{mensaje}</p> : null}
+        </div>
 
-          {mensaje && (
-            <p
-              className={`text-xs ${
-                mensaje.startsWith("✅") ? "text-success" : "text-danger"
-              }`}
-            >
-              {mensaje}
-            </p>
-          )}
-
-          <button
-            onClick={handleEnviar}
-            disabled={enviando}
-            className="btn-contained"
-          >
-            {enviando ? "Enviando..." : "Solicitar cita"}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-2 rounded-xl text-text-secondary font-bold text-sm"
-          >
+        <footer className="grid grid-cols-2 gap-3 border-t border-border bg-white px-6 py-4">
+          <button type="button" onClick={onClose} disabled={enviando} className="min-h-11 rounded-xl text-sm font-bold text-text-secondary focus-visible:outline-2 focus-visible:outline-accent">
             Cancelar
           </button>
-        </div>
-      </div>
+          <button type="button" onClick={() => void handleEnviar()} disabled={enviando} className="btn-contained min-h-11 disabled:opacity-60">
+            {enviando ? "Enviando…" : "Solicitar cita"}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }
