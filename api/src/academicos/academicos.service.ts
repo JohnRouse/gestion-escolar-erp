@@ -18603,110 +18603,45 @@ const existente = await this.prisma.persona.findUnique({
         estado_matricula: 'Activo',
       },
       select: {
-        id_seccion: true,
-        id_anio: true,
+        id_colegio: true,
+        seccion: { select: { id_colegio: true } },
       },
     });
 
-    const seccionIds = [
-      ...new Set(matriculas.map((m) => m.id_seccion)),
+    const colegioIds = [
+      ...new Set(
+        matriculas
+          .map((matricula) => matricula.id_colegio ?? matricula.seccion.id_colegio)
+          .filter((id): id is number => id !== null),
+      ),
     ];
 
-    const anioIds = [
-      ...new Set(matriculas.map((m) => m.id_anio)),
-    ];
-
-    const staffPorSeccion = await this.prisma.staff.findMany({
+    const staffInstitucional = await this.prisma.staff.findMany({
       where: {
+        es_miembro_staff: true,
+        permite_citas: true,
         OR: [
-          { id_seccion: { in: seccionIds } },
-          { area: 'administrativa' },
-          { area: 'salud' },
-          { area: 'servicios' },
-          { area: 'academica', id_seccion: null },
+          { id_colegio: { in: colegioIds } },
+          { id_colegio: null, seccion: { id_colegio: { in: colegioIds } } },
         ],
       },
       include: {
         persona: true,
-        seccion: { include: { grado: { include: { nivel: true } } } },
       },
     });
 
-    const resultado: any[] = [];
-
-    for (const staff of staffPorSeccion) {
-      const item: any = {
-        id_staff: staff.id_staff,
-        id_persona: staff.id_persona,
-        nombre: `${staff.persona.nombres} ${staff.persona.apellido_paterno}`,
-        cargo: staff.cargo,
-        area: staff.area,
-        telefono: staff.persona.telefono,
-        permite_citas: staff.permite_citas,
-        avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-          staff.persona.nombres,
-        )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
-      };
-
-      const docente = await this.prisma.docente.findUnique({
-        where: { id_persona: staff.id_persona },
-        include: {
-          asignaciones: {
-            where: {
-              id_seccion: { in: seccionIds },
-              id_anio: { in: anioIds },
-            },
-            include: { curso: true },
-          },
-          horarios: {
-            where: {
-              id_seccion: { in: seccionIds },
-              id_anio: { in: anioIds },
-            },
-            include: { curso: true },
-            orderBy: [{ dia_semana: 'asc' }, { hora_inicio: 'asc' }],
-          },
-        },
-      });
-
-      if (docente) {
-        item.cursos = [
-          ...new Set(
-            docente.asignaciones.map((a) => a.curso.nombre_curso),
-          ),
-        ];
-
-        const diasSemana = [
-          'Lunes',
-          'Martes',
-          'Miércoles',
-          'Jueves',
-          'Viernes',
-        ];
-
-        const horarioPorDia: Record<
-          string,
-          { hora_inicio: string; hora_fin: string; curso: string }[]
-        > = {};
-
-        for (const h of docente.horarios) {
-          const dia = diasSemana[h.dia_semana - 1];
-          if (!horarioPorDia[dia]) horarioPorDia[dia] = [];
-
-          horarioPorDia[dia].push({
-            hora_inicio: h.hora_inicio,
-            hora_fin: h.hora_fin,
-            curso: h.curso.nombre_curso,
-          });
-        }
-
-        item.horario = horarioPorDia;
-      }
-
-      resultado.push(item);
-    }
-
-    return resultado;
+    return staffInstitucional.map((staff) => ({
+      id_staff: staff.id_staff,
+      id_persona: staff.id_persona,
+      nombre: `${staff.persona.nombres} ${staff.persona.apellido_paterno}`,
+      cargo: staff.cargo,
+      area: staff.area,
+      telefono: staff.persona.telefono,
+      permite_citas: staff.permite_citas,
+      avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
+        staff.persona.nombres,
+      )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
+    }));
   }
 
   async getSeccionAlumno(alumnoId: number) {

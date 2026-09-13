@@ -119,6 +119,29 @@ Puede utilizar, según corresponda:
 
 Consulta únicamente información de estudiantes con los que mantiene una relación válida.
 
+### Citas
+
+- Admin, Director y Secretaria administran la agenda solo cuando el
+  `rol_colegio` efectivo les da autoridad sobre el colegio solicitado.
+- El consolidado de Citas se limita a colegios administrables del tenant activo;
+  Secretaria no usa consolidado.
+- Admin, Director y Secretaria pueden convocar cualquier sección de esos
+  colegios. Profesor solo puede convocar secciones con una asignación docente
+  persistida; Tutor suma su sección de Tutoría sin perder sus asignaciones
+  docentes. El backend revalida la sección dentro de la transacción.
+- Un destinatario con acceso interno solo consulta y actúa sobre citas cuyo
+  Docente o Persona Staff coincide con su Persona canónica.
+- El Apoderado solo opera citas propias y matrículas activas de estudiantes con
+  vínculo persistido. Una reunión de sección es visible por ese vínculo, pero no
+  puede ser cancelada como si fuera una cita individual. Los IDs recibidos no
+  sustituyen estas comprobaciones.
+- Toda mutación vuelve a comprobar alcance/participación dentro de la transacción;
+  los controles ocultos en frontend no conceden autorización.
+- En el alta individual, seleccionar la matrícula y seleccionar al apoderado son
+  decisiones separadas. Las opciones familiares provienen solo de
+  `ApoderadoEstudiante`, y el backend rechaza una pareja matrícula/apoderado no
+  vinculada aunque los IDs hayan sido alterados en la solicitud.
+
 ## 7. Acciones de autorización
 
 Los permisos deben evaluarse por acción:
