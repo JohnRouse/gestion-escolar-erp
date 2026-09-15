@@ -177,3 +177,17 @@ Deben utilizarse estados como:
   pendiente/confirmada devuelve a pendiente.
 - Creación, estados, reprogramación y acuerdos se anexan a historial persistente
   con actor y valores antes/después. Citas y movimientos no se eliminan.
+
+## 12. Notificaciones
+
+- Notificaciones es una bandeja personal de eventos del sistema; Circulares
+  conserva la comunicación institucional masiva.
+- Los orígenes estructurados V1 son citas, pagos, matricula, academico, eventos
+  y sistema. La existencia de un origen no implica que todos sus eventos estén
+  integrados.
+- Las acciones solo aceptan rutas internas permitidas y separadas para intranet
+  y portal de familias.
+- La lectura conserva `fecha_lectura`; volver a no leída la limpia. No existe
+  borrado físico en V1.
+- Todo helper que derive familias desde matrículas incluye Activo, Matriculado y
+  Pre-matriculado, y excluye Inactivo y Reserva.

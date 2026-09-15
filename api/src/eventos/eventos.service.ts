@@ -38,8 +38,21 @@ export class EventosService {
     secciones?: number[];
     generar_circular?: boolean;
   }) {
+    const anio = await this.prisma.anioLectivo.findUnique({
+      where: { id_anio: data.id_anio },
+      select: {
+        id_tenant: true,
+        id_colegio: true,
+        colegio: { select: { id_tenant: true } },
+      },
+    });
+    if (!anio) throw new NotFoundException('Año lectivo no encontrado');
+    const tenantId = anio.id_tenant ?? anio.colegio?.id_tenant ?? null;
+
     const evento = await this.prisma.evento.create({
       data: {
+        id_tenant: tenantId,
+        id_colegio: anio.id_colegio,
         titulo: data.titulo,
         fecha: new Date(data.fecha),
         hora: data.hora,
@@ -63,16 +76,20 @@ export class EventosService {
     const horaTexto = data.hora ? ` a las ${data.hora}` : '';
     const tipoTexto = data.tipo.charAt(0).toUpperCase() + data.tipo.slice(1);
 
-    // Notificar por niveles
-    for (const nivelId of idsNiveles) {
-      await this.notificacionesService.notificarApoderadosDeNivel(
-        nivelId,
-        'informativa',
-        `${tipoTexto}: ${data.titulo}`,
-        `${data.titulo} – ${new Date(data.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}${horaTexto}${data.descripcion ? '. ' + data.descripcion : ''}`,
-        '/dashboard/calendario',
-      );
-    }
+    // La bandeja solo acompaña al evento; Circulares conserva la comunicación masiva.
+    await this.notificacionesService.notificarApoderadosDeNivel({
+      nivelIds: idsNiveles,
+      id_tenant: tenantId,
+      id_colegio: anio.id_colegio,
+      tipo: 'evento.creado',
+      origen: 'eventos',
+      referencia_tipo: 'evento',
+      referencia_id: evento.id_evento,
+      canal: 'padres',
+      titulo: `${tipoTexto}: ${data.titulo}`,
+      mensaje: `${data.titulo} – ${new Date(data.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}${horaTexto}${data.descripcion ? '. ' + data.descripcion : ''}`,
+      url: '/dashboard/calendario',
+    });
 
     // TODO: si data.generar_circular es true, crear circular automática
 

@@ -12,7 +12,27 @@ interface Notif {
   mensaje: string;
   leida: boolean;
   fecha_creacion: string;
-  url?: string;
+  origen?: "citas" | "pagos" | "matricula" | "academico" | "eventos" | "sistema";
+  url?: string | null;
+}
+
+function safeParentTarget(url?: string | null) {
+  if (!url || !url.startsWith("/") || url.startsWith("//") || url.includes("\\")) {
+    return null;
+  }
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.origin !== window.location.origin) return null;
+    if (
+      parsed.pathname !== "/dashboard" &&
+      !parsed.pathname.startsWith("/dashboard/")
+    ) {
+      return null;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
 }
 
 export default function NotificationBell() {
@@ -26,7 +46,8 @@ export default function NotificationBell() {
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const fetchCount = async () => {
@@ -46,15 +67,19 @@ export default function NotificationBell() {
       if (!token) return;
       const res = await axios.get("/api/notificaciones", {
         headers: { Authorization: `Bearer ${token}` },
+        params: { limit: 10 },
       });
-      setNotifs(res.data);
+      setNotifs(res.data.data ?? []);
     } catch {}
   };
 
   useEffect(() => {
-    fetchCount();
+    const initial = window.setTimeout(() => void fetchCount(), 0);
     const interval = setInterval(fetchCount, 20000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initial);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleToggle = () => {
@@ -79,19 +104,25 @@ export default function NotificationBell() {
     if (!notif.leida) {
       try {
         const token = localStorage.getItem("token");
-        await axios.put(`/api/notificaciones/${notif.id_notif}/leida`, {}, {
+        await axios.patch(`/api/notificaciones/${notif.id_notif}/leida`, { leida: true }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCount((prev) => Math.max(0, prev - 1));
+        setNotifs((current) =>
+          current.map((item) =>
+            item.id_notif === notif.id_notif ? { ...item, leida: true } : item,
+          ),
+        );
       } catch {}
     }
 
-    let targetUrl = notif.url;
+    let targetUrl = safeParentTarget(notif.url);
     if (!targetUrl) {
-      switch (notif.tipo) {
-        case "informativa":   targetUrl = "/dashboard/circulares"; break;
-        case "administrativa": targetUrl = "/dashboard/pagos"; break;
-        case "academica":     targetUrl = "/dashboard/calificaciones"; break;
+      switch (notif.origen) {
+        case "citas": targetUrl = "/dashboard/citas"; break;
+        case "pagos": targetUrl = "/dashboard/pagos"; break;
+        case "academico": targetUrl = "/dashboard/calificaciones"; break;
+        case "eventos": targetUrl = "/dashboard/calendario"; break;
         default:              targetUrl = "/dashboard/actividad";
       }
     }
@@ -125,11 +156,12 @@ export default function NotificationBell() {
         onClick={handleToggle}
         className="relative w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
         title="Notificaciones"
+        aria-label="Ver notificaciones"
       >
         <span className="material-symbols-rounded">notifications</span>
         {count > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-            {count}
+            {count > 99 ? "99+" : count}
           </span>
         )}
       </button>

@@ -2210,14 +2210,21 @@ export class CitasService {
         },
         select: { id_usuario: true },
       });
+      const userIds = Array.from(new Set(users.map((user) => user.id_usuario)));
       await Promise.all(
-        users.map((user) =>
+        userIds.map((userId) =>
           this.notificaciones.crearNotificacion({
-            id_usuario: user.id_usuario,
+            id_usuario: userId,
+            id_tenant: cita.id_tenant,
+            id_colegio: schoolId,
             tipo:
               cita.tipo === 'seccion'
                 ? 'cita.seccion.creada.responsable'
                 : 'cita_solicitada',
+            origen: 'citas',
+            referencia_tipo: 'cita',
+            referencia_id: cita.id_cita,
+            canal: 'intranet',
             titulo:
               cita.tipo === 'seccion'
                 ? 'Nueva reunión de sección'
@@ -2250,11 +2257,18 @@ export class CitasService {
         where: { id_persona: cita.id_apoderado, estado: true },
         select: { id_usuario: true },
       });
+      const userIds = Array.from(new Set(users.map((user) => user.id_usuario)));
       await Promise.all(
-        users.map((user) =>
+        userIds.map((userId) =>
           this.notificaciones.crearNotificacion({
-            id_usuario: user.id_usuario,
+            id_usuario: userId,
+            id_tenant: cita.id_tenant,
+            id_colegio: this.recordSchoolId(cita),
             tipo: `cita_${action}`,
+            origen: 'citas',
+            referencia_tipo: 'cita',
+            referencia_id: cita.id_cita,
+            canal: 'padres',
             titulo: 'Actualización de cita',
             mensaje: `La cita del ${cita.fecha.toISOString().slice(0, 10)} fue ${action}.`,
             url: `/dashboard/citas?cita=${cita.id_cita}`,
@@ -2291,11 +2305,18 @@ export class CitasService {
         reprogramada: 'reprogramada',
         cancelada: 'cancelada',
       } as const;
+      const userIds = Array.from(new Set(users.map((user) => user.id_usuario)));
       await Promise.all(
-        users.map((user) =>
+        userIds.map((userId) =>
           this.notificaciones.crearNotificacion({
-            id_usuario: user.id_usuario,
+            id_usuario: userId,
+            id_tenant: cita.id_tenant,
+            id_colegio: this.recordSchoolId(cita),
             tipo: `cita.seccion.${action}`,
+            origen: 'citas',
+            referencia_tipo: 'cita',
+            referencia_id: cita.id_cita,
+            canal: 'padres',
             titulo: 'Reunión de sección',
             mensaje: `La reunión de ${cita.seccion ? this.sectionLabel(cita.seccion) : 'la sección'} fue ${actionLabels[action]}.`,
             url: `/dashboard/citas?cita=${cita.id_cita}`,

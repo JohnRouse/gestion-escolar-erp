@@ -30,6 +30,7 @@ Ejemplo:
 
 ## Correcciones transversales
 
+- [2026-09-13: Notificaciones V1 — bandeja personal segura](2026-09-13-notificaciones-v1.md).
 - [2026-09-12: Citas — búsqueda y reuniones de sección](2026-09-12-citas-busqueda-reuniones-seccion.md).
 - [2026-09-09: separación funcional entre Docentes y Staff](2026-09-09-separacion-docentes-staff-v1.md).
 - [2026-09-05: teclado exclusivo del diálogo superior](2026-09-05-accessible-dialog-teclado-anidado.md).

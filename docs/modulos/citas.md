@@ -164,16 +164,19 @@ una familia no puede cancelar una reunión colectiva. No se implementó asistenc
 
 ## Notificaciones
 
-Se reutiliza `NotificacionesService`; no se construyó una bandeja nueva. La
-creación avisa al responsable interno y, para reuniones, se emiten a cuentas
-familiares activas deduplicadas los eventos:
+Se reutiliza la bandeja personal de Notificaciones V1. La creación avisa al
+responsable interno y los cambios relevantes avisan a las cuentas familiares
+activas. Cada aviso nuevo guarda tenant, colegio, origen `citas`, referencia a
+la cita y canal `intranet` o `padres`. Los usuarios se deduplican dentro de la
+operación. Para reuniones se emiten los eventos:
 
 - `cita.seccion.creada`;
 - `cita.seccion.reprogramada`;
 - `cita.seccion.cancelada`.
 
-Los destinatarios se derivan de las matrículas activas y vínculos actuales de la
-sección. Un fallo de aviso se registra y no revierte la transacción de agenda.
+Los destinatarios se derivan de matrículas `Activo`, `Matriculado` o
+`Pre-matriculado` y vínculos actuales de la sección. Un fallo de aviso se
+registra y no revierte la transacción de agenda.
 
 ## API
 

@@ -26,13 +26,17 @@ export class NfcController {
     });
 
     // Notificar a los apoderados
-    await this.notificacionesService.notificarApoderadosDeAlumno(
-      estudiante.id_persona,
-      'informativa',
-      'Asistencia registrada',
-      `Tu hijo ha registrado ${body.tipo || 'entrada'} al colegio a las ${new Date().toLocaleTimeString('es-PE')}`,
-      '/dashboard/asistencia',
-    );
+    await this.notificacionesService.notificarApoderadosDeAlumno({
+      alumnoId: estudiante.id_persona,
+      tipo: 'asistencia.nfc',
+      origen: 'academico',
+      referencia_tipo: 'estudiante',
+      referencia_id: estudiante.id_persona,
+      canal: 'padres',
+      titulo: 'Asistencia registrada',
+      mensaje: `Tu hijo ha registrado ${body.tipo || 'entrada'} al colegio a las ${new Date().toLocaleTimeString('es-PE')}`,
+      url: '/dashboard/asistencia',
+    });
 
     return { message: 'Lectura registrada' };
   }

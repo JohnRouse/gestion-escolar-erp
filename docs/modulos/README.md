@@ -38,7 +38,7 @@ Cada módulo debe tener un documento propio utilizando `docs/plantillas/plantill
 ### Comunicación
 
 - Circulares.
-- Notificaciones.
+- [Notificaciones](notificaciones.md).
 
 ### Finanzas
 

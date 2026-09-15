@@ -37,6 +37,9 @@ usa matrícula/apoderado; la segunda usa la sección como audiencia estructural.
    vínculos actuales; no se persiste una lista copiada de IDs.
 8. Una acción autorizada sigue la máquina de estados. Reprogramar conserva antes
    y después; acuerdos se anexan al historial. Rechazo no aplica a reunión.
+9. Los avisos se deduplican por Usuario durante la operación y guardan tenant,
+   colegio, origen `citas`, referencia y canal antes de llegar a cada bandeja
+   personal.
 
 ## Validaciones y mensajes
 

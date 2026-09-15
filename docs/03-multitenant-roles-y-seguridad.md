@@ -202,3 +202,15 @@ el backend reúne sus contextos conocidos por Staff, Usuario, Docente, Estudiant
 y Apoderado. Si existe otro tenant o un colegio que el actor no administra, la
 edición global se rechaza con un mensaje explícito; seleccionar un colegio en la
 interfaz no amplía la autoridad del actor.
+
+## 12. Notificaciones personales
+
+- Toda lista, conteo y cambio de lectura exige `id_usuario` del actor además del
+  ID recibido.
+- El tenant activo se comprueba contra `UsuarioTenant`; un colegio se comprueba
+  contra `UsuarioColegio` activo y su tenant.
+- En colegio específico se muestran avisos del colegio y globales del mismo
+  tenant. En consolidado solo se incluyen colegios autorizados de ese tenant.
+- Las filas legacy sin contexto solo se muestran cuando el actor tiene un único
+  tenant activo; con varios se excluyen por ambigüedad.
+- Un ID ajeno o fuera del alcance responde 404 sin revelar su existencia.

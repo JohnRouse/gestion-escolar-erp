@@ -18,7 +18,7 @@ El alcance `Todos los colegios` significa los colegios autorizados **del tenant 
 
 ## 3. Estado general
 
-El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Staff institucional ya tiene flujo operativo real y aceptación dirigida del primer incremento V1. Citas internas está en pruebas con agenda individual y reuniones de sección; permanecen vacíos concretos en acceso externo de Citas, Enfermería, bandeja interna de Notificaciones, gestión de identidades/instituciones y operación SaaS.
+El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Staff institucional ya tiene flujo operativo real y aceptación dirigida del primer incremento V1. Citas internas está en pruebas con agenda individual y reuniones de sección. Notificaciones V1 dispone de bandeja personal y autorización dirigida en código, con migración y aceptación local aún pendientes. Permanecen vacíos concretos en acceso externo de Citas, Enfermería, integraciones futuras de avisos, gestión de identidades/instituciones y operación SaaS.
 
 Super SaaS está en **base estructural**, con entidades y contexto reutilizables; no hay una consola operativa. Tener `Tenant.plan`, roles o un selector de colegio no equivale a disponer de planes, suscripciones y administración global.
 
@@ -99,7 +99,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 | Módulo | Frontend | Backend | Persistencia | Flujo | Estado | Prioridad | Falta principal |
 |---|---|---|---|---|---|---|---|
 | Circulares | sí | sí | sí | completo | CASI COMPLETO | P0 | Cerrar aceptación de destinatarios, publicación y adjuntos; documentar contrato institucional. **A:** revisar. **D:** Colegios, niveles, secciones, Usuarios, Notificaciones. |
-| Notificaciones | parcial | parcial | sí | parcial | PARCIAL | P0 | Construir bandeja interna y asegurar propiedad al marcar leída; completar integración de avisos. **A:** revisar. **D:** Usuarios, Circulares, pagos, matrícula, citas. |
+| Notificaciones | sí | sí | sí | completo V1 acotado | CASI COMPLETO | P0 | Bandeja personal, filtros, lectura/no lectura, badge, propiedad y scope están en pruebas; aplicar migración y aceptar con datos reales. Integraciones futuras de Matrícula, Notas y Enfermería siguen pendientes. **A:** revisión dirigida aprobada en código. **D:** Usuarios, membresías, Citas, eventos y migración local. |
 | Galería / álbumes | sí | parcial | sí | parcial | PARCIAL | P1 | Reutilizar lectura, comentarios y reacciones del portal; cerrar gestión/publicación y autorización si entra después de P0. **A:** revisar. **D:** Portal de apoderados, secciones, almacenamiento. |
 
 ### Tesorería
@@ -196,7 +196,7 @@ Estas observaciones provienen de contratos y código; no son resultados de un en
   escrituras y oculta recursos ajenos. Su recorrido de apoderado conserva como
   dependencia la autenticación externa hoy rechazada; no debe habilitarse
   relajando el control interno.
-- `NotificacionesController.marcarLeida` pasa solo el ID; el listado sí filtra por usuario. Completar propiedad del destinatario al construir la bandeja.
+- Notificaciones combina actor, tenant y colegio en listado, count y mutaciones; un ID ajeno devuelve 404. Legacy sin contexto se excluye cuando el Usuario tiene varios tenants activos.
 - Los resolutores de alcance de Finanzas y otros servicios parten de membresías activas de colegio, pero el consolidado reúne todos sus IDs y usa un tenant principal. Deben separar explícitamente el tenant activo cuando el usuario pertenece a varias organizaciones.
 
 La revisión futura se dirige a esos contratos y a los flujos modificados. No justifica revisar todos los componentes antes de avanzar. Los fallos de autorización de un flujo se corrigen con ese bloque; no se aplazan al hardening final.
@@ -264,9 +264,10 @@ segunda migración aditiva de reuniones está creada y pendiente de aplicación
 controlada. El portal usa el contrato seguro y propone horarios sin convertir
 clases en disponibilidad, pero no puede aceptarse mientras Auth rechace los roles
 externos. Los eventos de reuniones reutilizan el servicio existente; la bandeja
-interna sigue pendiente. **Siguiente incremento recomendado:** aplicar/validar la
-segunda migración en entorno controlado, habilitar autenticación externa y
-aceptar el portal; continuar con bandeja segura de Notificaciones.
+interna ya está implementada en código y permanece en pruebas hasta aplicar su
+migración aditiva. **Siguiente incremento recomendado:** aplicar/validar las
+migraciones pendientes en entorno controlado, habilitar autenticación externa y
+aceptar el portal; luego conectar incrementalmente los orígenes futuros de avisos.
 
 Cada bloque termina con demostración funcional, pruebas proporcionales y documentación vigente del resultado. Los PR pueden dividir un bloque grande en funcionalidades completas, sin esperar un único PR gigantesco ni abrir un PR por ajuste minúsculo.
 

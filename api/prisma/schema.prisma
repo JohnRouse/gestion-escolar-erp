@@ -135,6 +135,7 @@ model Tenant {
   lotes_promocion       LotePromocion[]
   secciones_anio        SeccionAnio[]
   citas                 Cita[]
+  notificaciones        Notificacion[]
 }
 
 model Colegio {
@@ -181,6 +182,7 @@ model Colegio {
   datos_cobro         DatosCobroColegio?
   criterios_tutoria   CriterioTutoria[]
   citas               Cita[]
+  notificaciones      Notificacion[]
 
   progresiones_grado    GradoProgresion[]
   cierres_academicos    CierreAcademico[]
@@ -1123,19 +1125,31 @@ model Adjunto {
 }
 
 model Notificacion {
-  id_notif       Int      @id @default(autoincrement())
-  id_usuario     Int
-  tipo           String   @db.VarChar(50)
-  titulo         String
-  mensaje        String
-  leida          Boolean  @default(false)
-  fecha_creacion DateTime @default(now())
-  url            String?
+  id_notif        Int       @id @default(autoincrement())
+  id_usuario      Int
+  id_tenant       Int?
+  id_colegio      Int?
+  tipo            String    @db.VarChar(50)
+  origen          String?   @db.VarChar(30)
+  referencia_tipo String?   @db.VarChar(50)
+  referencia_id   String?   @db.VarChar(100)
+  canal           String?   @db.VarChar(20)
+  titulo          String
+  mensaje         String
+  leida           Boolean   @default(false)
+  fecha_creacion  DateTime  @default(now())
+  fecha_lectura   DateTime?
+  url             String?
 
-  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+  usuario Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  tenant  Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
+  colegio Colegio? @relation(fields: [id_colegio], references: [id_colegio])
 
   @@index([id_usuario])
   @@index([fecha_creacion])
+  @@index([id_usuario, leida, fecha_creacion])
+  @@index([id_usuario, id_tenant, id_colegio, fecha_creacion])
+  @@index([origen, fecha_creacion])
 }
 
 // ======================================================

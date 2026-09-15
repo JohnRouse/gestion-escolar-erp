@@ -155,7 +155,7 @@ const menuComunicacion: NavItem[] = [
     title: 'Notificaciones',
     icon: Bell,
     path: '/notificaciones',
-    roles: ['Admin'],
+    roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
   },
 ];
 
