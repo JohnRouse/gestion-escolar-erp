@@ -1,6 +1,7 @@
 export type ModuleAccessKey =
   | 'staff'
   | 'citas'
+  | 'notificaciones'
   | 'asistencia'
   | 'calendario'
   | 'horario'
@@ -26,6 +27,9 @@ type ModuleAccessRule = {
 export const MODULE_ACCESS_RULES: Record<ModuleAccessKey, ModuleAccessRule> = {
   staff: { roles: ['Admin', 'Director'] },
   citas: { roles: ['Admin', 'Director', 'Secretaria', 'Profesor'] },
+  notificaciones: {
+    roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
+  },
   asistencia: {
     roles: ['Profesor', 'Admin', 'Director'],
   },

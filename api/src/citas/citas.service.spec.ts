@@ -208,6 +208,7 @@ function setup() {
   return {
     prisma,
     service: new CitasService(prisma, notifications),
+    notifications,
   };
 }
 
@@ -1100,5 +1101,39 @@ describe('Citas: contrato de matrícula operativa', () => {
     expect(where.estado_matricula.in).not.toEqual(
       expect.arrayContaining(['Inactivo', 'Reserva']),
     );
+  });
+});
+
+describe('Citas: integración dirigida con Notificaciones V1', () => {
+  test('avisa al usuario responsable con contexto y referencia de la cita', async () => {
+    const { prisma, service, notifications } = setup();
+    prisma.usuario.findMany.mockResolvedValue([{ id_usuario: 91 }]);
+
+    await (service as any).notifyRecipient(cita());
+
+    expect(notifications.crearNotificacion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id_usuario: 91,
+        id_tenant: 1,
+        id_colegio: 10,
+        origen: 'citas',
+        referencia_tipo: 'cita',
+        referencia_id: 77,
+        canal: 'intranet',
+        url: '/citas?cita=77',
+      }),
+    );
+  });
+
+  test('no duplica al mismo usuario responsable durante una operación', async () => {
+    const { prisma, service, notifications } = setup();
+    prisma.usuario.findMany.mockResolvedValue([
+      { id_usuario: 91 },
+      { id_usuario: 91 },
+    ]);
+
+    await (service as any).notifyRecipient(cita());
+
+    expect(notifications.crearNotificacion).toHaveBeenCalledTimes(1);
   });
 });

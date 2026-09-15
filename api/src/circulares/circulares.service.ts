@@ -79,15 +79,17 @@ export class CircularesService {
 
     // Notificar a los apoderados de los niveles seleccionados
     if (dto.niveles && dto.niveles.length > 0) {
-      for (const nivelId of dto.niveles) {
-        await this.notificacionesService.notificarApoderadosDeNivel(
-  nivelId,
-  'informativa',
-  'Nueva circular',
-  `Se ha publicado una nueva circular: "${circular.titulo}"`,
-  `/dashboard/circulares?id_circular=${circular.id_circular}`,
-);
-      }
+      await this.notificacionesService.notificarApoderadosDeNivel({
+        nivelIds: dto.niveles,
+        tipo: 'circular.publicada',
+        origen: 'sistema',
+        referencia_tipo: 'circular',
+        referencia_id: circular.id_circular,
+        canal: 'padres',
+        titulo: 'Nueva circular',
+        mensaje: `Se ha publicado una nueva circular: "${circular.titulo}"`,
+        url: `/dashboard/circulares?id_circular=${circular.id_circular}`,
+      });
     }
 
     return circular;

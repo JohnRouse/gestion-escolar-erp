@@ -1,16 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, Menu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useSchool } from '../contexts/SchoolContext';
 import HeaderGlobalSearch from '../components/header/HeaderGlobalSearch';
 import HeaderInstitutionSelector from '../components/header/HeaderInstitutionSelector';
 import HeaderUserMenu from '../components/header/HeaderUserMenu';
+import { notificacionesApi } from '../pages/notificaciones/notificacionesApi';
 
 const iconButtonClass =
   'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/70 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-blue-500/15';
 
 export default function AppHeader() {
   const { toggle } = useSidebar();
+  const { token } = useAuth();
+  const { activeScope, tenant, queryParams } = useSchool();
+  const navigate = useNavigate();
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const tenantId = activeScope.id_tenant ?? tenant?.id_tenant ?? 0;
+  const notifications = useMemo(
+    () =>
+      notificacionesApi(token, { ...queryParams, tenant_id: tenantId }),
+    [token, queryParams, tenantId],
+  );
+
+  useEffect(() => {
+    if (!token || !tenantId) {
+      return;
+    }
+    let active = true;
+    let controller = new AbortController();
+    const loadCount = () => {
+      controller.abort();
+      controller = new AbortController();
+      void notifications
+        .count(controller.signal)
+        .then((count) => {
+          if (active) setNotificationCount(count);
+        })
+        .catch(() => undefined);
+    };
+    loadCount();
+    const interval = window.setInterval(loadCount, 30_000);
+    window.addEventListener('notifications:changed', loadCount);
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener('notifications:changed', loadCount);
+    };
+  }, [notifications, tenantId, token]);
 
   return (
     <header className="erp-app-header sticky top-3 z-30 px-4 md:px-6 lg:px-8">
@@ -62,9 +103,17 @@ export default function AppHeader() {
             type="button"
             aria-label="Ver notificaciones"
             className={`${iconButtonClass} relative`}
+            onClick={() => {
+              setSchoolDropdownOpen(false);
+              navigate('/notificaciones');
+            }}
           >
             <Bell size={18} strokeWidth={2} aria-hidden="true" />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            {notificationCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold leading-none text-white ring-2 ring-white">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            ) : null}
           </button>
 
           <HeaderUserMenu

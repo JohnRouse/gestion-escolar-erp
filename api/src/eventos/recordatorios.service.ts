@@ -38,8 +38,13 @@ export class RecordatoriosService {
     this.logger.log(`Encontrados ${eventos.length} eventos para recordar`);
 
     for (const evento of eventos) {
+      if (!evento.id_tenant) {
+        this.logger.warn(
+          `Evento ${evento.id_evento} omitido: no tiene contexto institucional seguro.`,
+        );
+        continue;
+      }
       const horaTexto = evento.hora ? ` a las ${evento.hora}` : '';
-      const tipoTexto = evento.tipo.charAt(0).toUpperCase() + evento.tipo.slice(1);
       const fechaFormateada = evento.fecha.toLocaleDateString('es-PE', {
         day: '2-digit',
         month: 'short',
@@ -48,42 +53,20 @@ export class RecordatoriosService {
       const mensaje = `📅 Faltan 2 días para "${evento.titulo}" – ${fechaFormateada}${horaTexto}${evento.descripcion ? '. ' + evento.descripcion : ''}`;
       const titulo = `Recordatorio: ${evento.titulo}`;
 
-      // Obtener todos los apoderados únicos con hijos en cualquier nivel
-      const usuariosUnicos = new Set<number>();
-
       const niveles = await this.prisma.nivel.findMany();
-      for (const nivel of niveles) {
-        const apoderados = await this.prisma.apoderadoEstudiante.findMany({
-          where: {
-            estudiante: {
-              matriculas: {
-                some: {
-                  estado_matricula: 'Activo',
-                  seccion: { grado: { id_nivel: nivel.id_nivel } },
-                },
-              },
-            },
-          },
-          include: {
-            apoderado: { include: { persona: { include: { usuarios: true } } } },
-          },
-        });
-
-        for (const rel of apoderados) {
-          for (const usuario of rel.apoderado.persona.usuarios) {
-            if (!usuariosUnicos.has(usuario.id_usuario)) {
-              usuariosUnicos.add(usuario.id_usuario);
-              await this.notificacionesService.crearNotificacion({
-                id_usuario: usuario.id_usuario,
-                tipo: 'informativa',
-                titulo,
-                mensaje,
-                url: '/dashboard/calendario',
-              });
-            }
-          }
-        }
-      }
+      await this.notificacionesService.notificarApoderadosDeNivel({
+        nivelIds: niveles.map((nivel) => nivel.id_nivel),
+        id_tenant: evento.id_tenant,
+        id_colegio: evento.id_colegio,
+        tipo: 'evento.recordatorio',
+        origen: 'eventos',
+        referencia_tipo: 'evento',
+        referencia_id: evento.id_evento,
+        canal: 'padres',
+        titulo,
+        mensaje,
+        url: '/dashboard/calendario',
+      });
     }
 
     this.logger.log('Recordatorios enviados correctamente');

@@ -39,7 +39,7 @@ import PagoPublicoPage from './pages/publico/PagoPublicoPage';
 import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
 import ModuloPendientePage, { moduloIcons } from './pages/ModuloPendientePage';
-
+import NotificacionesPage from './pages/notificaciones/NotificacionesPage';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -113,16 +113,9 @@ function AppRoutes() {
         <Route
           path="/notificaciones"
           element={
-            <ModuloPendientePage
-              modulo="Notificaciones"
-              descripcion="Centraliza avisos internos, alertas del sistema y comunicaciones enviadas a usuarios."
-              icon={moduloIcons.notificaciones}
-              acciones={[
-                'Listar alertas por usuario',
-                'Marcar notificaciones como leídas',
-                'Conectar avisos de pagos, notas y matrícula',
-              ]}
-            />
+            <ProtectedModuleRoute module="notificaciones">
+              <NotificacionesPage />
+            </ProtectedModuleRoute>
           }
         />
         <Route path="/perfil" element={<PerfilPage />} />

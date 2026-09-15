@@ -1026,13 +1026,19 @@ export class FinanzasService {
           ? `${estudiante.persona.nombres} ${estudiante.persona.apellido_paterno}`
           : 'su hijo';
 
-        await this.notificacionesService.notificarApoderadosDeAlumno(
-          mat.id_estudiante,
-          'administrativa',
-          'Nuevo pago pendiente',
-          `Nuevo pago para ${nombreEstudiante}: "${dto.nombre_concepto}" por S/ ${monto.toFixed(2)}.`,
-          `/dashboard/pagos?alumno_id=${mat.id_estudiante}&cronograma_id=${nuevoCronograma.id_cronograma}`,
-        );
+        await this.notificacionesService.notificarApoderadosDeAlumno({
+          alumnoId: mat.id_estudiante,
+          id_tenant: anio.id_tenant,
+          id_colegio: anio.id_colegio,
+          tipo: 'pago.pendiente',
+          origen: 'pagos',
+          referencia_tipo: 'cronograma_pago',
+          referencia_id: nuevoCronograma.id_cronograma,
+          canal: 'padres',
+          titulo: 'Nuevo pago pendiente',
+          mensaje: `Nuevo pago para ${nombreEstudiante}: "${dto.nombre_concepto}" por S/ ${monto.toFixed(2)}.`,
+          url: `/dashboard/pagos?alumno_id=${mat.id_estudiante}&cronograma_id=${nuevoCronograma.id_cronograma}`,
+        });
       }
     }
 

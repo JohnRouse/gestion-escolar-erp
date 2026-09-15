@@ -46,3 +46,4 @@ Cada escenario debe incluir:
 - [Teclado en diálogos anidados](dialogos-anidados-teclado.md).
 - [Identidad, alcance y separación funcional de Staff](staff-identidad-alcance.md).
 - [Citas: participantes, alcance y transiciones](citas-participantes-autorizacion.md).
+- [Notificaciones: propiedad y alcance activo](notificaciones-propiedad-alcance.md).
