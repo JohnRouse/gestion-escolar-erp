@@ -13,6 +13,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ExternalLink,
+  HeartPulse,
   Info,
   MessageSquareHeart,
   Search,
@@ -38,6 +39,7 @@ const origins: Array<{ value: NotificacionOrigen; label: string }> = [
   { value: "pagos", label: "Pagos" },
   { value: "matricula", label: "Matrícula" },
   { value: "academico", label: "Académico" },
+  { value: "enfermeria", label: "Enfermería" },
   { value: "eventos", label: "Eventos" },
   { value: "sistema", label: "Sistema" },
 ];
@@ -62,6 +64,11 @@ const originMeta = {
     label: "Académico",
     icon: BookOpenCheck,
     tone: "bg-amber-50 text-amber-800 ring-amber-100",
+  },
+  enfermeria: {
+    label: "Enfermería",
+    icon: HeartPulse,
+    tone: "bg-rose-50 text-rose-700 ring-rose-100",
   },
   eventos: {
     label: "Eventos",

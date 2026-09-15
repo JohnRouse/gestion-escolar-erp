@@ -63,37 +63,44 @@ model Usuario {
   persona Persona @relation(fields: [id_persona], references: [id_persona])
   rol     Rol     @relation(fields: [id_rol], references: [id_rol])
 
-  tenants                             UsuarioTenant[]
-  colegios                            UsuarioColegio[]
-  pagos_cajero                        PagoTransaccion[]
-  matriculas_registradas              Matricula[]                   @relation("UsuarioMatriculasRegistradas")
-  matriculas_revisadas                Matricula[]                   @relation("UsuarioMatriculasRevisadas")
-  circulares                          Circular[]
-  notificaciones                      Notificacion[]
-  tokensFCM                           TokenFCM[]
-  pagos_recibidos_registrados         PagoRecibido[]                @relation("PagoRecibidoRegistro")
-  pagos_recibidos_validados           PagoRecibido[]                @relation("PagoRecibidoValidacion")
-  pagos_recibidos_historial           PagoRecibidoHistorial[]       @relation("PagoRecibidoHistorialUsuario")
-  gestiones_cobranza                  CobranzaGestion[]             @relation("CobranzaGestionUsuario")
-  comentarios_bimestrales_registrados ComentarioBimestral[]         @relation("UsuarioComentariosBimestrales")
-  calificaciones_tutoria              CalificacionTutoria[]         @relation("UsuarioCalificacionesTutoria")
-  historial_estados_institucionales   EstudianteEstadoHistorial[]   @relation("UsuarioEstadoInstitucionalHistorial")
-  continuidades_matricula             Matricula[]                   @relation("UsuarioContinuidadMatricula")
-  situaciones_matricula               Matricula[]                   @relation("UsuarioSituacionMatricula")
-  cierres_academicos_iniciados        CierreAcademico[]             @relation("UsuarioCierreAcademicoInicio")
-  cierres_academicos_cerrados         CierreAcademico[]             @relation("UsuarioCierreAcademicoCierre")
-  historial_situacion_matriculas      MatriculaSituacionHistorial[] @relation("UsuarioSituacionHistorial")
-  procesos_recuperacion_abiertos      ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionApertura")
-  procesos_recuperacion_cerrados      ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionCierre")
-  resultados_recuperacion             RecuperacionAlumno[]          @relation("UsuarioRecuperacionResultado")
-  competencias_recuperacion           RecuperacionCompetencia[]     @relation("UsuarioRecuperacionCompetencia")
-  movimientos_estudiante              MovimientoEstudiante[]        @relation("UsuarioMovimientoEstudiante")
-  movimientos_citas                   CitaMovimiento[]              @relation("CitaMovimientoActor")
-  lotes_promocion_creados             LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
-  lotes_promocion_ejecutados          LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
-  lotes_promocion_revertidos          LotePromocion[]               @relation("UsuarioLotePromocionReversion")
-  ejecuciones_promocion_registradas   LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionRegistro")
-  ejecuciones_promocion_revertidas    LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionReversion")
+  tenants                               UsuarioTenant[]
+  colegios                              UsuarioColegio[]
+  pagos_cajero                          PagoTransaccion[]
+  matriculas_registradas                Matricula[]                   @relation("UsuarioMatriculasRegistradas")
+  matriculas_revisadas                  Matricula[]                   @relation("UsuarioMatriculasRevisadas")
+  circulares                            Circular[]
+  notificaciones                        Notificacion[]
+  tokensFCM                             TokenFCM[]
+  pagos_recibidos_registrados           PagoRecibido[]                @relation("PagoRecibidoRegistro")
+  pagos_recibidos_validados             PagoRecibido[]                @relation("PagoRecibidoValidacion")
+  pagos_recibidos_historial             PagoRecibidoHistorial[]       @relation("PagoRecibidoHistorialUsuario")
+  gestiones_cobranza                    CobranzaGestion[]             @relation("CobranzaGestionUsuario")
+  comentarios_bimestrales_registrados   ComentarioBimestral[]         @relation("UsuarioComentariosBimestrales")
+  calificaciones_tutoria                CalificacionTutoria[]         @relation("UsuarioCalificacionesTutoria")
+  historial_estados_institucionales     EstudianteEstadoHistorial[]   @relation("UsuarioEstadoInstitucionalHistorial")
+  continuidades_matricula               Matricula[]                   @relation("UsuarioContinuidadMatricula")
+  situaciones_matricula                 Matricula[]                   @relation("UsuarioSituacionMatricula")
+  cierres_academicos_iniciados          CierreAcademico[]             @relation("UsuarioCierreAcademicoInicio")
+  cierres_academicos_cerrados           CierreAcademico[]             @relation("UsuarioCierreAcademicoCierre")
+  historial_situacion_matriculas        MatriculaSituacionHistorial[] @relation("UsuarioSituacionHistorial")
+  procesos_recuperacion_abiertos        ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionApertura")
+  procesos_recuperacion_cerrados        ProcesoRecuperacion[]         @relation("UsuarioProcesoRecuperacionCierre")
+  resultados_recuperacion               RecuperacionAlumno[]          @relation("UsuarioRecuperacionResultado")
+  competencias_recuperacion             RecuperacionCompetencia[]     @relation("UsuarioRecuperacionCompetencia")
+  movimientos_estudiante                MovimientoEstudiante[]        @relation("UsuarioMovimientoEstudiante")
+  movimientos_citas                     CitaMovimiento[]              @relation("CitaMovimientoActor")
+  fichas_salud_actualizadas             FichaSalud[]                  @relation("FichaSaludActualizadaPor")
+  autorizaciones_medicacion_registradas AutorizacionMedicacion[]      @relation("AutorizacionMedicacionRegistro")
+  autorizaciones_medicacion_revocadas   AutorizacionMedicacion[]      @relation("AutorizacionMedicacionRevocacion")
+  atenciones_enfermeria_responsable     AtencionEnfermeria[]          @relation("AtencionEnfermeriaResponsable")
+  medicaciones_enfermeria_registradas   AtencionEnfermeria[]          @relation("AtencionEnfermeriaMedicacionActor")
+  contactos_enfermeria_registrados      EnfermeriaContacto[]          @relation("EnfermeriaContactoActor")
+  movimientos_enfermeria                EnfermeriaMovimiento[]        @relation("EnfermeriaMovimientoActor")
+  lotes_promocion_creados               LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
+  lotes_promocion_ejecutados            LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
+  lotes_promocion_revertidos            LotePromocion[]               @relation("UsuarioLotePromocionReversion")
+  ejecuciones_promocion_registradas     LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionRegistro")
+  ejecuciones_promocion_revertidas      LotePromocionEjecucion[]      @relation("UsuarioLotePromocionEjecucionReversion")
 }
 
 model Tenant {
@@ -106,36 +113,39 @@ model Tenant {
   plan       String   @default("basic") @db.VarChar(30)
   created_at DateTime @default(now())
 
-  colegios              Colegio[]
-  usuarios              UsuarioTenant[]
-  anios                 AnioLectivo[]
-  aulas                 Aula[]
-  secciones             Seccion[]
-  matriculas            Matricula[]
-  asignaciones          AsignacionDocente[]
-  conceptos             ConceptoPago[]
-  circulares            Circular[]
-  eventos               Evento[]
-  staff                 Staff[]
-  albumes               Album[]
-  plantillas            PlantillaEvaluacion[]
-  areas                 AreaCurricular[]
-  cursos                Curso[]
-  escalas               EscalaCalificacion[]
-  tipos_eval            TipoEvaluacion[]
-  campanas_matricula    CampanaMatricula[]
-  planes_pensiones      PlanPensiones[]
-  campanas_descuento    CampanaDescuento[]
-  ordenes_pago          OrdenPago[]
-  pagos_recibidos       PagoRecibido[]
-  criterios_tutoria     CriterioTutoria[]
-  cierres_academicos    CierreAcademico[]
-  procesos_recuperacion ProcesoRecuperacion[]
-  movimientos_alumnos   MovimientoEstudiante[]
-  lotes_promocion       LotePromocion[]
-  secciones_anio        SeccionAnio[]
-  citas                 Cita[]
-  notificaciones        Notificacion[]
+  colegios               Colegio[]
+  usuarios               UsuarioTenant[]
+  anios                  AnioLectivo[]
+  aulas                  Aula[]
+  secciones              Seccion[]
+  matriculas             Matricula[]
+  asignaciones           AsignacionDocente[]
+  conceptos              ConceptoPago[]
+  circulares             Circular[]
+  eventos                Evento[]
+  staff                  Staff[]
+  albumes                Album[]
+  plantillas             PlantillaEvaluacion[]
+  areas                  AreaCurricular[]
+  cursos                 Curso[]
+  escalas                EscalaCalificacion[]
+  tipos_eval             TipoEvaluacion[]
+  campanas_matricula     CampanaMatricula[]
+  planes_pensiones       PlanPensiones[]
+  campanas_descuento     CampanaDescuento[]
+  ordenes_pago           OrdenPago[]
+  pagos_recibidos        PagoRecibido[]
+  criterios_tutoria      CriterioTutoria[]
+  cierres_academicos     CierreAcademico[]
+  procesos_recuperacion  ProcesoRecuperacion[]
+  movimientos_alumnos    MovimientoEstudiante[]
+  lotes_promocion        LotePromocion[]
+  secciones_anio         SeccionAnio[]
+  citas                  Cita[]
+  notificaciones         Notificacion[]
+  fichas_salud           FichaSalud[]
+  atenciones_enfermeria  AtencionEnfermeria[]
+  movimientos_enfermeria EnfermeriaMovimiento[]
 }
 
 model Colegio {
@@ -154,35 +164,38 @@ model Colegio {
 
   tenant Tenant @relation(fields: [id_tenant], references: [id_tenant])
 
-  usuarios            UsuarioColegio[]
-  niveles             ColegioNivel[]
-  grados              ColegioGrado[]
-  anios               AnioLectivo[]
-  aulas               Aula[]
-  secciones           Seccion[]
-  matriculas          Matricula[]
-  asignaciones        AsignacionDocente[]
-  conceptos           ConceptoPago[]
-  circulares          Circular[]
-  eventos             Evento[]
-  staff               Staff[]
-  albumes             Album[]
-  plantillas          PlantillaEvaluacion[]
-  areas               AreaCurricular[]
-  cursos              Curso[]
-  escalas             EscalaCalificacion[]
-  tipos_eval          TipoEvaluacion[]
-  codigos_estudiantes EstudianteCodigoColegio[]
-  historial_estados   EstudianteEstadoHistorial[]
-  campanas_matricula  CampanaMatricula[]
-  planes_pensiones    PlanPensiones[]
-  campanas_descuento  CampanaDescuento[]
-  ordenes_pago        OrdenPago[]
-  pagos_recibidos     PagoRecibido[]
-  datos_cobro         DatosCobroColegio?
-  criterios_tutoria   CriterioTutoria[]
-  citas               Cita[]
-  notificaciones      Notificacion[]
+  usuarios               UsuarioColegio[]
+  niveles                ColegioNivel[]
+  grados                 ColegioGrado[]
+  anios                  AnioLectivo[]
+  aulas                  Aula[]
+  secciones              Seccion[]
+  matriculas             Matricula[]
+  asignaciones           AsignacionDocente[]
+  conceptos              ConceptoPago[]
+  circulares             Circular[]
+  eventos                Evento[]
+  staff                  Staff[]
+  albumes                Album[]
+  plantillas             PlantillaEvaluacion[]
+  areas                  AreaCurricular[]
+  cursos                 Curso[]
+  escalas                EscalaCalificacion[]
+  tipos_eval             TipoEvaluacion[]
+  codigos_estudiantes    EstudianteCodigoColegio[]
+  historial_estados      EstudianteEstadoHistorial[]
+  campanas_matricula     CampanaMatricula[]
+  planes_pensiones       PlanPensiones[]
+  campanas_descuento     CampanaDescuento[]
+  ordenes_pago           OrdenPago[]
+  pagos_recibidos        PagoRecibido[]
+  datos_cobro            DatosCobroColegio?
+  criterios_tutoria      CriterioTutoria[]
+  citas                  Cita[]
+  notificaciones         Notificacion[]
+  fichas_salud           FichaSalud[]
+  atenciones_enfermeria  AtencionEnfermeria[]
+  movimientos_enfermeria EnfermeriaMovimiento[]
 
   progresiones_grado    GradoProgresion[]
   cierres_academicos    CierreAcademico[]
@@ -445,13 +458,15 @@ model Apoderado {
 
   persona Persona @relation(fields: [id_persona], references: [id_persona])
 
-  estudiantes     ApoderadoEstudiante[]
-  pagos           PagoTransaccion[]
-  citas           Cita[]
-  comentarios     ComentarioFoto[]
-  reacciones      ReaccionFoto[]
-  ordenes_pago    OrdenPago[]
-  pagos_recibidos PagoRecibido[]
+  estudiantes               ApoderadoEstudiante[]
+  pagos                     PagoTransaccion[]
+  citas                     Cita[]
+  comentarios               ComentarioFoto[]
+  reacciones                ReaccionFoto[]
+  ordenes_pago              OrdenPago[]
+  pagos_recibidos           PagoRecibido[]
+  autorizaciones_medicacion AutorizacionMedicacion[]
+  contactos_enfermeria      EnfermeriaContacto[]
 }
 
 model Docente {
@@ -485,6 +500,7 @@ model Estudiante {
   pagos_recibidos    PagoRecibido[]
   movimientos        MovimientoEstudiante[]
   detalles_promocion LotePromocionDetalle[]
+  fichas_salud       FichaSalud[]
 }
 
 model ApoderadoEstudiante {
@@ -579,6 +595,7 @@ model Matricula {
   detalles_lote_generada         LotePromocionDetalle[]          @relation("LoteDetalleMatriculaGenerada")
   ejecuciones_promocion_generada LotePromocionEjecucionDetalle[] @relation("EjecucionDetalleMatriculaGenerada")
   citas                          Cita[]
+  atenciones_enfermeria          AtencionEnfermeria[]
 
   @@index([id_estudiante, id_anio])
   @@index([id_seccion])
@@ -1262,6 +1279,140 @@ model CitaMovimiento {
 
   @@index([id_cita, creado_en])
   @@index([id_usuario_actor])
+}
+
+// ======================================================
+// BIENESTAR: ENFERMERÍA ESCOLAR
+// ======================================================
+
+model FichaSalud {
+  id_ficha                      Int      @id @default(autoincrement())
+  id_tenant                     Int
+  id_colegio                    Int
+  id_estudiante                 Int
+  grupo_sanguineo               String?  @db.VarChar(10)
+  alergias_declaradas           String?  @db.Text
+  condiciones_declaradas        String?  @db.Text
+  medicacion_habitual_declarada String?  @db.Text
+  seguro_centro_atencion        String?  @db.VarChar(255)
+  contacto_emergencia           String?  @db.VarChar(150)
+  telefono_emergencia           String?  @db.VarChar(30)
+  observaciones_relevantes      String?  @db.Text
+  id_usuario_actualizo          Int
+  fecha_actualizacion           DateTime @default(now()) @updatedAt
+  creado_en                     DateTime @default(now())
+
+  tenant          Tenant     @relation(fields: [id_tenant], references: [id_tenant], onDelete: Restrict)
+  colegio         Colegio    @relation(fields: [id_colegio], references: [id_colegio], onDelete: Restrict)
+  estudiante      Estudiante @relation(fields: [id_estudiante], references: [id_persona], onDelete: Restrict)
+  actualizado_por Usuario    @relation("FichaSaludActualizadaPor", fields: [id_usuario_actualizo], references: [id_usuario], onDelete: Restrict)
+
+  autorizaciones AutorizacionMedicacion[]
+
+  @@unique([id_colegio, id_estudiante])
+  @@index([id_tenant, id_colegio])
+}
+
+model AutorizacionMedicacion {
+  id_autorizacion       Int       @id @default(autoincrement())
+  id_ficha              Int
+  id_apoderado          Int
+  medicamento           String    @db.VarChar(200)
+  dosis_instruccion     String    @db.Text
+  via                   String?   @db.VarChar(80)
+  fecha_inicio          DateTime  @db.Date
+  fecha_fin             DateTime  @db.Date
+  observaciones         String?   @db.Text
+  estado                String    @default("activa") @db.VarChar(20)
+  id_usuario_registro   Int
+  id_usuario_revocacion Int?
+  fecha_revocacion      DateTime?
+  motivo_revocacion     String?   @db.VarChar(500)
+  creado_en             DateTime  @default(now())
+  actualizado_en        DateTime  @default(now()) @updatedAt
+
+  ficha          FichaSalud @relation(fields: [id_ficha], references: [id_ficha], onDelete: Restrict)
+  apoderado      Apoderado  @relation(fields: [id_apoderado], references: [id_persona], onDelete: Restrict)
+  registrado_por Usuario    @relation("AutorizacionMedicacionRegistro", fields: [id_usuario_registro], references: [id_usuario], onDelete: Restrict)
+  revocado_por   Usuario?   @relation("AutorizacionMedicacionRevocacion", fields: [id_usuario_revocacion], references: [id_usuario], onDelete: SetNull)
+
+  atenciones AtencionEnfermeria[]
+
+  @@index([id_ficha, estado, fecha_fin])
+  @@index([id_apoderado])
+}
+
+model AtencionEnfermeria {
+  id_atencion                Int       @id @default(autoincrement())
+  id_tenant                  Int
+  id_colegio                 Int
+  id_matricula               Int
+  fecha_hora_ingreso         DateTime  @default(now())
+  motivo                     String    @db.VarChar(500)
+  observacion_reportada      String?   @db.Text
+  acciones_realizadas        String?   @db.Text
+  id_autorizacion_medicacion Int?
+  medicacion_administrada    Boolean   @default(false)
+  fecha_medicacion           DateTime?
+  id_usuario_medicacion      Int?
+  estado                     String    @default("abierta") @db.VarChar(20)
+  destino                    String?   @db.VarChar(40)
+  fecha_hora_cierre          DateTime?
+  id_usuario_responsable     Int
+  creado_en                  DateTime  @default(now())
+  actualizado_en             DateTime  @default(now()) @updatedAt
+
+  tenant                    Tenant                  @relation(fields: [id_tenant], references: [id_tenant], onDelete: Restrict)
+  colegio                   Colegio                 @relation(fields: [id_colegio], references: [id_colegio], onDelete: Restrict)
+  matricula                 Matricula               @relation(fields: [id_matricula], references: [id_matricula], onDelete: Restrict)
+  autorizacion_medicacion   AutorizacionMedicacion? @relation(fields: [id_autorizacion_medicacion], references: [id_autorizacion], onDelete: Restrict)
+  responsable               Usuario                 @relation("AtencionEnfermeriaResponsable", fields: [id_usuario_responsable], references: [id_usuario], onDelete: Restrict)
+  medicacion_registrada_por Usuario?                @relation("AtencionEnfermeriaMedicacionActor", fields: [id_usuario_medicacion], references: [id_usuario], onDelete: SetNull)
+
+  contactos EnfermeriaContacto[]
+
+  @@index([id_colegio, fecha_hora_ingreso])
+  @@index([id_matricula, fecha_hora_ingreso])
+  @@index([estado, fecha_hora_ingreso])
+}
+
+model EnfermeriaContacto {
+  id_contacto          Int      @id @default(autoincrement())
+  id_atencion          Int
+  id_apoderado         Int
+  fecha_hora           DateTime @default(now())
+  medio                String   @db.VarChar(20)
+  observacion          String?  @db.VarChar(1000)
+  notificacion_enviada Boolean  @default(false)
+  id_usuario_actor     Int
+  creado_en            DateTime @default(now())
+
+  atencion  AtencionEnfermeria @relation(fields: [id_atencion], references: [id_atencion], onDelete: Restrict)
+  apoderado Apoderado          @relation(fields: [id_apoderado], references: [id_persona], onDelete: Restrict)
+  actor     Usuario            @relation("EnfermeriaContactoActor", fields: [id_usuario_actor], references: [id_usuario], onDelete: Restrict)
+
+  @@index([id_atencion, fecha_hora])
+  @@index([id_apoderado])
+}
+
+model EnfermeriaMovimiento {
+  id_movimiento    Int      @id @default(autoincrement())
+  id_tenant        Int
+  id_colegio       Int
+  tipo_entidad     String   @db.VarChar(30)
+  id_entidad       Int
+  accion           String   @db.VarChar(50)
+  id_usuario_actor Int
+  motivo           String?  @db.VarChar(1000)
+  datos            Json?
+  creado_en        DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [id_tenant], references: [id_tenant], onDelete: Restrict)
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Restrict)
+  actor   Usuario @relation("EnfermeriaMovimientoActor", fields: [id_usuario_actor], references: [id_usuario], onDelete: Restrict)
+
+  @@index([tipo_entidad, id_entidad, creado_en])
+  @@index([id_tenant, id_colegio, creado_en])
 }
 
 // ======================================================

@@ -43,6 +43,7 @@ Debe contar con:
 | Calendario | Requiere inventario |
 | Tutoría | Implementación parcial; permisos pendientes de auditoría |
 | Citas | Citas individuales y reuniones de sección en pruebas; portal bloqueado por autenticación externa |
+| Enfermería | En pruebas; código y migración aditiva creados, pendiente aplicación local y aceptación humana |
 | Tesorería | Implementación amplia; requiere inventario |
 | Reportes | Requiere inventario |
 | Configuración | Implementación amplia; requiere inventario |

@@ -92,14 +92,14 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 
 | Módulo | Frontend | Backend | Persistencia | Flujo | Estado | Prioridad | Falta principal |
 |---|---|---|---|---|---|---|---|
-| Enfermería | parcial | no | no | faltante | ESQUELETO | P0 | Implementar ficha, atenciones, alertas, autorización de medicación y avisos; solo hay página pendiente. **A:** faltante. **D:** Alumnos, Apoderados, Staff, Notificaciones. |
+| Enfermería | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Ficha declarada, autorizaciones, atenciones, contactos, cierre, trazabilidad y aviso mínimo están implementados en código; aplicar migración aditiva en base aislada y completar aceptación humana. **A:** revisión dirigida aprobada en código. **D:** Alumnos, Apoderados, Matrícula, Notificaciones y migración local. |
 
 ### Comunicación
 
 | Módulo | Frontend | Backend | Persistencia | Flujo | Estado | Prioridad | Falta principal |
 |---|---|---|---|---|---|---|---|
 | Circulares | sí | sí | sí | completo | CASI COMPLETO | P0 | Cerrar aceptación de destinatarios, publicación y adjuntos; documentar contrato institucional. **A:** revisar. **D:** Colegios, niveles, secciones, Usuarios, Notificaciones. |
-| Notificaciones | sí | sí | sí | completo V1 acotado | CASI COMPLETO | P0 | Bandeja personal, filtros, lectura/no lectura, badge, propiedad y scope están en pruebas; aplicar migración y aceptar con datos reales. Integraciones futuras de Matrícula, Notas y Enfermería siguen pendientes. **A:** revisión dirigida aprobada en código. **D:** Usuarios, membresías, Citas, eventos y migración local. |
+| Notificaciones | sí | sí | sí | completo V1 acotado | CASI COMPLETO | P0 | Bandeja personal, filtros, lectura/no lectura, badge, propiedad y scope están en pruebas; aplicar migración y aceptar con datos reales. Enfermería ya integra avisos mínimos opcionales; Matrícula y Notas siguen pendientes. **A:** revisión dirigida aprobada en código. **D:** Usuarios, membresías, Citas, Enfermería, eventos y migración local. |
 | Galería / álbumes | sí | parcial | sí | parcial | PARCIAL | P1 | Reutilizar lectura, comentarios y reacciones del portal; cerrar gestión/publicación y autorización si entra después de P0. **A:** revisar. **D:** Portal de apoderados, secciones, almacenamiento. |
 
 ### Tesorería
@@ -269,6 +269,15 @@ migración aditiva. **Siguiente incremento recomendado:** aplicar/validar las
 migraciones pendientes en entorno controlado, habilitar autenticación externa y
 aceptar el portal; luego conectar incrementalmente los orígenes futuros de avisos.
 
+**Tercer incremento del bloque 1 — Enfermería EN PRUEBAS:** la intranet, API y
+migración aditiva separan ficha declarada, autorizaciones, atenciones, contactos
+y movimientos. Admin/Director se validan por rol global e institucional; no se
+usa cargo/área de Staff. La búsqueda adopta los tres estados operativos de
+matrícula, la medicación exige autorización activa/vigente y el aviso opcional
+usa texto mínimo sin detalle sensible. Jest dirigido, builds y Prisma aprobaron
+en código. No se aplicó la migración ni se realizó aceptación humana; por ello
+Enfermería no se marca completa. [Contrato y límites](modulos/enfermeria.md).
+
 Cada bloque termina con demostración funcional, pruebas proporcionales y documentación vigente del resultado. Los PR pueden dividir un bloque grande en funcionalidades completas, sin esperar un único PR gigantesco ni abrir un PR por ajuste minúsculo.
 
 ### Reglas de ejecución para evitar rendimientos decrecientes
@@ -339,7 +348,7 @@ Las operaciones sensibles deben conservar actor, fecha, tenant/colegio, acción,
 
 | Categoría | Tratamiento |
 |---|---|
-| **A — Funcionalidad realmente faltante** | Acceso externo para aceptar Citas del portal, Enfermería, bandeja interna, gestión de eventos completa, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
+| **A — Funcionalidad realmente faltante** | Acceso externo para aceptar Citas del portal, aceptación/aplicación local de Enfermería, gestión de eventos completa, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
 | **B — Implementación sin documentación vigente suficiente** | Renovación, promoción con preview/ejecución/reversión, historial de pagos, cartera/agenda, pensiones/campañas, Tutoría/libreta/PDF, catálogos/plantillas, Dashboard y Analíticas. Actualizar fichas y reglas al cerrar cada bloque; no afirmar que carecen de toda referencia histórica. |
 | **C — Deuda técnica no bloqueante** | Lint histórico, tipados amplios sin fallo de flujo demostrado, reorganización de archivos, descomposición de servicios grandes y limpieza general. Solo atender lo necesario para mantener/cerrar la funcionalidad modificada. |
 | **D — Deuda visual** | Ajustes cosméticos, densidad y variaciones de CSS se concentran en bloque 5 por patrones globales; no producen PR individuales salvo fallo de uso real. |

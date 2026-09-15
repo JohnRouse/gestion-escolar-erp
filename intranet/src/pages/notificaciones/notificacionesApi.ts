@@ -5,6 +5,7 @@ export type NotificacionOrigen =
   | "pagos"
   | "matricula"
   | "academico"
+  | "enfermeria"
   | "eventos"
   | "sistema";
 
