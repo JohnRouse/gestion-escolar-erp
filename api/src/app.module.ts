@@ -21,6 +21,7 @@ import { PlantillasModule } from './plantillas/plantillas.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ColegiosModule } from './colegios/colegios.module';
 import { TutoriaModule } from './tutoria/tutoria.module';
+import { EnfermeriaModule } from './enfermeria/enfermeria.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { TutoriaModule } from './tutoria/tutoria.module';
     PlantillasModule,
     DashboardModule,
     ColegiosModule,
+    EnfermeriaModule,
   ],
   controllers: [],
   providers: [{ provide: APP_INTERCEPTOR, useClass: ActividadInterceptor }],

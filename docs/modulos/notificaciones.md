@@ -5,7 +5,7 @@
 **En pruebas para V1.** La bandeja personal, la API segura, la campana de
 intranet y el contrato estructurado están implementados en código. La migración
 `20260913180000_notificaciones_v1_bandeja` está creada y validada, pero no se ha
-aplicado. Las integraciones futuras de Matrícula, Enfermería y otros eventos de
+aplicado. Enfermería ya emite avisos mínimos opcionales; las integraciones futuras de Matrícula y otros eventos de
 Tesorería no forman parte de este incremento.
 
 ## 2. Propósito
@@ -41,9 +41,9 @@ sistema. No es un editor de mensajes masivos ni reemplaza a Circulares.
 `Notificacion` conserva `tipo` y agrega campos opcionales:
 
 - `id_tenant`, `id_colegio`;
-- `origen`: citas, pagos, matricula, academico, eventos o sistema;
+- `origen`: citas, pagos, matricula, academico, eventos, enfermeria o sistema;
 - `referencia_tipo`, `referencia_id`;
-- `canal`: intranet o padres;
+- `canal`: intranet, portal o `padres` legacy compatible;
 - `fecha_lectura`.
 
 La relación principal continúa siendo `Notificacion.id_usuario → Usuario`.
@@ -94,8 +94,11 @@ La relación principal continúa siendo `Notificacion.id_usuario → Usuario`.
 - Circulares: sigue siendo el contenido masivo. Su aviso complementario legacy
   se omite mientras el flujo no entregue tenant/colegio explícitos; no se
   difunde por un nivel compartido entre organizaciones.
+- Enfermería: aviso opcional al apoderado vinculado, deduplicado por Usuario,
+  con contexto/referencia y texto mínimo sin síntomas, alergias ni medicación.
+  Usa canal `portal`, no inventa URL y conserva lectura de `padres` históricos.
 
-Pendientes: más eventos de pagos/validación, matrícula, notas, Enfermería y
+Pendientes: más eventos de pagos/validación, matrícula, notas y
 otros avisos académicos. Se conectarán incrementalmente; su mención como origen
 no significa que ya emitan notificaciones.
 

@@ -182,8 +182,8 @@ Deben utilizarse estados como:
 
 - Notificaciones es una bandeja personal de eventos del sistema; Circulares
   conserva la comunicación institucional masiva.
-- Los orígenes estructurados V1 son citas, pagos, matricula, academico, eventos
-  y sistema. La existencia de un origen no implica que todos sus eventos estén
+- Los orígenes estructurados V1 son citas, pagos, matricula, academico, eventos,
+  enfermeria y sistema. La existencia de un origen no implica que todos sus eventos estén
   integrados.
 - Las acciones solo aceptan rutas internas permitidas y separadas para intranet
   y portal de familias.
@@ -191,3 +191,29 @@ Deben utilizarse estados como:
   borrado físico en V1.
 - Todo helper que derive familias desde matrículas incluye Activo, Matriculado y
   Pre-matriculado, y excluye Inactivo y Reserva.
+
+## 13. Enfermería escolar
+
+- La información de salud se denomina declarada por la familia y no equivale a
+  diagnóstico, prescripción ni historia clínica hospitalaria.
+- Búsqueda y apertura usan matrículas `Activo`, `Matriculado` y
+  `Pre-matriculado`; los históricos continúan disponibles tras un cambio de
+  estado.
+- Cada matrícula puede tener una sola atención con estado `abierta`. La búsqueda
+  informa su ID y la interfaz debe continuar sobre esa atención. Si una apertura
+  concurrente llega al backend, responde 409 con código
+  `ENFERMERIA_ATENCION_ABIERTA` sin crear atención ni movimiento duplicados.
+- `Motivo de atención` describe el motivo o los síntomas observados y no
+  equivale a un diagnóstico.
+- Solo se registra medicación administrada seleccionando una autorización
+  activa, vigente y vinculada al mismo estudiante/colegio.
+- El texto libre de `Acciones y cuidados realizados` no se analiza ni permite
+  afirmar que se administró medicación.
+- Contactos y autorizaciones admiten únicamente apoderados persistidos en
+  `ApoderadoEstudiante`.
+- No se eliminan físicamente fichas, autorizaciones, atenciones, contactos ni
+  movimientos. Corregir una atención cerrada exige motivo e historial.
+- El aviso familiar es opcional y mínimo; nunca contiene alergias, diagnóstico,
+  síntomas detallados, medicamento ni dosis.
+- La métrica visual `Atenciones abiertas` cuenta directamente atenciones con
+  estado `abierta`.

@@ -33,7 +33,7 @@ Cada módulo debe tener un documento propio utilizando `docs/plantillas/plantill
 
 ### Bienestar
 
-- Enfermería.
+- [Enfermería](enfermeria.md).
 
 ### Comunicación
 

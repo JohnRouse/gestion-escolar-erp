@@ -17,6 +17,7 @@ export const NOTIFICACION_ORIGENES = [
   'matricula',
   'academico',
   'eventos',
+  'enfermeria',
   'sistema',
 ] as const;
 

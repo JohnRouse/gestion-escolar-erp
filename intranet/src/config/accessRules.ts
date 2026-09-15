@@ -2,6 +2,7 @@ export type ModuleAccessKey =
   | 'staff'
   | 'citas'
   | 'notificaciones'
+  | 'enfermeria'
   | 'asistencia'
   | 'calendario'
   | 'horario'
@@ -30,6 +31,7 @@ export const MODULE_ACCESS_RULES: Record<ModuleAccessKey, ModuleAccessRule> = {
   notificaciones: {
     roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
   },
+  enfermeria: { roles: ['Admin', 'Director'] },
   asistencia: {
     roles: ['Profesor', 'Admin', 'Director'],
   },

@@ -140,7 +140,7 @@ const menuBienestar: NavItem[] = [
     title: 'Enfermería',
     icon: HeartPulse,
     path: '/enfermeria',
-    roles: ['Admin'],
+    roles: ['Admin', 'Director'],
   },
 ];
 

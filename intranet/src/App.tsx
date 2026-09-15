@@ -38,8 +38,8 @@ import EstadoCuentaInternoPage from './pages/tesoreria/EstadoCuentaInternoPage';
 import PagoPublicoPage from './pages/publico/PagoPublicoPage';
 import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
-import ModuloPendientePage, { moduloIcons } from './pages/ModuloPendientePage';
 import NotificacionesPage from './pages/notificaciones/NotificacionesPage';
+import EnfermeriaPage from './pages/enfermeria/EnfermeriaPage';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -56,7 +56,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/pago/:referencia" element={<PagoPublicoPage />} />
-      <Route path="/consulta-pagos" element={<ConsultaPagosPublicaPage />} />\n      <Route
+      <Route path="/consulta-pagos" element={<ConsultaPagosPublicaPage />} />
+      <Route
         path="/asistencia/mobile"
         element={
           <ProtectedRoute>
@@ -98,16 +99,9 @@ function AppRoutes() {
         <Route
           path="/enfermeria"
           element={
-            <ModuloPendientePage
-              modulo="Enfermería"
-              descripcion="Registra atenciones, alertas médicas, medicación autorizada y observaciones de salud escolar."
-              icon={moduloIcons.enfermeria}
-              acciones={[
-                'Crear ficha médica del alumno',
-                'Registrar atenciones diarias',
-                'Notificar incidentes al apoderado',
-              ]}
-            />
+            <ProtectedModuleRoute module="enfermeria">
+              <EnfermeriaPage />
+            </ProtectedModuleRoute>
           }
         />
         <Route

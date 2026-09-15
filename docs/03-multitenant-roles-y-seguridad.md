@@ -142,6 +142,18 @@ Consulta únicamente información de estudiantes con los que mantiene una relaci
   `ApoderadoEstudiante`, y el backend rechaza una pareja matrícula/apoderado no
   vinculada aunque los IDs hayan sido alterados en la solicitud.
 
+### Enfermería
+
+- Solo Admin y Director acceden cuando el rol global y el `rol_colegio`
+  efectivo pertenecen a ese conjunto; Secretaria y Profesor no acceden.
+- `Staff.cargo`, `Staff.area` y otros textos libres no conceden autoridad.
+- Ficha, autorización, atención, contacto y movimiento se filtran por actor,
+  tenant y colegio autorizado. La matrícula determina el colegio al crear.
+- Apoderado y autorización se revalidan contra el estudiante; un ID ajeno
+  responde sin revelar datos sensibles.
+- El consolidado contiene únicamente colegios administrables del tenant activo.
+  Un rol dedicado de Enfermería queda como decisión futura.
+
 ## 7. Acciones de autorización
 
 Los permisos deben evaluarse por acción:

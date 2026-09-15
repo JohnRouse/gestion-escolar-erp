@@ -47,3 +47,4 @@ Cada escenario debe incluir:
 - [Identidad, alcance y separación funcional de Staff](staff-identidad-alcance.md).
 - [Citas: participantes, alcance y transiciones](citas-participantes-autorizacion.md).
 - [Notificaciones: propiedad y alcance activo](notificaciones-propiedad-alcance.md).
+- [Enfermería: privacidad, autorización y alcance](enfermeria-privacidad-autorizacion.md).

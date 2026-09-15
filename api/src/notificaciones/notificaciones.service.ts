@@ -19,7 +19,7 @@ const ESTADOS_MATRICULA_OPERATIVA = [
 ];
 
 export type NotificacionOrigen = (typeof NOTIFICACION_ORIGENES)[number];
-export type NotificacionCanal = 'intranet' | 'padres';
+export type NotificacionCanal = 'intranet' | 'padres' | 'portal';
 
 export type CrearNotificacionInput = {
   id_usuario: number;
@@ -186,7 +186,7 @@ export class NotificacionesService {
       actor.rol.nombre_rol,
     )
       ? 'intranet'
-      : 'padres';
+      : 'portal';
     if (channel === 'intranet' && !query.scope && !query.colegio_id) {
       throw new BadRequestException(
         'Selecciona el alcance institucional de la bandeja.',
@@ -236,7 +236,12 @@ export class NotificacionesService {
       id_usuario: usuarioId,
       AND: [
         { OR: context },
-        { OR: [{ canal: scope.channel }, { canal: null }] },
+        {
+          OR:
+            scope.channel === 'portal'
+              ? [{ canal: 'portal' }, { canal: 'padres' }, { canal: null }]
+              : [{ canal: scope.channel }, { canal: null }],
+        },
       ],
     };
   }
