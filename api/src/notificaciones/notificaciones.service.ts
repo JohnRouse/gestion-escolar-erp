@@ -40,6 +40,20 @@ type NotificarFamiliasInput = Omit<CrearNotificacionInput, 'id_usuario'> & {
   nivelIds?: number[];
 };
 
+export type NotificarAudienciaEventoInput = Omit<
+  CrearNotificacionInput,
+  'id_usuario' | 'id_tenant' | 'id_colegio'
+> & {
+  id_tenant: number;
+  id_colegio: number;
+  id_anio: number;
+  audiencia: {
+    tipo: 'colegio' | 'niveles' | 'grados' | 'secciones';
+    ids: number[];
+  };
+  deduplicar_existentes?: boolean;
+};
+
 type ResolvedScope = {
   tenantId: number;
   schoolIds: number[];
@@ -560,6 +574,90 @@ export class NotificacionesService {
         }
       }
     }
+    return this.createFamilyNotifications([...recipients.values()]);
+  }
+
+  async notificarApoderadosDeAudienciaEvento(
+    input: NotificarAudienciaEventoInput,
+  ) {
+    const audienceWhere: Prisma.MatriculaWhereInput =
+      input.audiencia.tipo === 'niveles'
+        ? {
+            seccion: {
+              grado: { id_nivel: { in: input.audiencia.ids } },
+            },
+          }
+        : input.audiencia.tipo === 'grados'
+          ? { seccion: { id_grado: { in: input.audiencia.ids } } }
+          : input.audiencia.tipo === 'secciones'
+            ? { id_seccion: { in: input.audiencia.ids } }
+            : {};
+
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        id_tenant: input.id_tenant,
+        id_colegio: input.id_colegio,
+        id_anio: input.id_anio,
+        estado_matricula: { in: ESTADOS_MATRICULA_OPERATIVA },
+        ...audienceWhere,
+      },
+      select: {
+        estudiante: {
+          select: {
+            apoderados: {
+              select: {
+                apoderado: {
+                  select: {
+                    persona: {
+                      select: {
+                        usuarios: {
+                          where: { estado: true },
+                          select: { id_usuario: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const recipients = new Map<number, CrearNotificacionInput>();
+    for (const enrollment of matriculas) {
+      for (const relation of enrollment.estudiante.apoderados) {
+        for (const user of relation.apoderado.persona.usuarios) {
+          recipients.set(user.id_usuario, {
+            ...input,
+            id_usuario: user.id_usuario,
+            id_tenant: input.id_tenant,
+            id_colegio: input.id_colegio,
+          });
+        }
+      }
+    }
+
+    if (input.deduplicar_existentes && recipients.size > 0) {
+      const existing = await this.prisma.notificacion.findMany({
+        where: {
+          id_usuario: { in: [...recipients.keys()] },
+          id_tenant: input.id_tenant,
+          id_colegio: input.id_colegio,
+          tipo: input.tipo,
+          origen: input.origen,
+          referencia_tipo: input.referencia_tipo,
+          referencia_id:
+            input.referencia_id === undefined
+              ? null
+              : String(input.referencia_id),
+        },
+        select: { id_usuario: true },
+      });
+      for (const item of existing) recipients.delete(item.id_usuario);
+    }
+
     return this.createFamilyNotifications([...recipients.values()]);
   }
 

@@ -48,3 +48,4 @@ Cada escenario debe incluir:
 - [Citas: participantes, alcance y transiciones](citas-participantes-autorizacion.md).
 - [Notificaciones: propiedad y alcance activo](notificaciones-propiedad-alcance.md).
 - [Enfermería: privacidad, autorización y alcance](enfermeria-privacidad-autorizacion.md).
+- [Eventos: autorización, audiencia y familias](eventos-autorizacion-audiencia.md).

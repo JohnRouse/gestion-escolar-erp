@@ -1,29 +1,109 @@
-import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
-import { EventosService } from './eventos.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RecordatoriosService } from './recordatorios.service';
+import { Request } from 'express';
+import { Roles, RolesGuard } from '../auth/roles.guard';
+import {
+  ActualizarEventoDto,
+  CancelarEventoDto,
+  CrearEventoDto,
+  ListarEventosDto,
+  ListarEventosPadresDto,
+  OpcionesEventosDto,
+} from './dto/eventos.dto';
+import { EventosService } from './eventos.service';
+
+type EventosRequest = Request & { user: { userId: number } };
 
 @Controller('eventos')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class EventosController {
-  constructor(private readonly eventosService: EventosService,
-  private readonly recordatoriosService: RecordatoriosService) {}
+  constructor(private readonly eventosService: EventosService) {}
 
   @Get()
-  async obtenerEventos(
-    @Query('anio_id') anioId: string,
-    @Query('mes') mes: string,
+  @Roles('Admin', 'Director', 'Secretaria', 'Profesor')
+  obtenerEventos(@Req() req: EventosRequest, @Query() query: ListarEventosDto) {
+    return this.eventosService.obtenerEventos(req.user.userId, query);
+  }
+
+  @Get('opciones')
+  @Roles('Admin', 'Director', 'Secretaria')
+  obtenerOpciones(
+    @Req() req: EventosRequest,
+    @Query() query: OpcionesEventosDto,
   ) {
-    return this.eventosService.obtenerEventos(Number(anioId), Number(mes));
+    return this.eventosService.obtenerOpciones(req.user.userId, query);
+  }
+
+  @Get('padres')
+  @Roles('Apoderado')
+  obtenerEventosPadres(
+    @Req() req: EventosRequest,
+    @Query() query: ListarEventosPadresDto,
+  ) {
+    return this.eventosService.obtenerEventosPadres(req.user.userId, query);
+  }
+
+  @Get(':id')
+  @Roles('Admin', 'Director', 'Secretaria', 'Profesor')
+  obtenerEvento(
+    @Req() req: EventosRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.eventosService.obtenerEvento(req.user.userId, id);
   }
 
   @Post()
-  async crearEvento(@Body() body: any) {
-    return this.eventosService.crearEvento(body);
+  @Roles('Admin', 'Director', 'Secretaria')
+  crearEvento(@Req() req: EventosRequest, @Body() body: CrearEventoDto) {
+    return this.eventosService.crearEvento(req.user.userId, body);
   }
 
-  @Post('recordatorios/prueba')
-  async ejecutarRecordatoriosPrueba() {
-  return this.recordatoriosService.ejecutarRecordatoriosPrueba();
-}
+  @Patch(':id')
+  @Roles('Admin', 'Director', 'Secretaria')
+  actualizarEvento(
+    @Req() req: EventosRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: ActualizarEventoDto,
+  ) {
+    return this.eventosService.actualizarEvento(req.user.userId, id, body);
+  }
+
+  @Post(':id/cancelar')
+  @Roles('Admin', 'Director', 'Secretaria')
+  cancelarEvento(
+    @Req() req: EventosRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CancelarEventoDto,
+  ) {
+    return this.eventosService.cancelarEvento(req.user.userId, id, body);
+  }
+
+  @Post(':id/realizar')
+  @Roles('Admin', 'Director', 'Secretaria')
+  realizarEvento(
+    @Req() req: EventosRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.eventosService.realizarEvento(req.user.userId, id);
+  }
 }

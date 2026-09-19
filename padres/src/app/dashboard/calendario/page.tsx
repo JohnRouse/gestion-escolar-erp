@@ -12,8 +12,18 @@ interface Evento {
   titulo: string;
   fecha: string;
   hora?: string | null;
+  hora_inicio?: string | null;
+  hora_fin?: string | null;
   tipo: string;
   descripcion: string | null;
+  estado: "programado" | "cancelado" | "realizado";
+  ubicacion?: string | null;
+}
+
+interface AnioLectivoPortal {
+  id_anio: number;
+  estado: string;
+  fecha_inicio: string;
 }
 
 const MESES = [
@@ -39,7 +49,8 @@ export default function CalendarioPage() {
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -49,7 +60,7 @@ export default function CalendarioPage() {
     axios
       .get("/api/academicos/anios", { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
-        const activo = res.data.find((a: any) => a.estado === 'Abierto');
+        const activo = (res.data as AnioLectivoPortal[]).find((item) => item.estado === 'Abierto');
         if (activo) {
           setAnioId(activo.id_anio);
           setAnio(new Date(activo.fecha_inicio).getFullYear());
@@ -63,14 +74,17 @@ export default function CalendarioPage() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    setLoading(true);
-    axios
-      .get(`/api/eventos?anio_id=${anioId}&mes=${mes}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setEventos(res.data))
-      .catch(() => setEventos([]))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      axios
+        .get(`/api/eventos/padres?anio_id=${anioId}&mes=${mes}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setEventos(res.data.data ?? []))
+        .catch(() => setEventos([]))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [anioId, mes]);
 
   const hoy = new Date();
@@ -144,6 +158,7 @@ export default function CalendarioPage() {
             <button
               onClick={() => cambiarMes(-1)}
               className="w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center text-text hover:bg-surface-alt"
+              aria-label="Mes anterior"
             >
               <span className="material-symbols-rounded">chevron_left</span>
             </button>
@@ -153,6 +168,7 @@ export default function CalendarioPage() {
             <button
               onClick={() => cambiarMes(1)}
               className="w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center text-text hover:bg-surface-alt"
+              aria-label="Mes siguiente"
             >
               <span className="material-symbols-rounded">chevron_right</span>
             </button>
@@ -215,7 +231,7 @@ export default function CalendarioPage() {
                   {eventosDelDia.map((ev) => (
                     <div
                       key={ev.id_evento}
-                      className="flex items-start gap-3 p-2 rounded-xl bg-surface-alt"
+                      className={`flex items-start gap-3 p-2 rounded-xl bg-surface-alt ${ev.estado === "cancelado" ? "opacity-70" : ""}`}
                     >
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -227,15 +243,24 @@ export default function CalendarioPage() {
                       <div>
                         <p className="text-sm font-bold text-text">
                           {ev.titulo}
-                          {ev.hora && (
+                          {(ev.hora_inicio || ev.hora) && (
                             <span className="text-xs text-text-muted ml-1">
-                              · {ev.hora}
+                              · {ev.hora_inicio || ev.hora}
+                              {ev.hora_fin ? `–${ev.hora_fin}` : ""}
                             </span>
                           )}
+                        </p>
+                        <p className="text-xs font-bold capitalize text-text-secondary mt-0.5">
+                          {ev.estado}
                         </p>
                         {ev.descripcion && (
                           <p className="text-xs text-text-secondary mt-0.5">
                             {ev.descripcion}
+                          </p>
+                        )}
+                        {ev.ubicacion && (
+                          <p className="text-xs text-text-secondary mt-0.5">
+                            {ev.ubicacion}
                           </p>
                         )}
                       </div>

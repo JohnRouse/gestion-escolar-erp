@@ -40,6 +40,7 @@ import DatosCobroPage from './pages/tesoreria/DatosCobroPage';
 import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
 import NotificacionesPage from './pages/notificaciones/NotificacionesPage';
 import EnfermeriaPage from './pages/enfermeria/EnfermeriaPage';
+import EventosPage from './pages/eventos/EventosPage';
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -87,6 +88,7 @@ function AppRoutes() {
         <Route path="/tesoreria/datos-cobro" element={<DatosCobroPage />} />
         <Route path="/asistencia" element={<ProtectedModuleRoute module="asistencia"><AsistenciaPage /></ProtectedModuleRoute>} />
         <Route path="/calendario" element={<ProtectedModuleRoute module="calendario"><CalendarioPage /></ProtectedModuleRoute>} />
+        <Route path="/eventos" element={<ProtectedModuleRoute module="eventos"><EventosPage /></ProtectedModuleRoute>} />
         <Route path="/horario" element={<ProtectedModuleRoute module="horario"><Navigate to="/calendario" replace /></ProtectedModuleRoute>} />
         <Route path="/notas" element={<ProtectedModuleRoute module="notas"><NotasPage /></ProtectedModuleRoute>} />
         <Route path="/notas/comentarios" element={<ProtectedModuleRoute module="tutoria"><Navigate to="/tutoria" replace /></ProtectedModuleRoute>} />

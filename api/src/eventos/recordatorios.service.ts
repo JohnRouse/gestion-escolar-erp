@@ -1,81 +1,90 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+function bogotaDateParts(value: Date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const get = (type: string) =>
+    Number(parts.find((item) => item.type === type)?.value);
+  return { year: get('year'), month: get('month'), day: get('day') };
+}
 
 @Injectable()
 export class RecordatoriosService {
   private readonly logger = new Logger(RecordatoriosService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private notificacionesService: NotificacionesService,
+    private readonly prisma: PrismaService,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
 
-  // Se ejecuta todos los días a las 7:00 AM
-  @Cron('0 7 * * *')
-  async enviarRecordatoriosDeEventos() {
-    this.logger.log('🔔 Verificando eventos próximos...');
+  @Cron('0 7 * * *', { timeZone: 'America/Bogota' })
+  async enviarRecordatoriosDeEventos(now = new Date()) {
+    const base = bogotaDateParts(now);
+    const target = new Date(Date.UTC(base.year, base.month - 1, base.day + 2));
+    const start = target;
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
-    const hoy = new Date();
-    const dosDiasDespues = new Date(hoy);
-    dosDiasDespues.setDate(hoy.getDate() + 2);
-
-    const inicio = new Date(dosDiasDespues.setHours(0, 0, 0, 0));
-    const fin = new Date(dosDiasDespues.setHours(23, 59, 59, 999));
-
-    const eventos = await this.prisma.evento.findMany({
+    const events = await this.prisma.evento.findMany({
       where: {
-        fecha: { gte: inicio, lte: fin },
+        estado: 'programado',
+        id_tenant: { not: null },
+        id_colegio: { not: null },
+        fecha: { gte: start, lt: end },
       },
+      include: { destinatarios: true },
     });
 
-    if (eventos.length === 0) {
-      this.logger.log('Ningún evento próximo encontrado');
-      return;
-    }
-
-    this.logger.log(`Encontrados ${eventos.length} eventos para recordar`);
-
-    for (const evento of eventos) {
-      if (!evento.id_tenant) {
+    for (const event of events) {
+      if (!event.id_tenant || !event.id_colegio) continue;
+      const type = event.destinatarios[0]?.tipo_destino as
+        | 'colegio'
+        | 'niveles'
+        | 'grados'
+        | 'secciones'
+        | undefined;
+      if (!type) {
         this.logger.warn(
-          `Evento ${evento.id_evento} omitido: no tiene contexto institucional seguro.`,
+          `Evento ${event.id_evento} omitido: no tiene audiencia estructurada.`,
         );
         continue;
       }
-      const horaTexto = evento.hora ? ` a las ${evento.hora}` : '';
-      const fechaFormateada = evento.fecha.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: 'short',
-      });
-
-      const mensaje = `📅 Faltan 2 días para "${evento.titulo}" – ${fechaFormateada}${horaTexto}${evento.descripcion ? '. ' + evento.descripcion : ''}`;
-      const titulo = `Recordatorio: ${evento.titulo}`;
-
-      const niveles = await this.prisma.nivel.findMany();
-      await this.notificacionesService.notificarApoderadosDeNivel({
-        nivelIds: niveles.map((nivel) => nivel.id_nivel),
-        id_tenant: evento.id_tenant,
-        id_colegio: evento.id_colegio,
+      const ids = event.destinatarios
+        .map((item) =>
+          type === 'niveles'
+            ? item.id_nivel
+            : type === 'grados'
+              ? item.id_grado
+              : type === 'secciones'
+                ? item.id_seccion
+                : null,
+        )
+        .filter((id): id is number => id !== null);
+      const time = event.hora_inicio ?? event.hora;
+      await this.notificacionesService.notificarApoderadosDeAudienciaEvento({
+        id_tenant: event.id_tenant,
+        id_colegio: event.id_colegio,
+        id_anio: event.id_anio,
+        audiencia: { tipo: type, ids },
         tipo: 'evento.recordatorio',
         origen: 'eventos',
         referencia_tipo: 'evento',
-        referencia_id: evento.id_evento,
+        referencia_id: event.id_evento,
         canal: 'padres',
-        titulo,
-        mensaje,
+        titulo: `Recordatorio: ${event.titulo}`,
+        mensaje: `Faltan 2 días para ${event.titulo}${time ? ` a las ${time}` : ''}.`,
         url: '/dashboard/calendario',
+        deduplicar_existentes: true,
       });
     }
 
-    this.logger.log('Recordatorios enviados correctamente');
-  }
-
-  // Endpoint de prueba
-  async ejecutarRecordatoriosPrueba() {
-    this.logger.log('Ejecutando recordatorios de prueba...');
-    await this.enviarRecordatoriosDeEventos();
-    return { message: 'Recordatorios de prueba ejecutados' };
+    this.logger.log(`Recordatorios procesados: ${events.length} evento(s).`);
+    return { procesados: events.length };
   }
 }

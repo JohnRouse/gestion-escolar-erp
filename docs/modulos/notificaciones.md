@@ -5,7 +5,7 @@
 **En pruebas para V1.** La bandeja personal, la API segura, la campana de
 intranet y el contrato estructurado están implementados en código. La migración
 `20260913180000_notificaciones_v1_bandeja` está creada y validada, pero no se ha
-aplicado. Enfermería ya emite avisos mínimos opcionales; las integraciones futuras de Matrícula y otros eventos de
+aplicado. Enfermería y Eventos ya emiten avisos acotados; las integraciones futuras de Matrícula y otros eventos de
 Tesorería no forman parte de este incremento.
 
 ## 2. Propósito
@@ -84,9 +84,10 @@ La relación principal continúa siendo `Notificacion.id_usuario → Usuario`.
 
 - Citas: alta para responsable interno; creación/reprogramación/cancelación de
   reunión y cambios relevantes para familias. Guarda referencia `cita`.
-- Eventos: alta y recordatorio para familias con contexto persistido. Un evento
-  legacy sin tenant se omite; un evento global con tenant y colegio NULL se
-  entrega una sola vez por Usuario como aviso global del tenant.
+- Eventos: creación, cambios relevantes, cancelación y recordatorio para la
+  audiencia relacional del mismo tenant/colegio/año. Todo el colegio filtra
+  matrículas directamente sin consultar niveles globales. Se deduplica por
+  Usuario y el recordatorio evita reenvíos del mismo evento.
 - Pagos: el flujo existente de nuevo pago pendiente usa origen `pagos` y
   referencia al cronograma.
 - Académico/NFC: el aviso existente de asistencia deriva contexto únicamente
@@ -129,7 +130,7 @@ separada.
 
 La suite dirigida cubre propiedad, rechazo de ID ajeno, count, lectura/no
 lectura, marcar todas, filtros, búsqueda, aislamiento de tenant/colegio,
-deduplicación de Citas, estados de matrícula y política legacy. La aplicación de
+deduplicación de Citas y Eventos, estados de matrícula y política legacy. La aplicación de
 la migración y la aceptación con datos reales siguen pendientes. La revisión
 visual del build aprobó 1440×900, 1366×768 y smoke test 390×844 sin overflow ni
 errores de consola; foco visible y reducción de movimiento también aprobaron.
