@@ -5,6 +5,7 @@ export type ModuleAccessKey =
   | 'enfermeria'
   | 'asistencia'
   | 'calendario'
+  | 'eventos'
   | 'horario'
   | 'notas'
   | 'tutoria'
@@ -37,6 +38,9 @@ export const MODULE_ACCESS_RULES: Record<ModuleAccessKey, ModuleAccessRule> = {
   },
   calendario: {
     // Profesor entra por /horario, que redirige a /calendario.
+    roles: ['Profesor', 'Admin', 'Secretaria', 'Director'],
+  },
+  eventos: {
     roles: ['Profesor', 'Admin', 'Secretaria', 'Director'],
   },
   horario: {

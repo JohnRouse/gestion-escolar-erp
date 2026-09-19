@@ -217,3 +217,32 @@ Deben utilizarse estados como:
   síntomas detallados, medicamento ni dosis.
 - La métrica visual `Atenciones abiertas` cuenta directamente atenciones con
   estado `abierta`.
+
+## 14. Eventos institucionales
+
+- Evento calendariza una actividad; Circular comunica formalmente,
+  Notificación avisa de forma personal y Horario programa clases semanales.
+- Cada evento V1 usa una audiencia relacional única: todo el colegio, uno o
+  varios niveles, grados o secciones del mismo colegio y año.
+- El catálogo de niveles, grados y secciones se deriva exclusivamente de
+  `SeccionAnio` activa del tenant, colegio y año seleccionados, recorriendo
+  `SeccionAnio → Seccion → Grado → Nivel`; no usa catálogos globales ni la
+  estructura de otro año.
+- Para crear se ofrecen únicamente años operables según la convención vigente:
+  Abierto, En curso, Activo, Matrícula abierta o Planificación. Se prefiere un
+  año abierto/en curso/activo y, si no existe, uno en Planificación. Los años
+  históricos cerrados continúan visibles en consultas.
+- La fecha de creación o edición debe estar entre `fecha_inicio` y `fecha_fin`
+  inclusive del año lectivo del evento; el backend rechaza cualquier cruce de
+  año con el mensaje funcional establecido.
+- Todo el colegio se resuelve filtrando matrículas por tenant/colegio/año; no
+  expandiendo el catálogo global de niveles.
+- Familias se derivan de ApoderadoEstudiante y matrículas `Activo`,
+  `Matriculado` o `Pre-matriculado`; `Inactivo` y `Reserva` se excluyen. Un
+  Usuario se deduplica aunque varios hijos coincidan.
+- Estados: programado, cancelado y realizado. No hay borrado físico ni cambio
+  automático por fecha en V1.
+- Cancelar exige motivo y avisa a la audiencia. Realizar conserva historial y
+  no envía un mensaje masivo automático.
+- Solo cambios de fecha, hora o audiencia emiten aviso de actualización; una
+  edición meramente descriptiva no re-notifica indiscriminadamente.

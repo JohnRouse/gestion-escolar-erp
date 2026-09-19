@@ -246,4 +246,115 @@ describe('NotificacionesService V1: propiedad y alcance', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  test('17. audiencia de evento limita matrículas por tenant, colegio, año y estados operativos', async () => {
+    const { prisma, service } = setup();
+    await service.notificarApoderadosDeAudienciaEvento({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 100,
+      audiencia: { tipo: 'colegio', ids: [] },
+      tipo: 'evento.creado',
+      origen: 'eventos',
+      referencia_tipo: 'evento',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Nuevo evento',
+      mensaje: 'Actividad escolar',
+    });
+    expect(prisma.matricula.findMany.mock.calls[0][0].where).toEqual({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 100,
+      estado_matricula: {
+        in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+      },
+    });
+  });
+
+  test('18. audiencia por sección no incorpora matrículas de otra sección', async () => {
+    const { prisma, service } = setup();
+    await service.notificarApoderadosDeAudienciaEvento({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 100,
+      audiencia: { tipo: 'secciones', ids: [20] },
+      tipo: 'evento.creado',
+      origen: 'eventos',
+      referencia_tipo: 'evento',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Nuevo evento',
+      mensaje: 'Actividad escolar',
+    });
+    expect(prisma.matricula.findMany.mock.calls[0][0].where.id_seccion).toEqual(
+      { in: [20] },
+    );
+  });
+
+  test('19. un apoderado con dos hijos en la audiencia recibe un solo aviso', async () => {
+    const { prisma, service } = setup();
+    const enrollment = {
+      estudiante: {
+        apoderados: [
+          {
+            apoderado: {
+              persona: { usuarios: [{ id_usuario: 7 }] },
+            },
+          },
+        ],
+      },
+    };
+    prisma.matricula.findMany.mockResolvedValue([enrollment, enrollment]);
+    prisma.notificacion.createMany.mockResolvedValue({ count: 1 });
+    await service.notificarApoderadosDeAudienciaEvento({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 100,
+      audiencia: { tipo: 'niveles', ids: [40] },
+      tipo: 'evento.creado',
+      origen: 'eventos',
+      referencia_tipo: 'evento',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Nuevo evento',
+      mensaje: 'Actividad escolar',
+    });
+    expect(prisma.notificacion.createMany.mock.calls[0][0].data).toHaveLength(
+      1,
+    );
+  });
+
+  test('20. recordatorio ya emitido no se duplica para el mismo usuario', async () => {
+    const { prisma, service } = setup();
+    prisma.matricula.findMany.mockResolvedValue([
+      {
+        estudiante: {
+          apoderados: [
+            {
+              apoderado: {
+                persona: { usuarios: [{ id_usuario: 7 }] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    prisma.notificacion.findMany.mockResolvedValue([{ id_usuario: 7 }]);
+    await service.notificarApoderadosDeAudienciaEvento({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 100,
+      audiencia: { tipo: 'colegio', ids: [] },
+      tipo: 'evento.recordatorio',
+      origen: 'eventos',
+      referencia_tipo: 'evento',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Recordatorio',
+      mensaje: 'Faltan dos días',
+      deduplicar_existentes: true,
+    });
+    expect(prisma.notificacion.createMany).not.toHaveBeenCalled();
+  });
 });

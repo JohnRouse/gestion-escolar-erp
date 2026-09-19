@@ -96,6 +96,9 @@ model Usuario {
   medicaciones_enfermeria_registradas   AtencionEnfermeria[]          @relation("AtencionEnfermeriaMedicacionActor")
   contactos_enfermeria_registrados      EnfermeriaContacto[]          @relation("EnfermeriaContactoActor")
   movimientos_enfermeria                EnfermeriaMovimiento[]        @relation("EnfermeriaMovimientoActor")
+  eventos_creados                       Evento[]                      @relation("EventoCreadoPor")
+  eventos_actualizados                  Evento[]                      @relation("EventoActualizadoPor")
+  movimientos_eventos                   EventoMovimiento[]            @relation("EventoMovimientoActor")
   lotes_promocion_creados               LotePromocion[]               @relation("UsuarioLotePromocionCreacion")
   lotes_promocion_ejecutados            LotePromocion[]               @relation("UsuarioLotePromocionEjecucion")
   lotes_promocion_revertidos            LotePromocion[]               @relation("UsuarioLotePromocionReversion")
@@ -146,6 +149,7 @@ model Tenant {
   fichas_salud           FichaSalud[]
   atenciones_enfermeria  AtencionEnfermeria[]
   movimientos_enfermeria EnfermeriaMovimiento[]
+  movimientos_eventos    EventoMovimiento[]
 }
 
 model Colegio {
@@ -196,6 +200,7 @@ model Colegio {
   fichas_salud           FichaSalud[]
   atenciones_enfermeria  AtencionEnfermeria[]
   movimientos_enfermeria EnfermeriaMovimiento[]
+  movimientos_eventos    EventoMovimiento[]
 
   progresiones_grado    GradoProgresion[]
   cierres_academicos    CierreAcademico[]
@@ -270,6 +275,7 @@ model Nivel {
   grados     Grado[]
   colegios   ColegioNivel[]
   circulares CircularDestinatario[]
+  eventos    EventoDestinatario[]
   plantillas PlantillaEvaluacion[]
 }
 
@@ -285,6 +291,7 @@ model Grado {
   progresiones_destino       GradoProgresion[]      @relation("GradoProgresionDestino")
   detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleGradoOrigen")
   detalles_promocion_destino LotePromocionDetalle[] @relation("LoteDetalleGradoDestino")
+  eventos                    EventoDestinatario[]
 }
 
 model Aula {
@@ -324,6 +331,7 @@ model Seccion {
   staff        Staff[]
   albumes      Album[]
   citas_agenda Cita[]
+  eventos      EventoDestinatario[]
 
   lotes_promocion_origen     LotePromocion[]        @relation("LotePromocionSeccionOrigen")
   detalles_promocion_origen  LotePromocionDetalle[] @relation("LoteDetalleSeccionOrigen")
@@ -1420,24 +1428,80 @@ model EnfermeriaMovimiento {
 // ======================================================
 
 model Evento {
-  id_evento   Int      @id @default(autoincrement())
-  id_tenant   Int?
-  id_colegio  Int?
-  titulo      String   @db.VarChar(200)
-  fecha       DateTime @db.Date
-  hora        String?  @db.VarChar(5)
-  tipo        String   @db.VarChar(50)
-  descripcion String?  @db.Text
-  id_anio     Int
+  id_evento               Int       @id @default(autoincrement())
+  id_tenant               Int?
+  id_colegio              Int?
+  id_anio                 Int
+  titulo                  String    @db.VarChar(200)
+  descripcion             String?   @db.Text
+  fecha                   DateTime  @db.Date
+  hora                    String?   @db.VarChar(5)
+  hora_inicio             String?   @db.VarChar(5)
+  hora_fin                String?   @db.VarChar(5)
+  tipo                    String    @db.VarChar(50)
+  estado                  String    @default("programado") @db.VarChar(20)
+  ubicacion               String?   @db.VarChar(200)
+  id_usuario_creador      Int?
+  id_usuario_actualizador Int?
+  motivo_cancelacion      String?   @db.VarChar(1000)
+  cancelado_en            DateTime?
+  creado_en               DateTime  @default(now())
+  actualizado_en          DateTime  @updatedAt
 
-  tenant  Tenant?     @relation(fields: [id_tenant], references: [id_tenant])
-  colegio Colegio?    @relation(fields: [id_colegio], references: [id_colegio])
-  anio    AnioLectivo @relation(fields: [id_anio], references: [id_anio])
+  tenant          Tenant?              @relation(fields: [id_tenant], references: [id_tenant], onDelete: Restrict)
+  colegio         Colegio?             @relation(fields: [id_colegio], references: [id_colegio], onDelete: Restrict)
+  anio            AnioLectivo          @relation(fields: [id_anio], references: [id_anio], onDelete: Restrict)
+  creado_por      Usuario?             @relation("EventoCreadoPor", fields: [id_usuario_creador], references: [id_usuario], onDelete: SetNull)
+  actualizado_por Usuario?             @relation("EventoActualizadoPor", fields: [id_usuario_actualizador], references: [id_usuario], onDelete: SetNull)
+  destinatarios   EventoDestinatario[]
+  movimientos     EventoMovimiento[]
 
-  @@index([id_tenant])
-  @@index([id_colegio])
-  @@index([id_anio])
-  @@index([fecha])
+  @@index([id_tenant, id_colegio, fecha])
+  @@index([id_anio, fecha])
+  @@index([estado, fecha])
+  @@index([tipo, fecha])
+  @@index([id_usuario_creador])
+}
+
+model EventoDestinatario {
+  id_destinatario Int    @id @default(autoincrement())
+  id_evento       Int
+  tipo_destino    String @db.VarChar(20)
+  id_nivel        Int?
+  id_grado        Int?
+  id_seccion      Int?
+
+  evento  Evento   @relation(fields: [id_evento], references: [id_evento], onDelete: Restrict)
+  nivel   Nivel?   @relation(fields: [id_nivel], references: [id_nivel], onDelete: Restrict)
+  grado   Grado?   @relation(fields: [id_grado], references: [id_grado], onDelete: Restrict)
+  seccion Seccion? @relation(fields: [id_seccion], references: [id_seccion], onDelete: Restrict)
+
+  @@unique([id_evento, tipo_destino, id_nivel, id_grado, id_seccion], map: "EventoDestinatario_evento_tipo_objetivo_key")
+  @@index([id_evento, tipo_destino])
+  @@index([id_nivel])
+  @@index([id_grado])
+  @@index([id_seccion])
+}
+
+model EventoMovimiento {
+  id_movimiento    Int      @id @default(autoincrement())
+  id_evento        Int
+  id_tenant        Int
+  id_colegio       Int
+  id_usuario_actor Int
+  accion           String   @db.VarChar(40)
+  motivo           String?  @db.VarChar(1000)
+  datos            Json?
+  creado_en        DateTime @default(now())
+
+  evento  Evento  @relation(fields: [id_evento], references: [id_evento], onDelete: Restrict)
+  tenant  Tenant  @relation(fields: [id_tenant], references: [id_tenant], onDelete: Restrict)
+  colegio Colegio @relation(fields: [id_colegio], references: [id_colegio], onDelete: Restrict)
+  actor   Usuario @relation("EventoMovimientoActor", fields: [id_usuario_actor], references: [id_usuario], onDelete: Restrict)
+
+  @@index([id_evento, creado_en])
+  @@index([id_tenant, id_colegio, creado_en])
+  @@index([id_usuario_actor])
 }
 
 model Album {

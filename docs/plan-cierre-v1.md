@@ -18,7 +18,7 @@ El alcance `Todos los colegios` significa los colegios autorizados **del tenant 
 
 ## 3. Estado general
 
-El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Staff institucional ya tiene flujo operativo real y aceptación dirigida del primer incremento V1. Citas internas está en pruebas con agenda individual y reuniones de sección. Notificaciones V1 dispone de bandeja personal y autorización dirigida en código, con migración y aceptación local aún pendientes. Permanecen vacíos concretos en acceso externo de Citas, Enfermería, integraciones futuras de avisos, gestión de identidades/instituciones y operación SaaS.
+El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Docentes, Asistencia, Horario, Tutoría, Tesorería, Configuración académica y Reportes. El principal trabajo no consiste en reconstruir esos módulos. Staff institucional ya tiene flujo operativo real y aceptación dirigida del primer incremento V1. Citas internas está en pruebas con agenda individual y reuniones de sección. Notificaciones V1 dispone de bandeja personal y autorización dirigida en código, con migración y aceptación local aún pendientes. Eventos V1 ya cuenta en código con gestión separada de Horario, audiencia relacional, avisos, recordatorios y trazabilidad; su migración fue aplicada localmente y queda pendiente la prueba manual final de la corrección funcional. Permanecen vacíos concretos en acceso externo, integraciones futuras de avisos, gestión de identidades/instituciones y operación SaaS.
 
 Super SaaS está en **base estructural**, con entidades y contexto reutilizables; no hay una consola operativa. Tener `Tenant.plan`, roles o un selector de colegio no equivale a disponer de planes, suscripciones y administración global.
 
@@ -68,7 +68,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 | Notas | sí | parcial | sí | parcial | PARCIAL | P0 | Conectar actor y asignación autorizada en evaluación/guardado; preservar cierres y reaperturas existentes. **A:** revisar. **D:** Asignaciones docentes, periodos, escalas, tipos, plantillas. |
 | Asistencia | sí | sí | sí | completo | CASI COMPLETO | P0 | Documentar registro, justificación y consulta; aceptar pertenencia por sección. **A:** aparente sí. **D:** Matrícula, docentes, secciones. |
 | Horario | sí | sí | sí | completo | CASI COMPLETO | P0 | Aceptar programación, edición y conflictos del horario; /horario redirige a /calendario. **A:** aparente sí. **D:** Asignaciones docentes, años, secciones. |
-| Calendario de eventos | parcial | parcial | sí | parcial | PARCIAL | P0 | Integrar gestión institucional de eventos; la página Calendario de intranet administra horarios. **A:** revisar. **D:** Años, colegios, Notificaciones, portal de apoderados. |
+| Calendario de eventos | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Gestión, audiencia relacional, estados, historial, avisos y portal están implementados en código mediante `/eventos`, sin modificar Horario. La migración fue aplicada localmente; falta la prueba manual final de catálogo/año/fecha con datos persistidos. El portal depende de autenticación externa segura. **A:** revisión dirigida aprobada en código. **D:** Años, colegios, Matrícula, Notificaciones y acceso externo. |
 | Tutoría | sí | sí | sí | completo | CASI COMPLETO | P0 | Formalizar acceso por tutor/sección/año y cierre de libreta; guard y validaciones de recurso ya existen. La asignación es académica, aunque conserva temporalmente campos legacy en Staff. **A:** aparente sí. **D:** Secciones, Docentes, compatibilidad legacy de Staff, Notas, Asistencia, criterios. |
 | Cierre académico / recuperación / movimientos | parcial | sí | sí | parcial | PARCIAL | P0 | Completar recorrido operativo para cierre, resultados de recuperación y movimientos; endpoints/modelos ya existen. **A:** revisar. **D:** Notas, Matrícula, progresiones, Promoción masiva. |
 
@@ -278,6 +278,19 @@ usa texto mínimo sin detalle sensible. Jest dirigido, builds y Prisma aprobaron
 en código. No se aplicó la migración ni se realizó aceptación humana; por ello
 Enfermería no se marca completa. [Contrato y límites](modulos/enfermeria.md).
 
+**Cuarto incremento del bloque 1 — Eventos EN PRUEBAS:** `/eventos` separa la
+gestión institucional del Horario existente; API, audiencia relacional,
+creación/edición/cancelación/realizado, movimientos, avisos y recordatorios
+están implementados en código. La consulta familiar deriva acceso desde hijos
+vinculados y matrículas operativas. Jest dirigido y validaciones técnicas
+aprobaron y la migración fue aplicada correctamente en la base local. Resta la
+prueba manual final de la corrección de catálogo/año/fecha y la habilitación
+transversal del acceso externo. La
+revisión visual técnica aprobó 1440×900, 1366×768 y 390×844 con datos simulados,
+foco visible y reducción de movimiento; queda la aceptación humana con datos
+persistidos.
+[Contrato y límites](modulos/eventos.md).
+
 Cada bloque termina con demostración funcional, pruebas proporcionales y documentación vigente del resultado. Los PR pueden dividir un bloque grande en funcionalidades completas, sin esperar un único PR gigantesco ni abrir un PR por ajuste minúsculo.
 
 ### Reglas de ejecución para evitar rendimientos decrecientes
@@ -348,7 +361,7 @@ Las operaciones sensibles deben conservar actor, fecha, tenant/colegio, acción,
 
 | Categoría | Tratamiento |
 |---|---|
-| **A — Funcionalidad realmente faltante** | Acceso externo para aceptar Citas del portal, aceptación/aplicación local de Enfermería, gestión de eventos completa, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
+| **A — Funcionalidad realmente faltante** | Acceso externo para el portal, aceptación/aplicación local de Enfermería y Eventos, administración institucional/usuarios y consola SaaS. Son trabajo de cierre P0; no deuda cosmética ni motivo para reescribir módulos conectados. |
 | **B — Implementación sin documentación vigente suficiente** | Renovación, promoción con preview/ejecución/reversión, historial de pagos, cartera/agenda, pensiones/campañas, Tutoría/libreta/PDF, catálogos/plantillas, Dashboard y Analíticas. Actualizar fichas y reglas al cerrar cada bloque; no afirmar que carecen de toda referencia histórica. |
 | **C — Deuda técnica no bloqueante** | Lint histórico, tipados amplios sin fallo de flujo demostrado, reorganización de archivos, descomposición de servicios grandes y limpieza general. Solo atender lo necesario para mantener/cerrar la funcionalidad modificada. |
 | **D — Deuda visual** | Ajustes cosméticos, densidad y variaciones de CSS se concentran en bloque 5 por patrones globales; no producen PR individuales salvo fallo de uso real. |

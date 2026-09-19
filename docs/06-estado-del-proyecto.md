@@ -40,7 +40,8 @@ Debe contar con:
 | Promoción masiva | En desarrollo y pruebas |
 | Notas | Requiere inventario |
 | Asistencia | Requiere inventario |
-| Calendario | Requiere inventario |
+| Horario (`/calendario`) | Implementación amplia; requiere aceptación dirigida |
+| Eventos (`/eventos`) | En pruebas; migración aplicada localmente, corrección final de catálogo/año/fecha validada en código y pendiente de prueba manual final |
 | Tutoría | Implementación parcial; permisos pendientes de auditoría |
 | Citas | Citas individuales y reuniones de sección en pruebas; portal bloqueado por autenticación externa |
 | Enfermería | En pruebas; código y migración aditiva creados, pendiente aplicación local y aceptación humana |

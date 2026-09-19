@@ -154,6 +154,21 @@ Consulta únicamente información de estudiantes con los que mantiene una relaci
 - El consolidado contiene únicamente colegios administrables del tenant activo.
   Un rol dedicado de Enfermería queda como decisión futura.
 
+### Eventos
+
+- Admin, Director y Secretaria gestionan eventos únicamente cuando el rol
+  global y el `rol_colegio` efectivo permiten la acción en esa institución.
+- Profesor consulta eventos de todo su colegio y audiencias que coinciden con
+  sus asignaciones persistidas del año; no crea, edita, cancela ni realiza.
+- `Todos los colegios` incluye solo membresías activas del tenant activo y se
+  limita a Admin/Director en V1. Crear siempre exige un colegio inequívoco.
+- Año, nivel, grado, sección y evento recibido por ID se revalidan en backend.
+- Los destinos por nivel, grado o sección deben existir en una `SeccionAnio`
+  activa del mismo tenant, colegio y año; la existencia global del ID no
+  concede pertenencia a la audiencia.
+- El Apoderado consulta por hijos vinculados y matrículas operativas; una
+  notificación no concede acceso a un evento.
+
 ## 7. Acciones de autorización
 
 Los permisos deben evaluarse por acción:

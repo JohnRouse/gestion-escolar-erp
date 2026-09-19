@@ -146,6 +146,12 @@ const menuBienestar: NavItem[] = [
 
 const menuComunicacion: NavItem[] = [
   {
+    title: 'Eventos',
+    icon: CalendarDays,
+    path: '/eventos',
+    roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
+  },
+  {
     title: 'Circulares',
     icon: Mail,
     path: '/circulares',
