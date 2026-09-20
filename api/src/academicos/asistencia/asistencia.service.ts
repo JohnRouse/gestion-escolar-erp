@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 
@@ -876,11 +881,19 @@ export class AsistenciaService {
     return { message: 'Asistencia guardada correctamente', total: data.length };
   }
 
-  async getAsistenciaAlumno(estudianteId: number, desde: string, hasta: string) {
+  async getAsistenciaAlumno(
+    apoderadoId: number,
+    estudianteId: number,
+    desde: string,
+    hasta: string,
+  ) {
     const matriculas = await this.prisma.matricula.findMany({
       where: {
         id_estudiante: estudianteId,
         estado_matricula: { in: ESTADOS_MATRICULA_ACTIVA },
+        estudiante: {
+          apoderados: { some: { id_apoderado: apoderadoId } },
+        },
       },
       include: {
         asistencias: {
@@ -894,6 +907,10 @@ export class AsistenciaService {
         },
       },
     });
+
+    if (!matriculas.length) {
+      throw new NotFoundException('Estudiante no disponible.');
+    }
 
     return matriculas.flatMap((mat) =>
       mat.asistencias.map((asist) => ({

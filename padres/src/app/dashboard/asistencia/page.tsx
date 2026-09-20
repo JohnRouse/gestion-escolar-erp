@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import { childDateRange, useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface AsistenciaItem { fecha: string; estado: string; }
 
@@ -25,13 +25,17 @@ export default function AsistenciaPage() {
     if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetchAsistencia(token, selectedChild.id_estudiante);
+    fetchAsistencia(token, selectedChild.id_estudiante, childDateRange(selectedChild));
   }, [selectedChild]);
 
-  const fetchAsistencia = async (token: string, id: number) => {
+  const fetchAsistencia = async (
+    token: string,
+    id: number,
+    range: { desde: string; hasta: string },
+  ) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=2025-01-01&hasta=2025-12-31`, {
+      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=${range.desde}&hasta=${range.hasta}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAsistencias(res.data);

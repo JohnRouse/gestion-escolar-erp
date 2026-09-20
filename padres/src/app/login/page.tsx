@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [step, setStep] = useState<"splash" | "form">("splash");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +15,10 @@ export default function LoginPage() {
   // Animación del birrete
   useEffect(() => {
     if (step !== "splash") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const frame = window.requestAnimationFrame(() => setStep("form"));
+      return () => window.cancelAnimationFrame(frame);
+    }
     const interval = setInterval(() => {
       setSplashProgress((prev) => {
         const next = prev + 4;
@@ -36,12 +38,15 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await axios.post("/api/auth/login", { username, password });
+      const res = await axios.post("/api/auth/portal/login", {
+        username,
+        password,
+      });
       const { access_token, user } = res.data;
       localStorage.setItem("token", access_token);
       localStorage.setItem("user", JSON.stringify(user));
       window.location.href = "/dashboard";
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         setError(err.response.data.message || "Credenciales inválidas");
       } else {
@@ -76,9 +81,21 @@ export default function LoginPage() {
             </defs>
             <g clipPath="url(#capClip)">
               <rect x="0" y="0" width="200" height="200" fill="#F4E1E5" />
-              <rect x="0" y={200 - splashProgress * 2} width="200" height="200" fill="url(#fillGrad)" />
+              <rect
+                x="0"
+                y={200 - splashProgress * 2}
+                width="200"
+                height="200"
+                fill="url(#fillGrad)"
+              />
             </g>
-            <g fill="none" stroke="#C95A6E" strokeWidth="2" strokeLinejoin="round" opacity=".35">
+            <g
+              fill="none"
+              stroke="#C95A6E"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              opacity=".35"
+            >
               <polygon points="100,55 180,80 100,105 20,80" />
               <path d="M40 110 Q100 90 160 110 L160 130 Q100 150 40 130 Z" />
               <line x1="158" y1="84" x2="158" y2="114" />
@@ -88,9 +105,11 @@ export default function LoginPage() {
         </div>
 
         <h1 className="text-2xl font-extrabold text-brand-ink tracking-tight">
-          Colegio <span className="text-brand-redDeep">Santa María</span>
+          Gestión <span className="text-brand-redDeep">Escolar</span>
         </h1>
-        <p className="text-brand-inkSoft text-sm mt-1">Portal para apoderados</p>
+        <p className="text-brand-inkSoft text-sm mt-1">
+          Portal para apoderados
+        </p>
 
         <div className="mt-8 w-56 h-1.5 rounded-full bg-brand-redSoft overflow-hidden">
           <div
@@ -101,7 +120,9 @@ export default function LoginPage() {
             }}
           />
         </div>
-        <p className="mt-3 text-[11px] tracking-[.2em] font-bold text-brand-inkSoft">CARGANDO</p>
+        <p className="mt-3 text-[11px] tracking-[.2em] font-bold text-brand-inkSoft">
+          CARGANDO
+        </p>
       </main>
     );
   }
@@ -114,19 +135,32 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm flex flex-col items-center text-center">
         <div className="w-20 h-20 rounded-3xl bg-white border border-brand-line grid place-items-center shadow-md mb-5">
-          <span className="material-symbols-rounded text-brand-redDeep" style={{ fontSize: 40 }}>
+          <span
+            className="material-symbols-rounded text-brand-redDeep"
+            style={{ fontSize: 40 }}
+          >
             school
           </span>
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink">
-          Colegio <span className="text-brand-redDeep">Santa María</span>
+          Gestión <span className="text-brand-redDeep">Escolar</span>
         </h1>
-        <p className="text-brand-inkSoft text-sm mt-1">Portal para apoderados</p>
+        <p className="text-brand-inkSoft text-sm mt-1">
+          Portal para apoderados
+        </p>
 
-        <div className="mt-8 w-full bg-white rounded-3xl border border-brand-line shadow-md p-6 text-left">
-          <h2 className="text-xl font-extrabold text-brand-ink text-center">Inicia sesión</h2>
+        <form
+          className="mt-8 w-full bg-white rounded-3xl border border-brand-line shadow-md p-6 text-left"
+          onSubmit={handleSubmit}
+        >
+          <h2 className="text-xl font-extrabold text-brand-ink text-center">
+            Inicia sesión
+          </h2>
 
-          <label className="block mt-5 text-[11px] tracking-[.18em] font-bold text-brand-inkSoft">
+          <label
+            htmlFor="portal-username"
+            className="block mt-5 text-[11px] tracking-[.18em] font-bold text-brand-inkSoft"
+          >
             CORREO O USUARIO
           </label>
           <div className="mt-2 relative">
@@ -134,15 +168,21 @@ export default function LoginPage() {
               mail
             </span>
             <input
+              id="portal-username"
               type="text"
               placeholder="usuario@colegio.edu.pe"
-              className="w-full bg-brand-paper border border-brand-line rounded-xl pl-10 pr-3 py-3.5 text-sm text-brand-ink placeholder:text-brand-inkSoft/60 focus:border-brand-red transition"
+              autoComplete="username"
+              required
+              className="w-full bg-brand-paper border border-brand-line rounded-xl pl-10 pr-3 py-3.5 text-sm text-brand-ink placeholder:text-brand-inkSoft/60 focus:border-brand-red focus:ring-2 focus:ring-brand-red/30 outline-none transition"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
 
-          <label className="block mt-4 text-[11px] tracking-[.18em] font-bold text-brand-inkSoft">
+          <label
+            htmlFor="portal-password"
+            className="block mt-4 text-[11px] tracking-[.18em] font-bold text-brand-inkSoft"
+          >
             CONTRASEÑA
           </label>
           <div className="mt-2 relative">
@@ -150,8 +190,11 @@ export default function LoginPage() {
               lock
             </span>
             <input
+              id="portal-password"
               type={showPw ? "text" : "password"}
-              className="w-full bg-brand-paper border border-brand-line rounded-xl pl-10 pr-10 py-3.5 text-sm text-brand-ink focus:border-brand-red transition"
+              autoComplete="current-password"
+              required
+              className="w-full bg-brand-paper border border-brand-line rounded-xl pl-10 pr-10 py-3.5 text-sm text-brand-ink focus:border-brand-red focus:ring-2 focus:ring-brand-red/30 outline-none transition"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -159,7 +202,8 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full text-brand-inkSoft hover:bg-brand-paper grid place-items-center"
+              aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full text-brand-inkSoft hover:bg-brand-paper focus-visible:ring-2 focus-visible:ring-brand-red grid place-items-center"
             >
               <span className="material-symbols-rounded text-xl">
                 {showPw ? "visibility_off" : "visibility"}
@@ -167,37 +211,40 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center mt-3">
-            <button className="text-sm font-semibold text-brand-redDeep hover:underline">
-              ¿Olvidaste tu contraseña?
-            </button>
-          </div>
+          <p className="text-center mt-3 text-sm text-brand-inkSoft">
+            Solicita o recupera tus credenciales con la institución.
+          </p>
 
           {error && (
-            <div className="mt-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3">
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mt-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3"
+            >
               {error}
             </div>
           )}
 
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading}
-            className="press mt-4 w-full py-4 rounded-2xl text-white font-bold text-[15px] shadow-md relative overflow-hidden"
+            className="press mt-4 w-full py-4 rounded-2xl text-white font-bold text-[15px] shadow-md relative overflow-hidden focus-visible:ring-2 focus-visible:ring-brand-redDeep focus-visible:ring-offset-2 disabled:opacity-60"
             style={{
               background: "linear-gradient(135deg, #E8788A 0%, #F0A6B0 100%)",
             }}
           >
-            <span className="relative z-10">{loading ? "Ingresando..." : "Ingresar"}</span>
+            <span className="relative z-10">
+              {loading ? "Ingresando..." : "Ingresar"}
+            </span>
           </button>
 
           <p className="text-center text-sm text-brand-inkSoft mt-4">
-            ¿Primera vez?{" "}
-            <button className="font-semibold text-brand-redDeep">Solicitar acceso</button>
+            El acceso es entregado por la institución educativa.
           </p>
-        </div>
+        </form>
 
         <p className="text-center text-[11px] text-brand-inkSoft mt-6">
-          © 2026 Colegio Santa María
+          © {new Date().getFullYear()} Gestión Escolar ERP
         </p>
       </div>
     </main>

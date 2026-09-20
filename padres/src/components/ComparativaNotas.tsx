@@ -39,7 +39,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   const [unidades, setUnidades] = useState<UnidadesCurso[]>([]);
   const [cursoSeleccionado, setCursoSeleccionado] = useState<string>("");
 
-  const fetchData = async (bim: number) => {
+  const fetchData = async (bim: number, signal: AbortSignal) => {
     if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -47,9 +47,11 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
     const [compRes, unidRes] = await Promise.all([
       axios.get(`/api/calificaciones/padres/comparativa?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bim}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       }),
       axios.get(`/api/calificaciones/padres/unidades?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bim}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       }),
     ]);
 
@@ -61,7 +63,14 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   };
 
   useEffect(() => {
-    fetchData(bimestre);
+    const controller = new AbortController();
+    fetchData(bimestre, controller.signal).catch((error) => {
+      if (!axios.isCancel(error)) {
+        setData(null);
+        setUnidades([]);
+      }
+    });
+    return () => controller.abort();
   }, [selectedChild, bimestre]);
 
   if (!data) return null;

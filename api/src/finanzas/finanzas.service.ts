@@ -809,12 +809,20 @@ export class FinanzasService {
     return { message: 'Pagos registrados correctamente', pagos: resultados };
   }
 
-  async getEstadoCuentaPadre(estudianteId: number) {
+  async getEstadoCuentaPadre(apoderadoId: number, estudianteId: number) {
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: estudianteId, estado_matricula: 'Activo' },
-      orderBy: { id_matricula: 'desc' },
+      where: {
+        id_estudiante: estudianteId,
+        estado_matricula: {
+          in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+        },
+        estudiante: {
+          apoderados: { some: { id_apoderado: apoderadoId } },
+        },
+      },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
-    if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+    if (!matriculaActiva) throw new NotFoundException('Estudiante no disponible.');
 
     const estado = await this.getEstadoCuenta(matriculaActiva.id_matricula);
 

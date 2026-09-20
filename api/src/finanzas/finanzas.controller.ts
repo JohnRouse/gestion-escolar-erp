@@ -69,12 +69,6 @@ export class FinanzasController {
     });
   }
 
-  @Get('padres/estado-cuenta')
-  @Roles('Apoderado', 'Admin')
-  async getEstadoCuentaPadre(@Query('alumno_id') alumnoId: string) {
-    return this.finanzasService.getEstadoCuentaPadre(Number(alumnoId));
-  }
-
   @Get('pagos/pendientes/count')
   @Roles('Admin', 'Secretaria', 'Director')
   async getPagosPendientesCount(

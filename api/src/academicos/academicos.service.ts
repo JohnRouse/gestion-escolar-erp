@@ -5954,16 +5954,28 @@ const existente = await this.prisma.persona.findUnique({
           include: {
             persona: true,
             matriculas: {
-              where: { estado_matricula: 'Activo' },
+              where: {
+                estado_matricula: {
+                  in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+                },
+              },
               include: {
+                colegio: true,
+                anio: {
+                  include: {
+                    bimestres: { orderBy: { numero: 'asc' } },
+                  },
+                },
                 seccion: {
                   include: {
+                    colegio: true,
                     grado: {
                       include: { nivel: true },
                     },
                   },
                 },
               },
+              orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
               take: 1,
             },
           },
@@ -5976,9 +5988,32 @@ const existente = await this.prisma.persona.findUnique({
       const seccion = matricula?.seccion;
       const gradoNombre = seccion?.grado?.nombre_grado || '';
       const nivelNombre = seccion?.grado?.nivel?.nombre_nivel || '';
+      const now = new Date();
+      const bimestres = matricula?.anio?.bimestres ?? [];
+      const bimestreActual =
+        bimestres.find(
+          (item) => item.fecha_inicio <= now && item.fecha_fin >= now,
+        ) ?? bimestres[0];
 
       return {
         id_estudiante: r.id_estudiante,
+        id_matricula: matricula?.id_matricula ?? null,
+        id_tenant:
+          matricula?.id_tenant ??
+          matricula?.colegio?.id_tenant ??
+          matricula?.seccion?.colegio?.id_tenant ??
+          null,
+        id_colegio:
+          matricula?.id_colegio ?? matricula?.seccion?.id_colegio ?? null,
+        colegio:
+          matricula?.colegio?.nombre ??
+          matricula?.seccion?.colegio?.nombre ??
+          null,
+        id_anio: matricula?.id_anio ?? null,
+        anio: matricula?.anio?.nombre_anio ?? null,
+        fecha_inicio: matricula?.anio?.fecha_inicio ?? null,
+        fecha_fin: matricula?.anio?.fecha_fin ?? null,
+        bimestre_actual: bimestreActual?.numero ?? null,
         nombre: `${r.estudiante.persona.nombres} ${r.estudiante.persona.apellido_paterno}`,
         grado: seccion
           ? `${gradoNombre} ${seccion.letra} · ${nivelNombre}`
@@ -5988,10 +6023,62 @@ const existente = await this.prisma.persona.findUnique({
     });
   }
 
-  async getHorarioAlumno(alumnoId: number) {
+  async getAniosApoderado(apoderadoId: number) {
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        estado_matricula: {
+          in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+        },
+        estudiante: {
+          apoderados: { some: { id_apoderado: apoderadoId } },
+        },
+      },
+      select: {
+        id_tenant: true,
+        id_colegio: true,
+        anio: {
+          select: {
+            id_anio: true,
+            nombre_anio: true,
+            estado: true,
+            fecha_inicio: true,
+            fecha_fin: true,
+          },
+        },
+        colegio: { select: { nombre: true } },
+        seccion: { select: { colegio: { select: { nombre: true } } } },
+      },
+      orderBy: { id_anio: 'desc' },
+    });
+
+    const years = new Map<number, any>();
+    for (const matricula of matriculas) {
+      if (!years.has(matricula.anio.id_anio)) {
+        years.set(matricula.anio.id_anio, {
+          ...matricula.anio,
+          id_tenant: matricula.id_tenant,
+          id_colegio: matricula.id_colegio,
+          colegio:
+            matricula.colegio?.nombre ?? matricula.seccion.colegio?.nombre ?? null,
+        });
+      }
+    }
+    return [...years.values()];
+  }
+
+  async getHorarioAlumno(apoderadoId: number, alumnoId: number) {
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: {
+          in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+        },
+        estudiante: {
+          apoderados: { some: { id_apoderado: apoderadoId } },
+        },
+      },
       include: { seccion: true },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
 
     if (!matriculaActiva) {
@@ -6023,6 +6110,29 @@ const existente = await this.prisma.persona.findUnique({
     }
 
     return resultado;
+  }
+
+  async updateAvatarHijo(
+    apoderadoId: number,
+    alumnoId: number,
+    avatarUrl: string,
+  ) {
+    const vinculo = await this.prisma.apoderadoEstudiante.findUnique({
+      where: {
+        id_apoderado_id_estudiante: {
+          id_apoderado: apoderadoId,
+          id_estudiante: alumnoId,
+        },
+      },
+    });
+    if (!vinculo) {
+      throw new NotFoundException('Estudiante no disponible.');
+    }
+    return this.prisma.estudiante.update({
+      where: { id_persona: alumnoId },
+      data: { avatar_url: avatarUrl },
+      select: { id_persona: true, avatar_url: true },
+    });
   }
 
   async getTotalMatriculados(params: ScopeParams & { anioId: number }) {

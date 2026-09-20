@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
@@ -26,7 +26,7 @@ interface Circular {
   dirigido_a?: string;
 }
 
-export default function CircularesPage() {
+function CircularesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [circulares, setCirculares] = useState<Circular[]>([]);
@@ -260,5 +260,23 @@ export default function CircularesPage() {
       </div>
       <BottomNav />
     </main>
+  );
+}
+
+export default function CircularesPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-surface-alt pb-24">
+          <ScreenHeader title="Avisos" />
+          <p className="px-5 pt-8 text-center text-sm text-text-secondary">
+            Cargando circulares...
+          </p>
+          <BottomNav />
+        </main>
+      }
+    >
+      <CircularesContent />
+    </Suspense>
   );
 }

@@ -110,7 +110,9 @@ No existe `DELETE /eventos`.
 - Un Usuario apoderado recibe un aviso aunque varios hijos coincidan.
 - El vínculo familiar debe existir en `ApoderadoEstudiante`.
 - Crear/actualizar/cancelar notifica con origen `eventos`, canal `padres`,
-  referencia `evento + id_evento` y URL `/dashboard/calendario`.
+  referencia `evento + id_evento` y URL
+  `/dashboard/calendario?anio_id=<id>&mes=<mes>&dia=<dia>&evento_id=<id>`.
+  Los recordatorios nuevos usan el mismo contexto.
 - Circular no se crea desde Eventos; `generar_circular` queda fuera de V1.
 
 ## 10. Validaciones
@@ -162,7 +164,11 @@ ApoderadoEstudiante, Notificaciones V1 y el calendario del portal.
   laptop first, lista cronológica, filtros, paginación, formulario, detalle e
   historial. En ancho menor usa fichas, no un calendario gráfico complejo.
 - Portal `/dashboard/calendario`: conserva la vista mensual mobile-first y
-  muestra estado, horario y ubicación de eventos familiares autorizados.
+  muestra estado, horario y ubicación de eventos familiares autorizados. Los
+  query params opcionales `anio_id`, `mes`, `dia` y `evento_id` orientan la
+  vista, pero año y evento solo se aplican si forman parte de los contratos
+  familiares autorizados. Un ID del query nunca concede acceso y un evento
+  cancelado no se selecciona automáticamente.
 - Reutiliza `PageHeader`, `AccessibleDialog` y `ConfirmDialog`; los controles
   tienen texto, foco visible, estados de carga/vacío/error/éxito y variantes de
   reducción de movimiento.
@@ -229,3 +235,4 @@ autorizado. Esto no sustituye la prueba manual final con datos persistidos.
 
 - [Eventos V1: gestión institucional, audiencia y trazabilidad](../registro-cambios/2026-09-15-eventos-v1.md).
 - [Corrección final: catálogo anual, años y fecha](../registro-cambios/2026-09-18-eventos-catalogo-anio-fecha.md).
+- [Navegación del portal y deep link de Eventos](../registro-cambios/2026-09-19-notificaciones-portal-deep-link-eventos.md).

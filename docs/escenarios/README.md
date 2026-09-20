@@ -43,6 +43,7 @@ Cada escenario debe incluir:
 
 ## Escenarios documentados
 
+- [Auth de apoderados: aislamiento entre portal e intranet](auth-apoderados-aislamiento.md).
 - [Teclado en diálogos anidados](dialogos-anidados-teclado.md).
 - [Identidad, alcance y separación funcional de Staff](staff-identidad-alcance.md).
 - [Citas: participantes, alcance y transiciones](citas-participantes-autorizacion.md).

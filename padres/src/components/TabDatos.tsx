@@ -36,7 +36,7 @@ export default function TabDatos({ onAvatarChange }: TabDatosProps) {
   const cargarPerfil = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/apoderados/perfil", {
+      const res = await axios.get("/api/auth/portal/perfil", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPerfil(res.data);
@@ -56,7 +56,7 @@ export default function TabDatos({ onAvatarChange }: TabDatosProps) {
     setMensaje("");
     try {
       const token = localStorage.getItem("token");
-      await axios.put("/api/apoderados/perfil", {
+      await axios.put("/api/auth/portal/perfil", {
         correo,
         telefono,
         ocupacion,

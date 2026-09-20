@@ -41,6 +41,9 @@ ApoderadoEstudiante persistidos.
 7. Se recorren vínculos reales de apoderados y se deduplican Usuarios.
 8. El portal vuelve a derivar los eventos desde esos vínculos; recibir una
    notificación no concede acceso al calendario.
+9. Una notificación nueva abre el año/mes del deep link. El calendario
+   selecciona el día de `evento_id` solo cuando el evento existe en la respuesta
+   autorizada de `GET /eventos/padres`; si no existe, presenta la vista normal.
 
 ## Validaciones y denegaciones
 
@@ -58,6 +61,8 @@ ApoderadoEstudiante persistidos.
 - `Inactivo` y `Reserva`: no reciben aviso ni habilitan eventos en el portal.
 - Dos hijos o destinos coincidentes: una notificación por Usuario.
 - Evento cancelado: permanece visible y no genera recordatorio.
+- `evento_id` manipulado o ya no accesible: no habilita una consulta por ID ni
+  muestra información fuera de la audiencia.
 - Cancelación sin motivo: rechazo sin cambiar el estado.
 
 ## Resultado esperado

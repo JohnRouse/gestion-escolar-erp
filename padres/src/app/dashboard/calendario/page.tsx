@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import {
+  PortalAcademicYear,
+  selectPortalAcademicYear,
+} from "@/lib/portalAcademicYear";
+import {
+  authorizedDeepLinkDay,
+  parsePortalCalendarDeepLink,
+} from "@/lib/portalCalendarDeepLink";
 
 interface Evento {
   id_evento: number;
@@ -20,12 +29,6 @@ interface Evento {
   ubicacion?: string | null;
 }
 
-interface AnioLectivoPortal {
-  id_anio: number;
-  estado: string;
-  fecha_inicio: string;
-}
-
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
@@ -38,8 +41,31 @@ const TIPO_COLORS: Record<string, string> = {
   actividad: "bg-green-100 text-green-700",
 };
 
-export default function CalendarioPage() {
+function CalendarFallback() {
+  return (
+    <main className="min-h-screen bg-surface-alt pb-24">
+      <ScreenHeader title="Calendario Escolar" />
+      <div className="px-5 pt-4 pb-28">
+        <div className="grid grid-cols-7 gap-1">
+          {[...Array(35)].map((_, i) => (
+            <div key={i} className="aspect-square skel rounded-xl" />
+          ))}
+        </div>
+      </div>
+      <BottomNav />
+    </main>
+  );
+}
+
+function CalendarioContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkQuery = searchParams.toString();
+  const deepLink = useMemo(
+    () => parsePortalCalendarDeepLink(new URLSearchParams(deepLinkQuery)),
+    [deepLinkQuery],
+  );
+  const { selectedChild } = useSelectedChild();
   const [anioId, setAnioId] = useState<number | null>(null);
   const [anio, setAnio] = useState<number>(new Date().getFullYear());
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -47,6 +73,10 @@ export default function CalendarioPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
+  const [status, setStatus] = useState<
+    "loading" | "ready" | "no-year" | "error"
+  >("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMounted(true), 0);
@@ -55,37 +85,88 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) { router.push("/login"); return; }
+    if (!token) {
+      router.push("/login");
+      return;
+    }
 
+    const controller = new AbortController();
     axios
-      .get("/api/academicos/anios", { headers: { Authorization: `Bearer ${token}` } })
+      .get("/api/academicos/padres/anios", {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      })
       .then((res) => {
-        const activo = (res.data as AnioLectivoPortal[]).find((item) => item.estado === 'Abierto');
-        if (activo) {
-          setAnioId(activo.id_anio);
-          setAnio(new Date(activo.fecha_inicio).getFullYear());
+        const selected = selectPortalAcademicYear(
+          res.data as PortalAcademicYear[],
+          selectedChild?.id_anio,
+          deepLink.anioId,
+        );
+        if (!selected) {
+          setAnioId(null);
+          setEventos([]);
+          setStatus("no-year");
+          setLoading(false);
+          return;
+        }
+        setAnioId(selected.id_anio);
+        setAnio(new Date(selected.fecha_inicio).getFullYear());
+        if (!deepLink.anioId || selected.id_anio === deepLink.anioId) {
+          if (deepLink.mes) setMes(deepLink.mes);
+          if (!deepLink.eventoId) setSelectedDia(deepLink.dia);
         }
       })
-      .catch(() => {});
-  }, [router]);
+      .catch((error) => {
+        if (axios.isCancel(error)) return;
+        setAnioId(null);
+        setEventos([]);
+        setStatus("error");
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [
+    deepLink.anioId,
+    deepLink.dia,
+    deepLink.eventoId,
+    deepLink.mes,
+    retryKey,
+    router,
+    selectedChild?.id_anio,
+  ]);
 
   useEffect(() => {
     if (!anioId) return;
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      return;
+    }
 
-    const timer = window.setTimeout(() => {
-      setLoading(true);
-      axios
-        .get(`/api/eventos/padres?anio_id=${anioId}&mes=${mes}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => setEventos(res.data.data ?? []))
-        .catch(() => setEventos([]))
-        .finally(() => setLoading(false));
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [anioId, mes]);
+    const controller = new AbortController();
+    axios
+      .get(`/api/eventos/padres?anio_id=${anioId}&mes=${mes}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      })
+      .then((res) => {
+        const authorizedEvents = (res.data.data ?? []) as Evento[];
+        setEventos(authorizedEvents);
+        if (!deepLink.anioId || anioId === deepLink.anioId) {
+          setSelectedDia(authorizedDeepLinkDay(deepLink, authorizedEvents));
+        }
+        setStatus("ready");
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) return;
+        setEventos([]);
+        setStatus("error");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [anioId, deepLink, mes, retryKey]);
 
   const hoy = new Date();
   const esMesActual = anio === hoy.getFullYear() && mes === hoy.getMonth() + 1;
@@ -115,6 +196,7 @@ export default function CalendarioPage() {
   }, [eventos]);
 
   const cambiarMes = (delta: number) => {
+    setLoading(true);
     setMes((prev) => {
       const nuevo = prev + delta;
       if (nuevo < 1) return 12;
@@ -127,15 +209,32 @@ export default function CalendarioPage() {
   const eventosDelDia = selectedDia ? eventosPorDia[selectedDia] || [] : [];
 
   if (!mounted) {
+    return <CalendarFallback />;
+  }
+
+  if (status === "error" || status === "no-year") {
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
         <ScreenHeader title="Calendario Escolar" />
-        <div className="px-5 pt-4 pb-28">
-          <div className="grid grid-cols-7 gap-1">
-            {[...Array(35)].map((_, i) => (
-              <div key={i} className="aspect-square skel rounded-xl" />
-            ))}
-          </div>
+        <div className="px-5 pt-8 text-center">
+          <p className="text-sm text-text-secondary">
+            {status === "no-year"
+              ? "No hay un año lectivo disponible para mostrar el calendario."
+              : "No se pudo cargar el calendario."}
+          </p>
+          {status === "error" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setStatus("loading");
+                setLoading(true);
+                setRetryKey((value) => value + 1);
+              }}
+              className="btn-contained mt-4 min-h-11 px-5"
+            >
+              Reintentar
+            </button>
+          ) : null}
         </div>
         <BottomNav />
       </main>
@@ -219,6 +318,12 @@ export default function CalendarioPage() {
             </div>
           )}
 
+          {!loading && status === "ready" && eventos.length === 0 ? (
+            <p className="py-4 text-center text-sm text-text-secondary">
+              No hay eventos programados para este mes.
+            </p>
+          ) : null}
+
           {selectedDia && (
             <div className="mt-4 bg-white rounded-2xl border border-border p-4 animate-fade-in">
               <p className="text-sm font-bold text-text mb-2">
@@ -274,5 +379,13 @@ export default function CalendarioPage() {
       </PageTransition>
       <BottomNav />
     </main>
+  );
+}
+
+export default function CalendarioPage() {
+  return (
+    <Suspense fallback={<CalendarFallback />}>
+      <CalendarioContent />
+    </Suspense>
   );
 }

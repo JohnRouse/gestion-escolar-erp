@@ -62,6 +62,10 @@ type ResolvedScope = {
   includeLegacy: boolean;
 };
 
+type PortalScope = {
+  contexts: Array<{ tenantId: number; schoolId: number }>;
+};
+
 type EnrollmentContextSource = {
   id_tenant: number | null;
   id_colegio: number | null;
@@ -149,6 +153,153 @@ function legacyOrigin(tipo: string): NotificacionOrigen {
 @Injectable()
 export class NotificacionesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async resolvePortalScope(usuarioId: number): Promise<PortalScope> {
+    const actor = await this.prisma.usuario.findUnique({
+      where: { id_usuario: usuarioId },
+      select: {
+        estado: true,
+        id_persona: true,
+        rol: { select: { nombre_rol: true } },
+        persona: { select: { apoderados: { select: { id_persona: true } } } },
+      },
+    });
+    const role = String(actor?.rol?.nombre_rol || '')
+      .trim()
+      .toLowerCase();
+    if (
+      !actor?.estado ||
+      !['apoderado', 'padre', 'madre'].includes(role) ||
+      !actor.persona.apoderados.length
+    ) {
+      throw new NotFoundException('Bandeja de portal no disponible.');
+    }
+
+    const enrollments = await this.prisma.matricula.findMany({
+      where: {
+        estado_matricula: { in: ESTADOS_MATRICULA_OPERATIVA },
+        estudiante: {
+          apoderados: { some: { id_apoderado: actor.id_persona } },
+        },
+      },
+      select: {
+        id_tenant: true,
+        id_colegio: true,
+        colegio: { select: { id_tenant: true } },
+        seccion: {
+          select: {
+            id_colegio: true,
+            colegio: { select: { id_tenant: true } },
+          },
+        },
+      },
+    });
+    const contexts = new Map<string, { tenantId: number; schoolId: number }>();
+    for (const enrollment of enrollments) {
+      const tenantId =
+        enrollment.id_tenant ??
+        enrollment.colegio?.id_tenant ??
+        enrollment.seccion.colegio?.id_tenant;
+      const schoolId = enrollment.id_colegio ?? enrollment.seccion.id_colegio;
+      if (tenantId && schoolId) {
+        contexts.set(`${tenantId}:${schoolId}`, { tenantId, schoolId });
+      }
+    }
+    return { contexts: [...contexts.values()] };
+  }
+
+  private async portalNotificationWhere(
+    usuarioId: number,
+  ): Promise<Prisma.NotificacionWhereInput> {
+    const scope = await this.resolvePortalScope(usuarioId);
+    const tenantIds = [...new Set(scope.contexts.map((item) => item.tenantId))];
+    const context: Prisma.NotificacionWhereInput[] = [
+      ...tenantIds.map((tenantId) => ({
+        id_tenant: tenantId,
+        id_colegio: null,
+      })),
+      ...scope.contexts.map((item) => ({
+        id_tenant: item.tenantId,
+        id_colegio: item.schoolId,
+      })),
+    ];
+    return {
+      id_usuario: usuarioId,
+      canal: { in: ['portal', 'padres'] },
+      ...(context.length ? { OR: context } : { id_notif: -1 }),
+    };
+  }
+
+  async getPortalNotificaciones(
+    usuarioId: number,
+    query: NotificacionesListDto,
+  ) {
+    const scopeWhere = await this.portalNotificationWhere(usuarioId);
+    const where: Prisma.NotificacionWhereInput = {
+      ...scopeWhere,
+      ...(query.leida !== undefined ? { leida: query.leida } : {}),
+      ...(query.origen ? { origen: query.origen } : {}),
+      ...(query.q
+        ? {
+            AND: [
+              {
+                OR: [
+                  { titulo: { contains: query.q } },
+                  { mensaje: { contains: query.q } },
+                ],
+              },
+            ],
+          }
+        : {}),
+    };
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const [items, total, unread] = await Promise.all([
+      this.prisma.notificacion.findMany({
+        where,
+        orderBy: [{ fecha_creacion: 'desc' }, { id_notif: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { colegio: { select: { id_colegio: true, nombre: true } } },
+      }),
+      this.prisma.notificacion.count({ where }),
+      this.prisma.notificacion.count({
+        where: { ...scopeWhere, leida: false },
+      }),
+    ]);
+    return {
+      data: items.map((item) => ({
+        ...item,
+        origen: item.origen ?? legacyOrigin(item.tipo),
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      resumen: { no_leidas: unread },
+    };
+  }
+
+  async getPortalCountNoLeidas(usuarioId: number) {
+    return this.prisma.notificacion.count({
+      where: {
+        ...(await this.portalNotificationWhere(usuarioId)),
+        leida: false,
+      },
+    });
+  }
+
+  async marcarPortalLectura(usuarioId: number, id: number, leida: boolean) {
+    const where = {
+      ...(await this.portalNotificationWhere(usuarioId)),
+      id_notif: id,
+    };
+    const result = await this.prisma.notificacion.updateMany({
+      where,
+      data: { leida, fecha_lectura: leida ? new Date() : null },
+    });
+    if (result.count !== 1) {
+      throw new NotFoundException('Notificación no encontrada.');
+    }
+    return this.prisma.notificacion.findFirst({ where });
+  }
 
   private async resolveScope(
     usuarioId: number,

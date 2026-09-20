@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { SelectedChildProvider } from "@/contexts/SelectedChildContext";
 import ThemeScript from "@/components/ThemeScript";
+import PortalSessionBoundary from "@/components/PortalSessionBoundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Santa María Victoria – Portal de Padres",
+  title: "Gestión Escolar ERP – Portal de familias",
   description: "Portal móvil para apoderados. Notas, asistencia, pagos, avisos y horario.",
 };
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeScript />
+        <PortalSessionBoundary />
         <SelectedChildProvider>
           <div className="w-full max-w-[420px] md:max-w-4xl mx-auto min-h-screen bg-brand-paper md:bg-surface-alt shadow-2xl relative overflow-hidden">
             {children}

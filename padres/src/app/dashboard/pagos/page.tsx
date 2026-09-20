@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
@@ -20,7 +20,7 @@ interface Deuda {
 }
 interface EstadoCuenta { id_matricula: number; estado_matricula: string; deudas: Deuda[]; total_pendiente: number; }
 
-export default function PagosPage() {
+function PagosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedChild, setSelectedChild, hijos } = useSelectedChild();
@@ -309,6 +309,7 @@ export default function PagosPage() {
                         nombreAlumno: selectedChild?.nombre || "Alumno",
                         nombreApoderado: nombreApoderado,
                         codigoTransaccion: pago.id_transaccion?.toString() || "—",
+                        institucion: selectedChild?.colegio,
                       });
                     }}
                     className="mt-3 w-full py-2.5 rounded-xl bg-accent text-white font-bold text-sm"
@@ -361,5 +362,23 @@ export default function PagosPage() {
 
       <BottomNav />
     </main>
+  );
+}
+
+export default function PagosPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-surface-alt pb-24">
+          <ScreenHeader title="Estado de cuenta" />
+          <p className="px-5 pt-8 text-center text-sm text-text-secondary">
+            Cargando estado de cuenta...
+          </p>
+          <BottomNav />
+        </main>
+      }
+    >
+      <PagosContent />
+    </Suspense>
   );
 }

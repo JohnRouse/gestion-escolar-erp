@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import axios from "axios";
 
-export default function RedirectPage() {
+function RedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setSelectedChild } = useSelectedChild();
@@ -49,5 +49,19 @@ export default function RedirectPage() {
     <div className="min-h-screen flex items-center justify-center bg-surface-alt">
       <p className="text-text-secondary">Redirigiendo...</p>
     </div>
+  );
+}
+
+export default function RedirectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-surface-alt">
+          <p className="text-text-secondary">Redirigiendo...</p>
+        </div>
+      }
+    >
+      <RedirectContent />
+    </Suspense>
   );
 }

@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const apiInternalUrl = (
+  process.env.API_INTERNAL_URL || "http://127.0.0.1:3000"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
     '3000-w-tiansky1993-morghlxn.cluster-o6xgj6spb5bw6q2doeigm2qy6c.cloudworkstations.dev',
@@ -9,7 +13,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://10.88.0.3:3000/:path*',
+        destination: `${apiInternalUrl}/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${apiInternalUrl}/uploads/:path*`,
       },
     ];
   },

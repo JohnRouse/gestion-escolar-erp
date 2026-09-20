@@ -38,7 +38,7 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange, initial
   const cargarPreferencias = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/apoderados/perfil", {
+      const res = await axios.get("/api/auth/portal/perfil", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTema(res.data.tema || "claro");
@@ -125,12 +125,6 @@ export default function ProfileDrawer({ isOpen, onClose, onAvatarChange, initial
               >
                 Calendario Escolar
               </button>
-              <button
-  onClick={() => { router.push("/dashboard/galeria"); onClose(); }}
-  className="btn-contained"
->
-  Momentos Victoria
-</button>
 <button
   onClick={() => { router.push("/dashboard/libreta"); onClose(); }}
   className="btn-contained"

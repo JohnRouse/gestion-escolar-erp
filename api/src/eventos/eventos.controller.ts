@@ -20,7 +20,6 @@ import {
   CancelarEventoDto,
   CrearEventoDto,
   ListarEventosDto,
-  ListarEventosPadresDto,
   OpcionesEventosDto,
 } from './dto/eventos.dto';
 import { EventosService } from './eventos.service';
@@ -52,15 +51,6 @@ export class EventosController {
     @Query() query: OpcionesEventosDto,
   ) {
     return this.eventosService.obtenerOpciones(req.user.userId, query);
-  }
-
-  @Get('padres')
-  @Roles('Apoderado')
-  obtenerEventosPadres(
-    @Req() req: EventosRequest,
-    @Query() query: ListarEventosPadresDto,
-  ) {
-    return this.eventosService.obtenerEventosPadres(req.user.userId, query);
   }
 
   @Get(':id')

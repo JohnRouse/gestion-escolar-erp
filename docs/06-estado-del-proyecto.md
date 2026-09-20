@@ -43,7 +43,8 @@ Debe contar con:
 | Horario (`/calendario`) | Implementación amplia; requiere aceptación dirigida |
 | Eventos (`/eventos`) | En pruebas; migración aplicada localmente, corrección final de catálogo/año/fecha validada en código y pendiente de prueba manual final |
 | Tutoría | Implementación parcial; permisos pendientes de auditoría |
-| Citas | Citas individuales y reuniones de sección en pruebas; portal bloqueado por autenticación externa |
+| Auth/portal de apoderados | En pruebas; canal `jwt-portal`, vínculo familiar, contratos P0 y smoke de API local aprobados; pendiente aceptación humana en navegador |
+| Citas | Citas individuales y reuniones de sección en pruebas; canal externo implementado, pendiente aceptación humana del portal |
 | Enfermería | En pruebas; código y migración aditiva creados, pendiente aplicación local y aceptación humana |
 | Tesorería | Implementación amplia; requiere inventario |
 | Reportes | Requiere inventario |

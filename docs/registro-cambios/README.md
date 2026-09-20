@@ -30,6 +30,8 @@ Ejemplo:
 
 ## Correcciones transversales
 
+- [2026-09-19: navegación de notificaciones y deep link de Eventos en el portal](2026-09-19-notificaciones-portal-deep-link-eventos.md).
+- [2026-09-18: Auth de apoderados V1 aislado](2026-09-18-auth-apoderados-v1.md).
 - [2026-09-18: Eventos — catálogo anual, años y fecha](2026-09-18-eventos-catalogo-anio-fecha.md).
 - [2026-09-14: Enfermería V1 escolar, segura y trazable](2026-09-14-enfermeria-v1.md).
 - [2026-09-13: Notificaciones V1 — bandeja personal segura](2026-09-13-notificaciones-v1.md).

@@ -28,7 +28,7 @@ export default function TabSeguridad() {
     setGuardando(true);
     try {
       const token = localStorage.getItem("token");
-      await axios.put("/api/auth/cambiar-password", {
+      await axios.put("/api/auth/portal/cambiar-password", {
         password_actual: actual,
         password_nueva: nueva,
       }, {

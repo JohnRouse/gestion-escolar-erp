@@ -94,6 +94,14 @@ type Membership = {
   colegio: { id_tenant: number };
 };
 
+export function eventPortalUrl(event: {
+  id_evento: number;
+  id_anio: number;
+  fecha: Date;
+}) {
+  return `/dashboard/calendario?anio_id=${event.id_anio}&mes=${event.fecha.getUTCMonth() + 1}&dia=${event.fecha.getUTCDate()}&evento_id=${event.id_evento}`;
+}
+
 function normalizeRole(value: unknown) {
   const source =
     typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -106,7 +114,7 @@ function normalizeRole(value: unknown) {
   if (['director', 'direccion'].includes(normalized)) return 'director';
   if (['secretaria', 'tesoreria'].includes(normalized)) return 'secretaria';
   if (['profesor', 'docente'].includes(normalized)) return 'profesor';
-  if (['apoderado', 'padre', 'madre', 'tutor'].includes(normalized)) {
+  if (['apoderado', 'padre', 'madre'].includes(normalized)) {
     return 'apoderado';
   }
   return normalized;
@@ -1227,7 +1235,7 @@ export class EventosService {
       canal: 'padres',
       titulo: action,
       mensaje: message,
-      url: '/dashboard/calendario',
+      url: eventPortalUrl(event),
     });
   }
 

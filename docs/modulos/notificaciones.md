@@ -112,6 +112,9 @@ no significa que ya emitan notificaciones.
 | `PATCH/PUT /notificaciones/:id/leida` | Marca propia como leída o no leída |
 | `PATCH/PUT /notificaciones/marcar-todas-leidas` | Marca las propias no leídas del scope |
 | `POST/DELETE /notificaciones/token` | Compatibilidad del registro FCM existente; FCM completo queda fuera de V1 |
+| `GET /notificaciones/portal` | Lista personal externa, limitada a canal portal/padres y vínculos reales |
+| `GET /notificaciones/portal/count` | Conteo externo personal de no leídas |
+| `PATCH /notificaciones/portal/:id/leida` | Marca lectura propia mediante `jwt-portal` |
 
 ## 11. Interfaz
 
@@ -123,8 +126,11 @@ intranet muestra el conteo del alcance activo y navega a la bandeja.
 
 El `NotificationBell` del portal conserva su dropdown mobile-first, consume la
 respuesta paginada, usa el conteo personal y vuelve a validar la ruta
-`/dashboard/...` antes de navegar. La autenticación externa sigue siendo deuda
-separada.
+`/dashboard/...` antes de navegar. Al activar una fila actualiza el estado
+local, lanza la lectura externa sin bloquear, cierra y navega inmediatamente.
+Si el PATCH falla, registra el error sin interrumpir la navegación. URLs
+externas, protocol-relative, con barra invertida o fuera de `/dashboard` se
+descartan y se aplica el fallback seguro del origen.
 
 ## 12. Pruebas
 
@@ -146,3 +152,4 @@ contexto/referencias nuevos, retirar FKs e índices y conservar las filas de
 ## 14. Historial de cambios
 
 - [Notificaciones V1: bandeja personal segura](../registro-cambios/2026-09-13-notificaciones-v1.md).
+- [Navegación del portal y deep link de Eventos](../registro-cambios/2026-09-19-notificaciones-portal-deep-link-eventos.md).

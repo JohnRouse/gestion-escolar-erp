@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { JwtPortalStrategy } from './jwt-portal.strategy';
 import { RolesGuard } from './roles.guard';
 import { StorageService } from '../storage/storage.service';
 
@@ -15,7 +16,13 @@ import { StorageService } from '../storage/storage.service';
       signOptions: { expiresIn: '8h' },
     }),
   ],
-  providers: [AuthService, JwtStrategy, RolesGuard, StorageService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtPortalStrategy,
+    RolesGuard,
+    StorageService,
+  ],
   controllers: [AuthController],
   exports: [AuthService, JwtModule, RolesGuard],
 })

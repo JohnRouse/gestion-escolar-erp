@@ -24,6 +24,7 @@ Cada módulo debe tener un documento propio utilizando `docs/plantillas/plantill
 
 - Alumnos.
 - Apoderados.
+- [Autenticación de apoderados](auth-apoderados.md).
 
 ### Personal
 

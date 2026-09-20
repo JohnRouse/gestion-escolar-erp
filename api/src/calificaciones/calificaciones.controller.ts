@@ -161,60 +161,6 @@ export class CalificacionesController {
   }
 
   // ── Consulta para padres ─────────────────────────
-  @Get('padres/notas')
-  @Roles('Apoderado', 'Admin')
-  async getNotasAlumno(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getNotasAlumno(Number(alumnoId), Number(bimestreId));
-  }
-
-  @Get('padres/comparativa')
-  @Roles('Apoderado', 'Admin')
-  async getComparativa(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getComparativa(Number(alumnoId), Number(bimestreId));
-  }
-
-  @Get('padres/comentarios')
-  @Roles('Apoderado', 'Admin')
-  async getComentarios(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getComentarios(Number(alumnoId), Number(bimestreId));
-  }
-
-  @Get('padres/unidades')
-  @Roles('Apoderado', 'Admin')
-  async getUnidadesComparativa(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getUnidadesComparativa(Number(alumnoId), Number(bimestreId));
-  }
-
-  @Get('padres/alertas')
-  @Roles('Apoderado', 'Admin')
-  async getAlertasAcademicas(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getAlertasAcademicas(Number(alumnoId), Number(bimestreId));
-  }
-
-  @Get('padres/libreta')
-  @Roles('Apoderado', 'Admin')
-  async getLibreta(
-    @Query('alumno_id') alumnoId: string,
-    @Query('bimestre_id') bimestreId: string,
-  ) {
-    return this.calificacionesService.getLibreta(Number(alumnoId), Number(bimestreId));
-  }
-
   @Delete('evaluaciones/:id')
   @Roles('Admin', 'Director', 'Profesor')
   async deleteEvaluacion(@Param('id') id: string) {

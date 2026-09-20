@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { eventPortalUrl } from './eventos.service';
 
 function bogotaDateParts(value: Date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -79,7 +80,7 @@ export class RecordatoriosService {
         canal: 'padres',
         titulo: `Recordatorio: ${event.titulo}`,
         mensaje: `Faltan 2 días para ${event.titulo}${time ? ` a las ${time}` : ''}.`,
-        url: '/dashboard/calendario',
+        url: eventPortalUrl(event),
         deduplicar_existentes: true,
       });
     }
