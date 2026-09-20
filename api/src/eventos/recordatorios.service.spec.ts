@@ -38,6 +38,7 @@ describe('RecordatoriosService de Eventos V1', () => {
       id_colegio: 10,
       id_anio: 100,
       titulo: 'Actuación',
+      fecha: new Date('2026-09-17T00:00:00.000Z'),
       hora: '09:00',
       hora_inicio: '09:00',
       destinatarios: [
@@ -61,6 +62,7 @@ describe('RecordatoriosService de Eventos V1', () => {
         id_colegio: 10,
         id_anio: 100,
         audiencia: { tipo: 'secciones', ids: [20] },
+        url: '/dashboard/calendario?anio_id=100&mes=9&dia=17&evento_id=50',
         deduplicar_existentes: true,
       }),
     );

@@ -32,21 +32,33 @@ export default function LibretaPage() {
   const { selectedChild } = useSelectedChild();
   const [libreta, setLibreta] = useState<LibretaData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [bimestre, setBimestre] = useState(1);
+  const [bimestre, setBimestre] = useState<number | null>(null);
 
   useEffect(() => {
     if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
-    setLoading(true);
+    const controller = new AbortController();
+    const numero = bimestre ?? selectedChild.bimestre_actual;
+    const bimestreQuery = numero ? `&bimestre_id=${numero}` : "";
     axios
-      .get(`/api/calificaciones/padres/libreta?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bimestre}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      .get(
+        `/api/calificaciones/padres/libreta?alumno_id=${selectedChild.id_estudiante}${bimestreQuery}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        },
+      )
       .then((res) => setLibreta(res.data))
-      .catch(() => setLibreta(null))
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (!axios.isCancel(error)) setLibreta(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
   }, [selectedChild, bimestre]);
 
   const descargarPDF = async () => {
@@ -58,7 +70,7 @@ export default function LibretaPage() {
 
   // Encabezado
   doc.setFontSize(16);
-  doc.text("Colegio Santa María Victoria", 105, 15, { align: "center" });
+  doc.text(selectedChild?.colegio || "Institución educativa", 105, 15, { align: "center" });
   doc.setFontSize(12);
   doc.text(`Libreta Bimestral - Bimestre ${libreta.bimestre}`, 105, 23, { align: "center" });
   doc.setFontSize(10);
@@ -139,9 +151,12 @@ export default function LibretaPage() {
             <h2 className="text-lg font-extrabold text-text">Bimestre {libreta.bimestre}</h2>
             <select
               className="bg-white border border-border rounded-full px-4 py-2 text-sm font-bold text-text"
-              value={bimestre}
+              value={bimestre ?? selectedChild?.bimestre_actual ?? ""}
               onChange={(e) => setBimestre(Number(e.target.value))}
             >
+              {!bimestre && !selectedChild?.bimestre_actual ? (
+                <option value="">Bimestre disponible</option>
+              ) : null}
               {[1, 2, 3, 4].map((b) => (
                 <option key={b} value={b}>Bimestre {b}</option>
               ))}

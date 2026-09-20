@@ -8,6 +8,23 @@ export interface Child {
   grado: string;
   color?: string;
   avatar_url?: string;
+  id_matricula?: number | null;
+  id_tenant?: number | null;
+  id_colegio?: number | null;
+  colegio?: string | null;
+  id_anio?: number | null;
+  anio?: string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  bimestre_actual?: number | null;
+}
+
+export function childDateRange(child: Child) {
+  const currentYear = new Date().getFullYear();
+  return {
+    desde: child.fecha_inicio?.slice(0, 10) || `${currentYear}-01-01`,
+    hasta: child.fecha_fin?.slice(0, 10) || `${currentYear}-12-31`,
+  };
 }
 
 interface SelectedChildContextType {

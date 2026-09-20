@@ -1,20 +1,16 @@
 import {
-  Controller, Get, Post, Put, Param, Query, Body,
-  UseGuards, Request, NotFoundException,
+  Controller, Get, Post, Param, Query, Body,
+  UseGuards, Request,
 } from '@nestjs/common';
 import { CircularesService } from './circulares.service';
 import { CreateCircularDto } from './dto/create-circular.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, Roles } from '../auth/roles.guard';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('circulares')
 @UseGuards(AuthGuard('jwt'))
 export class CircularesController {
-  constructor(
-    private readonly circularesService: CircularesService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private readonly circularesService: CircularesService) {}
 
   @Post()
   @Roles('Admin', 'Secretaria', 'Director')
@@ -28,18 +24,6 @@ export class CircularesController {
     return this.circularesService.findAll(Number(page), Number(limit));
   }
 
-  @Get('padres')
-  @Roles('Apoderado', 'Admin')
-  async findForApoderado(@Request() req) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id_usuario: req.user.userId },
-      include: { persona: { include: { apoderados: true } } },
-    });
-    const apoderado = usuario?.persona?.apoderados?.[0];
-    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
-    return this.circularesService.findForApoderado(apoderado.id_persona);
-  }
-
   @Get('count')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Admin', 'Secretaria', 'Director')
@@ -51,11 +35,5 @@ async getTotalCirculares() {
   async findOne(@Param('id') id: string) {
     return this.circularesService.findOne(Number(id));
   }
-
-  @Put(':id/leida')
-@Roles('Apoderado', 'Admin')
-async marcarLeida(@Param('id') id: string, @Request() req) {
-  return this.circularesService.marcarLeida(Number(id), req.user.userId);
-}
 
 }

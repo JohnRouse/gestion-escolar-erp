@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -13,34 +12,37 @@ interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: n
 interface Curso { curso: string; unidades: Unidad[]; promedioBimestre: number | null; }
 
 export default function CalificacionesPage() {
-  const router = useRouter();
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const [bimestre, setBimestre] = useState(1);
+  const [bimestre, setBimestre] = useState<number | null>(null);
   const { selectedChild } = useSelectedChild();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [mostrarComparativa, setMostrarComparativa] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token || !selectedChild) return;
-    fetchNotas(token, selectedChild.id_estudiante, bimestre);
-  }, [selectedChild, bimestre]);
-
-  const fetchNotas = async (token: string, id: number, bim: number) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`/api/calificaciones/padres/notas?alumno_id=${id}&bimestre_id=${bim}`, {
-        headers: { Authorization: `Bearer ${token}` },
+    const controller = new AbortController();
+    const numero = bimestre ?? selectedChild.bimestre_actual;
+    const bimestreQuery = numero ? `&bimestre_id=${numero}` : "";
+    axios
+      .get(
+        `/api/calificaciones/padres/notas?alumno_id=${selectedChild.id_estudiante}${bimestreQuery}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        },
+      )
+      .then((res) => setCursos(res.data))
+      .catch((error) => {
+        if (!axios.isCancel(error)) setCursos([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
-      setCursos(res.data);
-    } catch { setCursos([]); } finally { setLoading(false); }
-  };
+
+    return () => controller.abort();
+  }, [selectedChild, bimestre]);
 
   const promedioGeneral =
     cursos.length > 0
@@ -51,27 +53,6 @@ export default function CalificacionesPage() {
           cursos.filter((c) => c.promedioBimestre !== null).length
         )
       : null;
-
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
-        <ScreenHeader title="Calificaciones" />
-        <div className="px-5 pt-5 pb-4 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-center gap-3">
-              <div className="skel w-11 h-11 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-3.5 w-1/2" />
-                <div className="skel h-2.5 w-1/4" />
-              </div>
-              <div className="skel h-6 w-20 rounded-full" />
-            </div>
-          ))}
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
@@ -99,9 +80,12 @@ export default function CalificacionesPage() {
             </button>
             <select
               className="bg-white dark:bg-gray-800 border border-border dark:border-gray-600 rounded-full px-4 py-2 text-sm font-bold text-text dark:text-gray-200"
-              value={bimestre}
+              value={bimestre ?? selectedChild?.bimestre_actual ?? ""}
               onChange={(e) => setBimestre(Number(e.target.value))}
             >
+              {!bimestre && !selectedChild?.bimestre_actual ? (
+                <option value="">Bimestre disponible</option>
+              ) : null}
               <option value={1}>Bimestre I</option>
               <option value={2}>Bimestre II</option>
               <option value={3}>Bimestre III</option>
@@ -110,9 +94,11 @@ export default function CalificacionesPage() {
           </div>
         </div>
 
-        {mostrarComparativa && (
+        {mostrarComparativa && (bimestre ?? selectedChild?.bimestre_actual) && (
           <div className="m-card p-4 animate-fade-in">
-            <ComparativaNotas bimestre={bimestre} />
+            <ComparativaNotas
+              bimestre={(bimestre ?? selectedChild?.bimestre_actual)!}
+            />
           </div>
         )}
 

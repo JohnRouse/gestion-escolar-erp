@@ -1,7 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { CreateCircularDto } from './dto/create-circular.dto';
+
+type PortalAudienceScope = {
+  branches: Prisma.CircularWhereInput[];
+  levelIds: Set<number>;
+  sectionIds: Set<number>;
+};
 
 @Injectable()
 export class CircularesService {
@@ -130,85 +137,143 @@ export class CircularesService {
 
   // ── LISTAR PARA APODERADO (APP) ─────────────────────
   async findForApoderado(apoderadoId: number) {
-  const relaciones = await this.prisma.apoderadoEstudiante.findMany({
-    where: { id_apoderado: apoderadoId },
-    select: { id_estudiante: true },
-  });
-  const estudianteIds = relaciones.map((r) => r.id_estudiante);
+    const scope = await this.getAudienceScope(apoderadoId);
+    if (!scope.branches.length) return [];
 
-  const matriculas = await this.prisma.matricula.findMany({
-    where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
-    include: { seccion: { include: { grado: { include: { nivel: true } } } } },
-  });
-
-  const destinos = new Map<string, { id_nivel: number; id_seccion: number | null }>();
-  for (const mat of matriculas) {
-    const id_nivel = mat.seccion.grado.id_nivel;
-    const id_seccion = mat.id_seccion;
-    const key = `${id_nivel}_${id_seccion}`;
-    if (!destinos.has(key)) {
-      destinos.set(key, { id_nivel, id_seccion });
-    }
-  }
-
-  const niveles = new Set<number>();
-  const seccionesHijos = new Set<number>();
-  for (const d of destinos.values()) {
-    niveles.add(d.id_nivel);
-    if (d.id_seccion) seccionesHijos.add(d.id_seccion);
-  }
-
-  const circulares = await this.prisma.circular.findMany({
-    where: {
-      destinatarios: {
-        some: {
-          OR: [
-            { id_nivel: null, id_seccion: null },
-            { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
-            { id_nivel: { in: Array.from(niveles) }, id_seccion: { in: Array.from(seccionesHijos) } },
-          ],
-        },
+    const circulares = await this.prisma.circular.findMany({
+      where: { OR: scope.branches },
+      orderBy: { fecha_creacion: 'desc' },
+      include: {
+        remitente: { include: { persona: true } },
+        adjuntos: true,
+        destinatarios: { include: { nivel: true, seccion: true } },
       },
-    },
-    orderBy: { fecha_creacion: 'desc' },
-    include: {
-      remitente: { include: { persona: true } },
-      adjuntos: true,
-      destinatarios: { include: { nivel: true, seccion: true } },
-    },
-    distinct: ['id_circular'],
-  });
-
-  const circularesConLectura = circulares.map((c) => {
-    const destinatario = c.destinatarios.find((d) => {
-      if (!d.id_nivel && !d.id_seccion) return true;
-      if (d.id_seccion && seccionesHijos.has(d.id_seccion)) return true;
-      if (d.id_nivel && niveles.has(d.id_nivel) && !d.id_seccion) return true;
-      return false;
+      distinct: ['id_circular'],
     });
 
-    // Construir el texto "Dirigido a"
-    const dirigido_a = c.destinatarios
-      .map((d) => {
-        if (!d.id_nivel && !d.id_seccion) return 'Todos';
-        if (d.id_nivel && d.id_seccion) {
-          return `${d.nivel?.nombre_nivel || ''} ${d.seccion?.letra || ''}`.trim();
-        }
-        if (d.id_nivel) return d.nivel?.nombre_nivel || '';
-        return '';
-      })
-      .filter(Boolean)
-      .join(', ');
+    return circulares.map((c) => {
+      const destinatario = c.destinatarios.find((item) =>
+        this.isCircularAudienceMatch(c, item, scope),
+      );
 
-    return {
-      ...c,
-      leida: destinatario?.leida ?? false,
-      dirigido_a: dirigido_a || 'General',
-    };
-  });
+      const dirigido_a = c.destinatarios
+        .map((d) => {
+          if (!d.id_nivel && !d.id_seccion) return 'Todos';
+          if (d.id_nivel && d.id_seccion) {
+            return `${d.nivel?.nombre_nivel || ''} ${d.seccion?.letra || ''}`.trim();
+          }
+          if (d.id_nivel) return d.nivel?.nombre_nivel || '';
+          return '';
+        })
+        .filter(Boolean)
+        .join(', ');
 
-  return circularesConLectura;
-}
+      return {
+        ...c,
+        leida: destinatario?.leida ?? false,
+        dirigido_a: dirigido_a || 'General',
+      };
+    });
+  }
+
+  private async getAudienceScope(
+    apoderadoId: number,
+  ): Promise<PortalAudienceScope> {
+    const matriculas = await this.prisma.matricula.findMany({
+      where: {
+        estado_matricula: {
+          in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+        },
+        estudiante: {
+          apoderados: { some: { id_apoderado: apoderadoId } },
+        },
+      },
+      select: {
+        id_tenant: true,
+        id_colegio: true,
+        id_seccion: true,
+        colegio: { select: { id_tenant: true } },
+        seccion: {
+          select: {
+            id_colegio: true,
+            colegio: { select: { id_tenant: true } },
+            grado: { select: { id_nivel: true } },
+          },
+        },
+      },
+    });
+
+    const levelIds = new Set<number>();
+    const sectionIds = new Set<number>();
+    const branches = matriculas.flatMap((matricula) => {
+      const tenantId =
+        matricula.id_tenant ??
+        matricula.colegio?.id_tenant ??
+        matricula.seccion.colegio?.id_tenant;
+      const schoolId = matricula.id_colegio ?? matricula.seccion.id_colegio;
+      if (!tenantId || !schoolId) return [];
+      levelIds.add(matricula.seccion.grado.id_nivel);
+      sectionIds.add(matricula.id_seccion);
+      return [
+        {
+          OR: [
+            {
+              id_colegio: schoolId,
+              OR: [{ id_tenant: tenantId }, { id_tenant: null }],
+              destinatarios: {
+                some: {
+                  OR: [
+                    { id_nivel: null, id_seccion: null },
+                    {
+                      id_nivel: matricula.seccion.grado.id_nivel,
+                      id_seccion: null,
+                    },
+                    { id_seccion: matricula.id_seccion },
+                  ],
+                },
+              },
+            },
+            {
+              id_tenant: null,
+              id_colegio: null,
+              destinatarios: {
+                some: { id_seccion: matricula.id_seccion },
+              },
+            },
+          ],
+        },
+      ];
+    });
+
+    return { branches, levelIds, sectionIds };
+  }
+
+  private isAudienceMatch(
+    destinatario: { id_nivel: number | null; id_seccion: number | null },
+    scope: PortalAudienceScope,
+  ) {
+    if (!destinatario.id_nivel && !destinatario.id_seccion) return true;
+    if (destinatario.id_seccion) {
+      return scope.sectionIds.has(destinatario.id_seccion);
+    }
+    return Boolean(
+      destinatario.id_nivel && scope.levelIds.has(destinatario.id_nivel),
+    );
+  }
+
+  private isCircularAudienceMatch(
+    circular: { id_colegio: number | null },
+    destinatario: { id_nivel: number | null; id_seccion: number | null },
+    scope: PortalAudienceScope,
+  ) {
+    if (!circular.id_colegio) {
+      return Boolean(
+        destinatario.id_seccion &&
+          scope.sectionIds.has(destinatario.id_seccion),
+      );
+    }
+    return this.isAudienceMatch(destinatario, scope);
+  }
 
   // ── TOTAL DE CIRCULARES ────────────────────────────
   async getTotalCirculares() {
@@ -216,43 +281,24 @@ export class CircularesService {
   }
 
   // ── MARCAR COMO LEÍDA ───────────────────────────────
-  async marcarLeida(circularId: number, usuarioId: number) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { id_usuario: usuarioId },
-      include: { persona: { include: { apoderados: true } } },
-    });
-    const apoderado = usuario?.persona?.apoderados?.[0];
-    if (!apoderado) throw new NotFoundException('Apoderado no encontrado');
+  async marcarLeida(circularId: number, apoderadoId: number) {
+    const scope = await this.getAudienceScope(apoderadoId);
+    const circular = scope.branches.length
+      ? await this.prisma.circular.findFirst({
+          where: { id_circular: circularId, OR: scope.branches },
+          include: { destinatarios: true },
+        })
+      : null;
+    if (!circular) throw new NotFoundException('Circular no disponible.');
 
-    const relaciones = await this.prisma.apoderadoEstudiante.findMany({
-      where: { id_apoderado: apoderado.id_persona },
-      select: { id_estudiante: true },
-    });
-    const estudianteIds = relaciones.map((r) => r.id_estudiante);
-
-    const matriculas = await this.prisma.matricula.findMany({
-      where: { id_estudiante: { in: estudianteIds }, estado_matricula: 'Activo' },
-      select: {
-        id_seccion: true,
-        seccion: { select: { grado: { select: { id_nivel: true } } } },
-      },
-    });
-
-    const niveles = new Set<number>();
-    const secciones = new Set<number>();
-    for (const mat of matriculas) {
-      niveles.add(mat.seccion.grado.id_nivel);
-      secciones.add(mat.id_seccion);
-    }
+    const destinationIds = circular.destinatarios
+      .filter((item) => this.isCircularAudienceMatch(circular, item, scope))
+      .map((item) => item.id);
 
     await this.prisma.circularDestinatario.updateMany({
       where: {
         id_circular: circularId,
-        OR: [
-          { id_nivel: { in: Array.from(niveles) }, id_seccion: null },
-          { id_seccion: { in: Array.from(secciones) } },
-          { id_nivel: null, id_seccion: null },
-        ],
+        id: { in: destinationIds },
       },
       data: { leida: true, fecha_lectura: new Date() },
     });

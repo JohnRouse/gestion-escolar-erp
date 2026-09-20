@@ -132,18 +132,4 @@ export class AsistenciaController {
     );
   }
 
-  @Get('padres/asistencia')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Apoderado', 'Admin')
-  async getAsistenciaAlumno(
-    @Query('alumno_id') alumnoId: string,
-    @Query('desde') desde: string,
-    @Query('hasta') hasta: string,
-  ) {
-    return this.asistenciaService.getAsistenciaAlumno(
-      Number(alumnoId),
-      desde,
-      hasta,
-    );
-  }
 }

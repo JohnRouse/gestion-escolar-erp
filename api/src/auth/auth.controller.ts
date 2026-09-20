@@ -16,8 +16,22 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
+import { Request as ExpressRequest } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+
+type AuthenticatedRequest = ExpressRequest & {
+  user: { userId: number; personaId: number; rol: string; canal: string };
+};
+
+type PortalProfileUpdate = {
+  correo?: string;
+  telefono?: string;
+  ocupacion?: string;
+  avatar_url?: string;
+  tema?: string;
+  notificaciones_activas?: boolean;
+};
 
 @Controller('auth')
 export class AuthController {
@@ -31,6 +45,40 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: { username: string; password: string }) {
     return this.authService.login(body.username, body.password);
+  }
+
+  @Post('portal/login')
+  @HttpCode(HttpStatus.OK)
+  async loginPortal(@Body() body: { username: string; password: string }) {
+    return this.authService.loginPortal(body.username, body.password);
+  }
+
+  @Get('portal/perfil')
+  @UseGuards(AuthGuard('jwt-portal'))
+  async perfilPortal(@Request() req: AuthenticatedRequest) {
+    return this.authService.getPortalPerfil(req.user.userId);
+  }
+
+  @Put('portal/perfil')
+  @UseGuards(AuthGuard('jwt-portal'))
+  async updatePerfilPortal(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: PortalProfileUpdate,
+  ) {
+    return this.authService.updatePortalPerfil(req.user.userId, body);
+  }
+
+  @Put('portal/cambiar-password')
+  @UseGuards(AuthGuard('jwt-portal'))
+  async cambiarPasswordPortal(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { password_actual: string; password_nueva: string },
+  ) {
+    return this.authService.cambiarPassword(
+      req.user.userId,
+      body.password_actual,
+      body.password_nueva,
+    );
   }
 
   @Get('perfil')

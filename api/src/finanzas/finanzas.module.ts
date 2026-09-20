@@ -3,9 +3,14 @@ import { FinanzasService } from './finanzas.service';
 import { FinanzasController } from './finanzas.controller';
 import { FinanzasPublicController } from './finanzas-public.controller';
 import { StorageService } from '../storage/storage.service';
+import { FinanzasPadresController } from './finanzas-padres.controller';
 
 @Module({
   providers: [FinanzasService, StorageService],
-  controllers: [FinanzasController, FinanzasPublicController],
+  controllers: [
+    FinanzasPadresController,
+    FinanzasController,
+    FinanzasPublicController,
+  ],
 })
 export class FinanzasModule {}

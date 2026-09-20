@@ -358,3 +358,76 @@ describe('NotificacionesService V1: propiedad y alcance', () => {
     expect(prisma.notificacion.createMany).not.toHaveBeenCalled();
   });
 });
+
+describe('Notificaciones del portal de familias', () => {
+  function portalSetup() {
+    const { prisma, service } = setup();
+    prisma.usuario.findUnique.mockResolvedValue({
+      id_persona: 80,
+      estado: true,
+      rol: { nombre_rol: 'Apoderado' },
+      persona: { apoderados: [{ id_persona: 80 }] },
+    });
+    prisma.matricula.findMany.mockResolvedValue([
+      {
+        id_tenant: 1,
+        id_colegio: 10,
+        colegio: { id_tenant: 1 },
+        seccion: { id_colegio: 10, colegio: { id_tenant: 1 } },
+      },
+    ]);
+    return { prisma, service };
+  }
+
+  test('portal lista solo notificaciones propias de canal padres y vínculos reales', async () => {
+    const { prisma, service } = portalSetup();
+    await service.getPortalNotificaciones(7, { page: 1, limit: 20 });
+    const where = prisma.notificacion.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({
+      id_usuario: 7,
+      canal: { in: ['portal', 'padres'] },
+    });
+    expect(where.OR).toEqual(
+      expect.arrayContaining([
+        { id_tenant: 1, id_colegio: null },
+        { id_tenant: 1, id_colegio: 10 },
+      ]),
+    );
+    expect(prisma.matricula.findMany.mock.calls[0][0].where).toMatchObject({
+      estado_matricula: {
+        in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+      },
+      estudiante: { apoderados: { some: { id_apoderado: 80 } } },
+    });
+  });
+
+  test('portal no incorpora notificaciones legacy ni de intranet', async () => {
+    const { prisma, service } = portalSetup();
+    await service.getPortalCountNoLeidas(7);
+    const where = prisma.notificacion.count.mock.calls.at(-1)[0].where;
+    expect(where.canal).toEqual({ in: ['portal', 'padres'] });
+    expect(JSON.stringify(where)).not.toContain('intranet');
+    expect(JSON.stringify(where)).not.toContain('"canal":null');
+  });
+
+  test('portal marca una notificación propia', async () => {
+    const { prisma, service } = portalSetup();
+    await service.marcarPortalLectura(7, 50, true);
+    expect(prisma.notificacion.updateMany.mock.calls[0][0]).toMatchObject({
+      where: {
+        id_usuario: 7,
+        id_notif: 50,
+        canal: { in: ['portal', 'padres'] },
+      },
+      data: { leida: true },
+    });
+  });
+
+  test('portal no puede mutar una notificación ajena', async () => {
+    const { prisma, service } = portalSetup();
+    prisma.notificacion.updateMany.mockResolvedValue({ count: 0 });
+    await expect(
+      service.marcarPortalLectura(7, 999, true),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});

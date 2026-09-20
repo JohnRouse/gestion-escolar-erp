@@ -23,6 +23,8 @@ sean conocidos y pueden existir filas legacy sin contexto institucional.
 7. Si el ID pertenece a otro usuario o scope, la API devuelve 404 sin revelar
    existencia.
 8. Marcar todas solo cambia no leídas del actor y scope.
+9. En el portal, activar una fila actualiza su estado local, dispara el PATCH
+   externo sin esperarlo, cierra el dropdown y navega a una URL segura.
 
 ## Casos de borde
 
@@ -33,6 +35,10 @@ sean conocidos y pueden existir filas legacy sin contexto institucional.
   si hay ambigüedad multi-tenant.
 - URL externa, protocol-relative o perteneciente al canal opuesto: rechazada al
   crear y descartada por el cliente antes de navegar.
+- Si falla el PATCH de lectura, la navegación continúa; una carga posterior
+  recupera del backend el estado persistido.
+- Una notificación histórica con `/dashboard/calendario` continúa abriendo el
+  calendario sin intentar extraer fecha o año del mensaje.
 
 ## Resultado y trazabilidad
 

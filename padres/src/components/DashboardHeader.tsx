@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
@@ -14,7 +14,7 @@ const COLORES_ESTUDIANTES = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'
 ];
 
-export default function DashboardHeader() {
+function DashboardHeaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
@@ -31,7 +31,34 @@ export default function DashboardHeader() {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
     const token = localStorage.getItem("token");
-    if (token) fetchHijos(token);
+    const controller = new AbortController();
+    if (token) {
+      axios
+        .get("/api/academicos/padres/hijos", {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        })
+        .then((res) => {
+          const hijosConColor = res.data.map((h: any, idx: number) => ({
+            ...h,
+            color:
+              h.color ||
+              COLORES_ESTUDIANTES[idx % COLORES_ESTUDIANTES.length],
+          }));
+          setHijos(hijosConColor);
+          if (hijosConColor.length > 0) {
+            setSelectedChild(
+              hijosConColor.find(
+                (item: { id_estudiante: number }) =>
+                  item.id_estudiante === selectedChild?.id_estudiante,
+              ) ?? hijosConColor[0],
+            );
+          }
+        })
+        .catch((error) => {
+          if (!axios.isCancel(error)) setHijos([]);
+        });
+    }
 
     const hour = new Date().getHours();
     const g = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
@@ -40,6 +67,10 @@ export default function DashboardHeader() {
     const savedAvatar = localStorage.getItem('avatar_url');
     if (savedAvatar) setAvatarApoderado(savedAvatar);
 
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     // Abrir drawer en pestaña específica si viene de un botón "Servicios"
     const openTab = searchParams.get("open");
     if (openTab === "servicios") {
@@ -51,24 +82,6 @@ export default function DashboardHeader() {
   const updateAvatar = (newUrl: string) => {
     setAvatarApoderado(newUrl);
     localStorage.setItem('avatar_url', newUrl);
-  };
-
-  const fetchHijos = async (token: string) => {
-    try {
-      const res = await axios.get("/api/academicos/padres/hijos", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const hijosConColor = res.data.map((h: any, idx: number) => ({
-        ...h,
-        color: h.color || COLORES_ESTUDIANTES[idx % COLORES_ESTUDIANTES.length],
-      }));
-      setHijos(hijosConColor);
-      if (!selectedChild && hijosConColor.length > 0) {
-        setSelectedChild(hijosConColor[0]);
-      }
-    } catch {
-      setHijos([]);
-    }
   };
 
   const handleLogout = () => {
@@ -159,5 +172,19 @@ export default function DashboardHeader() {
         initialTab={initialTab}
       />
     </header>
+  );
+}
+
+export default function DashboardHeader() {
+  return (
+    <Suspense
+      fallback={
+        <header className="bg-primary px-5 pb-6 pt-12">
+          <div className="h-12 rounded-2xl bg-white/10" />
+        </header>
+      }
+    >
+      <DashboardHeaderContent />
+    </Suspense>
   );
 }

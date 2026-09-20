@@ -7,7 +7,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { normalizePersonaInput } from '../common/persona-normalizer';
+
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 @Injectable()
 export class AuthService {
@@ -17,8 +19,62 @@ export class AuthService {
   ) {}
 
   private isRolPortalExterno(rol?: string | null) {
-    const normalized = String(rol || '').trim().toLowerCase();
+    const normalized = String(rol || '')
+      .trim()
+      .toLowerCase();
     return ['apoderado', 'padre', 'madre'].includes(normalized);
+  }
+
+  private async getPortalUserById(userId: number) {
+    const user = await this.prisma.usuario.findUnique({
+      where: { id_usuario: userId },
+      include: {
+        persona: { include: { apoderados: true } },
+        rol: true,
+      },
+    });
+
+    if (
+      !user?.estado ||
+      !this.isRolPortalExterno(user.rol?.nombre_rol) ||
+      !user.persona?.apoderados?.length
+    ) {
+      throw new UnauthorizedException('Sesión de portal inválida');
+    }
+
+    return user;
+  }
+
+  private formatPortalUser(
+    user: Awaited<ReturnType<AuthService['getPortalUserById']>>,
+  ) {
+    const apellidos = `${user.persona.apellido_paterno || ''} ${
+      user.persona.apellido_materno || ''
+    }`
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return {
+      id: user.id_usuario,
+      id_usuario: user.id_usuario,
+      id_persona: user.id_persona,
+      username: user.username,
+      nombre: this.formatNombrePersona(user.persona),
+      nombres: user.persona.nombres,
+      apellidos,
+      apellido_paterno: user.persona.apellido_paterno,
+      apellido_materno: user.persona.apellido_materno,
+      correo: user.persona.correo,
+      email: user.persona.correo,
+      telefono: user.persona.telefono,
+      genero: user.persona.genero,
+      ocupacion: user.persona.apoderados[0]?.ocupacion ?? null,
+      avatar_url: user.avatar_url,
+      tema: user.tema,
+      notificaciones_activas: user.notificaciones_activas,
+      rol: 'Apoderado',
+      canal: 'portal-padres',
+    };
   }
 
   private formatSeccion(seccion: any) {
@@ -144,6 +200,9 @@ export class AuthService {
   }
 
   async login(username: string, password: string) {
+    if (!username || !password) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
     const user = await this.prisma.usuario.findUnique({
       where: { username },
       include: {
@@ -152,20 +211,19 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.estado) {
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user?.password_hash ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !isPasswordValid || !user.estado) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
     if (this.isRolPortalExterno(user.rol?.nombre_rol)) {
       throw new UnauthorizedException(
-        'Este acceso es solo para personal interno del colegio. Usa el portal de apoderados cuando esté habilitado.',
+        'Esta cuenta debe ingresar desde el portal de apoderados.',
       );
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     const payload = {
@@ -173,6 +231,7 @@ export class AuthService {
       username: user.username,
       rol: user.rol.nombre_rol,
       personaId: user.id_persona,
+      canal: 'intranet',
     };
 
     const contexto = await this.getContexto(user.id_usuario);
@@ -194,6 +253,103 @@ export class AuthService {
         contexto,
       },
     };
+  }
+
+  async loginPortal(username: string, password: string) {
+    if (!username || !password) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+    const user = await this.prisma.usuario.findUnique({
+      where: { username },
+      include: {
+        persona: { include: { apoderados: true } },
+        rol: true,
+      },
+    });
+
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user?.password_hash ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (
+      !user ||
+      !isPasswordValid ||
+      !user.estado ||
+      !this.isRolPortalExterno(user.rol?.nombre_rol) ||
+      !user.persona?.apoderados?.length
+    ) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const payload = {
+      sub: user.id_usuario,
+      username: user.username,
+      rol: user.rol.nombre_rol,
+      personaId: user.id_persona,
+      canal: 'portal-padres',
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: this.formatPortalUser(user),
+    };
+  }
+
+  async getPortalPerfil(userId: number) {
+    return this.formatPortalUser(await this.getPortalUserById(userId));
+  }
+
+  async updatePortalPerfil(
+    userId: number,
+    data: {
+      correo?: string;
+      telefono?: string;
+      ocupacion?: string;
+      avatar_url?: string;
+      tema?: string;
+      notificaciones_activas?: boolean;
+    },
+  ) {
+    const user = await this.getPortalUserById(userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (data.correo !== undefined || data.telefono !== undefined) {
+        await tx.persona.update({
+          where: { id_persona: user.id_persona },
+          data: {
+            ...(data.correo !== undefined ? { correo: data.correo } : {}),
+            ...(data.telefono !== undefined ? { telefono: data.telefono } : {}),
+          },
+        });
+      }
+      if (data.ocupacion !== undefined) {
+        await tx.apoderado.update({
+          where: { id_persona: user.id_persona },
+          data: { ocupacion: data.ocupacion },
+        });
+      }
+      if (
+        data.avatar_url !== undefined ||
+        data.tema !== undefined ||
+        data.notificaciones_activas !== undefined
+      ) {
+        await tx.usuario.update({
+          where: { id_usuario: userId },
+          data: {
+            ...(data.avatar_url !== undefined
+              ? { avatar_url: data.avatar_url }
+              : {}),
+            ...(data.tema !== undefined ? { tema: data.tema } : {}),
+            ...(data.notificaciones_activas !== undefined
+              ? { notificaciones_activas: data.notificaciones_activas }
+              : {}),
+          },
+        });
+      }
+    });
+
+    return this.getPortalPerfil(userId);
   }
 
   async getPerfil(userId: number) {

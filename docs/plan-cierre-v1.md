@@ -22,7 +22,12 @@ El producto tiene una base escolar amplia y conectada: Matrícula, Comunidad, Do
 
 Super SaaS está en **base estructural**, con entidades y contexto reutilizables; no hay una consola operativa. Tener `Tenant.plan`, roles o un selector de colegio no equivale a disponer de planes, suscripciones y administración global.
 
-El portal Next.js `padres/` contiene páginas reales; su login llama a `/api/auth/login`, que actualmente rechaza roles externos, y `JwtStrategy` también rechaza apoderados. Esto documenta una incompatibilidad de integración observable en código; no se ejecutó el portal ni se verificó un despliegue.
+El portal Next.js `padres/` contiene páginas reales. El incremento Auth de
+apoderados separó `/auth/portal/login` y `jwt-portal` de `/auth/login` y `jwt`,
+con autoridad derivada de ApoderadoEstudiante y validación técnica dirigida. El
+portal P0 compila y su smoke de API con datos locales aprobó; faltan aceptación
+humana en navegador y el cierre
+P1 independiente de Galería/Álbumes.
 
 La documentación está por detrás de la implementación: `docs/06-estado-del-proyecto.md` conserva estados de «requiere inventario» y el inventario inicial encontró únicamente `README.md` en `docs/modulos/`; ahora Staff dispone de ficha, escenario y registro de aceptación vigentes. Esto no demuestra ausencia de toda documentación histórica: significa que falta la ficha vigente por módulo. No se recorrió el archivo histórico.
 
@@ -78,7 +83,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 |---|---|---|---|---|---|---|---|
 | Alumnos | sí | sí | sí | completo | CASI COMPLETO | P0 | Documentar alta, edición, ficha, estado institucional y credenciales. **A:** aparente sí. **D:** Persona, Matrícula, colegios. |
 | Apoderados | sí | sí | sí | completo | CASI COMPLETO | P0 | Cerrar aceptación de vínculos, edición y credenciales; separar gestión interna de acceso al portal. **A:** revisar. **D:** Persona, Alumnos, Usuarios. |
-| Portal de apoderados | sí | parcial | sí | parcial | PARCIAL | P0 | Habilitar autenticación externa compatible y acceso exclusivamente a hijos vinculados; reutilizar páginas existentes. **A:** revisar. **D:** Autenticación, Apoderados, Notas, Asistencia, Tesorería, Comunicación. |
+| Portal de apoderados | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Login y JWT externos aislados, perfil y contratos P0 conectados a hijos vinculados; builds, pruebas dirigidas y smoke de API local aprobados. Falta aceptación humana en navegador. Galería/Álbumes permanece P1. **A:** revisión dirigida aprobada en código y API. **D:** Apoderados y Matrícula. |
 
 ### Personal
 
@@ -192,10 +197,10 @@ Estas observaciones provienen de contratos y código; no son resultados de un en
 
 - `CalificacionesController.saveNotasMasivo` pasa `0` como docente y varias operaciones de evaluación/guardado no reciben al actor. El servicio valida estados de unidad y relaciones, pero esos contratos no demuestran autorización del solicitante sobre la asignación. Debe cerrarse en el bloque académico.
 - `FinanzasController.updateConcepto` invoca `updateConcepto(id, body)` sin contexto de usuario/colegio. Es una brecha concreta de cobertura que debe resolverse con el flujo de configuración financiera.
-- Citas ya recibe al actor, revalida tenant/colegio/rol/participación dentro de las
-  escrituras y oculta recursos ajenos. Su recorrido de apoderado conserva como
-  dependencia la autenticación externa hoy rechazada; no debe habilitarse
-  relajando el control interno.
+- Citas ya recibe al actor, revalida tenant/colegio/rol/participación dentro de
+  las escrituras y oculta recursos ajenos. Su recorrido de apoderado usa ahora
+  `jwt-portal`; el canal interno permanece separado y falta aceptación humana
+  con datos persistidos.
 - Notificaciones combina actor, tenant y colegio en listado, count y mutaciones; un ID ajeno devuelve 404. Legacy sin contexto se excluye cuando el Usuario tiene varios tenants activos.
 - Los resolutores de alcance de Finanzas y otros servicios parten de membresías activas de colegio, pero el consolidado reúne todos sus IDs y usa un tenant principal. Deben separar explícitamente el tenant activo cuando el usuario pertenece a varias organizaciones.
 
@@ -211,7 +216,7 @@ La revisión futura se dirige a esos contratos y a los flujos modificados. No ju
 | Colegio | `Colegio` pertenece a Tenant; tiene identidad, estado, color, logo y relaciones académicas/financieras. | No hay aprovisionamiento global completo; sigue siendo el modelo institucional vigente. |
 | UsuarioTenant | Clave compuesta usuario/tenant, rol textual y estado. | La membresía no equivale a una política completa de permisos por contexto. |
 | UsuarioColegio | Clave compuesta usuario/colegio, rol, estado y colegio principal. | Falta operación central de estas membresías y uso coherente del rol contextual. |
-| Autenticación | JWT, bcrypt, perfil, cambio de contraseña y verificación del usuario activo. | No representa por sí sola selección de tenant ni autorización SaaS; el acceso externo está rechazado. |
+| Autenticación | JWT interno y `jwt-portal`, bcrypt, perfiles separados, cambio de contraseña y verificación del usuario activo. | No representa por sí sola selección de tenant ni autorización SaaS; el portal familiar deriva autoridad de vínculos reales. |
 | Contexto | `AuthService.getSaasContext`, `ColegiosService.getMisColegios`, `AuthContext` y `SchoolContext` exponen tenant, colegios y consolidado. | El tenant se obtiene como principal/primer acceso; no hay cambio explícito de tenant de extremo a extremo. |
 | API de colegios | `GET colegios/mis-colegios`, carga y eliminación de logo con validación de acceso. | No son endpoints de administración global de tenants/colegios. |
 | Alcance en servicios | Académicos, Finanzas, Dashboard, Analíticas y Tutoría contienen resolutores/controles propios. | Cobertura distribuida; no hay garantía universal por tener columnas tenant/colegio. |
@@ -262,12 +267,13 @@ reprogramación, acuerdos, historial y autorización contextual están conectado
 en pruebas. La primera migración ya aplicada conserva citas Staff históricas; la
 segunda migración aditiva de reuniones está creada y pendiente de aplicación
 controlada. El portal usa el contrato seguro y propone horarios sin convertir
-clases en disponibilidad, pero no puede aceptarse mientras Auth rechace los roles
-externos. Los eventos de reuniones reutilizan el servicio existente; la bandeja
+clases en disponibilidad. Auth externo ya está implementado y queda pendiente
+la aceptación humana del recorrido con datos persistidos. Los eventos de
+reuniones reutilizan el servicio existente; la bandeja
 interna ya está implementada en código y permanece en pruebas hasta aplicar su
 migración aditiva. **Siguiente incremento recomendado:** aplicar/validar las
-migraciones pendientes en entorno controlado, habilitar autenticación externa y
-aceptar el portal; luego conectar incrementalmente los orígenes futuros de avisos.
+migraciones pendientes en entorno controlado y aceptar Citas y el portal; luego
+conectar incrementalmente los orígenes futuros de avisos.
 
 **Tercer incremento del bloque 1 — Enfermería EN PRUEBAS:** la intranet, API y
 migración aditiva separan ficha declarada, autorizaciones, atenciones, contactos
@@ -285,11 +291,23 @@ están implementados en código. La consulta familiar deriva acceso desde hijos
 vinculados y matrículas operativas. Jest dirigido y validaciones técnicas
 aprobaron y la migración fue aplicada correctamente en la base local. Resta la
 prueba manual final de la corrección de catálogo/año/fecha y la habilitación
-transversal del acceso externo. La
+transversal del acceso externo. Auth externo ya existe en código; falta repetir
+esta aceptación con la cuenta familiar real. La
 revisión visual técnica aprobó 1440×900, 1366×768 y 390×844 con datos simulados,
 foco visible y reducción de movimiento; queda la aceptación humana con datos
 persistidos.
 [Contrato y límites](modulos/eventos.md).
+
+**Quinto incremento del bloque 1 — Auth de apoderados EN PRUEBAS:** el login y
+perfil del portal usan `jwt-portal` y una claim de canal no intercambiable con
+el JWT interno. El guard relee Usuario, Rol, estado, Persona y Apoderado; los
+contratos P0 de hijos, Citas, Eventos, Notificaciones, Calificaciones,
+Asistencia, Horario, Circulares y estado de cuenta revalidan vínculo, matrícula,
+audiencia o propietario. Jest dirigido y builds aprobaron. No hubo migración ni
+seed. Falta aceptación humana con cuentas y vínculos locales; Galería/Álbumes
+continúa como P1 fuera de este cierre. El smoke de API con las cuentas seed
+locales aprobó; queda pendiente la aceptación humana en navegador.
+[Contrato y límites](modulos/auth-apoderados.md).
 
 Cada bloque termina con demostración funcional, pruebas proporcionales y documentación vigente del resultado. Los PR pueden dividir un bloque grande en funcionalidades completas, sin esperar un único PR gigantesco ni abrir un PR por ajuste minúsculo.
 

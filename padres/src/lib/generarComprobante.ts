@@ -8,6 +8,7 @@ interface DatosComprobante {
   nombreAlumno: string;
   nombreApoderado: string;
   codigoTransaccion?: string;
+  institucion?: string | null;
 }
 
 export function generarComprobantePDF(datos: DatosComprobante) {
@@ -18,7 +19,7 @@ export function generarComprobantePDF(datos: DatosComprobante) {
   // Encabezado
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("Colegio Santa María Victoria", pageWidth / 2, y, { align: "center" });
+  doc.text(datos.institucion || "Institución educativa", pageWidth / 2, y, { align: "center" });
   y += 8;
 
   doc.setFontSize(10);

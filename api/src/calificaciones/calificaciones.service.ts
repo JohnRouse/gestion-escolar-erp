@@ -5,12 +5,59 @@ import { SaveNotasDto } from './dto/save-notas.dto';
 import { SaveNotasMasivoDto } from './dto/save-notas-masivo.dto';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
+const ESTADOS_MATRICULA_PORTAL = [
+  'Activo',
+  'Matriculado',
+  'Pre-matriculado',
+];
+
 @Injectable()
 export class CalificacionesService {
   constructor(
     private prisma: PrismaService,
     private notificacionesService: NotificacionesService,
   ) {}
+
+  private async assertApoderadoEstudiante(
+    apoderadoId: number,
+    estudianteId: number,
+  ) {
+    const vinculo = await this.prisma.apoderadoEstudiante.findUnique({
+      where: {
+        id_apoderado_id_estudiante: {
+          id_apoderado: apoderadoId,
+          id_estudiante: estudianteId,
+        },
+      },
+      select: { id_estudiante: true },
+    });
+    if (!vinculo) {
+      throw new NotFoundException('Estudiante no disponible.');
+    }
+  }
+
+  private seleccionarBimestrePortal<
+    T extends {
+      numero: number;
+      fecha_inicio: Date;
+      fecha_fin: Date;
+    },
+  >(bimestres: T[], numeroSolicitado?: number) {
+    const solicitado = Number(numeroSolicitado);
+    if (Number.isInteger(solicitado) && solicitado > 0) {
+      const encontrado = bimestres.find((item) => item.numero === solicitado);
+      if (encontrado) return encontrado;
+    }
+
+    const now = new Date();
+    return (
+      bimestres.find(
+        (item) => item.fecha_inicio <= now && item.fecha_fin >= now,
+      ) ??
+      bimestres[0] ??
+      null
+    );
+  }
 
   // ── Helpers ─────────────────────────────────────
   private normalizarGrupoEvaluacion(grupo?: string | null) {
@@ -542,25 +589,52 @@ export class CalificacionesService {
   }
 
   // ── Consulta para padres ──────────────────────────
-  async getNotasAlumno(alumnoId: number, bimestreId: number) {
-    const matriculas = await this.prisma.matricula.findMany({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+  async getNotasAlumno(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
+    const matricula = await this.prisma.matricula.findFirst({
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
       include: {
         seccion: { include: { grado: true } },
-        notas: {
-          where: { evaluacion: { unidad: { id_bimestre: bimestreId } } },
+      },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
+    });
+    if (!matricula) throw new NotFoundException('Estudiante no disponible.');
+
+    const bimestres = await this.prisma.bimestre.findMany({
+      where: { id_anio: matricula.id_anio },
+      orderBy: { numero: 'asc' },
+    });
+    const bimestre = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestre) return [];
+
+    const notas = await this.prisma.notaAlumno.findMany({
+      where: {
+        id_matricula: matricula.id_matricula,
+        evaluacion: { unidad: { id_bimestre: bimestre.id_bimestre } },
+      },
+      include: {
+        evaluacion: {
           include: {
-            evaluacion: {
-              include: { tipo: true, unidad: true, asignacion: { include: { curso: true } } },
-            },
+            tipo: true,
+            unidad: true,
+            asignacion: { include: { curso: true } },
           },
         },
       },
     });
 
     const cursos: any = {};
-    for (const mat of matriculas) {
-      for (const nota of mat.notas) {
+    for (const nota of notas) {
         const cursoNombre = nota.evaluacion.asignacion.curso.nombre_curso;
         if (!cursos[cursoNombre]) cursos[cursoNombre] = { curso: cursoNombre, unidades: {} };
         const unidadId = nota.evaluacion.id_unidad;
@@ -573,7 +647,6 @@ export class CalificacionesService {
           descripcion: nota.evaluacion.descripcion_actividad,
           valor: Number(nota.valor_nota),
         });
-      }
     }
 
     const resultado = Object.values(cursos).map((curso: any) => {
@@ -591,10 +664,19 @@ export class CalificacionesService {
   }
 
   // ── Comparativa (evolución, radar, mensaje) ────────
-  async getComparativa(alumnoId: number, bimestreId: number) {
+  async getComparativa(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
       include: { seccion: { include: { grado: true } } },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
     if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
 
@@ -605,15 +687,26 @@ export class CalificacionesService {
       where: { id_anio: idAnio },
       orderBy: { numero: 'asc' },
     });
+    const bimestreActual = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestreActual) {
+      return {
+        evolucion: [],
+        radar: [],
+        mensaje: 'Aún no hay bimestres configurados para este año.',
+      };
+    }
 
     const evolucion: { bimestre: number; promedio: number | null }[] = [];
 
     for (const bim of bimestres) {
-      if (bim.numero > bimestreId) break;
+      if (bim.numero > bimestreActual.numero) break;
 
       const notas = await this.prisma.notaAlumno.findMany({
         where: {
-          matricula: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+          id_matricula: matriculaActiva.id_matricula,
           evaluacion: { unidad: { id_bimestre: bim.id_bimestre } },
         },
         select: { valor_nota: true },
@@ -628,9 +721,6 @@ export class CalificacionesService {
 
       evolucion.push({ bimestre: bim.numero, promedio });
     }
-
-    const bimestreActual = bimestres.find(b => b.numero === bimestreId);
-    if (!bimestreActual) throw new NotFoundException('Bimestre no encontrado');
 
     const cursos = await this.prisma.curso.findMany({
       where: {
@@ -711,18 +801,32 @@ export class CalificacionesService {
   }
 
   // ── Comparativa de unidades por curso ──────────────
-  async getUnidadesComparativa(alumnoId: number, bimestreId: number) {
+  async getUnidadesComparativa(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
       include: { seccion: true },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
     if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
 
-    const bimestre = await this.prisma.bimestre.findFirst({
-      where: { numero: bimestreId, id_anio: matriculaActiva.id_anio },
+    const bimestres = await this.prisma.bimestre.findMany({
+      where: { id_anio: matriculaActiva.id_anio },
       include: { unidades: { orderBy: { numero: 'asc' } } },
+      orderBy: { numero: 'asc' },
     });
-    if (!bimestre) throw new NotFoundException('Bimestre no encontrado');
+    const bimestre = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestre) return [];
 
     const cursos = await this.prisma.curso.findMany({
       where: {
@@ -774,18 +878,37 @@ export class CalificacionesService {
   }
 
   // ── Comentarios del docente ────────────────────────
-  async getComentarios(alumnoId: number, bimestreId: number) {
+  async getComentarios(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
     if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+
+    const bimestres = await this.prisma.bimestre.findMany({
+      where: { id_anio: matriculaActiva.id_anio },
+      orderBy: { numero: 'asc' },
+    });
+    const bimestre = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestre) return [];
 
     const notas = await this.prisma.notaAlumno.findMany({
       where: {
         id_matricula: matriculaActiva.id_matricula,
         comentario: { not: '' },
         evaluacion: {
-          unidad: { id_bimestre: bimestreId },
+          unidad: { id_bimestre: bimestre.id_bimestre },
         },
       },
       include: {
@@ -816,10 +939,19 @@ export class CalificacionesService {
   }
 
   // ── Alertas académicas ─────────────────────────────
-  async getAlertasAcademicas(alumnoId: number, bimestreId: number) {
+  async getAlertasAcademicas(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
     const matriculaActiva = await this.prisma.matricula.findFirst({
-      where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
       include: { seccion: { include: { grado: true } } },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
     });
     if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
 
@@ -831,10 +963,14 @@ export class CalificacionesService {
       orderBy: { numero: 'asc' },
     });
 
-    const bimestreActual = bimestres.find(b => b.numero === bimestreId);
-    const bimestreAnterior = bimestres.find(b => b.numero === bimestreId - 1);
-
-    if (!bimestreActual) throw new NotFoundException('Bimestre no encontrado');
+    const bimestreActual = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestreActual) return [];
+    const bimestreAnterior = bimestres.find(
+      (b) => b.numero === bimestreActual.numero - 1,
+    );
 
     const cursos = await this.prisma.curso.findMany({
       where: {
@@ -968,79 +1104,103 @@ export class CalificacionesService {
   }
 
   // ── Libreta bimestral ──────────────────────────────
-  async getLibreta(alumnoId: number, bimestreId: number) {
-  const matriculaActiva = await this.prisma.matricula.findFirst({
-    where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
-    include: {
-      estudiante: { include: { persona: true } },
-      seccion: { include: { grado: { include: { nivel: true } } } },
-    },
-  });
-  if (!matriculaActiva) throw new NotFoundException('No se encontró matrícula activa');
+  async getLibreta(
+    apoderadoId: number,
+    alumnoId: number,
+    bimestreNumero?: number,
+  ) {
+    await this.assertApoderadoEstudiante(apoderadoId, alumnoId);
+    const matriculaActiva = await this.prisma.matricula.findFirst({
+      where: {
+        id_estudiante: alumnoId,
+        estado_matricula: { in: ESTADOS_MATRICULA_PORTAL },
+      },
+      include: {
+        estudiante: { include: { persona: true } },
+        seccion: { include: { grado: { include: { nivel: true } } } },
+      },
+      orderBy: [{ fecha_matricula: 'desc' }, { id_matricula: 'desc' }],
+    });
+    if (!matriculaActiva) {
+      throw new NotFoundException('Estudiante no disponible.');
+    }
 
-  // Obtener las notas del bimestre (reutiliza el método existente)
-  const notas = await this.getNotasAlumno(alumnoId, bimestreId);
+    const bimestres = await this.prisma.bimestre.findMany({
+      where: { id_anio: matriculaActiva.id_anio },
+      orderBy: { numero: 'asc' },
+    });
+    const bimestre = this.seleccionarBimestrePortal(
+      bimestres,
+      bimestreNumero,
+    );
+    if (!bimestre) return null;
 
-  // Comentario bimestral del tutor
-  const comentarioBimestral = await this.prisma.comentarioBimestral.findFirst({
-  where: {
-    matricula: {
-      id_estudiante: alumnoId,
-      estado_matricula: 'Activo',
-    },
-    id_bimestre: bimestreId,
-  },
-  include: { docente: { include: { persona: true } } },
-});
-
-  const docenteComentario = comentarioBimestral?.docente?.persona
-    ? `${comentarioBimestral.docente.persona.nombres || ''} ${comentarioBimestral.docente.persona.apellido_paterno || ''}`
-        .replace(/\s+/g, ' ')
-        .trim()
-    : 'Tutoría / Dirección';
-
-  const comentarioTutor = comentarioBimestral
-    ? {
-        docente: docenteComentario,
-        comentario: comentarioBimestral.comentario,
-      }
-    : null;
-
-  // Mapear cursos con docente
-  const cursosConDocente = await Promise.all(
-    notas.map(async (curso: any) => {
-      const cursoData = await this.prisma.curso.findFirst({
-        where: { nombre_curso: curso.curso },
+    const notas = await this.getNotasAlumno(
+      apoderadoId,
+      alumnoId,
+      bimestre.numero,
+    );
+    const comentarioBimestral =
+      await this.prisma.comentarioBimestral.findFirst({
+        where: {
+          id_matricula: matriculaActiva.id_matricula,
+          id_bimestre: bimestre.id_bimestre,
+        },
+        include: { docente: { include: { persona: true } } },
       });
-      let docente = 'Docente no asignado';
-      if (cursoData) {
-        const asignacion = await this.prisma.asignacionDocente.findFirst({
-          where: {
-            id_seccion: matriculaActiva.id_seccion,
-            id_curso: cursoData.id_curso,
-          },
-          include: { docente: { include: { persona: true } } },
-        });
-        if (asignacion) {
-          docente = `${asignacion.docente.persona.nombres} ${asignacion.docente.persona.apellido_paterno}`;
+
+    const docenteComentario = comentarioBimestral?.docente?.persona
+      ? `${comentarioBimestral.docente.persona.nombres || ''} ${comentarioBimestral.docente.persona.apellido_paterno || ''}`
+          .replace(/\s+/g, ' ')
+          .trim()
+      : 'Tutoría / Dirección';
+    const comentarioTutor = comentarioBimestral
+      ? {
+          docente: docenteComentario,
+          comentario: comentarioBimestral.comentario,
         }
-      }
-      return {
-        nombre: curso.curso,
-        promedioBimestre: curso.promedioBimestre,
-        docente,
-        unidades: curso.unidades.map((u: any) => ({
-          numero: u.unidad,
-          promedio: u.promedioUnidad,
-          evaluaciones: u.evaluaciones.map((e: any) => ({
-            tipo: e.tipo,
-            descripcion: e.descripcion,
-            valor: e.valor,
-          })),
+      : null;
+
+    const nombresCurso = notas.map((curso: any) => curso.curso);
+    const cursosAsignados = nombresCurso.length
+      ? await this.prisma.curso.findMany({
+          where: { nombre_curso: { in: nombresCurso } },
+          include: {
+            asignaciones: {
+              where: {
+                id_seccion: matriculaActiva.id_seccion,
+                id_anio: matriculaActiva.id_anio,
+              },
+              include: { docente: { include: { persona: true } } },
+            },
+          },
+        })
+      : [];
+    const docentePorCurso = new Map(
+      cursosAsignados.map((curso) => {
+        const persona = curso.asignaciones[0]?.docente?.persona;
+        return [
+          curso.nombre_curso,
+          persona
+            ? `${persona.nombres} ${persona.apellido_paterno}`
+            : 'Docente no asignado',
+        ];
+      }),
+    );
+    const cursosConDocente = notas.map((curso: any) => ({
+      nombre: curso.curso,
+      promedioBimestre: curso.promedioBimestre,
+      docente: docentePorCurso.get(curso.curso) ?? 'Docente no asignado',
+      unidades: curso.unidades.map((u: any) => ({
+        numero: u.unidad,
+        promedio: u.promedioUnidad,
+        evaluaciones: u.evaluaciones.map((e: any) => ({
+          tipo: e.tipo,
+          descripcion: e.descripcion,
+          valor: e.valor,
         })),
-      };
-    })
-  );
+      })),
+    }));
 
   // Promedio general del bimestre
   const promedios = cursosConDocente
@@ -1054,7 +1214,7 @@ export class CalificacionesService {
     alumno: `${matriculaActiva.estudiante.persona.nombres} ${matriculaActiva.estudiante.persona.apellido_paterno}`,
     grado: `${matriculaActiva.seccion.grado.nombre_grado} ${matriculaActiva.seccion.letra}`,
     nivel: matriculaActiva.seccion.grado.nivel.nombre_nivel,
-    bimestre: bimestreId,
+    bimestre: bimestre.numero,
     promedioGeneral,
     comentarioTutor,
     cursos: cursosConDocente,

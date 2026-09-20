@@ -37,7 +37,7 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
     setMensaje("");
     try {
       const token = localStorage.getItem("token");
-      await axios.put("/api/apoderados/perfil", {
+      await axios.put("/api/auth/portal/perfil", {
         tema: nuevoTema,
         notificaciones_activas: nuevasNotif,
       }, {

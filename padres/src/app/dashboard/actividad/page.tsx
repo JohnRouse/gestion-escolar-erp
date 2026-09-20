@@ -30,16 +30,22 @@ export default function ActividadPage() {
     if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetchActividad(token, selectedChild.id_estudiante);
+    fetchActividad(token);
   }, [selectedChild]);
 
-  const fetchActividad = async (token: string, alumnoId: number) => {
+  const fetchActividad = async (token: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/actividad?alumno_id=${alumnoId}&limite=50`, {
+      const res = await axios.get("/api/notificaciones/portal?limit=50", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setEventos(res.data);
+      setEventos((res.data.data ?? []).map((item: any) => ({
+        tipo: item.origen || item.tipo,
+        icono: item.origen === "pagos" ? "💳" : item.origen === "eventos" ? "📅" : "🔔",
+        mensaje: item.titulo || item.mensaje,
+        fecha: item.fecha_creacion,
+        url: item.url || "/dashboard",
+      })));
     } catch {
       setEventos([]);
     } finally {

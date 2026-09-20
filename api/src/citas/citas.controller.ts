@@ -16,9 +16,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 import {
   CitaAcuerdoDto,
-  CitaApoderadoCreateDto,
-  CitaApoderadoDestinatariosDto,
-  CitaCancelarDto,
   CitaCreateDto,
   CitaEstadoDto,
   CitaReprogramarDto,
@@ -43,38 +40,6 @@ type CitasRequest = Request & { user: { userId: number } };
 )
 export class CitasController {
   constructor(private readonly citas: CitasService) {}
-
-  @Get('apoderado/hijos')
-  parentChildren(@Req() req: CitasRequest) {
-    return this.citas.parentChildren(req.user.userId);
-  }
-
-  @Get('apoderado/destinatarios')
-  parentRecipients(
-    @Req() req: CitasRequest,
-    @Query() query: CitaApoderadoDestinatariosDto,
-  ) {
-    return this.citas.parentRecipients(req.user.userId, query.matricula_id);
-  }
-
-  @Get('apoderado')
-  parentAppointments(@Req() req: CitasRequest) {
-    return this.citas.parentAppointments(req.user.userId);
-  }
-
-  @Post('apoderado')
-  createParent(@Req() req: CitasRequest, @Body() body: CitaApoderadoCreateDto) {
-    return this.citas.createParent(req.user.userId, body);
-  }
-
-  @Patch('apoderado/:id/cancelar')
-  parentCancel(
-    @Req() req: CitasRequest,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: CitaCancelarDto,
-  ) {
-    return this.citas.parentCancel(req.user.userId, id, body.comentario);
-  }
 
   @Get('participantes')
   participants(

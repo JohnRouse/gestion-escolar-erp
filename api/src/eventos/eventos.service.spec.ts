@@ -525,4 +525,21 @@ describe('EventosService V1: autorización, scope y trazabilidad', () => {
     );
     expect(prisma.evento.update).not.toHaveBeenCalled();
   });
+
+  test('26. un evento nuevo genera un deep link con año, mes, día e ID', async () => {
+    const { notifications, service } = setup();
+
+    await service.crearEvento(7, createDto);
+
+    expect(
+      notifications.notificarApoderadosDeAudienciaEvento,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        origen: 'eventos',
+        referencia_tipo: 'evento',
+        referencia_id: 50,
+        url: '/dashboard/calendario?anio_id=100&mes=9&dia=30&evento_id=50',
+      }),
+    );
+  });
 });

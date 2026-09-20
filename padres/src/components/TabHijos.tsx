@@ -26,7 +26,7 @@ export default function TabHijos() {
     setMensaje("");
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`/api/estudiantes/${hijoSeleccionado}/avatar`, {
+      await axios.put(`/api/academicos/padres/hijos/${hijoSeleccionado}/avatar`, {
         avatar_url: avatarTmp,
       }, {
         headers: { Authorization: `Bearer ${token}` },

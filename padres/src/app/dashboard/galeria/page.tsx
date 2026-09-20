@@ -569,7 +569,7 @@ export default function GaleriaPage() {
   if (!mounted) {
     return (
       <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title="Momentos Victoria" />
+        <ScreenHeader title="Galería escolar" />
         <div className="px-5 pt-4 pb-28 grid grid-cols-2 gap-3">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="skel rounded-xl h-36" />
@@ -582,7 +582,7 @@ export default function GaleriaPage() {
 
   return (
     <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Momentos Victoria" />
+      <ScreenHeader title="Galería escolar" />
       <PageTransition>
         <div className="px-5 pt-4 pb-28">
           <button onClick={() => router.push("/dashboard?open=servicios")} className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1">

@@ -4,35 +4,18 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import {
+  activatePortalNotification,
+  PortalNotificationAction,
+} from "@/lib/portalNotificationNavigation";
 
-interface Notif {
+interface Notif extends PortalNotificationAction {
   id_notif: number;
   tipo: string;
   titulo: string;
   mensaje: string;
   leida: boolean;
   fecha_creacion: string;
-  origen?: "citas" | "pagos" | "matricula" | "academico" | "eventos" | "sistema";
-  url?: string | null;
-}
-
-function safeParentTarget(url?: string | null) {
-  if (!url || !url.startsWith("/") || url.startsWith("//") || url.includes("\\")) {
-    return null;
-  }
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (parsed.origin !== window.location.origin) return null;
-    if (
-      parsed.pathname !== "/dashboard" &&
-      !parsed.pathname.startsWith("/dashboard/")
-    ) {
-      return null;
-    }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return null;
-  }
 }
 
 export default function NotificationBell() {
@@ -54,7 +37,7 @@ export default function NotificationBell() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await axios.get("/api/notificaciones/count", {
+      const res = await axios.get("/api/notificaciones/portal/count", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCount(res.data.count);
@@ -65,7 +48,7 @@ export default function NotificationBell() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await axios.get("/api/notificaciones", {
+      const res = await axios.get("/api/notificaciones/portal", {
         headers: { Authorization: `Bearer ${token}` },
         params: { limit: 10 },
       });
@@ -100,35 +83,33 @@ export default function NotificationBell() {
     setOpen(!open);
   };
 
-  const handleClick = async (notif: Notif) => {
-    if (!notif.leida) {
-      try {
+  const handleClick = (notif: Notif) => {
+    activatePortalNotification({
+      notification: notif,
+      markRead: () => {
         const token = localStorage.getItem("token");
-        await axios.patch(`/api/notificaciones/${notif.id_notif}/leida`, { leida: true }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (!token) return Promise.resolve();
+        return axios.patch(
+          `/api/notificaciones/portal/${notif.id_notif}/leida`,
+          { leida: true },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      },
+      onOptimisticRead: () => {
         setCount((prev) => Math.max(0, prev - 1));
         setNotifs((current) =>
           current.map((item) =>
             item.id_notif === notif.id_notif ? { ...item, leida: true } : item,
           ),
         );
-      } catch {}
-    }
-
-    let targetUrl = safeParentTarget(notif.url);
-    if (!targetUrl) {
-      switch (notif.origen) {
-        case "citas": targetUrl = "/dashboard/citas"; break;
-        case "pagos": targetUrl = "/dashboard/pagos"; break;
-        case "academico": targetUrl = "/dashboard/calificaciones"; break;
-        case "eventos": targetUrl = "/dashboard/calendario"; break;
-        default:              targetUrl = "/dashboard/actividad";
-      }
-    }
-
-    setOpen(false);
-    router.push(targetUrl);
+      },
+      onReadError: () => {
+        console.error("No se pudo marcar la notificación como leída.");
+      },
+      close: () => setOpen(false),
+      navigate: (target) => router.push(target),
+      origin: window.location.origin,
+    });
   };
 
   useEffect(() => {

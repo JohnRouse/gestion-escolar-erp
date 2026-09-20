@@ -18,22 +18,40 @@ export default function AlertasAcademicas() {
   const { selectedChild } = useSelectedChild();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bimestre, setBimestre] = useState(1);
 
   useEffect(() => {
-    if (!selectedChild) return;
+    if (!selectedChild) {
+      return;
+    }
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      return;
+    }
 
-    setLoading(true);
+    const controller = new AbortController();
+    const bimestreQuery = selectedChild.bimestre_actual
+      ? `&bimestre_id=${selectedChild.bimestre_actual}`
+      : "";
     axios
-      .get(`/api/calificaciones/padres/alertas?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bimestre}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      .get(
+        `/api/calificaciones/padres/alertas?alumno_id=${selectedChild.id_estudiante}${bimestreQuery}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        },
+      )
       .then((res) => setAlertas(res.data.slice(0, 3))) // mostrar máximo 3 alertas
-      .catch(() => setAlertas([]))
-      .finally(() => setLoading(false));
-  }, [selectedChild, bimestre]);
+      .catch((error) => {
+        if (!axios.isCancel(error)) setAlertas([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedChild]);
+
+  if (!selectedChild) return null;
 
   if (loading) {
     return (

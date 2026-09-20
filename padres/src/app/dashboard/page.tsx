@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import DashboardHeader from "@/components/DashboardHeader";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import { childDateRange, useSelectedChild } from "@/contexts/SelectedChildContext";
 import AlertasAcademicas from "@/components/AlertasAcademicas";
 
 interface DashboardData {
@@ -26,45 +26,10 @@ interface EventoActividad {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
+  const { selectedChild } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [actividad, setActividad] = useState<EventoActividad[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const fetchHijos = async () => {
-      try {
-        const res = await axios.get("/api/academicos/padres/hijos", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const hijosData = res.data.map((h: any) => ({ ...h, color: undefined }));
-        setHijos(hijosData);
-
-        if (!selectedChild && hijosData.length > 0) {
-          setSelectedChild(hijosData[0]);
-        }
-      } catch {
-        setHijos([]);
-      }
-    };
-
-    fetchHijos();
-  }, [router, selectedChild, setSelectedChild, setHijos]);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -72,25 +37,25 @@ export default function DashboardPage() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    setLoading(true);
     const alumnoId = selectedChild.id_estudiante;
+    const range = childDateRange(selectedChild);
+    const controller = new AbortController();
+    const requestConfig = {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    };
+    const bimestreQuery = selectedChild.bimestre_actual
+      ? `&bimestre_id=${selectedChild.bimestre_actual}`
+      : "";
 
     Promise.allSettled([
-      axios.get(`/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=2025-01-01&hasta=2025-12-31`, {
-        headers: { Authorization: `Bearer ${token}` },
+      axios.get(`/api/academicos/padres/asistencia?alumno_id=${alumnoId}&desde=${range.desde}&hasta=${range.hasta}`, {
+        ...requestConfig,
       }),
-      axios.get(`/api/calificaciones/padres/notas?alumno_id=${alumnoId}&bimestre_id=1`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axios.get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axios.get("/api/circulares/padres", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axios.get(`/api/actividad?alumno_id=${alumnoId}&limite=3`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
+      axios.get(`/api/calificaciones/padres/notas?alumno_id=${alumnoId}${bimestreQuery}`, requestConfig),
+      axios.get(`/api/tesoreria/padres/estado-cuenta?alumno_id=${alumnoId}`, requestConfig),
+      axios.get("/api/circulares/padres", requestConfig),
+      axios.get("/api/notificaciones/portal?limit=3", requestConfig),
     ]).then(([asistRes, notasRes, pagosRes, circRes, actRes]) => {
       const asistencias = asistRes.status === "fulfilled" ? asistRes.value.data : [];
       const total = asistencias.length;
@@ -111,8 +76,17 @@ export default function DashboardPage() {
         ? { titulo: circulares[0].titulo, fecha: circulares[0].fecha_creacion }
         : null;
 
-      const actividadReciente = actRes.status === "fulfilled" ? actRes.value.data : [];
+      const actividadReciente = actRes.status === "fulfilled"
+        ? (actRes.value.data.data ?? []).map((item: any) => ({
+            tipo: item.origen || item.tipo,
+            icono: item.origen === "pagos" ? "💳" : item.origen === "eventos" ? "📅" : "🔔",
+            mensaje: item.titulo || item.mensaje,
+            fecha: item.fecha_creacion,
+            url: item.url || "/dashboard",
+          }))
+        : [];
 
+      if (controller.signal.aborted) return;
       setDashboardData({
         asistencia: pct,
         promedio: prom !== null ? Math.round(prom) : null,
@@ -121,7 +95,8 @@ export default function DashboardPage() {
         circularReciente: circ,
       });
       setActividad(actividadReciente.slice(0, 3));
-    }).catch(() => {
+    }).catch((error) => {
+      if (axios.isCancel(error)) return;
       setDashboardData({
         asistencia: null,
         promedio: null,
@@ -129,28 +104,12 @@ export default function DashboardPage() {
         totalPendiente: 0,
         circularReciente: null,
       });
-    }).finally(() => setLoading(false));
-  }, [selectedChild]);
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
 
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-24">
-        <DashboardHeader />
-        <div className="-mt-4 px-5 pb-6 relative z-20">
-          <div className="grid grid-cols-2 gap-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="m-card p-4 md:p-5 space-y-3">
-                <div className="skel h-3 md:h-4 w-16" />
-                <div className="skel h-8 md:h-10 w-20" />
-                <div className="skel h-2 md:h-3 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
+    return () => controller.abort();
+  }, [selectedChild]);
 
   return (
     <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-24">
