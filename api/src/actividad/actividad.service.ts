@@ -8,7 +8,9 @@ export class ActividadService {
   async getActividad(alumnoId: number, limite: number = 5) {
     const matricula = await this.prisma.matricula.findFirst({
       where: { id_estudiante: alumnoId, estado_matricula: 'Activo' },
-      include: { seccion: { include: { grado: { include: { nivel: true } } } } },
+      include: {
+        seccion: { include: { grado: { include: { nivel: true } } } },
+      },
     });
     if (!matricula) return [];
 
@@ -56,14 +58,14 @@ export class ActividadService {
       ...circulares.map((c) => ({
         tipo: 'circular',
         icono: '📢',
-        mensaje: `Circular: ${c.titulo}`,
+        mensaje: `Nuevo comunicado: ${c.titulo}`,
         fecha: c.fecha_creacion.toISOString(),
-        url: '/dashboard/circulares',
+        url: '/dashboard/comunicados',
       })),
       ...notas.map((n) => ({
         tipo: 'nota',
         icono: '📝',
-        mensaje: `Nota de ${n.evaluacion.descripcion_actividad}: ${n.valor_nota}`,
+        mensaje: `Nota de ${n.evaluacion.descripcion_actividad}: ${n.valor_nota.toString()}`,
         fecha: new Date().toISOString(),
         url: '/dashboard/calificaciones',
       })),
@@ -76,7 +78,14 @@ export class ActividadService {
       })),
       ...asistencias.map((a) => ({
         tipo: 'asistencia',
-        icono: a.estado === 'Presente' ? '✅' : a.estado === 'Ausente' ? '❌' : a.estado === 'Tardanza' ? '⏱️' : '📝',
+        icono:
+          a.estado === 'Presente'
+            ? '✅'
+            : a.estado === 'Ausente'
+              ? '❌'
+              : a.estado === 'Tardanza'
+                ? '⏱️'
+                : '📝',
         mensaje: `Asistencia: ${a.estado}`,
         fecha: a.fecha.toISOString(),
         url: '/dashboard/asistencia',

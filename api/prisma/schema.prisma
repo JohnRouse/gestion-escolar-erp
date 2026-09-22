@@ -69,6 +69,8 @@ model Usuario {
   matriculas_registradas                Matricula[]                   @relation("UsuarioMatriculasRegistradas")
   matriculas_revisadas                  Matricula[]                   @relation("UsuarioMatriculasRevisadas")
   circulares                            Circular[]
+  estados_circular_lectura              CircularEstadoApoderado[]     @relation("CircularEstadoLecturaUsuario")
+  estados_circular_confirmacion         CircularEstadoApoderado[]     @relation("CircularEstadoConfirmacionUsuario")
   notificaciones                        Notificacion[]
   tokensFCM                             TokenFCM[]
   pagos_recibidos_registrados           PagoRecibido[]                @relation("PagoRecibidoRegistro")
@@ -405,6 +407,7 @@ model AnioLectivo {
   conceptos                      ConceptoPago[]
   asignaciones                   AsignacionDocente[]
   eventos                        Evento[]
+  circulares                     Circular[]
   campanas_matricula             CampanaMatricula[]
   planes_pensiones               PlanPensiones[]
   campanas_descuento             CampanaDescuento[]
@@ -475,6 +478,7 @@ model Apoderado {
   pagos_recibidos           PagoRecibido[]
   autorizaciones_medicacion AutorizacionMedicacion[]
   contactos_enfermeria      EnfermeriaContacto[]
+  estados_circulares        CircularEstadoApoderado[]
 }
 
 model Docente {
@@ -1099,6 +1103,7 @@ model Circular {
   id_circular           Int      @id @default(autoincrement())
   id_tenant             Int?
   id_colegio            Int?
+  id_anio               Int?
   titulo                String   @db.VarChar(150)
   contenido             String   @db.Text
   fecha_creacion        DateTime @default(now())
@@ -1107,16 +1112,42 @@ model Circular {
   urgente               Boolean  @default(false)
   requiere_autorizacion Boolean  @default(false)
 
-  tenant    Tenant?  @relation(fields: [id_tenant], references: [id_tenant])
-  colegio   Colegio? @relation(fields: [id_colegio], references: [id_colegio])
-  remitente Usuario  @relation(fields: [remitente_id_usuario], references: [id_usuario])
+  tenant    Tenant?      @relation(fields: [id_tenant], references: [id_tenant])
+  colegio   Colegio?     @relation(fields: [id_colegio], references: [id_colegio])
+  anio      AnioLectivo? @relation(fields: [id_anio], references: [id_anio], onDelete: Restrict, onUpdate: Cascade)
+  remitente Usuario      @relation(fields: [remitente_id_usuario], references: [id_usuario])
 
-  destinatarios CircularDestinatario[]
-  adjuntos      Adjunto[]
+  destinatarios      CircularDestinatario[]
+  adjuntos           Adjunto[]
+  estados_apoderados CircularEstadoApoderado[]
 
   @@index([id_tenant])
   @@index([id_colegio])
+  @@index([id_anio])
   @@index([remitente_id_usuario])
+}
+
+model CircularEstadoApoderado {
+  id                      Int       @id @default(autoincrement())
+  id_circular             Int
+  id_apoderado            Int
+  fecha_lectura           DateTime?
+  fecha_confirmacion      DateTime?
+  id_usuario_lectura      Int?
+  id_usuario_confirmacion Int?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  circular             Circular  @relation(fields: [id_circular], references: [id_circular])
+  apoderado            Apoderado @relation(fields: [id_apoderado], references: [id_persona])
+  usuario_lectura      Usuario?  @relation("CircularEstadoLecturaUsuario", fields: [id_usuario_lectura], references: [id_usuario])
+  usuario_confirmacion Usuario?  @relation("CircularEstadoConfirmacionUsuario", fields: [id_usuario_confirmacion], references: [id_usuario])
+
+  @@unique([id_circular, id_apoderado])
+  @@index([id_apoderado])
+  @@index([id_circular])
+  @@index([id_usuario_lectura])
+  @@index([id_usuario_confirmacion])
 }
 
 model CircularDestinatario {

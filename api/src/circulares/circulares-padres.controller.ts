@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 import { CircularesService } from './circulares.service';
@@ -14,11 +23,27 @@ export class CircularesPadresController {
 
   @Get('padres')
   list(@Req() req: PortalRequest) {
-    return this.circularesService.findForApoderado(req.user.personaId);
+    return this.circularesService.findForApoderado(
+      req.user.userId,
+      req.user.personaId,
+    );
   }
 
   @Put(':id/leida')
-  markRead(@Req() req: PortalRequest, @Param('id') id: string) {
-    return this.circularesService.marcarLeida(Number(id), req.user.personaId);
+  markRead(@Req() req: PortalRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.circularesService.marcarLeida(
+      id,
+      req.user.userId,
+      req.user.personaId,
+    );
+  }
+
+  @Post(':id/confirmar')
+  confirm(@Req() req: PortalRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.circularesService.confirmar(
+      id,
+      req.user.userId,
+      req.user.personaId,
+    );
   }
 }

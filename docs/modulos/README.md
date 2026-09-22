@@ -39,7 +39,7 @@ Cada módulo debe tener un documento propio utilizando `docs/plantillas/plantill
 ### Comunicación
 
 - [Eventos](eventos.md).
-- Circulares.
+- [Comunicados](comunicados.md).
 - [Notificaciones](notificaciones.md).
 
 ### Finanzas

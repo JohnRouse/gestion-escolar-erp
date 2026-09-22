@@ -152,9 +152,9 @@ const menuComunicacion: NavItem[] = [
     roles: ['Admin', 'Director', 'Secretaria', 'Profesor'],
   },
   {
-    title: 'Circulares',
+    title: 'Comunicados',
     icon: Mail,
-    path: '/circulares',
+    path: '/comunicados',
     roles: ['Admin', 'Secretaria', 'Director'],
   },
   {

@@ -75,3 +75,16 @@ test("notificación histórica genérica sigue abriendo el calendario", () => {
     "/dashboard/calendario",
   );
 });
+
+test("notificación histórica de circulares abre Comunicados y conserva el deep link", () => {
+  assert.equal(
+    portalNotificationTarget(
+      {
+        origen: "sistema",
+        url: "/dashboard/circulares?id_circular=42",
+      },
+      origin,
+    ),
+    "/dashboard/comunicados?id_circular=42",
+  );
+});

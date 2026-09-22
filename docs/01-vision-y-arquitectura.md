@@ -212,7 +212,7 @@ convierte por sí solo en miembro de Staff.
 
 ### Comunicación
 
-- Circulares.
+- Comunicados (modelo interno `Circular`).
 - Notificaciones.
 
 ### Finanzas

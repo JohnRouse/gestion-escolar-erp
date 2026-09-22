@@ -50,3 +50,4 @@ Cada escenario debe incluir:
 - [Notificaciones: propiedad y alcance activo](notificaciones-propiedad-alcance.md).
 - [Enfermería: privacidad, autorización y alcance](enfermeria-privacidad-autorizacion.md).
 - [Eventos: autorización, audiencia y familias](eventos-autorizacion-audiencia.md).
+- [Comunicados: audiencia y estado personal](comunicados-audiencia-estado-personal.md).

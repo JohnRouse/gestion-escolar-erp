@@ -8,7 +8,7 @@ export default function Breadcrumb() {
     dashboard: 'Dashboard',
     matricula: 'Matrícula',
     tesoreria: 'Tesorería',
-    circulares: 'Circulares',
+    comunicados: 'Comunicados',
     docentes: 'Docentes',
     asistencia: 'Asistencia',
     notas: 'Notas',
