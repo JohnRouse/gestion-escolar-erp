@@ -52,7 +52,7 @@ Está diseñado para poder leerse en pantalla o imprimirse.
 
 ### Parte V. Comunicación
 
-31. Circulares.
+31. Comunicados.
 32. Notificaciones.
 
 ### Parte VI. Finanzas

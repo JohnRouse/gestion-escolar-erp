@@ -103,7 +103,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 
 | Módulo | Frontend | Backend | Persistencia | Flujo | Estado | Prioridad | Falta principal |
 |---|---|---|---|---|---|---|---|
-| Circulares | sí | sí | sí | completo | CASI COMPLETO | P0 | Cerrar aceptación de destinatarios, publicación y adjuntos; documentar contrato institucional. **A:** revisar. **D:** Colegios, niveles, secciones, Usuarios, Notificaciones. |
+| Comunicados | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Gestión, audiencia, adjuntos, notificación y estado personal están implementados. La corrección de contexto anual persiste `Circular.id_anio`, muestra selector y acota colegio/nivel/sección, portal y avisos; migración aditiva preparada y no aplicada. Falta revisión/aplicación manual y nueva aceptación humana. [Contrato](modulos/comunicados.md). **A:** revisión dirigida técnica aprobada. **D:** Colegios, años lectivos, estructura anual, Matrículas, Usuarios, Apoderados y Notificaciones. |
 | Notificaciones | sí | sí | sí | completo V1 acotado | CASI COMPLETO | P0 | Bandeja personal, filtros, lectura/no lectura, badge, propiedad y scope están en pruebas; aplicar migración y aceptar con datos reales. Enfermería ya integra avisos mínimos opcionales; Matrícula y Notas siguen pendientes. **A:** revisión dirigida aprobada en código. **D:** Usuarios, membresías, Citas, Enfermería, eventos y migración local. |
 | Galería / álbumes | sí | parcial | sí | parcial | PARCIAL | P1 | Reutilizar lectura, comentarios y reacciones del portal; cerrar gestión/publicación y autorización si entra después de P0. **A:** revisar. **D:** Portal de apoderados, secciones, almacenamiento. |
 
@@ -129,7 +129,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 | Panel general | sí | sí | sí | completo | CASI COMPLETO | P1 | Documentar panel conectado a seis consultas analíticas; aceptar filtros y errores parciales. **A:** aparente sí. **D:** Analíticas académicas, financieras y operativas. |
 | Asistencia global | sí | sí | sí | completo | CASI COMPLETO | P0 | Aceptar filtros institucionales y consistencia con registros diarios. **A:** aparente sí. **D:** Asistencia, Matrícula, años. |
 | Analíticas financieras | sí | sí | sí | completo | CASI COMPLETO | P1 | Documentar ingresos, morosidad y cumplimiento dentro de /reportes; no es otra pantalla. **A:** aparente sí. **D:** Tesorería, Matrícula. |
-| Analíticas académicas / operativas / alertas | sí | sí | sí | completo | CASI COMPLETO | P1 | Documentar capacidad, tendencia de matrícula, carga docente y alertas ya consultables en /reportes. **A:** aparente sí. **D:** Notas, Asistencia, Matrícula, docentes, Circulares. |
+| Analíticas académicas / operativas / alertas | sí | sí | sí | completo | CASI COMPLETO | P1 | Documentar capacidad, tendencia de matrícula, carga docente y alertas ya consultables en /reportes. **A:** aparente sí. **D:** Notas, Asistencia, Matrícula, docentes, Comunicados. |
 | Libreta y exportación PDF | sí | sí | sí | completo | CASI COMPLETO | P0 | Aceptar consistencia de libreta individual y exportación por salón ya invocadas desde Tutoría. **A:** aparente sí. **D:** Tutoría, Notas, Asistencia, cabecera de libreta. |
 
 ### Configuración
@@ -302,7 +302,7 @@ persistidos.
 perfil del portal usan `jwt-portal` y una claim de canal no intercambiable con
 el JWT interno. El guard relee Usuario, Rol, estado, Persona y Apoderado; los
 contratos P0 de hijos, Citas, Eventos, Notificaciones, Calificaciones,
-Asistencia, Horario, Circulares y estado de cuenta revalidan vínculo, matrícula,
+Asistencia, Horario, Comunicados y estado de cuenta revalidan vínculo, matrícula,
 audiencia o propietario. Jest dirigido y builds aprobaron. No hubo migración ni
 seed. Falta aceptación humana con cuentas y vínculos locales; Galería/Álbumes
 continúa como P1 fuera de este cierre. El smoke de API con las cuentas seed
@@ -351,7 +351,7 @@ Preparar base aislada con dos tenants, varios colegios en uno de ellos, un usuar
 | Cierre / recuperación / promoción | Preview, conflictos, cupos, ejecución e historial; traslado autorizado, reintento sin duplicados y reversión validada. |
 | Staff → Citas → Notificaciones | Solicitud, disponibilidad, confirmación/cancelación/acuerdos y avisos solo a participantes autorizados. |
 | Enfermería | Acceso restringido a ficha/atención, registro del responsable y comunicación autorizada al apoderado. |
-| Circulares / eventos → portal | Destinatarios correctos, publicación y lectura; el apoderado solo ve información permitida de sus hijos. |
+| Comunicados / eventos → portal | Destinatarios correctos, publicación, lectura y confirmación personal; el apoderado solo ve información permitida de sus hijos. |
 | Pensiones → cobro → validación → saldo | Generación/publicación, reporte de pago, identificación, aplicación única, comprobante y saldo conciliado. |
 | Cobranzas / cambios de estado | Seguimiento de deuda, historial completo y efecto financiero consistente al cambiar estados. |
 | Suspensión / módulos / soporte / auditoría | API y navegación aplican restricciones, sesiones vigentes no eluden suspensión; reactivación y operaciones quedan trazadas. |

@@ -30,6 +30,8 @@ Ejemplo:
 
 ## Correcciones transversales
 
+- [2026-09-21: selector de audiencia escalable en Comunicados](2026-09-21-comunicados-selector-audiencia.md).
+- [2026-09-20: Comunicados V1 con audiencia y estado personal](2026-09-20-comunicados-v1.md).
 - [2026-09-19: navegación de notificaciones y deep link de Eventos en el portal](2026-09-19-notificaciones-portal-deep-link-eventos.md).
 - [2026-09-18: Auth de apoderados V1 aislado](2026-09-18-auth-apoderados-v1.md).
 - [2026-09-18: Eventos — catálogo anual, años y fecha](2026-09-18-eventos-catalogo-anio-fecha.md).

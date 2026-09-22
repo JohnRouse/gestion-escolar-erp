@@ -357,6 +357,118 @@ describe('NotificacionesService V1: propiedad y alcance', () => {
     });
     expect(prisma.notificacion.createMany).not.toHaveBeenCalled();
   });
+
+  test('21. sección 15 en 2027 filtra por año, matrícula operativa y Usuario', async () => {
+    const { prisma, service } = setup();
+    const enrollment = {
+      estudiante: {
+        apoderados: [
+          {
+            apoderado: {
+              persona: { usuarios: [{ id_usuario: 7 }] },
+            },
+          },
+        ],
+      },
+    };
+    prisma.matricula.findMany.mockResolvedValue([enrollment, enrollment]);
+    await service.notificarApoderadosDeAudienciaComunicado({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 3,
+      audiencia: { tipo: 'secciones', ids: [15] },
+      tipo: 'circular.publicada',
+      origen: 'sistema',
+      referencia_tipo: 'circular',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Nuevo comunicado',
+      mensaje: 'Contenido',
+      url: '/dashboard/comunicados?id_circular=50',
+    });
+
+    expect(prisma.matricula.findMany.mock.calls[0][0].where).toEqual({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 3,
+      id_seccion: { in: [15] },
+      estado_matricula: {
+        in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+      },
+    });
+    expect(prisma.notificacion.createMany.mock.calls[0][0].data).toHaveLength(
+      1,
+    );
+  });
+
+  test.each([
+    ['colegio', [], {}],
+    ['niveles', [20], { seccion: { grado: { id_nivel: { in: [20] } } } }],
+  ] as const)(
+    'audiencia %s queda acotada al año del comunicado',
+    async (tipo, ids, audienceWhere) => {
+      const { prisma, service } = setup();
+      prisma.matricula.findMany.mockResolvedValue([]);
+
+      await service.notificarApoderadosDeAudienciaComunicado({
+        id_tenant: 1,
+        id_colegio: 10,
+        id_anio: 101,
+        audiencia: { tipo, ids: [...ids] },
+        tipo: 'circular.publicada',
+        origen: 'sistema',
+        referencia_tipo: 'circular',
+        referencia_id: 51,
+        canal: 'padres',
+        titulo: 'Nuevo comunicado',
+        mensaje: 'Contenido',
+      });
+
+      expect(prisma.matricula.findMany.mock.calls[0][0].where).toEqual({
+        id_tenant: 1,
+        id_colegio: 10,
+        id_anio: 101,
+        estado_matricula: {
+          in: ['Activo', 'Matriculado', 'Pre-matriculado'],
+        },
+        ...audienceWhere,
+      });
+    },
+  );
+
+  test('22. comunicado no duplica una notificación ya emitida al mismo Usuario', async () => {
+    const { prisma, service } = setup();
+    prisma.matricula.findMany.mockResolvedValue([
+      {
+        estudiante: {
+          apoderados: [
+            {
+              apoderado: {
+                persona: { usuarios: [{ id_usuario: 7 }] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    prisma.notificacion.findMany.mockResolvedValue([{ id_usuario: 7 }]);
+    await service.notificarApoderadosDeAudienciaComunicado({
+      id_tenant: 1,
+      id_colegio: 10,
+      id_anio: 101,
+      audiencia: { tipo: 'colegio', ids: [] },
+      tipo: 'circular.publicada',
+      origen: 'sistema',
+      referencia_tipo: 'circular',
+      referencia_id: 50,
+      canal: 'padres',
+      titulo: 'Nuevo comunicado',
+      mensaje: 'Contenido',
+      deduplicar_existentes: true,
+    });
+
+    expect(prisma.notificacion.createMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('Notificaciones del portal de familias', () => {

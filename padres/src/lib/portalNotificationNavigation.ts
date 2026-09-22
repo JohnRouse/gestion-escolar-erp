@@ -44,7 +44,11 @@ export function safePortalTarget(
     ) {
       return null;
     }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    const pathname =
+      parsed.pathname === "/dashboard/circulares"
+        ? "/dashboard/comunicados"
+        : parsed.pathname;
+    return `${pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return null;
   }

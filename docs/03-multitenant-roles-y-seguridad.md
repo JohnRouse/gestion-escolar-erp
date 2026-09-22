@@ -99,7 +99,7 @@ Gestiona principalmente:
 - Estudiantes.
 - Apoderados.
 - Calendario.
-- Circulares.
+- Comunicados.
 - Citas.
 - Operaciones administrativas.
 - Operaciones financieras autorizadas.
@@ -168,6 +168,18 @@ Consulta únicamente información de estudiantes con los que mantiene una relaci
   concede pertenencia a la audiencia.
 - El Apoderado consulta por hijos vinculados y matrículas operativas; una
   notificación no concede acceso a un evento.
+
+### Comunicados
+
+- Admin, Director y Secretaria gestionan únicamente colegios donde el
+  `rol_colegio` efectivo y la membresía activa los autorizan; Profesor no crea,
+  edita ni publica.
+- Tenant, colegio y destinos se revalidan en backend. Todo el colegio usa un
+  destino NULL/NULL; niveles y secciones provienen de `SeccionAnio` activa.
+- El Apoderado consulta por hijos vinculados y matrículas operativas. Lectura y
+  confirmación pertenecen al Apoderado canónico, auditan el Usuario actor y no
+  usan los flags legacy compartidos de `CircularDestinatario`.
+- Una notificación o un `id_circular` en el query no concede acceso.
 
 ## 7. Acciones de autorización
 

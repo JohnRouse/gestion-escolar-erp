@@ -180,8 +180,8 @@ Deben utilizarse estados como:
 
 ## 12. Notificaciones
 
-- Notificaciones es una bandeja personal de eventos del sistema; Circulares
-  conserva la comunicación institucional masiva.
+- Notificaciones es una bandeja personal de eventos del sistema; Comunicados
+  conserva la comunicación institucional formal (modelo interno `Circular`).
 - Los orígenes estructurados V1 son citas, pagos, matricula, academico, eventos,
   enfermeria y sistema. La existencia de un origen no implica que todos sus eventos estén
   integrados.
@@ -220,7 +220,7 @@ Deben utilizarse estados como:
 
 ## 14. Eventos institucionales
 
-- Evento calendariza una actividad; Circular comunica formalmente,
+- Evento calendariza una actividad; Comunicado comunica formalmente,
   Notificación avisa de forma personal y Horario programa clases semanales.
 - Cada evento V1 usa una audiencia relacional única: todo el colegio, uno o
   varios niveles, grados o secciones del mismo colegio y año.
@@ -246,3 +246,19 @@ Deben utilizarse estados como:
   no envía un mensaje masivo automático.
 - Solo cambios de fecha, hora o audiencia emiten aviso de actualización; una
   edición meramente descriptiva no re-notifica indiscriminadamente.
+
+## 15. Comunicados institucionales
+
+- Admin, Director y Secretaria publican con rol global y `rol_colegio` efectivo
+  de gestión; Profesor no publica.
+- Audiencia V1: todo el colegio, niveles o secciones. Los destinos específicos
+  se derivan de `SeccionAnio` activa del año operativo. Todo el colegio se
+  representa mediante una única fila NULL/NULL y no consulta niveles globales.
+- `CircularEstadoApoderado` es la única fuente de lectura y confirmación del
+  portal. Ausencia de fila significa no leído/no confirmado; las columnas
+  equivalentes de `CircularDestinatario` son legacy.
+- El estado se comparte por Apoderado canónico y audita la cuenta Usuario que
+  ejecutó cada primera acción.
+- La confirmación V1 es acuse personal, no firma digital certificada.
+- Familias y notificaciones usan matrículas `Activo`, `Matriculado` y
+  `Pre-matriculado`, excluyen `Inactivo`/`Reserva` y deduplican por Usuario.

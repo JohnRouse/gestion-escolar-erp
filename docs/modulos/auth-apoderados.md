@@ -113,7 +113,7 @@ sesiones continúa como deuda de plataforma.
 ## 14. Dependencias
 
 Auth, Académicos, Citas, Eventos, Notificaciones, Calificaciones, Asistencia,
-Horario, Circulares y Tesorería; además de las relaciones familiares y
+Horario, Comunicados y Tesorería; además de las relaciones familiares y
 matrículas ya existentes.
 
 ## 15. Interfaz
@@ -147,7 +147,7 @@ Todos estos contratos usan `jwt-portal`, salvo el login:
 | Eventos | `GET /eventos/padres` |
 | Notificaciones | `GET /notificaciones/portal`, `GET /notificaciones/portal/count`, `PATCH /notificaciones/portal/:id/leida` |
 | Calificaciones | `GET /calificaciones/padres/{notas,comparativa,comentarios,unidades,alertas,libreta}` |
-| Circulares | `GET /circulares/padres`, `PUT /circulares/:id/leida` |
+| Comunicados | `GET /circulares/padres`, `PUT /circulares/:id/leida`, `POST /circulares/:id/confirmar` |
 | Tesorería | `GET /tesoreria/padres/estado-cuenta` |
 
 Inventario frontend fuera de este cierre: la página de Galería aún contiene
@@ -162,10 +162,11 @@ de consumir los contratos internos `/actividad`, `/apoderados/perfil`,
 
 ## 18. Base de datos
 
-Se reutiliza el esquema actual. No se creó ni aplicó migración, no se ejecutó
-seed y no se duplicó Persona, Apoderado ni Usuario. La lectura individual de
-circulares sigue apoyándose en el modelo existente; un estado de lectura por
-usuario requeriría modelado futuro y no se simula en V1.
+Comunicados agrega la migración aditiva ya aplicada
+`20260919190000_comunicados_estado_apoderado`. No duplica Persona, Apoderado ni
+Usuario y no realiza backfill. Lectura y confirmación usan estado por Apoderado
+canónico y registran el Usuario ejecutor; las columnas legacy compartidas de
+`CircularDestinatario` dejaron de ser fuente funcional del portal.
 
 ## 19. Pruebas
 
@@ -184,8 +185,7 @@ usuario requeriría modelado futuro y no se simula en V1.
   con `carlos.diaz` ya aprobó sobre los datos locales existentes.
 - Recuperación automática, auto-registro y refresh tokens no forman parte de V1.
 - Galería/Álbumes requiere un cierre de autorización separado.
-- Modelar lectura de circular por usuario requeriría una decisión de esquema.
-- Circulares legacy sin colegio solo son visibles si una sección vinculada
+- Comunicados legacy sin colegio solo son visibles si una sección vinculada
   identifica la institución; destinos generales o solo por nivel sin contexto
   se excluyen para evitar cruces entre colegios.
 - Campaña E2E real y revisión 390×844/zoom permanecen pendientes.

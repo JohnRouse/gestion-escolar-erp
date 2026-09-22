@@ -195,7 +195,7 @@ export default function DashboardPage() {
                   {activeScope.tipo === 'todos' && (<KpiCard label="Colegios" value={formatNumber(institucional.kpis?.colegios)} helper="Instituciones activas" icon={School} tone="violet" />)}
                   <KpiCard label="Matriculados" value={formatNumber(institucional.kpis?.matriculados)} helper="Estudiantes activos" icon={GraduationCap} tone="blue" onClick={() => navigate('/matricula')} />
                   <KpiCard label="Docentes" value={formatNumber(institucional.kpis?.docentes)} helper="Equipo académico" icon={Users} tone="emerald" onClick={() => navigate('/docentes')} />
-                  <KpiCard label="Circulares" value={formatNumber(institucional.kpis?.circulares)} helper="Comunicados enviados" icon={Mail} tone="amber" onClick={() => navigate('/circulares')} />
+                  <KpiCard label="Comunicados" value={formatNumber(institucional.kpis?.circulares)} helper="Comunicaciones publicadas" icon={Mail} tone="amber" onClick={() => navigate('/comunicados')} />
                   <KpiCard label="Pagos pend." value={formatNumber(institucional.kpis?.pagosPendientes)} helper="Por regularizar" icon={Wallet} tone="rose" onClick={() => navigate('/tesoreria')} />
                 </div>
 

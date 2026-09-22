@@ -202,19 +202,19 @@ export default function DashboardPage() {
                 </span>
               </button>
 
-              {/* Último aviso */}
-              <button onClick={() => router.push("/dashboard/circulares")} className="press m-card p-4 md:p-5 text-left">
+              {/* Último comunicado */}
+              <button onClick={() => router.push("/dashboard/comunicados")} className="press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ÚLTIMO AVISO</p>
+                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ÚLTIMO COMUNICADO</p>
                   <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-info-soft flex items-center justify-center">
                     <span className="material-symbols-rounded text-info text-lg md:text-xl">campaign</span>
                   </span>
                 </div>
                 <p className="text-base md:text-lg font-extrabold text-text dark:text-gray-100 mt-2 line-clamp-1">
-                  {dashboardData?.circularReciente?.titulo ?? "Sin avisos"}
+                  {dashboardData?.circularReciente?.titulo ?? "Sin comunicados"}
                 </p>
                 <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400 truncate">
-                  {dashboardData?.circularReciente ? "Nuevo comunicado" : "No hay circulares"}
+                  {dashboardData?.circularReciente ? "Nuevo comunicado" : "No hay comunicados"}
                 </p>
                 {dashboardData?.circularReciente && (
                   <p className="text-[11px] md:text-xs text-text-secondary dark:text-gray-400 mt-2">

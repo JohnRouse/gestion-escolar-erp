@@ -9,6 +9,7 @@
   "build": "vite build",
   "build:check": "tsc -b && vite build",
   "test:eventos": "node --test tests/eventosFormRules.test.mjs",
+  "test:comunicados": "node --test tests/comunicadosFormRules.test.mjs",
   "lint": "eslint .",
   "preview": "vite preview",
   "preview:cloud": "vite preview --host 0.0.0.0 --port 3002",

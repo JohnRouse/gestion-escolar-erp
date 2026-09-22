@@ -11,7 +11,7 @@ Tesorería no forman parte de este incremento.
 ## 2. Propósito
 
 Notificaciones es la bandeja personal de eventos y avisos operativos del
-sistema. No es un editor de mensajes masivos ni reemplaza a Circulares.
+sistema. No es un editor de mensajes masivos ni reemplaza a Comunicados.
 
 ## 3. Usuarios y roles
 
@@ -92,9 +92,10 @@ La relación principal continúa siendo `Notificacion.id_usuario → Usuario`.
   referencia al cronograma.
 - Académico/NFC: el aviso existente de asistencia deriva contexto únicamente
   desde matrículas operativas y relaciones persistidas.
-- Circulares: sigue siendo el contenido masivo. Su aviso complementario legacy
-  se omite mientras el flujo no entregue tenant/colegio explícitos; no se
-  difunde por un nivel compartido entre organizaciones.
+- Comunicados: conserva el contenido formal. Al publicar resuelve la audiencia
+  por tenant/colegio y matrículas operativas, deduplica por Usuario y guarda
+  referencia `circular`, ID y URL `/dashboard/comunicados?id_circular=<id>`.
+  Una notificación no concede acceso al contenido.
 - Enfermería: aviso opcional al apoderado vinculado, deduplicado por Usuario,
   con contexto/referencia y texto mínimo sin síntomas, alergias ni medicación.
   Usa canal `portal`, no inventa URL y conserva lectura de `padres` históricos.

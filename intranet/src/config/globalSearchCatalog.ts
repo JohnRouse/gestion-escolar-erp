@@ -290,13 +290,13 @@ export const GLOBAL_SEARCH_ENTRIES:
     ],
   },
   {
-    id: 'circulares',
-    title: 'Circulares',
+    id: 'comunicados',
+    title: 'Comunicados',
     description:
       'Crear y consultar comunicaciones institucionales.',
     category: 'Comunicación',
-    breadcrumb: 'Comunicación · Circulares',
-    path: '/circulares',
+    breadcrumb: 'Comunicación · Comunicados',
+    path: '/comunicados',
     keywords: [
       'comunicado',
       'circular',

@@ -18,11 +18,12 @@ general, día no laborable, ceremonia, paseo, evaluación institucional,
 celebración o jornada especial.
 
 - Evento registra la actividad y su fecha.
-- Circular conserva la comunicación formal y sus adjuntos/autorizaciones.
+- Comunicado (modelo `Circular`) conserva la comunicación formal y sus
+  adjuntos/confirmaciones.
 - Notificación es un aviso personal automático originado por el evento.
 - Horario conserva la programación semanal de clases.
 
-Eventos no genera Circulares automáticamente y no implementa entradas,
+Eventos no genera Comunicados automáticamente y no implementa entradas,
 reservas ni ticketing.
 
 ## 3. Usuarios y roles
@@ -113,7 +114,7 @@ No existe `DELETE /eventos`.
   referencia `evento + id_evento` y URL
   `/dashboard/calendario?anio_id=<id>&mes=<mes>&dia=<dia>&evento_id=<id>`.
   Los recordatorios nuevos usan el mismo contexto.
-- Circular no se crea desde Eventos; `generar_circular` queda fuera de V1.
+- Comunicado no se crea desde Eventos; `generar_circular` queda fuera de V1.
 
 ## 10. Validaciones
 

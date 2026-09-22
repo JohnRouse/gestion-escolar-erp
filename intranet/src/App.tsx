@@ -1,6 +1,6 @@
 import StaffPage from './pages/staff/StaffPage';
 import CitasPage from './pages/citas/CitasPage';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import LoginPage from './pages/LoginPage';
@@ -41,6 +41,12 @@ import ConsultaPagosPublicaPage from './pages/publico/ConsultaPagosPublicaPage';
 import NotificacionesPage from './pages/notificaciones/NotificacionesPage';
 import EnfermeriaPage from './pages/enfermeria/EnfermeriaPage';
 import EventosPage from './pages/eventos/EventosPage';
+import { legacyComunicadosTarget } from './pages/comunicados/comunicadosRoutes';
+
+function LegacyCircularesRedirect() {
+  const location = useLocation();
+  return <Navigate to={legacyComunicadosTarget(location.search)} replace />;
+}
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -93,7 +99,8 @@ function AppRoutes() {
         <Route path="/notas" element={<ProtectedModuleRoute module="notas"><NotasPage /></ProtectedModuleRoute>} />
         <Route path="/notas/comentarios" element={<ProtectedModuleRoute module="tutoria"><Navigate to="/tutoria" replace /></ProtectedModuleRoute>} />
         <Route path="/tutoria" element={<ProtectedModuleRoute module="tutoria"><TutoriaPage /></ProtectedModuleRoute>} />
-        <Route path="/circulares" element={<CircularesPage />} />
+        <Route path="/comunicados" element={<ProtectedModuleRoute module="comunicados"><CircularesPage /></ProtectedModuleRoute>} />
+        <Route path="/circulares" element={<ProtectedModuleRoute module="comunicados"><LegacyCircularesRedirect /></ProtectedModuleRoute>} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         <Route path="/docentes" element={<DocentesPage />} />
         <Route path="/staff" element={<ProtectedModuleRoute module="staff"><StaffPage /></ProtectedModuleRoute>} />

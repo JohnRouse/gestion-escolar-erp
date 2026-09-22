@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Gestión Escolar ERP – Portal de familias",
-  description: "Portal móvil para apoderados. Notas, asistencia, pagos, avisos y horario.",
+  description: "Portal móvil para apoderados. Notas, asistencia, pagos, comunicados y horario.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
