@@ -6,9 +6,11 @@ import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 import SolicitarCitaModal, {
   type CitaRecipient,
 } from "@/components/SolicitarCitaModal";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 type ChildEnrollment = {
   id_matricula: number;
@@ -34,6 +36,7 @@ function initials(name: string) {
 
 export default function StaffPage() {
   const router = useRouter();
+  const { selectedChild } = useSelectedChild();
   const [children, setChildren] = useState<ChildEnrollment[]>([]);
   const [matriculaId, setMatriculaId] = useState<number | null>(null);
   const [recipients, setRecipients] = useState<CitaRecipient[]>([]);
@@ -50,30 +53,54 @@ export default function StaffPage() {
       router.push("/login");
       return;
     }
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) setError("");
+    });
     axios
       .get<ChildEnrollment[]>("/api/citas/apoderado/hijos", {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       .then((response) => {
-        setLoadingRecipients(Boolean(response.data[0]?.id_matricula));
+        const preferred = response.data.find((item) => item.estudiante.id_estudiante === selectedChild?.id_estudiante) ?? response.data[0];
+        setLoadingRecipients(Boolean(preferred?.id_matricula));
         setChildren(response.data);
-        setMatriculaId(response.data[0]?.id_matricula ?? null);
+        setMatriculaId(preferred?.id_matricula ?? null);
       })
-      .catch(() => setError("No se pudieron cargar los estudiantes vinculados."))
-      .finally(() => setLoading(false));
-  }, [router]);
+      .catch((requestError) => {
+        if (!axios.isCancel(requestError)) setError("No se pudieron cargar los estudiantes vinculados.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [router, selectedChild?.id_estudiante]);
 
   useEffect(() => {
     if (!matriculaId) return;
     const token = localStorage.getItem("token");
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setLoadingRecipients(true);
+        setError("");
+      }
+    });
     axios
       .get<CitaRecipient[]>("/api/citas/apoderado/destinatarios", {
         params: { matricula_id: matriculaId },
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       .then((response) => setRecipients(response.data))
-      .catch(() => setError("No se pudieron cargar las personas disponibles para citas."))
-      .finally(() => setLoadingRecipients(false));
+      .catch((requestError) => {
+        if (!axios.isCancel(requestError)) setError("No se pudieron cargar las personas disponibles para citas.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingRecipients(false);
+      });
+    return () => controller.abort();
   }, [matriculaId]);
 
   const visible = useMemo(
@@ -86,24 +113,15 @@ export default function StaffPage() {
   const child = children.find((item) => item.id_matricula === matriculaId);
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Personas para citas" />
+    <main className="portal-page">
+      <ScreenHeader title="Personas para citas" subtitle="Directorio académico" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
       <PageTransition>
-        <div className="px-5 pb-28 pt-4">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard?open=servicios")}
-            className="mb-4 flex min-h-11 items-center gap-1 text-sm font-bold text-accent focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            <span className="material-symbols-rounded text-lg" aria-hidden="true">arrow_back</span>
-            Servicios
-          </button>
-
+        <div className="portal-content">
           <section className="m-card p-4">
             <label className="block">
               <span className="mb-1 block text-sm font-semibold text-text-secondary">Solicitar sobre</span>
               <select
-                className="input-underline min-h-11"
+                className="portal-field"
                 value={matriculaId ?? ""}
                 disabled={loading}
                 onChange={(event) => {
@@ -131,22 +149,19 @@ export default function StaffPage() {
             ) : null}
           </section>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por función">
+          <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por función">
             {[
               ["todos", "Todos"],
               ["docente", "Docentes"],
               ["tutor", "Tutor"],
-              ["staff", "Staff"],
+              ["staff", "Equipo escolar"],
             ].map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setContext(key)}
-                className={`min-h-11 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-accent motion-reduce:transition-none ${
-                  context === key
-                    ? "bg-accent text-white"
-                    : "border border-border bg-white text-text-secondary"
-                }`}
+                aria-pressed={context === key}
+                className="portal-filter"
               >
                 {label}
               </button>
@@ -154,38 +169,29 @@ export default function StaffPage() {
           </div>
 
           <p className="mb-4 mt-2 text-sm leading-6 text-text-secondary">
-            Los docentes corresponden a la sección vigente. El Staff se muestra solo cuando acepta citas.
+            Los docentes corresponden a la sección vigente. El equipo escolar se muestra solo cuando acepta citas.
           </p>
 
           {success ? (
-            <p role="status" className="mb-4 rounded-xl bg-success-soft p-3 text-sm font-semibold text-success">
+            <p role="status" className="mb-4 rounded-lg border border-success/20 bg-success-soft p-3 text-sm font-semibold text-success">
               {success}
             </p>
           ) : null}
           {error ? (
-            <div role="alert" className="m-card mb-4 p-4 text-sm font-semibold text-danger">
-              {error}
-            </div>
+            <PortalState kind="error" title="No pudimos cargar el directorio" description={error} className="mb-4" />
           ) : null}
 
           {loading || loadingRecipients ? (
-            <div className="space-y-3" role="status" aria-label="Cargando destinatarios">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="m-card flex items-center gap-3 p-4">
-                  <div className="skel h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-2"><div className="skel h-4 w-32" /><div className="skel h-3 w-24" /></div>
-                </div>
-              ))}
-            </div>
+            <PortalSkeletonList />
           ) : !matriculaId ? (
-            <p className="py-10 text-center text-sm text-text-secondary">Selecciona un estudiante para ver destinatarios válidos.</p>
+            <PortalState title="Selecciona un estudiante" description="Elige a quién corresponde la cita para ver las personas disponibles." />
           ) : visible.length === 0 ? (
-            <p className="py-10 text-center text-sm text-text-secondary">No hay destinatarios disponibles para este filtro.</p>
+            <PortalState title="No hay personas disponibles" description="Prueba otro filtro o consulta con la institución." />
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border rounded-xl border border-border bg-white px-4">
               {visible.map((item) => (
-                <li key={item.key} className="m-card flex items-center gap-3 p-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-extrabold text-accent" aria-hidden="true">
+                <li key={item.key} className="portal-list-item flex-wrap sm:flex-nowrap">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent" aria-hidden="true">
                     {initials(item.nombre)}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -195,10 +201,10 @@ export default function StaffPage() {
                   </div>
                   <button
                     type="button"
-                    className="min-h-11 shrink-0 rounded-xl bg-accent px-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="portal-button ml-14 w-full sm:ml-0 sm:w-auto"
                     onClick={() => setSelected(item)}
                   >
-                    Solicitar
+                    Solicitar cita
                   </button>
                 </li>
               ))}

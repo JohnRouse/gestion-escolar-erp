@@ -13,7 +13,7 @@ describe('Recursos académicos y financieros del portal', () => {
           {
             id_estudiante: 40,
             estudiante: {
-              avatar_url: null,
+              avatar_url: '/uploads/alumnos/foto-estudiante-item-actual.jpg',
               persona: { nombres: 'Hija', apellido_paterno: 'Propia' },
               matriculas: [
                 {
@@ -45,7 +45,11 @@ describe('Recursos académicos y financieros del portal', () => {
     };
     const service = new AcademicosService(prisma);
     await expect(service.getHijosApoderado(80)).resolves.toEqual([
-      expect.objectContaining({ id_estudiante: 40, id_matricula: 90 }),
+      expect.objectContaining({
+        id_estudiante: 40,
+        id_matricula: 90,
+        avatar_url: '/uploads/alumnos/foto-estudiante-item-actual.jpg',
+      }),
     ]);
     expect(prisma.apoderadoEstudiante.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id_apoderado: 80 } }),
@@ -261,14 +265,19 @@ describe('Recursos académicos y financieros del portal', () => {
       estudiante: {
         update: jest.fn().mockResolvedValue({
           id_persona: 40,
-          avatar_url: 'https://example.test/avatar.png',
+          avatar_url: '/uploads/alumnos/foto-estudiante-item-nueva.png',
         }),
       },
     };
     const service = new AcademicosService(prisma);
 
     await expect(
-      service.updateAvatarHijo(80, 40, 'https://example.test/avatar.png'),
+      service.updateAvatarHijo(
+        80,
+        7,
+        40,
+        '/uploads/alumnos/foto-estudiante-item-nueva.png',
+      ),
     ).resolves.toMatchObject({ id_persona: 40 });
     expect(prisma.apoderadoEstudiante.findUnique).toHaveBeenCalledWith({
       where: {
@@ -277,7 +286,16 @@ describe('Recursos académicos y financieros del portal', () => {
           id_estudiante: 40,
         },
       },
+      select: { id_estudiante: true },
     });
+    expect(prisma.estudiante.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id_persona: 40 },
+        data: {
+          avatar_url: '/uploads/alumnos/foto-estudiante-item-nueva.png',
+        },
+      }),
+    );
   });
 
   test('11. avatar de alumno ajeno es rechazado', async () => {
@@ -287,7 +305,37 @@ describe('Recursos académicos y financieros del portal', () => {
     const service = new AcademicosService(prisma);
 
     await expect(
-      service.updateAvatarHijo(80, 999, 'https://example.test/avatar.png'),
+      service.updateAvatarHijo(
+        80,
+        7,
+        999,
+        '/uploads/alumnos/foto-estudiante-item-nueva.png',
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  test('12. quitar foto revalida el vínculo y vuelve avatar_url a NULL', async () => {
+    const prisma: any = {
+      apoderadoEstudiante: {
+        findUnique: jest.fn().mockResolvedValue({ id_estudiante: 40 }),
+      },
+      estudiante: {
+        update: jest.fn().mockResolvedValue({
+          id_persona: 40,
+          avatar_url: null,
+        }),
+      },
+    };
+    const service = new AcademicosService(prisma);
+
+    await expect(service.removeAvatarHijo(80, 7, 40)).resolves.toEqual({
+      id_persona: 40,
+      avatar_url: null,
+    });
+    expect(prisma.estudiante.update).toHaveBeenCalledWith({
+      where: { id_persona: 40 },
+      data: { avatar_url: null },
+      select: { id_persona: true, avatar_url: true },
+    });
   });
 });

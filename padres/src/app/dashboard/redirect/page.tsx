@@ -3,16 +3,20 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
-import axios from "axios";
+import { safePortalTarget } from "@/lib/portalNotificationNavigation";
 
 function RedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setSelectedChild } = useSelectedChild();
+  const { setSelectedChild, hijos, childrenLoading } = useSelectedChild();
 
   useEffect(() => {
     const alumnoId = searchParams.get("alumno_id");
-    const destino = searchParams.get("destino") || "/dashboard/pagos";
+    if (childrenLoading) return;
+    const destino = safePortalTarget(
+      searchParams.get("destino") || "/dashboard/pagos",
+      window.location.origin,
+    ) || "/dashboard";
     const cronogramaId = searchParams.get("cronograma_id");
 
     if (!alumnoId) {
@@ -20,30 +24,12 @@ function RedirectContent() {
       return;
     }
 
-    const fetchAndRedirect = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get("/api/academicos/padres/hijos", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const hijos = res.data;
-        const hijo = hijos.find((h: any) => h.id_estudiante === Number(alumnoId));
-        if (hijo) {
-          setSelectedChild(hijo);
-        }
-      } catch (e) {
-        // Si falla, igual redirigimos
-      } finally {
-        // Construir la URL de destino conservando otros parámetros
-        const params = new URLSearchParams();
-        if (cronogramaId) params.set("cronograma_id", cronogramaId);
-        const query = params.toString();
-        router.replace(`${destino}${query ? `?${query}` : ""}`);
-      }
-    };
-
-    fetchAndRedirect();
-  }, [searchParams, router, setSelectedChild]);
+    const hijo = hijos.find((item) => item.id_estudiante === Number(alumnoId));
+    if (hijo) setSelectedChild(hijo);
+    const target = new URL(destino, window.location.origin);
+    if (cronogramaId) target.searchParams.set("cronograma_id", cronogramaId);
+    router.replace(`${target.pathname}${target.search}${target.hash}`);
+  }, [childrenLoading, hijos, searchParams, router, setSelectedChild]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-alt">

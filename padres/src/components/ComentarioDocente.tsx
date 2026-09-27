@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CircleAlert, CircleCheck, MessageSquareText, Minus } from "lucide-react";
 import axios from "axios";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
@@ -15,7 +16,7 @@ interface Comentario {
 export default function ComentarioDocente() {
   const { selectedChild } = useSelectedChild();
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
-  const [bimestre, setBimestre] = useState(1);
+  const [bimestre] = useState(1);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -36,13 +37,13 @@ export default function ComentarioDocente() {
   const getEmocionStyle = (emocion: string) => {
     switch (emocion) {
       case "positiva":
-        return { bg: "bg-success-soft", text: "text-success", icon: "😊" };
+        return { bg: "bg-success-soft", text: "text-success", icon: CircleCheck };
       case "neutral":
-        return { bg: "bg-warning-soft", text: "text-warning", icon: "😐" };
+        return { bg: "bg-warning-soft", text: "text-warning", icon: Minus };
       case "preocupante":
-        return { bg: "bg-danger-soft", text: "text-danger", icon: "😟" };
+        return { bg: "bg-danger-soft", text: "text-danger", icon: CircleAlert };
       default:
-        return { bg: "bg-surface-alt", text: "text-text-muted", icon: "💬" };
+        return { bg: "bg-surface-alt", text: "text-text-muted", icon: MessageSquareText };
     }
   };
 
@@ -51,15 +52,16 @@ export default function ComentarioDocente() {
       <p className="text-xs font-semibold text-text">Comentarios del docente</p>
       {comentarios.map((c, idx) => {
         const style = getEmocionStyle(c.emocion);
+        const Icon = style.icon;
         return (
           <div key={idx} className={`${style.bg} rounded-xl p-3 text-xs`}>
             <div className="flex items-center justify-between">
-              <span className={`font-bold ${style.text}`}>
-                {style.icon} {c.curso} · {c.tipo}
+              <span className={`flex items-center gap-1.5 font-bold ${style.text}`}>
+                <Icon size={15} aria-hidden="true" /> {c.curso} · {c.tipo}
               </span>
               <span className={`font-bold ${style.text}`}>{c.valor_nota}</span>
             </div>
-            <p className="text-text mt-1 italic">"{c.comentario}"</p>
+            <p className="text-text mt-1 italic">“{c.comentario}”</p>
           </div>
         );
       })}

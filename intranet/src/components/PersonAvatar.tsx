@@ -62,9 +62,9 @@ export default function PersonAvatar({
   if (persona.avatar_url) {
     return (
       <img
-        src={persona.avatar_url}
+        src={assetUrl(persona.avatar_url)}
         alt={`${persona.nombres || ''} ${persona.apellido_paterno || ''}`.trim() || 'Avatar'}
-        className={`${baseClass} object-cover ring-1 ring-slate-100 ${className}`}
+        className={`${baseClass} object-cover object-center ring-1 ring-slate-100 ${className}`}
       />
     );
   }
@@ -79,3 +79,4 @@ export default function PersonAvatar({
     </div>
   );
 }
+import { assetUrl } from '../utils/assets';

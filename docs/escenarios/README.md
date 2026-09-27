@@ -51,3 +51,4 @@ Cada escenario debe incluir:
 - [Enfermería: privacidad, autorización y alcance](enfermeria-privacidad-autorizacion.md).
 - [Eventos: autorización, audiencia y familias](eventos-autorizacion-audiencia.md).
 - [Comunicados: audiencia y estado personal](comunicados-audiencia-estado-personal.md).
+- [Foto del estudiante sincronizada ERP ↔ Portal](foto-estudiante-sincronizada.md).

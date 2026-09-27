@@ -26,8 +26,8 @@ El portal Next.js `padres/` contiene páginas reales. El incremento Auth de
 apoderados separó `/auth/portal/login` y `jwt-portal` de `/auth/login` y `jwt`,
 con autoridad derivada de ApoderadoEstudiante y validación técnica dirigida. El
 portal P0 compila y su smoke de API con datos locales aprobó; faltan aceptación
-humana en navegador y el cierre
-P1 independiente de Galería/Álbumes.
+humana final en navegador. La Galería social/Álbumes fue descartada del
+producto y no se conserva como P1 ni como roadmap funcional.
 
 La documentación está por detrás de la implementación: `docs/06-estado-del-proyecto.md` conserva estados de «requiere inventario» y el inventario inicial encontró únicamente `README.md` en `docs/modulos/`; ahora Staff dispone de ficha, escenario y registro de aceptación vigentes. Esto no demuestra ausencia de toda documentación histórica: significa que falta la ficha vigente por módulo. No se recorrió el archivo histórico.
 
@@ -43,7 +43,7 @@ Fuentes principales de este inventario, todas de solo lectura:
 - [Finanzas: controlador](../api/src/finanzas/finanzas.controller.ts), [API pública](../api/src/finanzas/finanzas-public.controller.ts) y [servicio](../api/src/finanzas/finanzas.service.ts): cobros, cronogramas, campañas, cartera, referencias e historial.
 - [Calificaciones](../api/src/calificaciones/calificaciones.controller.ts), [Asistencia](../api/src/academicos/asistencia/asistencia.controller.ts), [Tutoría](../api/src/tutoria/tutoria.service.ts) y [guard de Tutoría](../api/src/tutoria/tutoria-access.guard.ts).
 - [Dashboard](../api/src/dashboard/dashboard.service.ts), [Analíticas](../api/src/analiticas/analiticas.controller.ts), [panel de reportes](../intranet/src/pages/ReportesPage.tsx), [asistencia global](../intranet/src/pages/reportes/AsistenciaReportesPage.tsx) y [libretas](../intranet/src/pages/TutoriaPage.tsx).
-- [Citas](../api/src/citas/citas.service.ts), [Notificaciones](../api/src/notificaciones/notificaciones.controller.ts), [Eventos](../api/src/eventos/eventos.controller.ts), [Álbumes](../api/src/albumes/albumes.controller.ts), [login del portal](../padres/src/app/login/page.tsx).
+- [Citas](../api/src/citas/citas.service.ts), [Notificaciones](../api/src/notificaciones/notificaciones.controller.ts), [Eventos](../api/src/eventos/eventos.controller.ts), [backend legacy de Álbumes](../api/src/albumes/albumes.controller.ts) y [login del portal](../padres/src/app/login/page.tsx).
 - [Autenticación](../api/src/auth/auth.service.ts), [JWT](../api/src/auth/jwt.strategy.ts), [roles](../api/src/auth/roles.guard.ts), [colegios](../api/src/colegios/colegios.service.ts), [contexto frontend](../intranet/src/contexts/SchoolContext.tsx), [PrismaService](../api/src/prisma/prisma.service.ts).
 
 No se certifica ejecución, seguridad, migraciones aplicadas o integridad de datos de una base real. «Persistencia sí» significa modelo y acceso persistente presentes en el repositorio. «Flujo completo» significa recorrido principal identificable en código, no aceptación E2E. No se convierten observaciones estáticas en fallos reproducidos.
@@ -83,7 +83,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 |---|---|---|---|---|---|---|---|
 | Alumnos | sí | sí | sí | completo | CASI COMPLETO | P0 | Documentar alta, edición, ficha, estado institucional y credenciales. **A:** aparente sí. **D:** Persona, Matrícula, colegios. |
 | Apoderados | sí | sí | sí | completo | CASI COMPLETO | P0 | Cerrar aceptación de vínculos, edición y credenciales; separar gestión interna de acceso al portal. **A:** revisar. **D:** Persona, Alumnos, Usuarios. |
-| Portal de apoderados | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Login y JWT externos aislados, perfil y contratos P0 conectados a hijos vinculados; builds, pruebas dirigidas y smoke de API local aprobados. Falta aceptación humana en navegador. Galería/Álbumes permanece P1. **A:** revisión dirigida aprobada en código y API. **D:** Apoderados y Matrícula. |
+| Portal de apoderados | sí | sí | sí | completo V1 acotado | EN PRUEBAS FINALES | P0 | Login y JWT externos aislados, perfil y contratos P0 conectados a hijos vinculados; QA integral, build, pruebas dirigidas y revisión visual local aprobados. Falta aceptación humana final. Galería social descartada. **A:** revisión dirigida aprobada en código y API. **D:** Apoderados y Matrícula. |
 
 ### Personal
 
@@ -105,7 +105,7 @@ Las filas cuentan capacidades de planificación, no módulos NestJS ni pantallas
 |---|---|---|---|---|---|---|---|
 | Comunicados | sí | sí | sí | completo V1 acotado | EN PRUEBAS | P0 | Gestión, audiencia, adjuntos, notificación y estado personal están implementados. La corrección de contexto anual persiste `Circular.id_anio`, muestra selector y acota colegio/nivel/sección, portal y avisos; migración aditiva preparada y no aplicada. Falta revisión/aplicación manual y nueva aceptación humana. [Contrato](modulos/comunicados.md). **A:** revisión dirigida técnica aprobada. **D:** Colegios, años lectivos, estructura anual, Matrículas, Usuarios, Apoderados y Notificaciones. |
 | Notificaciones | sí | sí | sí | completo V1 acotado | CASI COMPLETO | P0 | Bandeja personal, filtros, lectura/no lectura, badge, propiedad y scope están en pruebas; aplicar migración y aceptar con datos reales. Enfermería ya integra avisos mínimos opcionales; Matrícula y Notas siguen pendientes. **A:** revisión dirigida aprobada en código. **D:** Usuarios, membresías, Citas, Enfermería, eventos y migración local. |
-| Galería / álbumes | sí | parcial | sí | parcial | PARCIAL | P1 | Reutilizar lectura, comentarios y reacciones del portal; cerrar gestión/publicación y autorización si entra después de P0. **A:** revisar. **D:** Portal de apoderados, secciones, almacenamiento. |
+| Galería social / álbumes | no | legacy dormante | sí | descartado | FUERA DEL PRODUCTO | — | No es P1 ni roadmap. El frontend fue retirado y la ruta legacy redirige a Inicio. Conservar datos y documentar limpieza técnica posterior de `api/src/albumes/**`, sin borrado destructivo. **A:** no reactivar contratos legacy sin rediseño de autorización. |
 
 ### Tesorería
 
@@ -304,8 +304,8 @@ el JWT interno. El guard relee Usuario, Rol, estado, Persona y Apoderado; los
 contratos P0 de hijos, Citas, Eventos, Notificaciones, Calificaciones,
 Asistencia, Horario, Comunicados y estado de cuenta revalidan vínculo, matrícula,
 audiencia o propietario. Jest dirigido y builds aprobaron. No hubo migración ni
-seed. Falta aceptación humana con cuentas y vínculos locales; Galería/Álbumes
-continúa como P1 fuera de este cierre. El smoke de API con las cuentas seed
+seed. Falta aceptación humana final con cuentas y vínculos locales; la Galería
+social fue descartada y su backend queda legacy/dormante. El smoke de API con las cuentas seed
 locales aprobó; queda pendiente la aceptación humana en navegador.
 [Contrato y límites](modulos/auth-apoderados.md).
 
@@ -385,7 +385,7 @@ Las operaciones sensibles deben conservar actor, fecha, tenant/colegio, acción,
 | **D — Deuda visual** | Ajustes cosméticos, densidad y variaciones de CSS se concentran en bloque 5 por patrones globales; no producen PR individuales salvo fallo de uso real. |
 | **E — E2E integral** | Campaña completa al final; durante implementación, pruebas funcionales/transaccionales y Playwright dirigidos a lo cambiado. |
 
-Quedan fuera del mínimo V1: facturación automática SaaS/pasarela comercial, webhooks bancarios como requisito de cobro manual, BI avanzado, nuevas familias de reportes sin necesidad definida, integración física NFC completa, ampliación de Galería, impersonación de soporte y renombrado estructural `Colegio` → `Institución`. Branding avanzado y paneles analíticos P1 no deben desplazar P0. Las capacidades P1 ya presentes se conservan; no se prometen como flujos aceptados mientras dependan de trabajo pendiente.
+Quedan fuera del mínimo V1: facturación automática SaaS/pasarela comercial, webhooks bancarios como requisito de cobro manual, BI avanzado, nuevas familias de reportes sin necesidad definida, integración física NFC completa, impersonación de soporte y renombrado estructural `Colegio` → `Institución`. La Galería social está descartada del producto, no aplazada: solo se conserva su backend/datos legacy hasta una limpieza técnica segura. Branding avanzado y paneles analíticos P1 no deben desplazar P0. Las capacidades P1 ya presentes se conservan; no se prometen como flujos aceptados mientras dependan de trabajo pendiente.
 
 No se aplazan al backlog cosmético el aislamiento, autorización de recursos, trazabilidad sensible, pérdida de datos, cálculo financiero ni errores que impidan finalizar un proceso P0.
 

@@ -1,6 +1,8 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -17,6 +19,7 @@ interface ScopeParams {
   rol: string;
   scope?: string;
   colegioId?: number;
+  tenantId?: number;
 }
 
 interface MatriculaScope {
@@ -35,6 +38,8 @@ interface MatriculaScope {
 
 @Injectable()
 export class AcademicosService {
+  private readonly avatarAudit = new Logger('StudentAvatarAudit');
+
   constructor(private prisma: PrismaService) {}
 
   // ── HELPERS DE ESTADOS FINALES ──────────────────────
@@ -1458,27 +1463,128 @@ export class AcademicosService {
 
   // ── CONSULTAS ──────────────────────────────────────────
 
-  async getCodigoAlumnoParaArchivo(
+  private normalizeAvatarManagementRole(value: unknown) {
+    const role = (typeof value === 'string' ? value : '')
+      .trim()
+      .toLocaleLowerCase('es')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return role;
+  }
+
+  private logAvatarChange(params: {
+    userId: number;
+    studentId: number;
+    action: 'reemplazar' | 'quitar';
+    channel: 'portal' | 'intranet';
+  }) {
+    this.avatarAudit.log(
+      JSON.stringify({
+        usuario: params.userId,
+        estudiante: params.studentId,
+        accion: params.action,
+        canal: params.channel,
+        fecha: new Date().toISOString(),
+      }),
+    );
+  }
+
+  async autorizarFotoAlumnoIntranet(
     params: ScopeParams & {
       idEstudiante: number;
     },
   ) {
-    const scope = await this.resolveScope(params);
+    const actor = await this.prisma.usuario.findUnique({
+      where: { id_usuario: params.userId },
+      select: {
+        estado: true,
+        rol: { select: { nombre_rol: true } },
+        tenants: {
+          where: { estado: 'Activo', tenant: { estado: 'Activo' } },
+          select: { id_tenant: true },
+        },
+        colegios: {
+          where: { estado: 'Activo', colegio: { estado: 'Activo' } },
+          select: {
+            id_colegio: true,
+            rol_colegio: true,
+            es_principal: true,
+            colegio: { select: { id_tenant: true } },
+          },
+          orderBy: { es_principal: 'desc' },
+        },
+      },
+    });
+
+    const allowedRoles = new Set(['admin', 'director', 'secretaria']);
+    const globalRole = this.normalizeAvatarManagementRole(
+      actor?.rol?.nombre_rol,
+    );
+
+    if (!actor?.estado || !allowedRoles.has(globalRole)) {
+      throw new ForbiddenException(
+        'No tienes permiso para gestionar la foto institucional del alumno.',
+      );
+    }
+
+    let memberships = actor.colegios.filter((membership) =>
+      allowedRoles.has(
+        this.normalizeAvatarManagementRole(membership.rol_colegio),
+      ),
+    );
+
+    let tenantId = params.tenantId;
+    if (params.colegioId) {
+      memberships = memberships.filter(
+        (membership) => membership.id_colegio === params.colegioId,
+      );
+      tenantId ??= memberships[0]?.colegio.id_tenant;
+    } else if (params.scope === 'all') {
+      if (!tenantId) {
+        throw new BadRequestException(
+          'Selecciona la organización activa para gestionar la foto.',
+        );
+      }
+      if (!['admin', 'director'].includes(globalRole)) {
+        throw new ForbiddenException(
+          'No tienes permiso para gestionar fotos en el alcance consolidado.',
+        );
+      }
+    } else {
+      memberships = memberships.slice(0, 1);
+      tenantId ??= memberships[0]?.colegio.id_tenant;
+    }
+
+    if (tenantId) {
+      const hasTenant = actor.tenants.some(
+        (membership) => membership.id_tenant === tenantId,
+      );
+      if (!hasTenant) {
+        throw new NotFoundException('Alumno no encontrado o sin acceso.');
+      }
+      memberships = memberships.filter(
+        (membership) => membership.colegio.id_tenant === tenantId,
+      );
+    }
+
+    const colegioIds = memberships.map((membership) => membership.id_colegio);
+    if (!colegioIds.length) {
+      throw new NotFoundException('Alumno no encontrado o sin acceso.');
+    }
 
     const estudiante = await this.prisma.estudiante.findFirst({
       where: {
         id_persona: params.idEstudiante,
         matriculas: {
           some: {
-            id_colegio: {
-              in: scope.colegioIds,
-            },
+            id_colegio: { in: colegioIds },
           },
         },
       },
       select: {
         id_persona: true,
-        codigo_estudiante: true,
+        avatar_url: true,
       },
     });
 
@@ -1486,10 +1592,7 @@ export class AcademicosService {
       throw new NotFoundException('Alumno no encontrado o sin acceso.');
     }
 
-    return {
-      codigo_estudiante:
-        estudiante.codigo_estudiante || `ALUMNO-${estudiante.id_persona}`,
-    };
+    return estudiante;
   }
 
   async actualizarFotoAlumno(
@@ -1498,27 +1601,7 @@ export class AcademicosService {
       avatarUrl: string;
     },
   ) {
-    const scope = await this.resolveScope(params);
-
-    const estudiante = await this.prisma.estudiante.findFirst({
-      where: {
-        id_persona: params.idEstudiante,
-        matriculas: {
-          some: {
-            id_colegio: {
-              in: scope.colegioIds,
-            },
-          },
-        },
-      },
-      include: {
-        persona: true,
-      },
-    });
-
-    if (!estudiante) {
-      throw new NotFoundException('Alumno no encontrado o sin acceso.');
-    }
+    await this.autorizarFotoAlumnoIntranet(params);
 
     const actualizado = await this.prisma.estudiante.update({
       where: {
@@ -1530,6 +1613,13 @@ export class AcademicosService {
       include: {
         persona: true,
       },
+    });
+
+    this.logAvatarChange({
+      userId: params.userId,
+      studentId: params.idEstudiante,
+      action: 'reemplazar',
+      channel: 'intranet',
     });
 
     return {
@@ -6112,11 +6202,7 @@ const existente = await this.prisma.persona.findUnique({
     return resultado;
   }
 
-  async updateAvatarHijo(
-    apoderadoId: number,
-    alumnoId: number,
-    avatarUrl: string,
-  ) {
+  async autorizarAvatarHijo(apoderadoId: number, alumnoId: number) {
     const vinculo = await this.prisma.apoderadoEstudiante.findUnique({
       where: {
         id_apoderado_id_estudiante: {
@@ -6124,15 +6210,59 @@ const existente = await this.prisma.persona.findUnique({
           id_estudiante: alumnoId,
         },
       },
+      select: { id_estudiante: true },
     });
+
     if (!vinculo) {
       throw new NotFoundException('Estudiante no disponible.');
     }
-    return this.prisma.estudiante.update({
+
+    return vinculo;
+  }
+
+  async updateAvatarHijo(
+    apoderadoId: number,
+    userId: number,
+    alumnoId: number,
+    avatarUrl: string,
+  ) {
+    await this.autorizarAvatarHijo(apoderadoId, alumnoId);
+    const estudiante = await this.prisma.estudiante.update({
       where: { id_persona: alumnoId },
       data: { avatar_url: avatarUrl },
       select: { id_persona: true, avatar_url: true },
     });
+
+    this.logAvatarChange({
+      userId,
+      studentId: alumnoId,
+      action: 'reemplazar',
+      channel: 'portal',
+    });
+
+    return estudiante;
+  }
+
+  async removeAvatarHijo(
+    apoderadoId: number,
+    userId: number,
+    alumnoId: number,
+  ) {
+    await this.autorizarAvatarHijo(apoderadoId, alumnoId);
+    const estudiante = await this.prisma.estudiante.update({
+      where: { id_persona: alumnoId },
+      data: { avatar_url: null },
+      select: { id_persona: true, avatar_url: true },
+    });
+
+    this.logAvatarChange({
+      userId,
+      studentId: alumnoId,
+      action: 'quitar',
+      channel: 'portal',
+    });
+
+    return estudiante;
   }
 
   async getTotalMatriculados(params: ScopeParams & { anioId: number }) {
@@ -18188,13 +18318,17 @@ const existente = await this.prisma.persona.findUnique({
       const persona = apoderado.persona || {};
       const usuarioApoderado =
         (persona.usuarios || []).find(
-          (usuario: any) => usuario.rol?.nombre_rol === 'Apoderado',
+          (usuario: any) =>
+            ['apoderado', 'padre', 'madre'].includes(
+              String(usuario.rol?.nombre_rol || '').trim().toLowerCase(),
+            ),
         ) || null;
 
       const { usuarios, ...personaSinUsuarios } = persona;
 
       return {
         ...apoderado,
+        avatar_url: usuarioApoderado?.avatar_url || null,
         persona: personaSinUsuarios,
         credencial: {
           existe: Boolean(usuarioApoderado),
@@ -18239,7 +18373,16 @@ const existente = await this.prisma.persona.findUnique({
         },
       },
       include: {
-        persona: true,
+        persona: {
+          include: {
+            usuarios: {
+              select: {
+                avatar_url: true,
+                rol: { select: { nombre_rol: true } },
+              },
+            },
+          },
+        },
         estudiantes: {
           include: {
             estudiante: {
@@ -18267,7 +18410,18 @@ const existente = await this.prisma.persona.findUnique({
       throw new NotFoundException('No se encontró el apoderado solicitado.');
     }
 
-    return apoderado;
+    const usuarioPortal = apoderado.persona.usuarios.find((usuario) =>
+      ['apoderado', 'padre', 'madre'].includes(
+        String(usuario.rol?.nombre_rol || '').trim().toLowerCase(),
+      ),
+    );
+    const { usuarios: _usuarios, ...persona } = apoderado.persona;
+
+    return {
+      ...apoderado,
+      avatar_url: usuarioPortal?.avatar_url || null,
+      persona,
+    };
   }
 
   async updateApoderado(idApoderado: number, dto: Partial<CreateApoderadoDto>) {
@@ -18748,9 +18902,7 @@ const existente = await this.prisma.persona.findUnique({
       area: staff.area,
       telefono: staff.persona.telefono,
       permite_citas: staff.permite_citas,
-      avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-        staff.persona.nombres,
-      )}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`,
+      avatar_url: null,
     }));
   }
 

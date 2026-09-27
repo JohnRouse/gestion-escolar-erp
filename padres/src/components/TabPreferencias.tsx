@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Moon, Sun } from "lucide-react";
 import axios from "axios";
 
 interface TabPreferenciasProps {
@@ -59,7 +60,12 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
           <p className="text-xs text-text-muted">Recibir notificaciones del colegio</p>
         </div>
         <button
+          type="button"
           onClick={() => handleNotificacionesChange(!notificaciones)}
+          role="switch"
+          aria-checked={notificaciones}
+          aria-label="Recibir notificaciones del colegio"
+          disabled={guardando}
           className={`w-12 h-7 rounded-full transition-colors relative ${
             notificaciones ? "bg-accent" : "bg-border dark:bg-gray-600"
           }`}
@@ -78,22 +84,24 @@ export default function TabPreferencias({ temaActual, notificacionesActual, onTe
         <p className="text-xs text-text-muted mb-3">Elige la apariencia de la aplicación</p>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => handleTemaChange("claro")}
+            aria-pressed={tema === "claro"}
             className={`theme-card ${tema === "claro" ? "theme-card-selected" : "theme-card-unselected"}`}
           >
-            <span className="text-2xl">☀️</span>
-            <span className={`text-xs font-bold ${tema === "claro" ? "text-text dark:text-gray-900" : "text-text-muted"}`}>
-              Claro
-            </span>
+            {tema === "claro" ? <Check size={17} className="theme-card-check" aria-hidden="true" /> : null}
+            <Sun size={22} className="theme-card-icon" aria-hidden="true" />
+            <span className="text-sm font-bold">Claro</span>
           </button>
           <button
+            type="button"
             onClick={() => handleTemaChange("oscuro")}
+            aria-pressed={tema === "oscuro"}
             className={`theme-card ${tema === "oscuro" ? "theme-card-selected" : "theme-card-unselected"}`}
           >
-            <span className="text-2xl">🌙</span>
-            <span className={`text-xs font-bold ${tema === "oscuro" ? "text-gray-900" : "text-text-muted"}`}>
-              Oscuro
-            </span>
+            {tema === "oscuro" ? <Check size={17} className="theme-card-check" aria-hidden="true" /> : null}
+            <Moon size={22} className="theme-card-icon" aria-hidden="true" />
+            <span className="text-sm font-bold">Oscuro</span>
           </button>
         </div>
       </div>

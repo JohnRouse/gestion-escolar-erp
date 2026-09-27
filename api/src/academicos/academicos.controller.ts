@@ -25,17 +25,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from '../storage/storage.service';
 import { memoryStorage } from 'multer';
-
-const alumnoAvatarFileFilter = (_req: any, file: any, callback: any) => {
-  const allowed = ['image/jpeg', 'image/png'];
-
-  if (!allowed.includes(file.mimetype)) {
-    callback(new BadRequestException('Solo se permiten imágenes JPG o PNG.'), false);
-    return;
-  }
-
-  callback(null, true);
-};
+import {
+  STUDENT_AVATAR_MAX_BYTES,
+  studentAvatarFileFilter,
+} from '../storage/image-upload';
 
 @Controller('academicos')
 export class AcademicosController {
@@ -1714,45 +1707,52 @@ async deleteGrado(
   @UseInterceptors(
     FileInterceptor('foto', {
       storage: memoryStorage(),
-      fileFilter: alumnoAvatarFileFilter,
+      fileFilter: studentAvatarFileFilter,
       limits: {
-        fileSize: 3 * 1024 * 1024,
+        fileSize: STUDENT_AVATAR_MAX_BYTES,
       },
     }),
   )
   async subirFotoAlumno(
     @Param('id') id: string,
-    @UploadedFile() file: any,
-    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: { user: { userId: number; rol: string } },
     @Query('scope') scope?: string,
     @Query('colegio_id') colegioId?: string,
+    @Query('tenant_id') tenantId?: string,
   ) {
+    const estudianteId = Number(id);
+
+    if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
+      throw new BadRequestException('El estudiante indicado no es válido.');
+    }
+
     if (!file) {
       throw new BadRequestException('Selecciona una imagen JPG o PNG.');
     }
 
-    const alumnoArchivo = await this.academicosService.getCodigoAlumnoParaArchivo({
-      idEstudiante: Number(id),
+    await this.academicosService.autorizarFotoAlumnoIntranet({
+      idEstudiante: estudianteId,
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
       colegioId: colegioId ? Number(colegioId) : undefined,
+      tenantId: tenantId ? Number(tenantId) : undefined,
     });
 
     const savedImage = await this.storageService.saveImage(file, {
       folder: 'alumnos',
-      prefix: 'alumno',
-      entityId: id,
-      filenameBase: alumnoArchivo.codigo_estudiante,
+      prefix: 'foto-estudiante',
     });
 
     return this.academicosService.actualizarFotoAlumno({
-      idEstudiante: Number(id),
+      idEstudiante: estudianteId,
       avatarUrl: savedImage.url,
       userId: req.user.userId,
       rol: req.user.rol,
       scope,
       colegioId: colegioId ? Number(colegioId) : undefined,
+      tenantId: tenantId ? Number(tenantId) : undefined,
     });
   }
 

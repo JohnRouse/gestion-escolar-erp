@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
@@ -13,6 +14,8 @@ const DUMMY_PASSWORD_HASH =
 
 @Injectable()
 export class AuthService {
+  private readonly portalAvatarAudit = new Logger('PortalAvatarAudit');
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -300,13 +303,56 @@ export class AuthService {
     return this.formatPortalUser(await this.getPortalUserById(userId));
   }
 
+  private logPortalAvatarChange(params: {
+    userId: number;
+    personId: number;
+    action: 'reemplazar' | 'quitar';
+  }) {
+    this.portalAvatarAudit.log(
+      JSON.stringify({
+        usuario: params.userId,
+        persona: params.personId,
+        accion: params.action,
+        canal: 'portal',
+        fecha: new Date().toISOString(),
+      }),
+    );
+  }
+
+  async updatePortalAvatar(userId: number, avatarUrl: string) {
+    const user = await this.getPortalUserById(userId);
+    await this.prisma.usuario.update({
+      where: { id_usuario: user.id_usuario },
+      data: { avatar_url: avatarUrl },
+    });
+    this.logPortalAvatarChange({
+      userId: user.id_usuario,
+      personId: user.id_persona,
+      action: 'reemplazar',
+    });
+    return this.getPortalPerfil(user.id_usuario);
+  }
+
+  async removePortalAvatar(userId: number) {
+    const user = await this.getPortalUserById(userId);
+    await this.prisma.usuario.update({
+      where: { id_usuario: user.id_usuario },
+      data: { avatar_url: null },
+    });
+    this.logPortalAvatarChange({
+      userId: user.id_usuario,
+      personId: user.id_persona,
+      action: 'quitar',
+    });
+    return this.getPortalPerfil(user.id_usuario);
+  }
+
   async updatePortalPerfil(
     userId: number,
     data: {
       correo?: string;
       telefono?: string;
       ocupacion?: string;
-      avatar_url?: string;
       tema?: string;
       notificaciones_activas?: boolean;
     },
@@ -330,16 +376,12 @@ export class AuthService {
         });
       }
       if (
-        data.avatar_url !== undefined ||
         data.tema !== undefined ||
         data.notificaciones_activas !== undefined
       ) {
         await tx.usuario.update({
           where: { id_usuario: userId },
           data: {
-            ...(data.avatar_url !== undefined
-              ? { avatar_url: data.avatar_url }
-              : {}),
             ...(data.tema !== undefined ? { tema: data.tema } : {}),
             ...(data.notificaciones_activas !== undefined
               ? { notificaciones_activas: data.notificaciones_activas }

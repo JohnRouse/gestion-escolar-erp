@@ -2,6 +2,11 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import {
+  assertValidAvatar,
+  AVATAR_MAX_BYTES,
+  AVATAR_MIME_EXTENSIONS,
+} from './image-upload';
 
 type SaveFileOptions = {
   folder: string;
@@ -25,18 +30,17 @@ export class StorageService {
       .replace(/^-|-$/g, '');
   }
 
-  async saveFile(file: any, options: SaveFileOptions) {
+  async saveFile(file: Express.Multer.File, options: SaveFileOptions) {
     if (!file?.buffer) {
       throw new BadRequestException('No se recibió el archivo.');
     }
 
-    const allowed =
-      options.allowedMimeExtensions || {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/webp': '.webp',
-        'application/pdf': '.pdf',
-      };
+    const allowed = options.allowedMimeExtensions || {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'application/pdf': '.pdf',
+    };
 
     const ext = allowed[file.mimetype];
 
@@ -46,7 +50,9 @@ export class StorageService {
 
     const folder = this.sanitizeSegment(options.folder || 'general');
     const prefix = this.sanitizeSegment(options.prefix || 'archivo');
-    const entity = options.entityId ? this.sanitizeSegment(String(options.entityId)) : 'item';
+    const entity = options.entityId
+      ? this.sanitizeSegment(String(options.entityId))
+      : 'item';
 
     const baseName = options.filenameBase
       ? this.sanitizeSegment(String(options.filenameBase))
@@ -72,13 +78,12 @@ export class StorageService {
     };
   }
 
-  async saveImage(file: any, options: SaveFileOptions) {
+  async saveImage(file: Express.Multer.File, options: SaveFileOptions) {
+    assertValidAvatar(file, AVATAR_MAX_BYTES);
+
     return this.saveFile(file, {
       ...options,
-      allowedMimeExtensions: {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-      },
+      allowedMimeExtensions: AVATAR_MIME_EXTENSIONS,
     });
   }
 }

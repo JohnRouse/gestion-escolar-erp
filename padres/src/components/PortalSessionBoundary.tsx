@@ -1,36 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import axios from "axios";
+import { clearPortalSession, isValidPortalToken } from "@/lib/portalSession";
 
-function clearPortalSession() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("selectedChild");
-  localStorage.removeItem("avatar_url");
-}
+export default function PortalSessionBoundary({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [ready, setReady] = useState(false);
 
-function isPortalToken(token: string) {
-  try {
-    const segment = token.split(".")[1] || "";
-    const base64 = segment.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(padded));
-    return payload.canal === "portal-padres";
-  } catch {
-    return false;
-  }
-}
-
-export default function PortalSessionBoundary() {
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token && !isPortalToken(token)) {
+    const privateRoute = pathname.startsWith("/dashboard");
+    if ((token && !isValidPortalToken(token)) || (privateRoute && !token)) {
       clearPortalSession();
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login");
-      }
+      window.location.replace("/login");
+      return;
     }
+
+    queueMicrotask(() => setReady(true));
 
     const interceptor = axios.interceptors.response.use(
       (response) => response,
@@ -46,7 +34,15 @@ export default function PortalSessionBoundary() {
     );
 
     return () => axios.interceptors.response.eject(interceptor);
-  }, []);
+  }, [pathname]);
 
-  return null;
+  if (!ready) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-surface-alt px-6">
+        <p className="text-sm font-semibold text-text-secondary">Validando sesión…</p>
+      </main>
+    );
+  }
+
+  return children;
 }

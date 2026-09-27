@@ -262,3 +262,31 @@ Deben utilizarse estados como:
 - La confirmación V1 es acuse personal, no firma digital certificada.
 - Familias y notificaciones usan matrículas `Activo`, `Matriculado` y
   `Pre-matriculado`, excluyen `Inactivo`/`Reserva` y deduplican por Usuario.
+
+## 16. Fotografía del estudiante compartida
+
+- La fuente única es `Estudiante.avatar_url`; ERP y Portal leen y actualizan la
+  misma referencia.
+- Reemplazar una foto sobrescribe esa referencia. Quitarla establece
+  `avatar_url = NULL`; el archivo anterior puede quedar huérfano hasta contar
+  con una política fiable de borrado físico.
+- Sin foto, las interfaces muestran iniciales locales con la regla canónica
+  primera letra del primer nombre + primera letra del último apellido visible.
+- No se generan imágenes externas ni se aceptan URLs ingresadas por el cliente.
+- V1 sincroniza por actualización local inmediata en el Portal y por nueva
+  consulta en el otro producto; no utiliza WebSockets.
+- Agregar o cambiar no carga el original inmediatamente: abre el editor común,
+  permite mover y ampliar, muestra preview cuadrado/circular y solo entonces
+  genera el avatar oficial 1:1 de 512×512 en WEBP o JPEG compatible.
+- El archivo persistido ya contiene el encuadre. Todo consumidor muestra esa
+  fuente cuadrada con `object-fit: cover` y `object-position: center center`,
+  sin aplicar un crop distinto por pantalla.
+
+## 17. Fotografía del usuario apoderado
+
+- La fuente única es `Usuario.avatar_url`; `localStorage` puede conservar una
+  copia de presentación, pero el perfil del backend siempre prevalece.
+- La misma edición 1:1 y normalización 512×512 se usa para agregar o cambiar.
+  Quitar vuelve la referencia a `NULL` y la interfaz retorna a iniciales locales.
+- Solo el Usuario autenticado por el canal Portal puede operar su foto. Los
+  contratos no reciben un identificador de otro usuario ni aceptan URLs.

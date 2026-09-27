@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Delete,
   Get,
   Body,
   HttpCode,
@@ -19,6 +20,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request as ExpressRequest } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { AVATAR_MAX_BYTES, avatarFileFilter } from '../storage/image-upload';
 
 type AuthenticatedRequest = ExpressRequest & {
   user: { userId: number; personaId: number; rol: string; canal: string };
@@ -28,7 +30,6 @@ type PortalProfileUpdate = {
   correo?: string;
   telefono?: string;
   ocupacion?: string;
-  avatar_url?: string;
   tema?: string;
   notificaciones_activas?: boolean;
 };
@@ -66,6 +67,37 @@ export class AuthController {
     @Body() body: PortalProfileUpdate,
   ) {
     return this.authService.updatePortalPerfil(req.user.userId, body);
+  }
+
+  @Post('portal/perfil/avatar')
+  @UseGuards(AuthGuard('jwt-portal'))
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: memoryStorage(),
+      limits: { fileSize: AVATAR_MAX_BYTES },
+      fileFilter: avatarFileFilter,
+    }),
+  )
+  async subirAvatarPerfilPortal(
+    @Request() req: AuthenticatedRequest,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Selecciona una imagen JPG, PNG o WEBP.');
+    }
+
+    const saved = await this.storageService.saveImage(file, {
+      folder: 'usuarios',
+      prefix: 'avatar-portal',
+    });
+
+    return this.authService.updatePortalAvatar(req.user.userId, saved.url);
+  }
+
+  @Delete('portal/perfil/avatar')
+  @UseGuards(AuthGuard('jwt-portal'))
+  quitarAvatarPerfilPortal(@Request() req: AuthenticatedRequest) {
+    return this.authService.removePortalAvatar(req.user.userId);
   }
 
   @Put('portal/cambiar-password')

@@ -14,6 +14,6 @@ import { AsistenciaPadresController } from './asistencia/asistencia-padres.contr
     AcademicosController,
     AsistenciaController,
   ],
-  providers: [AcademicosService, AsistenciaService, StorageService]
+  providers: [AcademicosService, AsistenciaService, StorageService],
 })
 export class AcademicosModule {}

@@ -18,6 +18,7 @@ type PersonaResumen = {
   telefono?: string | null;
   correo?: string | null;
   distrito?: string | null;
+  avatar_url?: string | null;
 };
 
 type StudentRowProps = {
@@ -46,6 +47,7 @@ type StudentRowProps = {
 type GuardianRowProps = {
   apoderado: {
     id_persona: number;
+    avatar_url?: string | null;
     ocupacion?: string | null;
     persona: PersonaResumen;
     estudiantes?: any[];
@@ -256,7 +258,7 @@ export function GuardianTableRow({
     <div className="carbon-list-row community-guardian-row group grid items-center gap-5 px-5 py-4 transition-colors xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1.2fr)_minmax(120px,0.45fr)_auto]">
       <div className="flex min-w-0 items-center gap-3">
         <PersonAvatar
-          persona={apoderado.persona}
+          persona={{ ...apoderado.persona, avatar_url: apoderado.avatar_url }}
           size="md"
           rounded="xl"
         />

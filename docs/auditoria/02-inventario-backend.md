@@ -55,6 +55,8 @@ Este documento fue generado a partir de los controladores NestJS.
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `PATCH` | `matriculas/:id/continuidad` |
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `PATCH` | `alumnos/:id/estado-institucional` |
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `POST` | `alumnos/:id/avatar` |
+| `api/src/academicos/academicos-padres.controller.ts` | `academicos/padres` | `POST` | `hijos/:id/avatar` |
+| `api/src/academicos/academicos-padres.controller.ts` | `academicos/padres` | `DELETE` | `hijos/:id/avatar` |
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `PUT` | `alumnos/:id` |
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `POST` | `apoderados` |
 | `api/src/academicos/academicos.controller.ts` | `academicos` | `GET` | `apoderados/listado` |
@@ -141,7 +143,6 @@ Este documento fue generado a partir de los controladores NestJS.
 | `api/src/analiticas/analiticas.controller.ts` | `analiticas` | `GET` | `distribucion-nivel` |
 | `api/src/apoderados/apoderados.controller.ts` | `apoderados` | `GET` | `perfil` |
 | `api/src/apoderados/apoderados.controller.ts` | `apoderados` | `PUT` | `perfil` |
-| `api/src/apoderados/estudiantes.controller.ts` | `estudiantes` | `PUT` | `:id/avatar` |
 | `api/src/app.controller.ts` | `` | `GET` | `` |
 | `api/src/auth/auth.controller.ts` | `auth` | `POST` | `login` |
 | `api/src/auth/auth.controller.ts` | `auth` | `GET` | `perfil` |

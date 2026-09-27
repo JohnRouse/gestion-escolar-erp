@@ -3,8 +3,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
+import { AlertCircle, ArrowLeft, Mail, Paperclip, Search } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 
 interface Adjunto {
   id_adjunto: number;
@@ -180,9 +182,9 @@ function ComunicadosContent() {
 
   if (selected) {
     return (
-      <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title="Comunicados" />
-        <div className="px-5 pb-28 pt-4 md:px-8">
+      <main className="portal-page">
+        <ScreenHeader title="Comunicados" subtitle="Información institucional" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
+        <div className="portal-content">
           <button
             onClick={() => {
               setSelected(null);
@@ -191,23 +193,23 @@ function ComunicadosContent() {
               setActionSuccess("");
               router.replace("/dashboard/comunicados");
             }}
-            className="mb-4 flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-bold text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="portal-button portal-button-quiet mb-4 px-2"
           >
-            <span className="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+            <ArrowLeft size={17} aria-hidden="true" />
             Volver a comunicados
           </button>
 
           <article className="m-card p-5 md:p-7">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+              <span className="portal-badge bg-accent-soft text-accent">
                 {selected.categoria || "General"}
               </span>
               {selected.urgente && (
-                <span className="rounded-full bg-danger-soft px-3 py-1 text-xs font-bold text-danger">
+                <span className="portal-badge bg-danger-soft text-danger">
                   Urgente
                 </span>
               )}
-              <span className={`rounded-full px-3 py-1 text-xs font-bold ${selected.leida ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>
+              <span className={`portal-badge ${selected.leida ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>
                 {selected.leida
                   ? "Leído"
                   : markingRead === selected.id_circular
@@ -248,9 +250,9 @@ function ComunicadosContent() {
                       href={file.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm font-bold text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-accent"
                     >
-                      <span className="material-symbols-rounded" aria-hidden="true">attach_file</span>
+                      <Paperclip size={17} aria-hidden="true" />
                       {file.nombre_archivo}
                     </a>
                   ))}
@@ -273,7 +275,7 @@ function ComunicadosContent() {
                     <button
                       onClick={() => void confirm()}
                       disabled={confirming}
-                      className="press mt-3 min-h-11 rounded-xl bg-accent px-5 text-sm font-bold text-white disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                      className="portal-button mt-3"
                     >
                       {confirming ? "Confirmando…" : "Confirmar recepción"}
                     </button>
@@ -311,9 +313,9 @@ function ComunicadosContent() {
   const unread = items.filter((item) => !item.leida).length;
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Comunicados" />
-      <div className="px-5 pb-28 pt-4 md:px-8">
+    <main className="portal-page">
+      <ScreenHeader title="Comunicados" subtitle="Información institucional" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
+      <div className="portal-content">
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-text-secondary">
             {unread > 0 ? `${unread} sin leer` : "Todos leídos"}
@@ -323,53 +325,36 @@ function ComunicadosContent() {
 
         <label className="relative mb-3 block">
           <span className="sr-only">Buscar comunicados</span>
-          <span className="material-symbols-rounded absolute left-3 top-3 text-text-muted" aria-hidden="true">search</span>
+          <Search size={18} className="absolute left-3 top-3 text-text-muted" aria-hidden="true" />
           <input
             type="search"
             placeholder="Buscar comunicados"
-            className="min-h-11 w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="portal-field portal-field-leading"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
 
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Filtros de comunicados">
+        <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Filtros de comunicados">
           {([['todos', 'Todos'], ['no_leidos', 'Sin leer'], ['leidos', 'Leídos']] as const).map(([value, label]) => (
-            <button key={value} onClick={() => setReadFilter(value)} className={`min-h-11 whitespace-nowrap rounded-full px-4 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${readFilter === value ? "bg-accent text-white" : "border border-border bg-white text-text-secondary"}`}>
+            <button key={value} onClick={() => setReadFilter(value)} aria-pressed={readFilter === value} className="portal-filter">
               {label}
             </button>
           ))}
-          <button onClick={() => setUrgentOnly((value) => !value)} className={`min-h-11 whitespace-nowrap rounded-full px-4 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${urgentOnly ? "bg-danger text-white" : "border border-border bg-white text-text-secondary"}`}>
+          <button onClick={() => setUrgentOnly((value) => !value)} aria-pressed={urgentOnly} className="portal-filter">
             Urgentes
           </button>
-          <button onClick={() => setAttachmentsOnly((value) => !value)} className={`min-h-11 whitespace-nowrap rounded-full px-4 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${attachmentsOnly ? "bg-info text-white" : "border border-border bg-white text-text-secondary"}`}>
+          <button onClick={() => setAttachmentsOnly((value) => !value)} aria-pressed={attachmentsOnly} className="portal-filter">
             Con adjuntos
           </button>
         </div>
 
         {loading ? (
-          <div className="space-y-3" aria-label="Cargando comunicados">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="m-card space-y-3 p-4">
-                <div className="skel h-4 w-3/4" />
-                <div className="skel h-3 w-full" />
-                <div className="skel h-3 w-1/4" />
-              </div>
-            ))}
-          </div>
+          <PortalSkeletonList />
         ) : error ? (
-          <div className="m-card p-6 text-center">
-            <span className="material-symbols-rounded text-3xl text-danger" aria-hidden="true">error</span>
-            <p className="mt-2 text-sm font-bold text-text">No se pudieron cargar los comunicados</p>
-            <p role="alert" className="mt-1 text-sm text-text-secondary">{error}</p>
-            <button onClick={() => void load()} className="mt-4 min-h-11 rounded-xl bg-accent px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Reintentar</button>
-          </div>
+          <PortalState kind="error" icon={<AlertCircle size={21} />} title="No se pudieron cargar los comunicados" description={error} actionLabel="Reintentar" onAction={() => void load()} />
         ) : filtered.length === 0 ? (
-          <div className="m-card p-8 text-center">
-            <span className="material-symbols-rounded text-4xl text-text-muted" aria-hidden="true">mail</span>
-            <p className="mt-2 text-sm font-bold text-text">No hay comunicados para mostrar</p>
-            <p className="mt-1 text-sm text-text-secondary">Prueba cambiando los filtros.</p>
-          </div>
+          <PortalState icon={<Mail size={21} />} title="No hay comunicados para mostrar" description="Prueba cambiando los filtros." />
         ) : (
           <div className="space-y-3">
             {filtered.map((item) => (
@@ -381,17 +366,17 @@ function ComunicadosContent() {
                   setReadAttempted(null);
                   setSelected(item);
                 }}
-                className={`press m-card w-full p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${!item.leida ? "border-l-4 border-l-accent" : ""}`}
+                className={`press m-card w-full p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${!item.leida ? "portal-unread" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       {!item.leida && <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="Sin leer" />}
-                      <p className={`truncate font-extrabold ${item.leida ? "text-text-secondary" : "text-text"}`}>{item.titulo}</p>
+                      <p className={`line-clamp-2 leading-6 text-text ${item.leida ? "font-semibold" : "font-extrabold"}`}>{item.titulo}</p>
                     </div>
                     <p className="mt-1 truncate text-xs text-text-secondary">{item.remitente}</p>
                   </div>
-                  {item.urgente && <span className="shrink-0 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-bold text-danger">Urgente</span>}
+                  {item.urgente && <span className="portal-badge shrink-0 bg-danger-soft text-danger">Urgente</span>}
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm leading-5 text-text-secondary">{item.contenido}</p>
                 <p className="mt-2 text-xs text-text-muted">Dirigido a: {item.dirigido_a}</p>
@@ -399,7 +384,7 @@ function ComunicadosContent() {
                   <span>{formatDate(item.fecha_creacion)}</span>
                   <span>·</span>
                   <span>{item.categoria}</span>
-                  {item.adjuntos.length > 0 && <><span>·</span><span className="inline-flex items-center gap-1"><span className="material-symbols-rounded text-base" aria-hidden="true">attach_file</span>{item.adjuntos.length}</span></>}
+                  {item.adjuntos.length > 0 && <><span>·</span><span className="inline-flex items-center gap-1"><Paperclip size={14} aria-hidden="true" />{item.adjuntos.length}</span></>}
                   {item.confirmada && <><span>·</span><span className="font-bold text-success">Confirmado</span></>}
                 </div>
               </button>
@@ -416,8 +401,8 @@ export default function ComunicadosPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-surface-alt pb-24">
-          <ScreenHeader title="Comunicados" />
+        <main className="portal-page">
+          <ScreenHeader title="Comunicados" subtitle="Información institucional" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
           <p className="px-5 pt-8 text-center text-sm text-text-secondary">Cargando comunicados…</p>
           <BottomNav />
         </main>

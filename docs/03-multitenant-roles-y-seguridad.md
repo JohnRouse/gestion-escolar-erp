@@ -253,3 +253,36 @@ interfaz no amplía la autoridad del actor.
 - Las filas legacy sin contexto solo se muestran cuando el actor tiene un único
   tenant activo; con varios se excluyen por ambigüedad.
 - Un ID ajeno o fuera del alcance responde 404 sin revelar su existencia.
+
+## 13. Fotografía institucional del estudiante
+
+- `Estudiante.avatar_url` es la única referencia de foto para intranet y Portal
+  de Padres. No existe un avatar paralelo por canal.
+- Apoderado, Padre o Madre solo puede subir, reemplazar o quitar la foto después
+  de que `jwt-portal` relea su identidad y el backend confirme el vínculo
+  `ApoderadoEstudiante`. Un ID ajeno responde 404.
+- En intranet solo Admin, Director y Secretaria pueden cambiarla cuando tanto el
+  rol global como el `rol_colegio` efectivo autorizan el tenant y colegio
+  activos. Profesor no puede hacerlo.
+- La carga inicial admite JPG/JPEG, PNG o WEBP de hasta 5 MB. El cliente obliga
+  a confirmar un recorte cuadrado y normaliza el resultado a WEBP 512×512
+  (JPEG si el navegador no dispone de encoder WEBP);
+  servidor y StorageService vuelven a comprobar MIME, firma binaria, peso y
+  formato. SVG, contenido ejecutable y URLs arbitrarias se rechazan.
+- La traza estructurada registra usuario, estudiante, acción, canal y fecha; no
+  registra el archivo ni su contenido.
+
+## 14. Fotografía propia del apoderado
+
+- `Usuario.avatar_url` es la única referencia de la foto del usuario tanto para
+  Portal como para cualquier ficha ERP que consulte esa cuenta. No existe un
+  campo paralelo ni sincronización por copia.
+- `POST /auth/portal/perfil/avatar` y `DELETE /auth/portal/perfil/avatar` usan
+  exclusivamente `jwt-portal` y derivan el Usuario desde `req.user`; no aceptan
+  `id_usuario` ni una URL enviada por el cliente.
+- El PUT general del perfil no puede modificar `avatar_url`. Agregar o cambiar
+  exige archivo, crop 1:1 y validación binaria compartida; quitar establece la
+  referencia en `NULL`.
+- La traza registra actor, Persona, acción, canal y fecha, sin nombre original,
+  DNI, bytes ni contenido. El archivo reemplazado puede quedar huérfano hasta
+  disponer de una política fiable de borrado físico.

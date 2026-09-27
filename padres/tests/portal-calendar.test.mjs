@@ -96,7 +96,7 @@ test("calendario sale de loading en error y ofrece reintento", async () => {
   );
   assert.match(source, /setStatus\("error"\);\s*setLoading\(false\)/);
   assert.match(source, /No se pudo cargar el calendario\./);
-  assert.match(source, />\s*Reintentar\s*</);
+  assert.match(source, /actionLabel=\{status === "error" \? "Reintentar" : undefined\}/);
 });
 
 test("proxy conserva API_INTERNAL_URL y reescribe uploads", async () => {

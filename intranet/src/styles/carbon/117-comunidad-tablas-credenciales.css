@@ -58,9 +58,8 @@
 .community-student-list-photo {
   width: 100%;
   height: 100%;
-  padding: 2px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center center;
   background: #ffffff;
 }
 
@@ -131,7 +130,7 @@
 .community-linked-student-photo-frame {
   display: flex;
   width: 48px;
-  height: 58px;
+  height: 48px;
   flex: 0 0 48px;
   align-items: center;
   justify-content: center;
@@ -144,9 +143,8 @@
 .community-linked-student-photo {
   width: 100%;
   height: 100%;
-  padding: 2px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center center;
   background: #ffffff;
 }
 

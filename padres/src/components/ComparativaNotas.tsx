@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import axios from "axios";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
@@ -39,36 +40,24 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   const [unidades, setUnidades] = useState<UnidadesCurso[]>([]);
   const [cursoSeleccionado, setCursoSeleccionado] = useState<string>("");
 
-  const fetchData = async (bim: number, signal: AbortSignal) => {
+  useEffect(() => {
     if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) return;
-
-    const [compRes, unidRes] = await Promise.all([
-      axios.get(`/api/calificaciones/padres/comparativa?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bim}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      }),
-      axios.get(`/api/calificaciones/padres/unidades?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bim}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      }),
-    ]);
-
-    setData(compRes.data);
-    setUnidades(unidRes.data);
-    if (unidRes.data.length > 0 && !cursoSeleccionado) {
-      setCursoSeleccionado(unidRes.data[0].curso);
-    }
-  };
-
-  useEffect(() => {
     const controller = new AbortController();
-    fetchData(bimestre, controller.signal).catch((error) => {
-      if (!axios.isCancel(error)) {
-        setData(null);
-        setUnidades([]);
-      }
+    Promise.all([
+      axios.get(`/api/calificaciones/padres/comparativa?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bimestre}`, {
+        headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
+      }),
+      axios.get(`/api/calificaciones/padres/unidades?alumno_id=${selectedChild.id_estudiante}&bimestre_id=${bimestre}`, {
+        headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
+      }),
+    ]).then(([compRes, unidRes]) => {
+      setData(compRes.data);
+      setUnidades(unidRes.data);
+      setCursoSeleccionado((current) => current || unidRes.data[0]?.curso || "");
+    }).catch((error) => {
+      if (!axios.isCancel(error)) { setData(null); setUnidades([]); }
     });
     return () => controller.abort();
   }, [selectedChild, bimestre]);
@@ -78,7 +67,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   const maxNota = 20;
 
   // ── Gráfico de evolución (con placeholders) ──
-  const EvolucionBarras = () => {
+  const renderEvolucionBarras = () => {
     if (data.evolucion.every((e) => e.promedio === null)) {
       return <p className="text-xs text-text-muted">Sin notas registradas en ningún bimestre.</p>;
     }
@@ -116,7 +105,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
                     x={i * (barWidth + gap) + barWidth / 2}
                     y={isHigh ? chartHeight - barHeight + 12 : chartHeight - barHeight - 4}
                     textAnchor="middle"
-                    className={`text-[9px] font-bold ${isHigh ? "fill-white" : "fill-text dark:fill-gray-300"}`}
+                    className={`text-[11px] font-bold ${isHigh ? "fill-white" : "fill-text dark:fill-gray-300"}`}
                   >
                     {valorEntero}
                   </text>
@@ -125,7 +114,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
                   x={i * (barWidth + gap) + barWidth / 2}
                   y={chartHeight + 14}
                   textAnchor="middle"
-                  className={`text-[9px] ${tieneDato ? "fill-text dark:fill-gray-300" : "fill-text-muted dark:fill-gray-500"}`}
+                  className={`text-[11px] ${tieneDato ? "fill-text dark:fill-gray-300" : "fill-text-muted dark:fill-gray-500"}`}
                 >
                   B{bim}
                 </text>
@@ -138,7 +127,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   };
 
   // ── Gráfico de radar ──
-  const RadarChart = () => {
+  const renderRadarChart = () => {
     const cursos = data.radar.filter((c) => c.promedioAlumno !== null && c.promedioSeccion !== null);
     if (cursos.length === 0) {
       return <p className="text-xs text-text-muted">No hay suficientes datos comparativos para este bimestre.</p>;
@@ -183,8 +172,6 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   // ángulo del eje
   const angle = angleSlice * i - Math.PI / 2;
   const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-
   // elegir anclaje según lado
   let textAnchor: "start" | "middle" | "end" = "middle";
   if (cos > 0.1) textAnchor = "start";
@@ -201,14 +188,14 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
       y={pos.y}
       textAnchor={textAnchor}
       dominantBaseline="middle"
-      className="text-[10px] font-semibold fill-text dark:fill-gray-200"
+      className="text-xs font-semibold fill-text dark:fill-gray-200"
     >
       {abreviarCurso(c.curso)}
     </text>
   );
 })}
     </svg>
-    <div className="flex items-center gap-4 text-[10px]">
+    <div className="flex items-center gap-4 text-xs">
       <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-accent inline-block" /> Alumno</span>
       <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-text-muted inline-block" style={{ borderTop: '2px dashed' }} /> Sección</span>
     </div>
@@ -217,7 +204,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
   };
 
   // ── Gráfico de unidades por curso ──
-  const UnidadesBarras = () => {
+  const renderUnidadesBarras = () => {
     const cursoData = unidades.find((u) => u.curso === cursoSeleccionado);
     if (!cursoData || cursoData.unidades.every((u) => u.promedio === null)) {
       return <p className="text-xs text-text-muted">Sin notas registradas en este bimestre para el curso seleccionado.</p>;
@@ -262,7 +249,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
                     x={idx * (barWidth + gap) + barWidth / 2}
                     y={isHigh ? chartHeight - barHeight + 12 : chartHeight - barHeight - 4}
                     textAnchor="middle"
-                    className={`text-[9px] font-bold ${isHigh ? "fill-white" : "fill-text dark:fill-gray-300"}`}
+                    className={`text-[11px] font-bold ${isHigh ? "fill-white" : "fill-text dark:fill-gray-300"}`}
                   >
                     {valorEntero}
                   </text>
@@ -271,7 +258,7 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
                   x={idx * (barWidth + gap) + barWidth / 2}
                   y={chartHeight + 14}
                   textAnchor="middle"
-                  className="text-[9px] fill-text-muted dark:fill-gray-400"
+                  className="text-[11px] fill-text-muted dark:fill-gray-400"
                 >
                   U{unidad.unidad}
                 </text>
@@ -285,11 +272,11 @@ export default function ComparativaNotas({ bimestre }: ComparativaNotasProps) {
 
   return (
     <div className="space-y-6">
-      <EvolucionBarras />
-      <UnidadesBarras />
-      <RadarChart />
-      <div className="bg-accent-soft dark:bg-accent/20 rounded-xl p-3 text-xs text-text dark:text-gray-200 leading-relaxed">
-        🌟 {data.mensaje}
+      {renderEvolucionBarras()}
+      {renderUnidadesBarras()}
+      {renderRadarChart()}
+      <div className="flex gap-2 rounded-xl bg-accent-soft p-3 text-xs leading-relaxed text-text dark:bg-accent/20 dark:text-gray-200">
+        <Info size={16} className="shrink-0 text-accent" aria-hidden="true" /> {data.mensaje}
       </div>
     </div>
   );
