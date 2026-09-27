@@ -126,7 +126,7 @@ export default function SolicitarCitaModal({
       <button
         type="button"
         aria-label="Cerrar solicitud de cita"
-        className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
+        className="portal-sheet-backdrop"
         onClick={() => !enviando && onClose()}
       />
       <section
@@ -135,7 +135,7 @@ export default function SolicitarCitaModal({
         aria-modal="true"
         aria-labelledby="solicitar-cita-title"
         aria-describedby="solicitar-cita-help"
-        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-[460px] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:rounded-[28px]"
+        className="portal-sheet relative flex max-h-[calc(100dvh-1rem)] w-full max-w-[520px] flex-col overflow-hidden sm:rounded-[18px] sm:border-b"
       >
         <header className="border-b border-border px-6 py-5">
           <p className="text-sm font-semibold text-accent">Solicitud de cita</p>
@@ -146,7 +146,7 @@ export default function SolicitarCitaModal({
         </header>
 
         <div className="space-y-4 overflow-y-auto px-6 py-5">
-          <p id="solicitar-cita-help" className="rounded-xl bg-accent-soft p-3 text-sm leading-6 text-text-secondary">
+          <p id="solicitar-cita-help" className="rounded-lg border border-accent/15 bg-accent-soft p-3 text-sm leading-6 text-text-secondary">
             Propón un horario. El colegio o la persona destinataria deberá confirmarlo; el horario de clases no se muestra como disponibilidad.
           </p>
           <label className="block">
@@ -180,11 +180,11 @@ export default function SolicitarCitaModal({
               placeholder="Describe brevemente el motivo"
             />
           </label>
-          {mensaje ? <p className="text-sm font-semibold text-danger" role="alert">{mensaje}</p> : null}
+          {mensaje ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger" role="alert">{mensaje}</p> : null}
         </div>
 
         <footer className="grid grid-cols-2 gap-3 border-t border-border bg-white px-6 py-4">
-          <button type="button" onClick={onClose} disabled={enviando} className="min-h-11 rounded-xl text-sm font-bold text-text-secondary focus-visible:outline-2 focus-visible:outline-accent">
+          <button type="button" onClick={onClose} disabled={enviando} className="portal-button portal-button-secondary">
             Cancelar
           </button>
           <button type="button" onClick={() => void handleEnviar()} disabled={enviando} className="btn-contained min-h-11 disabled:opacity-60">

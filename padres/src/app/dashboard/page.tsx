@@ -3,41 +3,75 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { CalendarCheck2, ChevronRight, CreditCard, Megaphone, TrendingUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import DashboardHeader from "@/components/DashboardHeader";
+import { PortalNotificationIcon, PortalSection, PortalState } from "@/components/PortalUI";
 import { childDateRange, useSelectedChild } from "@/contexts/SelectedChildContext";
 import AlertasAcademicas from "@/components/AlertasAcademicas";
+import {
+  attendancePercentage,
+  averageAvailableScores,
+  formatPortalScore,
+  paymentSummary,
+} from "@/lib/portalDashboard";
+import { portalNotificationTarget } from "@/lib/portalNotificationNavigation";
 
 interface DashboardData {
   asistencia: number | null;
   promedio: number | null;
   estadoPagos: string;
-  totalPendiente: number;
+  totalPendiente: number | null;
+  pagosTone: "success" | "warning" | "neutral";
   circularReciente: { titulo: string; fecha: string } | null;
+  circularError: boolean;
 }
 
 interface EventoActividad {
   tipo: string;
-  icono: string;
   mensaje: string;
   fecha: string;
   url: string;
 }
 
+interface AttendanceDto { estado: string }
+interface GradeDto { promedioBimestre: number | null }
+interface PortalNotificationDto {
+  origen?: string;
+  tipo?: string;
+  titulo?: string;
+  mensaje?: string;
+  fecha_creacion: string;
+  url?: string | null;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedChild } = useSelectedChild();
+  const { selectedChild, childrenLoading, childrenError, reloadChildren } = useSelectedChild();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [actividad, setActividad] = useState<EventoActividad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [partialError, setPartialError] = useState(false);
+  const [activityError, setActivityError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    if (!selectedChild) return;
+    if (!selectedChild) {
+      return;
+    }
 
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const alumnoId = selectedChild.id_estudiante;
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return;
+      setLoading(true);
+      setDashboardData(null);
+      setActividad([]);
+      setPartialError(false);
+      setActivityError(false);
+    });
     const range = childDateRange(selectedChild);
     const controller = new AbortController();
     const requestConfig = {
@@ -57,19 +91,16 @@ export default function DashboardPage() {
       axios.get("/api/circulares/padres", requestConfig),
       axios.get("/api/notificaciones/portal?limit=3", requestConfig),
     ]).then(([asistRes, notasRes, pagosRes, circRes, actRes]) => {
-      const asistencias = asistRes.status === "fulfilled" ? asistRes.value.data : [];
-      const total = asistencias.length;
-      const presentes = asistencias.filter((a: any) => a.estado === "Presente").length;
-      const pct = total > 0 ? Math.round((presentes / total) * 100) : null;
+      const asistencias: AttendanceDto[] = asistRes.status === "fulfilled" ? asistRes.value.data : [];
+      const pct = attendancePercentage(asistencias);
 
-      const notas = notasRes.status === "fulfilled" ? notasRes.value.data : [];
-      const promedios = notas.map((c: any) => c.promedioBimestre).filter((p: any) => p !== null);
-      const prom = promedios.length > 0
-        ? Math.round((promedios.reduce((a: number, b: number) => a + b, 0) / promedios.length) * 10) / 10
-        : null;
+      const notas: GradeDto[] = notasRes.status === "fulfilled" ? notasRes.value.data : [];
+      const prom = averageAvailableScores(notas.map((course) => course.promedioBimestre));
 
-      const pendiente = pagosRes.status === "fulfilled" ? pagosRes.value.data.total_pendiente || 0 : 0;
-      const estado = pendiente === 0 ? "Al día" : "Por pagar";
+      const payment = paymentSummary(
+        pagosRes.status,
+        pagosRes.status === "fulfilled" ? pagosRes.value.data.total_pendiente : null,
+      );
 
       const circulares = circRes.status === "fulfilled" ? circRes.value.data : [];
       const circ = circulares.length > 0
@@ -77,50 +108,76 @@ export default function DashboardPage() {
         : null;
 
       const actividadReciente = actRes.status === "fulfilled"
-        ? (actRes.value.data.data ?? []).map((item: any) => ({
-            tipo: item.origen || item.tipo,
-            icono: item.origen === "pagos" ? "💳" : item.origen === "eventos" ? "📅" : "🔔",
+        ? (actRes.value.data.data ?? []).map((item: PortalNotificationDto) => ({
+          tipo: item.origen || item.tipo,
             mensaje: item.titulo || item.mensaje,
             fecha: item.fecha_creacion,
-            url: item.url || "/dashboard",
+            url: portalNotificationTarget(item, window.location.origin),
           }))
         : [];
 
       if (controller.signal.aborted) return;
       setDashboardData({
         asistencia: pct,
-        promedio: prom !== null ? Math.round(prom) : null,
-        estadoPagos: estado,
-        totalPendiente: pendiente,
+        promedio: prom,
+        estadoPagos: payment.label,
+        totalPendiente: payment.total,
+        pagosTone: payment.tone,
         circularReciente: circ,
+        circularError: circRes.status === "rejected",
       });
       setActividad(actividadReciente.slice(0, 3));
+      setActivityError(actRes.status === "rejected");
+      setPartialError([asistRes, notasRes, pagosRes, circRes, actRes].some((result) => result.status === "rejected"));
     }).catch((error) => {
       if (axios.isCancel(error)) return;
       setDashboardData({
         asistencia: null,
         promedio: null,
         estadoPagos: "Sin datos",
-        totalPendiente: 0,
+        totalPendiente: null,
+        pagosTone: "neutral",
         circularReciente: null,
+        circularError: true,
       });
+      setActivityError(true);
+      setPartialError(true);
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
 
     return () => controller.abort();
-  }, [selectedChild]);
+  }, [childrenLoading, retryKey, selectedChild]);
+
+  const pageLoading = childrenLoading || (Boolean(selectedChild) && loading);
 
   return (
-    <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-24">
+    <main className="portal-page">
       <DashboardHeader />
       <div
         key={selectedChild?.id_estudiante}
-        className="-mt-4 px-5 pb-6 relative z-20"
+        className="portal-content"
       >
-        <div className={`transition-opacity duration-500 ${loading ? "opacity-0" : "opacity-100"}`}>
+        <div>
+          {childrenError ? (
+            <div role="alert" className="m-card mb-4 p-4 text-sm text-text-secondary">
+              <p>{childrenError}</p>
+              <button type="button" onClick={reloadChildren} className="mt-2 font-bold text-accent">Reintentar</button>
+            </div>
+          ) : null}
+          {!pageLoading && !selectedChild && !childrenError ? (
+            <PortalState title="No hay estudiantes vinculados" description="Cuando la institución vincule un estudiante, su información aparecerá aquí." />
+          ) : null}
+          {partialError && selectedChild ? (
+            <div role="status" className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-warning/20 bg-warning-soft p-3 text-sm text-text-secondary">
+              <span>Algunos datos no pudieron actualizarse.</span>
+              <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="shrink-0 font-bold text-accent">Reintentar</button>
+            </div>
+          ) : null}
+          {pageLoading || selectedChild ? (
+            <>
           {/* Métricas principales */}
-          {loading ? (
+          {pageLoading ? (
             <div className="grid grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="m-card p-4 md:p-5 space-y-3">
@@ -133,91 +190,85 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {/* Asistencia */}
-              <button onClick={() => router.push("/dashboard/asistencia")} className="press m-card p-4 md:p-5 text-left">
+              <button onClick={() => router.push("/dashboard/asistencia")} className="portal-kpi press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ASISTENCIA</p>
-                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-success-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-success text-lg md:text-xl">check</span>
+                  <p className="portal-eyebrow">Asistencia</p>
+                  <span className="portal-icon-box">
+                    <CalendarCheck2 size={18} aria-hidden="true" />
                   </span>
                 </div>
                 <p className="text-3xl md:text-4xl font-extrabold text-text dark:text-gray-100 mt-2">
-                  {dashboardData?.asistencia ?? "—"}<span className="text-xl md:text-2xl">%</span>
+                  {dashboardData?.asistencia ?? "—"}{dashboardData?.asistencia !== null ? <span className="text-xl md:text-2xl">%</span> : null}
                 </p>
-                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">Bimestre I</p>
+                <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">{selectedChild?.anio || "Año lectivo"}</p>
                 <div className="mt-3 h-1.5 bg-border dark:bg-gray-600 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-success transition-all duration-700"
+                    className="h-full bg-success transition-[width] duration-300"
                     style={{ width: `${dashboardData?.asistencia ?? 0}%` }}
                   />
                 </div>
               </button>
 
               {/* Promedio */}
-              <button onClick={() => router.push("/dashboard/calificaciones")} className="press m-card p-4 md:p-5 text-left">
+              <button onClick={() => router.push("/dashboard/calificaciones")} className="portal-kpi press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PROMEDIO</p>
-                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-accent-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-accent text-lg md:text-xl">trending_up</span>
+                  <p className="portal-eyebrow">Promedio</p>
+                  <span className="portal-icon-box">
+                    <TrendingUp size={18} aria-hidden="true" />
                   </span>
                 </div>
                 <p className="text-3xl md:text-4xl font-extrabold text-text dark:text-gray-100 mt-2">
-                  {dashboardData?.promedio ?? "—"}
-                  <span className="text-base md:text-lg text-text-secondary dark:text-gray-400">.0</span>
+                  {formatPortalScore(dashboardData?.promedio ?? null)}
                 </p>
                 <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">General</p>
-                <span
-                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] md:text-xs font-bold ${
-                    (dashboardData?.promedio ?? 0) >= 11
-                      ? "bg-success-soft text-success"
-                      : "bg-danger-soft text-danger"
-                  }`}
-                >
-                  {(dashboardData?.promedio ?? 0) >= 11 ? "Aprobado" : "En riesgo"}
+                <span className="portal-badge mt-3 bg-surface-alt text-text-secondary">
+                  {dashboardData?.promedio === null ? "Sin notas" : "Promedio disponible"}
                 </span>
               </button>
 
               {/* Pagos */}
-              <button onClick={() => router.push("/dashboard/pagos")} className="press m-card p-4 md:p-5 text-left">
+              <button onClick={() => router.push("/dashboard/pagos")} className="portal-kpi press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">PAGOS</p>
-                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-danger-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-danger text-lg md:text-xl">credit_card</span>
+                  <p className="portal-eyebrow">Pagos</p>
+                  <span className="portal-icon-box">
+                    <CreditCard size={18} aria-hidden="true" />
                   </span>
                 </div>
-                <p className="text-xl md:text-2xl font-extrabold text-text dark:text-gray-100 mt-2">
-                  S/{" "}
-                  {dashboardData?.totalPendiente?.toLocaleString("es-PE", {
+                <p className="portal-kpi-value text-2xl md:text-3xl font-extrabold text-text dark:text-gray-100 mt-2">
+                  {dashboardData?.totalPendiente === null ? "—" : `S/ ${dashboardData?.totalPendiente?.toLocaleString("es-PE", {
                     minimumFractionDigits: 2,
-                  }) ?? "0.00"}
+                  })}`}
                 </p>
                 <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400">{dashboardData?.estadoPagos}</p>
                 <span
-                  className={`inline-flex mt-3 px-2 py-0.5 rounded-full text-[11px] md:text-xs font-bold ${
-                    dashboardData?.estadoPagos === "Al día"
+                  className={`portal-badge mt-3 ${
+                    dashboardData?.pagosTone === "success"
                       ? "bg-success-soft text-success"
-                      : "bg-warning-soft text-warning"
+                      : dashboardData?.pagosTone === "warning"
+                        ? "bg-warning-soft text-warning"
+                        : "bg-surface-alt text-text-secondary"
                   }`}
                 >
-                  {dashboardData?.estadoPagos === "Al día" ? "Al día" : "Por pagar"}
+                  {dashboardData?.estadoPagos}
                 </span>
               </button>
 
               {/* Último comunicado */}
-              <button onClick={() => router.push("/dashboard/comunicados")} className="press m-card p-4 md:p-5 text-left">
+              <button onClick={() => router.push("/dashboard/comunicados")} className="portal-kpi press m-card p-4 md:p-5 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs tracking-[.18em] font-bold text-text-secondary dark:text-gray-400 uppercase">ÚLTIMO COMUNICADO</p>
-                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-info-soft flex items-center justify-center">
-                    <span className="material-symbols-rounded text-info text-lg md:text-xl">campaign</span>
+                  <p className="portal-eyebrow">Último comunicado</p>
+                  <span className="portal-icon-box bg-info-soft text-info">
+                    <Megaphone size={18} aria-hidden="true" />
                   </span>
                 </div>
-                <p className="text-base md:text-lg font-extrabold text-text dark:text-gray-100 mt-2 line-clamp-1">
-                  {dashboardData?.circularReciente?.titulo ?? "Sin comunicados"}
+                <p className="text-base md:text-lg font-extrabold text-text dark:text-gray-100 mt-2 line-clamp-2">
+                  {dashboardData?.circularReciente?.titulo ?? (dashboardData?.circularError ? "No disponible" : "Sin comunicados")}
                 </p>
                 <p className="text-xs md:text-sm text-text-secondary dark:text-gray-400 truncate">
-                  {dashboardData?.circularReciente ? "Nuevo comunicado" : "No hay comunicados"}
+                  {dashboardData?.circularReciente ? "Nuevo comunicado" : dashboardData?.circularError ? "No se pudo actualizar" : "No hay comunicados"}
                 </p>
                 {dashboardData?.circularReciente && (
-                  <p className="text-[11px] md:text-xs text-text-secondary dark:text-gray-400 mt-2">
+                  <p className="mt-2 text-xs text-text-secondary dark:text-gray-400">
                     {new Date(dashboardData.circularReciente.fecha).toLocaleDateString("es-PE", {
                       day: "2-digit",
                       month: "short",
@@ -234,18 +285,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Actividad Reciente */}
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-[10px] md:text-xs tracking-[.22em] font-extrabold text-text-secondary dark:text-gray-400 uppercase">
-              ACTIVIDAD RECIENTE
-            </p>
-            <button
+          <PortalSection title="Actividad reciente" action={<button
               onClick={() => router.push("/dashboard/actividad")}
-              className="text-xs md:text-sm font-bold text-accent"
+              className="portal-button portal-button-quiet min-h-8 px-2 text-xs"
             >
               Ver más
-            </button>
-          </div>
-          {loading ? (
+            </button>}>
+          {pageLoading ? (
             <div className="mt-3 space-y-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="m-card p-3 md:p-4 flex items-center gap-3">
@@ -257,16 +303,18 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          ) : activityError ? (
+            <p role="status" className="mt-6 text-center text-sm text-text-secondary">No se pudo cargar la actividad reciente.</p>
           ) : actividad.length > 0 ? (
-            <div className="mt-3 space-y-3">
+            <div className="portal-activity-list mt-3">
               {actividad.map((evento, idx) => (
                 <button
                   key={idx}
                   onClick={() => router.push(evento.url)}
-                  className="m-card p-3 md:p-4 flex items-center gap-3 press w-full text-left"
+                  className="portal-list-item press w-full text-left"
                 >
-                  <span className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-surface-alt dark:bg-gray-700 flex items-center justify-center text-lg md:text-xl">
-                    {evento.icono}
+                  <span className="portal-icon-box">
+                    <PortalNotificationIcon origin={evento.tipo} />
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm md:text-base font-bold text-text dark:text-gray-100">{evento.mensaje}</p>
@@ -279,15 +327,16 @@ export default function DashboardPage() {
                       })}
                     </p>
                   </div>
-                  <span className="material-symbols-rounded text-text-muted">chevron_right</span>
+                  <ChevronRight size={18} className="text-text-muted" aria-hidden="true" />
                 </button>
               ))}
             </div>
           ) : (
-            <p className="text-center text-text-muted dark:text-gray-500 text-sm mt-6">
-              No hay actividad reciente.
-            </p>
+            <PortalState title="No hay actividad reciente" description="Los avisos de pagos, eventos y comunicados aparecerán aquí." />
           )}
+          </PortalSection>
+            </>
+          ) : null}
         </div>
       </div>
       <BottomNav />

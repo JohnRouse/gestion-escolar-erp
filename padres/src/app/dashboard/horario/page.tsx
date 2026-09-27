@@ -5,103 +5,93 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface Clase { hora_inicio: string; hora_fin: string; curso: string; docente: string; }
+
+function classDuration(start: string, end: string) {
+  const [startHour, startMinute] = start.split(":").map(Number);
+  const [endHour, endMinute] = end.split(":").map(Number);
+  const minutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+  return Number.isFinite(minutes) && minutes > 0 ? `${minutes} min` : null;
+}
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 
 export default function HorarioPage() {
   const router = useRouter();
-  const { selectedChild } = useSelectedChild();
+  const { selectedChild, childrenLoading, childrenError } = useSelectedChild();
   const [horario, setHorario] = useState<Record<string, Clase[]>>({});
   const [diaActivo, setDiaActivo] = useState("Lunes");
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedChild) return;
+    if (!selectedChild) {
+      return;
+    }
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetchHorario(token, selectedChild.id_estudiante);
-  }, [selectedChild]);
-
-  const fetchHorario = async (token: string, id: number) => {
+    const controller = new AbortController();
+    const fetchHorario = async () => {
     setLoading(true);
+    setHorario({});
+    setError("");
     try {
-      const res = await axios.get(`/api/academicos/padres/horario?alumno_id=${id}`, {
+      const res = await axios.get(`/api/academicos/padres/horario?alumno_id=${selectedChild.id_estudiante}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
       setHorario(res.data);
       const hoy = new Date().getDay();
       const diaHoy = DIAS[hoy - 1] || "Lunes";
       setDiaActivo(res.data[diaHoy] ? diaHoy : "Lunes");
-    } catch { setHorario({}); } finally { setLoading(false); }
-  };
+    } catch (requestError) {
+      if (axios.isCancel(requestError)) return;
+      setHorario({});
+      setError("No se pudo cargar el horario.");
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+    };
+    void fetchHorario();
+    return () => controller.abort();
+  }, [childrenLoading, retryKey, router, selectedChild]);
 
   const clases = horario[diaActivo] ?? [];
 
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt pb-20">
-        <ScreenHeader title="Horario" />
-        <div className="px-5 pt-4 pb-28 space-y-3 relative">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-start gap-3 relative pl-6">
-              <div className="skel w-3 h-3 rounded-full absolute left-[10px] top-4" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-4 w-32" />
-                <div className="skel h-3 w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-surface-alt pb-20">
-      <ScreenHeader title="Horario" />
-      <div className="px-5 pt-4">
-        <div className="flex gap-2 overflow-x-auto pb-4">
+    <main className="portal-page">
+      <ScreenHeader title="Horario" subtitle="Clases y docentes de la semana" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
+      <div className="px-5 pt-5 md:px-8">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-4">
           {DIAS.map((dia) => (
             <button
               key={dia}
               onClick={() => setDiaActivo(dia)}
-              className={`press w-12 h-12 rounded-2xl font-bold text-sm transition-all ${
-                diaActivo === dia
-                  ? "bg-accent text-white shadow-lg shadow-accent/20"
-                  : "bg-white text-text-secondary border border-border hover:bg-surface-alt"
-              }`}
+              aria-pressed={diaActivo === dia}
+              className="portal-filter min-w-[64px]"
             >
               {dia.slice(0, 3)}
             </button>
           ))}
         </div>
       </div>
-      <div className="px-5 pt-2 pb-28 space-y-3 relative">
+      <div className="relative px-5 pb-8 pt-2 md:px-8">
         <div className="absolute left-7 top-2 bottom-32 w-px bg-border" />
-        {loading ? (
-          [1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-start gap-3 relative pl-6">
-              <div className="skel w-3 h-3 rounded-full absolute left-[10px] top-4" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-4 w-32" />
-                <div className="skel h-3 w-24" />
-              </div>
-            </div>
-          ))
+        {childrenError || error ? (
+          <PortalState kind="error" title="No pudimos cargar el horario" description={childrenError || error} actionLabel={error ? "Reintentar" : undefined} onAction={error ? () => setRetryKey((key) => key + 1) : undefined} />
+        ) : !childrenLoading && !selectedChild ? (
+          <PortalState title="Selecciona un estudiante" description="Elige un estudiante para consultar su horario." />
+        ) : childrenLoading || loading ? (
+          <PortalSkeletonList />
         ) : clases.length === 0 ? (
-          <p className="text-center text-text-secondary py-10">Sin clases el {diaActivo}.</p>
+          <PortalState title={`Sin clases el ${diaActivo.toLowerCase()}`} description="No hay bloques académicos programados para este día." />
         ) : (
           clases.map((clase, idx) => (
-            <div key={idx} className="relative pl-6">
+            <div key={idx} className="relative mb-3 pl-6">
               <span className={`absolute left-[10px] top-4 w-3 h-3 rounded-full ring-4 ${
                 idx % 2 === 0 ? "bg-accent ring-accent-soft" : "bg-info ring-info-soft"
               }`} />
@@ -109,12 +99,12 @@ export default function HorarioPage() {
                 <div className="flex-1">
                   <p className="font-extrabold text-text">{clase.curso}</p>
                   <p className="text-xs text-text-secondary">{clase.docente}</p>
-                  <span className={`inline-flex mt-2 items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  {classDuration(clase.hora_inicio, clase.hora_fin) ? <span className={`portal-badge mt-2 ${
                     idx % 2 === 0 ? "bg-accent-soft text-accent" : "bg-info-soft text-info"
                   }`}>
                     <span className={`dot ${idx % 2 === 0 ? "bg-accent" : "bg-info"}`} />
-                    45 min
-                  </span>
+                    {classDuration(clase.hora_inicio, clase.hora_fin)}
+                  </span> : null}
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-extrabold text-text">{clase.hora_inicio}</p>

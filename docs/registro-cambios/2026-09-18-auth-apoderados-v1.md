@@ -77,8 +77,9 @@ visual en 390×844 y con zoom queda pendiente por ausencia de navegador.
 
 ## Riesgos y deuda
 
-Faltan aceptación humana y prueba con datos persistidos. Galería/Álbumes es P1
-y permanece fuera del contrato habilitado. No hay refresh tokens,
+Faltan aceptación humana y prueba con datos persistidos. La Galería social fue
+descartada del producto; su backend de álbumes/fotos queda legacy y dormante
+hasta una limpieza técnica no destructiva. No hay refresh tokens,
 auto-registro ni recuperación automática. La lectura de circulares no dispone
 de relación individual por usuario en el esquema vigente.
 

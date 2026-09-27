@@ -64,6 +64,7 @@ type ApoderadoMatricula = {
 
 type ApoderadoItem = {
   id_persona: number;
+  avatar_url?: string | null;
   ocupacion?: string | null;
   persona: {
     dni: string; nombres: string; apellido_paterno: string; apellido_materno: string;
@@ -473,7 +474,7 @@ export default function ApoderadosPage() {
         description="Datos personales y alumnos vinculados."
         leadingSlot={
           detalle ? (
-            <PersonAvatar persona={detalle.persona} size="lg" rounded="2xl" />
+            <PersonAvatar persona={{ ...detalle.persona, avatar_url: detalle.avatar_url }} size="lg" rounded="2xl" />
           ) : null
         }
         actions={

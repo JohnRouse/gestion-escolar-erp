@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
+import { ChevronLeft, ChevronRight, Clock3, MapPin } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
+import { PortalState, portalStateIcons } from "@/components/PortalUI";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import {
   PortalAcademicYear,
@@ -35,20 +37,20 @@ const MESES = [
 ];
 
 const TIPO_COLORS: Record<string, string> = {
-  feriado: "bg-red-100 text-red-700",
-  examen: "bg-blue-100 text-blue-700",
-  reunion: "bg-purple-100 text-purple-700",
-  actividad: "bg-green-100 text-green-700",
+  feriado: "bg-danger-soft text-danger",
+  examen: "bg-accent-soft text-accent-dark",
+  reunion: "bg-info-soft text-info",
+  actividad: "bg-success-soft text-success",
 };
 
 function CalendarFallback() {
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Calendario Escolar" />
-      <div className="px-5 pt-4 pb-28">
+    <main className="portal-page">
+      <ScreenHeader title="Calendario escolar" subtitle="Eventos y actividades" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
+      <div className="portal-content">
         <div className="grid grid-cols-7 gap-1">
           {[...Array(35)].map((_, i) => (
-            <div key={i} className="aspect-square skel rounded-xl" />
+              <div key={i} className="aspect-square skel rounded-lg" />
           ))}
         </div>
       </div>
@@ -214,27 +216,17 @@ function CalendarioContent() {
 
   if (status === "error" || status === "no-year") {
     return (
-      <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title="Calendario Escolar" />
-        <div className="px-5 pt-8 text-center">
-          <p className="text-sm text-text-secondary">
-            {status === "no-year"
-              ? "No hay un año lectivo disponible para mostrar el calendario."
-              : "No se pudo cargar el calendario."}
-          </p>
-          {status === "error" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setStatus("loading");
-                setLoading(true);
-                setRetryKey((value) => value + 1);
-              }}
-              className="btn-contained mt-4 min-h-11 px-5"
-            >
-              Reintentar
-            </button>
-          ) : null}
+      <main className="portal-page">
+        <ScreenHeader title="Calendario escolar" subtitle="Eventos y actividades" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
+        <div className="portal-content">
+          <PortalState
+            kind={status === "error" ? "error" : "empty"}
+            icon={portalStateIcons.calendar}
+            title={status === "no-year" ? "No hay un año lectivo disponible" : "No pudimos cargar el calendario"}
+            description={status === "no-year" ? "La institución aún no tiene un año operativo para mostrar." : "No se pudo cargar el calendario. Revisa tu conexión e intenta nuevamente."}
+            actionLabel={status === "error" ? "Reintentar" : undefined}
+            onAction={status === "error" ? () => { setStatus("loading"); setLoading(true); setRetryKey((value) => value + 1); } : undefined}
+          />
         </div>
         <BottomNav />
       </main>
@@ -242,38 +234,31 @@ function CalendarioContent() {
   }
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Calendario Escolar" />
+    <main className="portal-page">
+      <ScreenHeader title="Calendario escolar" subtitle="Eventos y actividades" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
       <PageTransition>
-        <div className="px-5 pt-4 pb-28">
-          <button
-            onClick={() => router.push("/dashboard?open=servicios")}
-            className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"
-          >
-            <span className="material-symbols-rounded text-lg">arrow_back</span> Servicios
-          </button>
-
+        <div className="portal-content">
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => cambiarMes(-1)}
-              className="w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center text-text hover:bg-surface-alt"
+              className="portal-icon-button"
               aria-label="Mes anterior"
             >
-              <span className="material-symbols-rounded">chevron_left</span>
+              <ChevronLeft size={19} aria-hidden="true" />
             </button>
             <h2 className="text-lg font-extrabold text-text">
               {MESES[mes - 1]} {anio}
             </h2>
             <button
               onClick={() => cambiarMes(1)}
-              className="w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center text-text hover:bg-surface-alt"
+              className="portal-icon-button"
               aria-label="Mes siguiente"
             >
-              <span className="material-symbols-rounded">chevron_right</span>
+              <ChevronRight size={19} aria-hidden="true" />
             </button>
           </div>
 
-          <div className="grid grid-cols-7 text-center text-[10px] font-bold text-text-muted mb-2">
+          <div className="mb-2 grid grid-cols-7 text-center text-xs font-medium text-text-muted">
             {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d) => (
               <div key={d}>{d}</div>
             ))}
@@ -282,7 +267,7 @@ function CalendarioContent() {
           {loading ? (
             <div className="grid grid-cols-7 gap-1">
               {[...Array(35)].map((_, i) => (
-                <div key={i} className="aspect-square skel rounded-xl" />
+                <div key={i} className="aspect-square skel rounded-lg" />
               ))}
             </div>
           ) : (
@@ -298,11 +283,11 @@ function CalendarioContent() {
                   <button
                     key={dia}
                     onClick={() => setSelectedDia(esSeleccionado ? null : dia)}
-                    className={`aspect-square rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center ${
+                    className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
                       esSeleccionado
-                        ? "bg-accent text-white shadow-lg"
+                        ? "bg-accent text-white shadow-sm"
                         : esHoy
-                        ? "bg-primary text-white"
+                        ? "border border-accent bg-white text-accent-dark"
                         : tieneEventos
                         ? "bg-accent-soft text-accent"
                         : "bg-white text-text hover:bg-surface-alt"
@@ -319,27 +304,32 @@ function CalendarioContent() {
           )}
 
           {!loading && status === "ready" && eventos.length === 0 ? (
-            <p className="py-4 text-center text-sm text-text-secondary">
-              No hay eventos programados para este mes.
-            </p>
+            <PortalState icon={portalStateIcons.calendar} title="No hay eventos este mes" description="Las actividades publicadas por la institución aparecerán aquí." className="mt-4" />
+          ) : null}
+
+          {!loading && status === "ready" && eventos.length > 0 && !selectedDia ? (
+            <div className="mt-4 flex min-h-16 items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-muted">
+              <span className="portal-icon-box h-9 w-9"><Clock3 size={16} aria-hidden="true" /></span>
+              <p><span className="font-semibold text-text">Selecciona un día con indicador</span><br />Verás debajo los eventos y sus detalles.</p>
+            </div>
           ) : null}
 
           {selectedDia && (
-            <div className="mt-4 bg-white rounded-2xl border border-border p-4 animate-fade-in">
+            <div className="m-card mt-4 p-4 animate-fade-in">
               <p className="text-sm font-bold text-text mb-2">
                 {selectedDia} de {MESES[mes - 1]}
               </p>
               {eventosDelDia.length === 0 ? (
-                <p className="text-xs text-text-muted">Sin eventos</p>
+                <p className="text-sm text-text-muted">Sin eventos para este día.</p>
               ) : (
                 <div className="space-y-2">
                   {eventosDelDia.map((ev) => (
                     <div
                       key={ev.id_evento}
-                      className={`flex items-start gap-3 p-2 rounded-xl bg-surface-alt ${ev.estado === "cancelado" ? "opacity-70" : ""}`}
+                      className={`rounded-lg border border-border bg-surface-alt p-3 ${ev.estado === "cancelado" ? "opacity-70" : ""}`}
                     >
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`portal-badge ${
                           TIPO_COLORS[ev.tipo] || "bg-gray-100 text-gray-600"
                         }`}
                       >
@@ -348,14 +338,8 @@ function CalendarioContent() {
                       <div>
                         <p className="text-sm font-bold text-text">
                           {ev.titulo}
-                          {(ev.hora_inicio || ev.hora) && (
-                            <span className="text-xs text-text-muted ml-1">
-                              · {ev.hora_inicio || ev.hora}
-                              {ev.hora_fin ? `–${ev.hora_fin}` : ""}
-                            </span>
-                          )}
                         </p>
-                        <p className="text-xs font-bold capitalize text-text-secondary mt-0.5">
+                        <p className="mt-0.5 text-xs font-semibold capitalize text-text-secondary">
                           {ev.estado}
                         </p>
                         {ev.descripcion && (
@@ -364,10 +348,11 @@ function CalendarioContent() {
                           </p>
                         )}
                         {ev.ubicacion && (
-                          <p className="text-xs text-text-secondary mt-0.5">
-                            {ev.ubicacion}
+                          <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                            <MapPin size={13} aria-hidden="true" /> {ev.ubicacion}
                           </p>
                         )}
+                        {(ev.hora_inicio || ev.hora) ? <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary"><Clock3 size={13} aria-hidden="true" />{ev.hora_inicio || ev.hora}{ev.hora_fin ? `–${ev.hora_fin}` : ""}</p> : null}
                       </div>
                     </div>
                   ))}

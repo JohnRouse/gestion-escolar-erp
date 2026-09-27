@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { MessageSquareText, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface Alerta {
@@ -68,27 +69,28 @@ export default function AlertasAcademicas() {
   const getAlertStyle = (tendencia: string) => {
     switch (tendencia) {
       case "mejora":
-        return { bg: "bg-success-soft dark:bg-green-900/30", border: "border-success", text: "text-success", icon: "🌟" };
+        return { bg: "bg-success-soft dark:bg-green-900/30", border: "border-success/25", text: "text-success", icon: TrendingUp };
       case "bajada":
-        return { bg: "bg-danger-soft dark:bg-red-900/30", border: "border-danger", text: "text-danger", icon: "📉" };
+        return { bg: "bg-danger-soft dark:bg-red-900/30", border: "border-danger/25", text: "text-danger", icon: TrendingDown };
       case "estable":
-        return { bg: "bg-surface-alt dark:bg-gray-800", border: "border-border dark:border-gray-600", text: "text-text-secondary dark:text-gray-400", icon: "📊" };
+        return { bg: "bg-surface-alt dark:bg-gray-800", border: "border-border dark:border-gray-600", text: "text-text-secondary dark:text-gray-400", icon: Minus };
       default:
-        return { bg: "bg-surface-alt dark:bg-gray-800", border: "border-border dark:border-gray-600", text: "text-text-muted", icon: "💬" };
+        return { bg: "bg-surface-alt dark:bg-gray-800", border: "border-border dark:border-gray-600", text: "text-text-muted", icon: MessageSquareText };
     }
   };
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] tracking-[.22em] font-extrabold text-text-muted uppercase">Alertas académicas</p>
+      <p className="portal-section-title">Alertas académicas</p>
       {alertas.map((alerta, idx) => {
         const style = getAlertStyle(alerta.tendencia);
+        const Icon = style.icon;
         return (
           <div
             key={idx}
             className={`${style.bg} border ${style.border} rounded-xl p-3 flex items-center gap-3 animate-fade-in`}
           >
-            <span className="text-xl">{style.icon}</span>
+            <span className={`portal-icon-box h-9 w-9 ${style.bg} ${style.text}`}><Icon size={18} aria-hidden="true" /></span>
             <div className="flex-1">
               <p className={`text-xs font-bold ${style.text}`}>{alerta.curso}</p>
               <p className="text-xs text-text dark:text-gray-300 mt-0.5">{alerta.mensaje}</p>

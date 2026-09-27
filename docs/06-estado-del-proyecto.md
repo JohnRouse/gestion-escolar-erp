@@ -44,7 +44,7 @@ Debe contar con:
 | Eventos (`/eventos`) | En pruebas; migración aplicada localmente, corrección final de catálogo/año/fecha validada en código y pendiente de prueba manual final |
 | Comunicados (`/comunicados`) | En pruebas; contexto anual V1 implementado en código con selector, audiencia, portal y notificaciones acotados por año; migración aditiva anual preparada y no aplicada, pendiente revisión/aplicación manual y nueva aceptación humana |
 | Tutoría | Implementación parcial; permisos pendientes de auditoría |
-| Auth/portal de apoderados | En pruebas; canal `jwt-portal`, vínculo familiar, contratos P0 y smoke de API local aprobados; pendiente aceptación humana en navegador |
+| Auth/portal de apoderados | Funcionalidad base y QA humana aprobadas. Primera propuesta visual no aprobada; segunda propuesta institucional premium en revisión. Foto institucional compartida ERP ↔ Portal, crop 1:1 y foto propia del apoderado implementados en código y pruebas dirigidas; pendiente validación humana cruzada del editor. Galería social descartada y frontend retirado. [Registro visual](registro-cambios/2026-09-23-portal-padres-institucional-premium.md) · [Foto compartida](registro-cambios/2026-09-25-foto-estudiante-erp-portal.md) |
 | Citas | Citas individuales y reuniones de sección en pruebas; canal externo implementado, pendiente aceptación humana del portal |
 | Enfermería | En pruebas; código y migración aditiva creados, pendiente aplicación local y aceptación humana |
 | Tesorería | Implementación amplia; requiere inventario |

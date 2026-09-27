@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import ComparativaNotas from "@/components/ComparativaNotas";
 
-interface Evaluacion { id: number; tipo: string; descripcion: string; valor: number; }
+interface Evaluacion { id: number; tipo: string; descripcion: string; valor: number | null; }
 interface Unidad { unidad: number; evaluaciones: Evaluacion[]; promedioUnidad: number | null; }
 interface Curso { curso: string; unidades: Unidad[]; promedioBimestre: number | null; }
 
@@ -15,14 +17,26 @@ export default function CalificacionesPage() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [bimestre, setBimestre] = useState<number | null>(null);
-  const { selectedChild } = useSelectedChild();
+  const { selectedChild, childrenLoading, childrenError } = useSelectedChild();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [mostrarComparativa, setMostrarComparativa] = useState(false);
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token || !selectedChild) return;
+    if (!selectedChild) {
+      return;
+    }
+    if (!token) return;
     const controller = new AbortController();
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return;
+      setLoading(true);
+      setCursos([]);
+      setExpanded(null);
+      setError("");
+    });
     const numero = bimestre ?? selectedChild.bimestre_actual;
     const bimestreQuery = numero ? `&bimestre_id=${numero}` : "";
     axios
@@ -35,34 +49,32 @@ export default function CalificacionesPage() {
       )
       .then((res) => setCursos(res.data))
       .catch((error) => {
-        if (!axios.isCancel(error)) setCursos([]);
+        if (!axios.isCancel(error)) {
+          setCursos([]);
+          setError("No se pudieron cargar las calificaciones.");
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
 
     return () => controller.abort();
-  }, [selectedChild, bimestre]);
+  }, [bimestre, childrenLoading, retryKey, selectedChild]);
 
-  const promedioGeneral =
-    cursos.length > 0
-      ? Math.round(
-          cursos
-            .filter((c) => c.promedioBimestre !== null)
-            .reduce((s, c) => s + (c.promedioBimestre ?? 0), 0) /
-          cursos.filter((c) => c.promedioBimestre !== null).length
-        )
-      : null;
+  const promediosDisponibles = cursos.flatMap((course) => course.promedioBimestre === null ? [] : [course.promedioBimestre]);
+  const promedioGeneral = promediosDisponibles.length > 0
+    ? Math.round(promediosDisponibles.reduce((sum, value) => sum + value, 0) / promediosDisponibles.length)
+    : null;
 
   return (
-    <main className="min-h-screen bg-surface-alt dark:bg-[#0F172A] pb-20">
-      <ScreenHeader title="Calificaciones" />
-      <div className="px-5 pt-5 pb-4 space-y-3">
-        <div className="flex items-center justify-between">
+    <main className="portal-page">
+      <ScreenHeader title="Calificaciones" subtitle="Notas y avances por materia" />
+      <div className="portal-content space-y-3">
+        <div className="portal-summary m-card flex flex-wrap items-end justify-between gap-3 p-4">
           <div>
             {promedioGeneral !== null && (
               <>
-                <p className="text-4xl font-extrabold text-text dark:text-gray-100">
+                <p className="portal-summary-value">
                   {promedioGeneral}
                 </p>
                 <p className="text-text-secondary dark:text-gray-400 text-sm mt-1">
@@ -71,15 +83,16 @@ export default function CalificacionesPage() {
               </>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
             <button
               onClick={() => setMostrarComparativa(!mostrarComparativa)}
-              className="press px-4 py-2 rounded-full text-xs font-bold bg-accent text-white shadow-md"
+              className="portal-button portal-button-secondary"
             >
+              <BarChart3 size={16} aria-hidden="true" />
               {mostrarComparativa ? "Ocultar análisis" : "Ver análisis"}
             </button>
             <select
-              className="bg-white dark:bg-gray-800 border border-border dark:border-gray-600 rounded-full px-4 py-2 text-sm font-bold text-text dark:text-gray-200"
+              className="portal-field w-auto min-w-[148px] font-medium"
               value={bimestre ?? selectedChild?.bimestre_actual ?? ""}
               onChange={(e) => setBimestre(Number(e.target.value))}
             >
@@ -102,26 +115,18 @@ export default function CalificacionesPage() {
           </div>
         )}
 
-        {loading ? (
-          [1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-center gap-3">
-              <div className="skel w-11 h-11 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-3.5 w-1/2" />
-                <div className="skel h-2.5 w-1/4" />
-              </div>
-              <div className="skel h-6 w-20 rounded-full" />
-            </div>
-          ))
+        {childrenError || error ? (
+          <PortalState kind="error" title="No pudimos cargar las calificaciones" description={childrenError || error} actionLabel={error ? "Reintentar" : undefined} onAction={error ? () => setRetryKey((key) => key + 1) : undefined} />
+        ) : !childrenLoading && !selectedChild ? (
+          <PortalState title="Selecciona un estudiante" description="Elige un estudiante para consultar sus calificaciones." />
+        ) : childrenLoading || loading ? (
+          <PortalSkeletonList />
         ) : cursos.length === 0 ? (
-          <p className="text-center text-text-secondary dark:text-gray-400 py-10">
-            Sin calificaciones para este bimestre.
-          </p>
+          <PortalState title="No hay calificaciones todavía" description="Las notas publicadas para este bimestre aparecerán aquí." />
         ) : (
           cursos.map((curso) => {
             const isOpen = expanded === curso.curso;
             const prom = curso.promedioBimestre;
-            const aprobado = prom !== null && prom >= 11;
             return (
               <div key={curso.curso} className="m-card overflow-hidden">
                 <button
@@ -129,36 +134,18 @@ export default function CalificacionesPage() {
                   onClick={() => setExpanded(isOpen ? null : curso.curso)}
                 >
                   <span
-                    className={`w-11 h-11 rounded-full grid place-items-center font-extrabold ${
-                      prom !== null
-                        ? aprobado
-                          ? "bg-success-soft text-success"
-                          : "bg-danger-soft text-danger"
-                        : "bg-border text-text-muted"
-                    }`}
+                    className={`grid h-12 w-12 shrink-0 place-items-center rounded-lg text-xl font-bold ${prom !== null ? "bg-accent text-white" : "bg-border text-text-muted"}`}
                   >
                     {prom !== null ? Math.round(prom) : "—"}
                   </span>
-                  <div className="flex-1 text-left">
+                  <div className="min-w-0 flex-1 text-left">
                     <p className="font-extrabold text-text dark:text-gray-100">{curso.curso}</p>
                     <p className="text-xs text-text-secondary dark:text-gray-400">
                       {curso.unidades.length} unidad{curso.unidades.length !== 1 ? "es" : ""}
                     </p>
                   </div>
-                  {prom !== null && (
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                        aprobado
-                          ? "bg-success-soft text-success"
-                          : "bg-danger-soft text-danger"
-                      }`}
-                    >
-                      {aprobado ? "Aprobado" : "En riesgo"}
-                    </span>
-                  )}
-                  <span className="material-symbols-rounded text-text-muted">
-                    {isOpen ? "expand_less" : "expand_more"}
-                  </span>
+                  {prom !== null ? <span className="portal-badge bg-surface-muted text-text-secondary">Promedio</span> : null}
+                  {isOpen ? <ChevronUp size={18} className="text-text-muted" /> : <ChevronDown size={18} className="text-text-muted" />}
                 </button>
                 {isOpen && (
                   <div className="border-t border-border dark:border-gray-700 bg-surface-alt dark:bg-gray-800 p-4 space-y-3 text-sm">
@@ -172,24 +159,17 @@ export default function CalificacionesPage() {
                             </span>
                           )}
                         </p>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-border dark:border-gray-600">
-                                <th className="text-left py-1 text-text-muted font-medium">Evaluación</th>
-                                <th className="text-left py-1 text-text-muted font-medium">Tipo</th>
-                                <th className="text-right py-1 text-text-muted font-medium">Nota</th>
-                              </tr>
-                            </thead>
-                            <tbody>
+                        <div className="divide-y divide-border rounded-lg border border-border bg-white">
                               {unidad.evaluaciones.map((eva) => (
-                                <tr key={eva.id} className="border-b border-border/50 dark:border-gray-700">
-                                  <td className="py-1.5 text-text dark:text-gray-200">{eva.descripcion}</td>
-                                  <td className="py-1.5 text-text-secondary dark:text-gray-400">{eva.tipo}</td>
-                                  <td className="py-1.5 text-right">
+                                <div key={eva.id} className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2.5">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-text dark:text-gray-200">{eva.descripcion}</p>
+                                    <p className="text-xs text-text-secondary dark:text-gray-400">{eva.tipo}</p>
+                                  </div>
+                                  <div className="text-right">
                                     <span
-                                      className={`inline-flex items-center gap-1 justify-center min-w-[3rem] px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                        Math.round(eva.valor) >= 15
+                                      className={`portal-badge min-w-[3rem] justify-center ${
+                                        eva.valor === null ? "bg-border text-text-muted" : Math.round(eva.valor) >= 15
                                           ? "bg-success-soft text-success"
                                           : Math.round(eva.valor) >= 11
                                           ? "bg-warning-soft text-warning"
@@ -198,20 +178,18 @@ export default function CalificacionesPage() {
                                     >
                                       <span
                                         className={`w-2 h-2 rounded-full ${
-                                          Math.round(eva.valor) >= 15
+                                          eva.valor !== null && Math.round(eva.valor) >= 15
                                             ? "bg-success"
-                                            : Math.round(eva.valor) >= 11
+                                            : eva.valor !== null && Math.round(eva.valor) >= 11
                                             ? "bg-warning"
                                             : "bg-danger"
                                         }`}
                                       />
-                                      {Math.round(eva.valor)}
+                                      {eva.valor === null ? "—" : Math.round(eva.valor)}
                                     </span>
-                                  </td>
-                                </tr>
+                                  </div>
+                                </div>
                               ))}
-                            </tbody>
-                          </table>
                         </div>
                       </div>
                     ))}

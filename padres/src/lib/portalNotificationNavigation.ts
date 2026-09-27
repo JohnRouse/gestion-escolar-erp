@@ -44,6 +44,7 @@ export function safePortalTarget(
     ) {
       return null;
     }
+    if (parsed.pathname === "/dashboard/galeria") return "/dashboard";
     const pathname =
       parsed.pathname === "/dashboard/circulares"
         ? "/dashboard/comunicados"

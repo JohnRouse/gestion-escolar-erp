@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 import { childDateRange, useSelectedChild } from "@/contexts/SelectedChildContext";
 
 interface AsistenciaItem { fecha: string; estado: string; }
@@ -13,41 +14,47 @@ export default function AsistenciaPage() {
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<AsistenciaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const { selectedChild } = useSelectedChild();
+  const { selectedChild, childrenLoading, childrenError } = useSelectedChild();
   const [filtro, setFiltro] = useState("Todos");
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedChild) return;
+    if (!selectedChild) {
+      return;
+    }
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    fetchAsistencia(token, selectedChild.id_estudiante, childDateRange(selectedChild));
-  }, [selectedChild]);
-
-  const fetchAsistencia = async (
-    token: string,
-    id: number,
-    range: { desde: string; hasta: string },
-  ) => {
+    const controller = new AbortController();
+    const fetchAsistencia = async () => {
     setLoading(true);
+    setError("");
+    setAsistencias([]);
     try {
-      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${id}&desde=${range.desde}&hasta=${range.hasta}`, {
+      const range = childDateRange(selectedChild);
+      const res = await axios.get(`/api/academicos/padres/asistencia?alumno_id=${selectedChild.id_estudiante}&desde=${range.desde}&hasta=${range.hasta}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
       setAsistencias(res.data);
-    } catch { setAsistencias([]); } finally { setLoading(false); }
-  };
+    } catch (requestError) {
+      if (axios.isCancel(requestError)) return;
+      setAsistencias([]);
+      setError("No se pudo cargar la asistencia.");
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+    };
+    void fetchAsistencia();
+    return () => controller.abort();
+  }, [childrenLoading, retryKey, router, selectedChild]);
 
   const total = asistencias.length;
   const presentes = asistencias.filter(a => a.estado === "Presente").length;
   const ausentes = asistencias.filter(a => a.estado === "Ausente").length;
   const tardanzas = asistencias.filter(a => a.estado === "Tardanza").length;
   const justificados = asistencias.filter(a => a.estado === "Justificado").length;
-  const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
+  const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : null;
 
   const filtros = ["Todos", "Presente", "Ausente", "Tardanza", "Justificado"];
   const listaFiltrada = filtro === "Todos" ? asistencias : asistencias.filter(a => a.estado === filtro);
@@ -62,91 +69,65 @@ export default function AsistenciaPage() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt pb-20">
-        <ScreenHeader title="Asistencia" />
-        <div className="px-5 pt-4 pb-28 space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-center gap-3">
-              <div className="skel w-3 h-3 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-4 w-1/3" />
-                <div className="skel h-3 w-1/4" />
-              </div>
-              <div className="skel h-6 w-20 rounded-full" />
-            </div>
-          ))}
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-surface-alt pb-20">
-      <ScreenHeader title="Asistencia" />
-      <div className="px-5 pt-4">
-        <div className="flex items-center gap-5 mb-5">
-          <div className="relative w-24 h-24">
-            <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: `conic-gradient(#10B981 ${porcentaje}%, #E2E8F0 0)` }}>
-              <div className="absolute inset-[10px] rounded-full bg-white" />
+    <main className="portal-page">
+      <ScreenHeader title="Asistencia" subtitle="Resumen e historial del año lectivo" />
+      <div className="portal-content pb-3">
+        <section className="portal-summary m-card mb-4 flex items-center gap-5 p-5">
+          <div className="relative h-20 w-20 shrink-0">
+            <div className="flex h-full w-full items-center justify-center rounded-full" style={{ background: `conic-gradient(var(--portal-success) ${porcentaje ?? 0}%, var(--portal-border) 0)` }}>
+              <div className="absolute inset-[8px] rounded-full bg-white" />
             </div>
-            <span className="absolute inset-0 grid place-items-center text-text font-extrabold">{porcentaje}%</span>
+            <span className="absolute inset-0 grid place-items-center text-xl text-text font-extrabold">{porcentaje === null ? "—" : `${porcentaje}%`}</span>
           </div>
           <div>
-            <p className="text-4xl font-extrabold text-text">{presentes}<span className="text-2xl text-text-secondary">/{total}</span></p>
-            <p className="text-text-secondary text-sm mt-1">días presentes</p>
+            <p className="portal-summary-value">{total > 0 ? presentes : "—"}<span className="text-xl text-text-secondary">{total > 0 ? `/${total}` : ""}</span></p>
+            <p className="text-text-secondary text-sm mt-1">{total > 0 ? "días presentes" : "Sin registros en el periodo"}</p>
           </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="m-card p-3 text-center">
+        </section>
+        <div className="portal-attendance-stats mb-5">
+          <div>
             <p className="text-2xl font-extrabold text-text">{ausentes}</p>
-            <p className="text-[11px] text-text-secondary">Ausencias</p>
+            <p className="text-xs text-text-secondary">Ausencias</p>
           </div>
-          <div className="m-card p-3 text-center">
+          <div>
             <p className="text-2xl font-extrabold text-text">{tardanzas}</p>
-            <p className="text-[11px] text-text-secondary">Tardanzas</p>
+            <p className="text-xs text-text-secondary">Tardanzas</p>
           </div>
-          <div className="m-card p-3 text-center">
+          <div>
             <p className="text-2xl font-extrabold text-text">{justificados}</p>
-            <p className="text-[11px] text-text-secondary">Justificadas</p>
+            <p className="text-xs text-text-secondary">Justificadas</p>
           </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2">
           {filtros.map((f) => (
-            <button key={f} onClick={() => setFiltro(f)} className={`press px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filtro === f ? "bg-accent text-white shadow-lg shadow-accent/20" : "bg-white text-text-secondary border border-border hover:bg-surface-alt"}`}>
+            <button key={f} onClick={() => setFiltro(f)} aria-pressed={filtro === f} className="portal-filter">
               {f}
             </button>
           ))}
         </div>
       </div>
-      <div className="px-5 mt-3 pb-28 space-y-2">
-        {loading ? (
-          [1, 2, 3].map((i) => (
-            <div key={i} className="m-card p-4 flex items-center gap-3">
-              <div className="skel w-3 h-3 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-4 w-1/3" />
-                <div className="skel h-3 w-1/4" />
-              </div>
-              <div className="skel h-6 w-20 rounded-full" />
-            </div>
-          ))
+      <div className="px-5 pb-8 md:px-8">
+        {childrenError || error ? (
+          <PortalState kind="error" title="No pudimos cargar la asistencia" description={childrenError || error} actionLabel={error ? "Reintentar" : undefined} onAction={error ? () => setRetryKey((key) => key + 1) : undefined} />
+        ) : !childrenLoading && !selectedChild ? (
+          <PortalState title="Selecciona un estudiante" description="Elige un estudiante para consultar su asistencia." />
+        ) : childrenLoading || loading ? (
+          <PortalSkeletonList />
         ) : listaFiltrada.length === 0 ? (
-          <p className="text-center text-text-secondary py-10">Sin registros</p>
+          <PortalState title="No hay registros" description={filtro === "Todos" ? "La asistencia del periodo aparecerá aquí." : `No hay registros con estado ${filtro.toLowerCase()}.`} />
         ) : (
           listaFiltrada.map((item, idx) => {
             const est = getEstadoStyle(item.estado);
             const fecha = new Date(item.fecha + "T00:00:00");
             return (
-              <div key={idx} className="m-card p-4 flex items-center gap-3">
+              <div key={idx} className="portal-list-item px-1">
                 <span className={`dot ${est.dot}`} />
                 <div className="flex-1">
                   <p className="font-extrabold text-text">{fecha.toLocaleDateString("es-PE", { weekday: "long" })}</p>
                   <p className="text-xs text-text-secondary">{fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${est.bg} ${est.text}`}>{item.estado}</span>
+                <span className={`portal-badge ${est.bg} ${est.text}`}>{item.estado}</span>
               </div>
             );
           })

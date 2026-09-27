@@ -558,7 +558,7 @@ export default function TutoriaPage() {
                     <img
                       src={assetUrl(alumno.avatar_url)}
                       alt={alumno.alumno}
-                      className="h-11 w-11 shrink-0 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200"
+                      className="h-11 w-11 shrink-0 rounded-2xl bg-white object-cover object-center ring-1 ring-slate-200"
                     />
                   ) : (
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xs font-black text-blue-700 ring-1 ring-blue-100">

@@ -88,3 +88,13 @@ test("notificación histórica de circulares abre Comunicados y conserva el deep
     "/dashboard/comunicados?id_circular=42",
   );
 });
+
+test("un deep link histórico de Galería vuelve al inicio", () => {
+  assert.equal(
+    portalNotificationTarget(
+      { origen: "sistema", url: "/dashboard/galeria?album=12" },
+      origin,
+    ),
+    "/dashboard",
+  );
+});

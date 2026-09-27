@@ -3,104 +3,85 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { ChevronRight } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import { PortalNotificationIcon, PortalState, PortalSkeletonList } from "@/components/PortalUI";
+import { portalNotificationTarget } from "@/lib/portalNotificationNavigation";
 
 interface EventoActividad {
   tipo: string;
-  icono: string;
   mensaje: string;
   fecha: string;
   url: string;
 }
 
+interface PortalNotificationDto {
+  origen?: string;
+  tipo?: string;
+  titulo?: string;
+  mensaje?: string;
+  fecha_creacion: string;
+  url?: string | null;
+}
+
 export default function ActividadPage() {
   const router = useRouter();
-  const { selectedChild } = useSelectedChild();
   const [eventos, setEventos] = useState<EventoActividad[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedChild) return;
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetchActividad(token);
-  }, [selectedChild]);
-
-  const fetchActividad = async (token: string) => {
+    const controller = new AbortController();
+    const fetchActividad = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await axios.get("/api/notificaciones/portal?limit=50", {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
-      setEventos((res.data.data ?? []).map((item: any) => ({
+      setEventos((res.data.data ?? []).map((item: PortalNotificationDto) => ({
         tipo: item.origen || item.tipo,
-        icono: item.origen === "pagos" ? "💳" : item.origen === "eventos" ? "📅" : "🔔",
         mensaje: item.titulo || item.mensaje,
         fecha: item.fecha_creacion,
-        url: item.url || "/dashboard",
+        url: portalNotificationTarget(item, window.location.origin),
       })));
-    } catch {
+    } catch (requestError) {
+      if (axios.isCancel(requestError)) return;
       setEventos([]);
+      setError("No se pudo cargar la actividad.");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  };
-
-  if (!mounted) {
-    return (
-      <main className="min-h-screen bg-surface-alt pb-24">
-        <ScreenHeader title="Actividad Reciente" />
-        <div className="px-5 pt-4 pb-28 space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="m-card p-3 flex items-center gap-3">
-              <div className="skel w-10 h-10 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <div className="skel h-3 w-3/4" />
-                <div className="skel h-2.5 w-1/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
+    };
+    void fetchActividad();
+    return () => controller.abort();
+  }, [retryKey]);
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Actividad Reciente" />
-      <div className="px-5 pt-4 pb-28">
+    <main className="portal-page">
+      <ScreenHeader title="Actividad" subtitle="Notificaciones y movimientos recientes" />
+      <div className="portal-content">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="m-card p-3 flex items-center gap-3">
-                <div className="skel w-10 h-10 rounded-xl" />
-                <div className="flex-1 space-y-2">
-                  <div className="skel h-3 w-3/4" />
-                  <div className="skel h-2.5 w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <PortalSkeletonList rows={5} />
+        ) : error ? (
+          <PortalState kind="error" title="No pudimos cargar la actividad" description={error} actionLabel="Reintentar" onAction={() => setRetryKey((key) => key + 1)} />
         ) : eventos.length === 0 ? (
-          <p className="text-center text-text-secondary py-10">No hay actividad registrada.</p>
+          <PortalState title="No hay actividad registrada" description="Los avisos y movimientos del portal aparecerán aquí." />
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-border rounded-xl border border-border bg-white px-4">
             {eventos.map((evento, idx) => (
               <button
                 key={idx}
                 onClick={() => router.push(evento.url)}
-                className="m-card p-3 flex items-center gap-3 press w-full text-left"
+                className="portal-list-item press w-full text-left"
               >
-                <span className="w-10 h-10 rounded-xl bg-surface-alt flex items-center justify-center text-lg">
-                  {evento.icono}
+                <span className="portal-icon-box">
+                  <PortalNotificationIcon origin={evento.tipo} />
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-text">{evento.mensaje}</p>
@@ -113,7 +94,7 @@ export default function ActividadPage() {
                     })}
                   </p>
                 </div>
-                <span className="material-symbols-rounded text-text-muted">chevron_right</span>
+                <ChevronRight size={18} className="text-text-muted" aria-hidden="true" />
               </button>
             ))}
           </div>

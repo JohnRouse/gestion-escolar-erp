@@ -17,12 +17,12 @@ export default function SplashScreen() {
   if (!shouldRender) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="w-24 h-24 rounded-3xl bg-red-500 flex items-center justify-center shadow-2xl shadow-red-500/20 animate-bounce">
-        <span className="text-3xl font-bold text-white">GE</span>
+    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-accent/20 bg-accent-soft">
+        <span className="text-xl font-semibold text-accent">GE</span>
       </div>
       <h1 className="mt-6 text-xl font-bold text-gray-900 tracking-tight">Gestión Escolar</h1>
-      <div className="absolute bottom-12 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+      <div className="absolute bottom-12 h-1 w-20 overflow-hidden rounded-full bg-border"><div className="h-full w-2/3 bg-accent" /></div>
     </div>
   );
 }

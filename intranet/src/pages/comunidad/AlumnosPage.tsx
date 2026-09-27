@@ -32,6 +32,7 @@ import LocationSelects from '../../components/LocationSelects';
 import CommunityEditModal from '../../components/community/CommunityEditModal';
 import ContinuidadMatriculaModal from '../../components/community/ContinuidadMatriculaModal';
 import CommunityDetailModal from '../../components/community/CommunityDetailModal';
+import AvatarCropEditor from '../../components/AvatarCropEditor';
 import {
   CommunityEmptyState,
   CommunityInlineLoading,
@@ -48,6 +49,10 @@ import {
   CommunityTextarea as Textarea,
   communityInputClass,
 } from '../../components/community/CommunityUI';
+import {
+  type AvatarCrop,
+  type CroppedAvatarResult,
+} from '../../lib/avatarCrop';
 
 type CodigoColegio = {
   id_colegio: number;
@@ -268,10 +273,18 @@ const toForm = (detalle: AlumnoItem): AlumnoForm => ({
 
 export default function AlumnosPage() {
   const { token } = useAuth();
-  const { queryString, scopeLabel } = useSchool();
+  const { activeScope, queryString, scopeLabel } = useSchool();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const avatarQueryString = useMemo(() => {
+    const params = new URLSearchParams(queryString.replace(/^\?/, ''));
+    if (activeScope.id_tenant) {
+      params.set('tenant_id', String(activeScope.id_tenant));
+    }
+    const value = params.toString();
+    return value ? `?${value}` : '';
+  }, [activeScope.id_tenant, queryString]);
 
   const [data, setData] = useState<AlumnoItem[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -309,9 +322,10 @@ export default function AlumnosPage() {
   const [form, setForm] = useState<AlumnoForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarDraft, setAvatarDraft] = useState<{ file: File; previewUrl: string } | null>(null);
-  const [avatarZoom, setAvatarZoom] = useState(1);
-  const [avatarOffsetY, setAvatarOffsetY] = useState(0);
+  const [avatarDraft, setAvatarDraft] = useState<{ file: File } | null>(null);
+  const [avatarCrop, setAvatarCrop] = useState<AvatarCrop>({ zoom: 1, position: { x: 0, y: 0 } });
+  const [avatarCropResult, setAvatarCropResult] = useState<CroppedAvatarResult | null>(null);
+  const [avatarCropError, setAvatarCropError] = useState('');
   const [confirmEditAlumno, setConfirmEditAlumno] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [confirmApoderadoDestino, setConfirmApoderadoDestino] = useState<{ id: number; nombre: string } | null>(null);
@@ -660,123 +674,60 @@ export default function AlumnosPage() {
   const prepararFotoAlumno = (file?: File | null) => {
     if (!file) return;
 
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      const errorMessage = 'Selecciona una imagen JPG o PNG.';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      const errorMessage = 'Selecciona una imagen JPG, PNG o WEBP.';
       setMensaje(errorMessage);
       showToast({ type: 'error', title: 'Formato no permitido', message: errorMessage });
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      const errorMessage = 'La imagen no debe superar los 3 MB.';
+    if (file.size > 5 * 1024 * 1024) {
+      const errorMessage = 'La imagen no debe superar los 5 MB.';
       setMensaje(errorMessage);
       showToast({ type: 'error', title: 'Imagen muy pesada', message: errorMessage });
       return;
     }
 
-    if (avatarDraft?.previewUrl) {
-      URL.revokeObjectURL(avatarDraft.previewUrl);
-    }
-
-    setAvatarZoom(1);
-    setAvatarOffsetY(0);
-    setAvatarDraft({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    });
+    setAvatarCrop({ zoom: 1, position: { x: 0, y: 0 } });
+    setAvatarCropResult(null);
+    setAvatarCropError('');
+    setAvatarDraft({ file });
   };
 
   const cerrarAjusteFoto = () => {
     if (uploadingAvatar) return;
 
-    if (avatarDraft?.previewUrl) {
-      URL.revokeObjectURL(
-        avatarDraft.previewUrl,
-      );
-    }
-
     setAvatarDraft(null);
-  };
-
-  const crearFotoAjustada = async (file: File, zoom: number, offsetY: number) => {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new window.Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-
-    const width = 420;
-    const height = 560;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) return file;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-
-    const baseScale = Math.max(width / image.width, height / image.height);
-    const scale = baseScale * zoom;
-    const drawW = image.width * scale;
-    const drawH = image.height * scale;
-    const drawX = (width - drawW) / 2;
-    const drawY = (height - drawH) / 2 + offsetY;
-
-    ctx.drawImage(image, drawX, drawY, drawW, drawH);
-
-    return new Promise<File>((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-
-          resolve(
-            new File(
-              [blob],
-              file.name.replace(/\.(png|jpg|jpeg)$/i, '') + '-libreta.jpg',
-              { type: 'image/jpeg' },
-            ),
-          );
-        },
-        'image/jpeg',
-        0.92,
-      );
-    });
+    setAvatarCropResult(null);
   };
 
   const confirmarSubidaFoto = async () => {
-    if (!avatarDraft) return;
+    if (!avatarDraft || !avatarCropResult) return;
 
-    const adjustedFile = await crearFotoAjustada(
-      avatarDraft.file,
-      avatarZoom,
-      avatarOffsetY,
-    );
-
-    await subirFotoAlumno(adjustedFile);
-
-    URL.revokeObjectURL(avatarDraft.previewUrl);
-    setAvatarDraft(null);
+    setAvatarCropError('');
+    try {
+      const saved = await subirFotoAlumno(avatarCropResult.file);
+      if (saved) {
+        setAvatarDraft(null);
+        setAvatarCropResult(null);
+      }
+    } catch {
+      setAvatarCropError('No se pudo preparar el recorte. Prueba con otra imagen.');
+    }
   };
 
   const subirFotoAlumno = async (file?: File | null) => {
     if (!token || !detalle || !file) return;
 
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      const errorMessage = 'Selecciona una imagen JPG o PNG.';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      const errorMessage = 'Selecciona una imagen JPG, PNG o WEBP.';
       setMensaje(errorMessage);
       showToast({ type: 'error', title: 'Formato no permitido', message: errorMessage });
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      const errorMessage = 'La imagen no debe superar los 3 MB.';
+    if (file.size > 5 * 1024 * 1024) {
+      const errorMessage = 'La imagen no debe superar los 5 MB.';
       setMensaje(errorMessage);
       showToast({ type: 'error', title: 'Imagen muy pesada', message: errorMessage });
       return;
@@ -790,7 +741,7 @@ export default function AlumnosPage() {
 
     try {
       const res = await axios.post(
-        `/api/academicos/alumnos/${detalle.id_persona}/avatar${queryString}`,
+        `/api/academicos/alumnos/${detalle.id_persona}/avatar${avatarQueryString}`,
         formData,
         {
           headers: {
@@ -818,6 +769,7 @@ export default function AlumnosPage() {
         title: 'Foto actualizada',
         message: 'La foto se usará en la libreta del alumno.',
       });
+      return true;
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || 'No se pudo subir la foto del alumno.';
@@ -828,6 +780,8 @@ export default function AlumnosPage() {
         title: 'No se pudo subir',
         message: errorMessage,
       });
+      setAvatarCropError(errorMessage);
+      return false;
     } finally {
       setUploadingAvatar(false);
     }
@@ -1356,7 +1310,7 @@ export default function AlumnosPage() {
                 <img
                   src={assetUrl(detalle.avatar_url)}
                   alt={fullName(detalle.persona)}
-                  className="h-14 w-14 rounded-2xl bg-white object-contain p-0.5 ring-1 ring-slate-200 transition group-hover:opacity-80 group-hover:ring-accent-300"
+                  className="h-14 w-14 rounded-2xl bg-white object-cover object-center ring-1 ring-slate-200 transition group-hover:opacity-80 group-hover:ring-accent-300"
                 />
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/30 group-hover:opacity-100">
                   <Eye size={18} className="text-white" />
@@ -1378,10 +1332,10 @@ export default function AlumnosPage() {
                 ) : (
                   <UploadCloud size={13} />
                 )}
-                {uploadingAvatar ? 'Subiendo...' : detalle.avatar_url ? 'Cambiar foto' : 'Subir foto'}
+                {uploadingAvatar ? 'Subiendo...' : detalle.avatar_url ? 'Cambiar foto' : 'Agregar foto'}
                 <input
                   type="file"
-                  accept="image/jpeg,image/png"
+                  accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   disabled={uploadingAvatar}
                   onChange={(event) => {
@@ -1961,7 +1915,7 @@ export default function AlumnosPage() {
         bodyClassName="!bg-slate-950 !p-4 sm:!p-6"
       >
         {detalle?.avatar_url && (
-          <div className="flex min-h-[360px] items-center justify-center">
+          <div className="flex min-h-[320px] items-center justify-center">
             <img
               src={assetUrl(
                 detalle.avatar_url,
@@ -1969,7 +1923,7 @@ export default function AlumnosPage() {
               alt={fullName(
                 detalle.persona,
               )}
-              className="max-h-[78vh] w-full max-w-full rounded-2xl object-contain shadow-2xl"
+              className="aspect-square max-h-[70vh] w-full max-w-[min(70vh,640px)] rounded-2xl object-contain object-center shadow-2xl"
             />
           </div>
         )}
@@ -2039,14 +1993,14 @@ export default function AlumnosPage() {
       <AccessibleDialog
         open={Boolean(avatarDraft)}
         eyebrow="Foto del alumno"
-        title="Ajustar foto del alumno"
-        description="Ajusta el encuadre antes de guardar. Esta imagen aparecerá en la libreta."
+        title="Editar foto"
+        description="Ajusta el encuadre oficial. El mismo recorte se verá en Intranet y Portal de Padres."
         onClose={cerrarAjusteFoto}
         preventClose={uploadingAvatar}
         closeOnEscape
         closeOnOverlay
         closeLabel="Cerrar ajuste de fotografía"
-        maxWidthClassName="max-w-3xl"
+        maxWidthClassName="max-w-4xl"
         bodyClassName="!p-5"
         footerClassName="sm:!justify-end"
         footer={
@@ -2065,7 +2019,7 @@ export default function AlumnosPage() {
               onClick={() =>
                 void confirmarSubidaFoto()
               }
-              disabled={uploadingAvatar}
+              disabled={uploadingAvatar || !avatarCropResult}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
             >
               {uploadingAvatar && (
@@ -2076,81 +2030,25 @@ export default function AlumnosPage() {
                 />
               )}
 
-              Confirmar y subir
+              Guardar foto
             </button>
           </>
         }
       >
         {avatarDraft && (
-          <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="flex justify-center">
-              <div className="h-[280px] w-[210px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-inner">
-                <img
-                  src={
-                    avatarDraft.previewUrl
-                  }
-                  alt="Vista previa de la fotografía"
-                  className="h-full w-full object-cover"
-                  style={{
-                    transform: `scale(${avatarZoom}) translateY(${avatarOffsetY}px)`,
-                    transformOrigin: 'center',
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <div className="rounded-3xl bg-blue-50 p-4 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
-                Usa el zoom para acercar el rostro y el ajuste vertical para centrarlo mejor.
-              </div>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Zoom
-                </span>
-
-                <input
-                  type="range"
-                  min="1"
-                  max="1.8"
-                  step="0.02"
-                  value={avatarZoom}
-                  aria-label="Zoom de la fotografía"
-                  onChange={(event) =>
-                    setAvatarZoom(
-                      Number(
-                        event.target.value,
-                      ),
-                    )
-                  }
-                  className="w-full"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                  Ajuste vertical
-                </span>
-
-                <input
-                  type="range"
-                  min="-90"
-                  max="90"
-                  step="2"
-                  value={avatarOffsetY}
-                  aria-label="Ajuste vertical de la fotografía"
-                  onChange={(event) =>
-                    setAvatarOffsetY(
-                      Number(
-                        event.target.value,
-                      ),
-                    )
-                  }
-                  className="w-full"
-                />
-              </label>
-            </div>
-          </div>
+          <>
+            <AvatarCropEditor
+              file={avatarDraft.file}
+              value={avatarCrop}
+              onChange={setAvatarCrop}
+              onResultChange={setAvatarCropResult}
+            />
+            {avatarCropError ? (
+              <p role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                {avatarCropError}
+              </p>
+            ) : null}
+          </>
         )}
       </AccessibleDialog>
 

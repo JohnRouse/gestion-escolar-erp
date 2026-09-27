@@ -1,189 +1,139 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogOut } from "lucide-react";
-import { useSelectedChild } from "@/contexts/SelectedChildContext";
+import { ChevronDown, GraduationCap, LogOut } from "lucide-react";
 import axios from "axios";
+import { useSelectedChild } from "@/contexts/SelectedChildContext";
 import NotificationBell from "@/components/NotificationBell";
 import ProfileDrawer from "@/components/ProfileDrawer";
+import PortalAvatar from "@/components/PortalAvatar";
+import { clearPortalSession } from "@/lib/portalSession";
 
 type TabKey = "datos" | "seguridad" | "preferencias" | "hijos" | "servicios";
 
-const COLORES_ESTUDIANTES = [
-  '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'
-];
+function storedUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null") as { nombre: string; genero?: string } | null;
+  } catch {
+    return null;
+  }
+}
+
+function currentGreeting() {
+  const hour = new Date().getHours();
+  return hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
+}
 
 function DashboardHeaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { selectedChild, setSelectedChild, setHijos } = useSelectedChild();
-  const [user, setUser] = useState<{ nombre: string; genero?: string } | null>(null);
-  const [greeting, setGreeting] = useState('');
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [initialTab, setInitialTab] = useState<TabKey>("datos");
-
-  const [avatarApoderado, setAvatarApoderado] = useState(
-    `https://api.dicebear.com/9.x/avataaars/svg?seed=usuario&gender=male&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
-  );
+  const { selectedChild, hijos, childrenLoading, childrenError, reloadChildren } = useSelectedChild();
+  const servicesRequested = searchParams.get("open") === "servicios";
+  const [user] = useState(storedUser);
+  const [greeting] = useState(currentGreeting);
+  const [profileOpen, setProfileOpen] = useState(servicesRequested);
+  const [initialTab, setInitialTab] = useState<TabKey>(servicesRequested ? "servicios" : "datos");
+  const [avatarApoderado, setAvatarApoderado] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("avatar_url") || "");
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) setUser(JSON.parse(userData));
     const token = localStorage.getItem("token");
+    if (!token) return;
     const controller = new AbortController();
-    if (token) {
-      axios
-        .get("/api/academicos/padres/hijos", {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        })
-        .then((res) => {
-          const hijosConColor = res.data.map((h: any, idx: number) => ({
-            ...h,
-            color:
-              h.color ||
-              COLORES_ESTUDIANTES[idx % COLORES_ESTUDIANTES.length],
-          }));
-          setHijos(hijosConColor);
-          if (hijosConColor.length > 0) {
-            setSelectedChild(
-              hijosConColor.find(
-                (item: { id_estudiante: number }) =>
-                  item.id_estudiante === selectedChild?.id_estudiante,
-              ) ?? hijosConColor[0],
-            );
-          }
-        })
-        .catch((error) => {
-          if (!axios.isCancel(error)) setHijos([]);
-        });
-    }
-
-    const hour = new Date().getHours();
-    const g = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
-    setGreeting(g);
-
-    const savedAvatar = localStorage.getItem('avatar_url');
-    if (savedAvatar) setAvatarApoderado(savedAvatar);
-
+    axios.get<{ avatar_url?: string | null }>("/api/auth/portal/perfil", {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    }).then((response) => {
+      const authoritativeAvatar = response.data.avatar_url || "";
+      setAvatarApoderado(authoritativeAvatar);
+      localStorage.setItem("avatar_url", authoritativeAvatar);
+    }).catch((error) => {
+      if (!axios.isCancel(error)) setAvatarApoderado("");
+    });
     return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    // Abrir drawer en pestaña específica si viene de un botón "Servicios"
-    const openTab = searchParams.get("open");
-    if (openTab === "servicios") {
-      setInitialTab("servicios");
-      setProfileOpen(true);
+    if (searchParams.get("open") === "servicios") {
+      queueMicrotask(() => {
+        setInitialTab("servicios");
+        setProfileOpen(true);
+      });
     }
   }, [searchParams]);
 
-  const updateAvatar = (newUrl: string) => {
-    setAvatarApoderado(newUrl);
-    localStorage.setItem('avatar_url', newUrl);
-  };
+  const updateAvatar = useCallback((newUrl: string | null) => {
+    const cachedUrl = newUrl || "";
+    setAvatarApoderado(cachedUrl);
+    localStorage.setItem("avatar_url", cachedUrl);
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
+    clearPortalSession();
+    router.replace("/login");
   };
 
   const nombreApoderado = user?.nombre?.split(" ")[0] || "Apoderado";
 
-  const nombreEstudiante = selectedChild?.nombre?.split(" ")[0] || "";
-  const generoEstudiante = nombreEstudiante.endsWith("a") ? "female" : "male";
-  const avatarEstudiante = selectedChild?.avatar_url
-    ? selectedChild.avatar_url
-    : selectedChild
-      ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(
-          selectedChild.nombre
-        )}&gender=${generoEstudiante}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
-      : "";
-
   return (
-    <header className="bg-primary pt-12 pb-6 px-5 relative">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute right-[-30px] top-[-30px] w-44 h-44 rounded-full bg-white/5 blur-2xl" />
-        <div className="absolute left-[-20px] bottom-[-30px] w-32 h-32 rounded-full bg-accent/10 blur-2xl" />
-      </div>
-
-      <div className="relative z-10 flex items-center gap-3">
-        <button
-          onClick={() => setProfileOpen(true)}
-          className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-md"
-        >
-          <img
-            src={avatarApoderado}
-            alt="Avatar"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = "none";
-              (target.parentElement as HTMLElement).innerHTML = `<span class="flex items-center justify-center w-full h-full bg-accent text-primary font-extrabold text-sm">${nombreApoderado
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}</span>`;
-            }}
-          />
+    <header className="portal-home-header">
+      <div className="portal-brand portal-home-brand">
+      <p className="portal-brand-caption mb-3 text-xs font-semibold tracking-wide">Portal de familias</p>
+      <div className="flex items-center gap-3">
+        <button onClick={() => setProfileOpen(true)} className="block shrink-0 rounded-full p-0 leading-none" aria-label="Abrir perfil y servicios">
+          <PortalAvatar name={nombreApoderado} src={avatarApoderado} className="h-11 w-11 rounded-full border border-border" />
         </button>
-
-        <div className="flex-1">
-          <p className="text-white/60 text-sm">{greeting || '\u00A0'}</p>
-          <p className="text-white text-lg font-extrabold leading-tight">{nombreApoderado}</p>
+        <div className="min-w-0 flex-1">
+          <p className="portal-brand-caption text-sm">{greeting}</p>
+          <p className="truncate text-xl font-bold tracking-[-0.01em] text-white">{nombreApoderado}</p>
         </div>
-
         <NotificationBell />
-
-        <button
-          onClick={handleLogout}
-          className="w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-          title="Cerrar sesión"
-        >
-          <LogOut size={18} />
+        <button onClick={handleLogout} className="portal-icon-button" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <LogOut size={18} aria-hidden="true" />
         </button>
       </div>
+      </div>
 
-      {selectedChild && (
-        <div className="mt-4 m-card p-4 animate-fade-in relative z-10">
-          <p className="text-[10px] tracking-[.22em] text-text-muted font-bold uppercase">ESTUDIANTE</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {avatarEstudiante && (
-                <img src={avatarEstudiante} alt={selectedChild.nombre} className="w-12 h-12 rounded-2xl bg-accent-soft shrink-0" />
-              )}
-              <div className="min-w-0">
-                <p className="font-extrabold text-primary text-sm truncate">{selectedChild.nombre}</p>
-                <p className="text-xs text-text-secondary mt-0.5">{selectedChild.grado}</p>
-              </div>
-            </div>
-            <span className="material-symbols-rounded text-accent text-3xl">workspace_premium</span>
-          </div>
+      <div className="portal-student-context">
+      {childrenLoading ? (
+        <div className="portal-student-button" aria-label="Cargando estudiante">
+          <div className="skel h-10 w-10 rounded-full" />
+          <div className="flex-1 space-y-2"><div className="skel h-3.5 w-40" /><div className="skel h-3 w-24" /></div>
         </div>
+      ) : childrenError ? (
+        <div className="mt-4 rounded-xl border border-danger/25 bg-danger-soft p-3 text-sm text-text-secondary" role="alert">
+          <p>{childrenError}</p>
+          <button type="button" onClick={reloadChildren} className="mt-1 font-semibold text-danger">Reintentar</button>
+        </div>
+      ) : selectedChild ? (
+        <button
+          type="button"
+          onClick={() => { setInitialTab("hijos"); setProfileOpen(true); }}
+          className="portal-student-button"
+          aria-label={hijos.length > 1 ? `Cambiar estudiante. Actual: ${selectedChild.nombre}` : `Estudiante activo: ${selectedChild.nombre}`}
+        >
+          <PortalAvatar name={selectedChild.nombre} src={selectedChild.avatar_url} className="h-11 w-11 rounded-lg" />
+          <span className="min-w-0 flex-1">
+            <span className="portal-eyebrow block">Estudiante activo</span>
+            <span className="mt-0.5 block truncate text-sm font-bold text-text">{selectedChild.nombre}</span>
+            <span className="block truncate text-xs text-text-muted">{selectedChild.grado}{selectedChild.anio ? ` · ${selectedChild.anio}` : ""}</span>
+          </span>
+          {hijos.length > 1 ? <ChevronDown size={18} className="text-text-muted" aria-hidden="true" /> : <GraduationCap size={20} className="text-accent" aria-hidden="true" />}
+        </button>
+      ) : (
+        <div className="mt-4 rounded-xl border border-border bg-surface-alt p-4 text-sm text-text-muted">No hay estudiantes vinculados a esta cuenta.</div>
       )}
+      </div>
 
-      <ProfileDrawer
-        isOpen={profileOpen}
-        onClose={() => { setProfileOpen(false); setInitialTab("datos"); }}
-        onAvatarChange={updateAvatar}
-        initialTab={initialTab}
-      />
+      <ProfileDrawer key={initialTab} isOpen={profileOpen} onClose={() => { setProfileOpen(false); setInitialTab("datos"); }} onAvatarChange={updateAvatar} initialTab={initialTab} />
     </header>
   );
 }
 
 export default function DashboardHeader() {
   return (
-    <Suspense
-      fallback={
-        <header className="bg-primary px-5 pb-6 pt-12">
-          <div className="h-12 rounded-2xl bg-white/10" />
-        </header>
-      }
-    >
+    <Suspense fallback={<header className="border-b border-border bg-white px-5 py-5"><div className="skel h-11 w-full" /></header>}>
       <DashboardHeaderContent />
     </Suspense>
   );

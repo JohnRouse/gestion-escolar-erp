@@ -140,8 +140,8 @@ Todos estos contratos usan `jwt-portal`, salvo el login:
 
 | Área | Contratos del portal |
 |---|---|
-| Auth | `POST /auth/portal/login`, `GET/PUT /auth/portal/perfil`, `PUT /auth/portal/cambiar-password` |
-| Hijos | `GET /academicos/padres/hijos`, `PUT /academicos/padres/hijos/:id/avatar` |
+| Auth | `POST /auth/portal/login`, `GET/PUT /auth/portal/perfil`, `POST/DELETE /auth/portal/perfil/avatar`, `PUT /auth/portal/cambiar-password` |
+| Hijos | `GET /academicos/padres/hijos`, `POST /academicos/padres/hijos/:id/avatar` multipart `foto`, `DELETE /academicos/padres/hijos/:id/avatar` |
 | Contexto escolar | `GET /academicos/padres/anios`, `GET /academicos/padres/asistencia`, `GET /academicos/padres/horario` |
 | Citas | `GET /citas/apoderado`, `GET /hijos`, `GET /destinatarios`, `POST /citas/apoderado`, `PATCH /:id/cancelar` bajo ese prefijo |
 | Eventos | `GET /eventos/padres` |
@@ -150,15 +150,17 @@ Todos estos contratos usan `jwt-portal`, salvo el login:
 | Comunicados | `GET /circulares/padres`, `PUT /circulares/:id/leida`, `POST /circulares/:id/confirmar` |
 | Tesorería | `GET /tesoreria/padres/estado-cuenta` |
 
-Inventario frontend fuera de este cierre: la página de Galería aún contiene
-`GET /albumes`, `GET /albumes/:id/fotos`, comentarios
-`GET/POST /albumes/fotos/:id/comentarios`, edición/eliminación en
-`/albumes/fotos/:fotoId/comentarios/:comentarioId`, reacciones
-`GET /albumes/fotos/:id/reacciones` y `POST /albumes/fotos/:id/reaccionar`.
-Su entrada fue retirada del menú. Galería es P1 y esos contratos no se migraron
-porque `api/src/albumes/**` quedó fuera del alcance autorizado. El portal dejó
-de consumir los contratos internos `/actividad`, `/apoderados/perfil`,
-`/estudiantes/:id/avatar`, `/academicos/anios` y `/notificaciones`.
+La Galería social fue descartada del producto. El portal no muestra navegación,
+servicios ni cliente para álbumes, fotos, comentarios o reacciones; la ruta
+legacy `/dashboard/galeria` redirige a `/dashboard`. Los contratos y datos de
+`api/src/albumes/**`, `Album`, `Foto`, `ComentarioFoto` y `ReaccionFoto` se
+conservan como backend legacy dormante para una limpieza técnica posterior y
+no forman parte de V1 ni del roadmap funcional. No deben reactivarse sin un
+cierre específico de autorización y tratamiento de datos. El portal dejó de
+consumir los contratos internos `/actividad`, `/apoderados/perfil`,
+`/academicos/anios` y `/notificaciones`. El contrato inseguro legacy
+`/estudiantes/:id/avatar` fue retirado; la fotografía del estudiante usa el
+contrato portal multipart protegido por `jwt-portal` de la tabla anterior.
 
 ## 18. Base de datos
 
@@ -184,11 +186,21 @@ canónico y registran el Usuario ejecutor; las columnas legacy compartidas de
 - Prueba humana en navegador con `carlos.diaz` o `rosa.pardo`; el smoke de API
   con `carlos.diaz` ya aprobó sobre los datos locales existentes.
 - Recuperación automática, auto-registro y refresh tokens no forman parte de V1.
-- Galería/Álbumes requiere un cierre de autorización separado.
+- El backend legacy de álbumes/fotos requiere una limpieza técnica posterior;
+  no está habilitado ni planificado como funcionalidad del Portal.
 - Comunicados legacy sin colegio solo son visibles si una sección vinculada
   identifica la institución; destinos generales o solo por nivel sin contexto
   se excluyen para evitar cruces entre colegios.
 - Campaña E2E real y revisión 390×844/zoom permanecen pendientes.
+- La foto del estudiante usa exclusivamente `Estudiante.avatar_url`; no acepta
+  URLs del cliente y actualiza el contexto del Portal sin recarga. Véase el
+  [escenario sincronizado](../escenarios/foto-estudiante-sincronizada.md).
+- La foto propia usa exclusivamente `Usuario.avatar_url`. El Portal obtiene al
+  Usuario de `jwt-portal`, no admite `id_usuario` del cliente, normaliza el crop
+  confirmado a WEBP 512×512 y actualiza Perfil/Header sin recarga. El PUT
+  general de perfil ya no acepta `avatar_url`.
+- Los originales reemplazados pueden quedar huérfanos hasta implementar borrado
+  físico fiable en StorageService; nunca se improvisa la eliminación.
 
 ## 21. Historial de cambios
 

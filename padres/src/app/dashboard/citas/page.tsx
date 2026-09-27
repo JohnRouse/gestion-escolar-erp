@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { CalendarClock, Clock3, UserRound } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import ScreenHeader from "@/components/ScreenHeader";
 import PageTransition from "@/components/PageTransition";
+import { PortalState, PortalSkeletonList } from "@/components/PortalUI";
 
 interface Cita {
   id_cita: number;
@@ -31,12 +33,18 @@ interface Cita {
     contexto: "staff" | "docente" | "tutor";
     funcion: string;
   };
+  permisos?: { cancelar?: boolean };
 }
 
 export default function CitasPage() {
   const router = useRouter();
   const [citas, setCitas] = useState<Cita[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const [cancelId, setCancelId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -45,14 +53,56 @@ export default function CitasPage() {
       return;
     }
 
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setLoading(true);
+        setError("");
+      }
+    });
     axios
       .get("/api/citas/apoderado", {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       .then((res) => setCitas(res.data))
-      .catch(() => setCitas([]))
-      .finally(() => setLoading(false));
-  }, [router]);
+      .catch((requestError) => {
+        if (axios.isCancel(requestError)) return;
+        setCitas([]);
+        setError("No se pudieron cargar las citas.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [retryKey, router]);
+
+  const cancelAppointment = async (id: number) => {
+    if (cancelReason.trim().length < 3) {
+      setError("Indica un motivo breve para cancelar la cita.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.patch(
+        `/api/citas/apoderado/${id}/cancelar`,
+        { comentario: cancelReason.trim() },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setCitas((current) => current.map((item) => item.id_cita === id ? response.data : item));
+      setCancelId(null);
+      setCancelReason("");
+    } catch (requestError) {
+      const message = axios.isAxiosError<{ message?: string }>(requestError)
+        ? requestError.response?.data?.message
+        : null;
+      setError(message || "No se pudo cancelar la cita.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const getEstadoStyle = (estado: string) => {
     switch (estado) {
@@ -72,54 +122,49 @@ export default function CitasPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface-alt pb-24">
-      <ScreenHeader title="Mis Citas" />
+    <main className="portal-page">
+      <ScreenHeader title="Mis citas" subtitle="Solicitudes y reuniones programadas" backHref="/dashboard?open=servicios" backLabel="Volver a servicios" />
       <PageTransition>
-        <div className="px-5 pt-4 pb-28">
-          <button
-            onClick={() => router.push("/dashboard?open=servicios")}
-            className="text-accent text-sm font-bold hover:underline mb-4 flex items-center gap-1"
-          >
-            <span className="material-symbols-rounded text-lg">arrow_back</span>{" "}
-            Servicios
-          </button>
+        <div className="portal-content">
+          {error && cancelId === null ? (
+            <PortalState kind="error" title="No pudimos cargar las citas" description={error} actionLabel="Reintentar" onAction={() => setRetryKey((key) => key + 1)} className="mb-4" />
+          ) : null}
 
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="m-card p-4 space-y-2">
-                  <div className="skel h-4 w-32" />
-                  <div className="skel h-3 w-24" />
-                  <div className="skel h-3 w-20" />
-                </div>
-              ))}
-            </div>
-          ) : citas.length === 0 ? (
-            <p className="text-center text-text-secondary py-10">
-              No tienes citas solicitadas
-            </p>
+            <PortalSkeletonList />
+          ) : error && cancelId === null ? null : citas.length === 0 ? (
+            <PortalState icon={<CalendarClock size={21} />} title="No tienes citas programadas" description="Solicita una cita desde el Directorio Académico cuando necesites conversar con el colegio." />
           ) : (
             citas.map((cita) => (
-              <div key={cita.id_cita} className="m-card p-4 mb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-extrabold text-text">
+              <div key={cita.id_cita} className="m-card mb-3 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="portal-icon-box"><UserRound size={18} aria-hidden="true" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-text">
+                        {cita.tipo === "seccion" ? "Reunión de sección" : cita.destinatario.nombre}
+                      </p>
+                      <span className={`portal-badge capitalize ${getEstadoStyle(cita.estado)}`}>
+                        {cita.estado}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-text-secondary">
                       {cita.tipo === "seccion"
-                        ? cita.seccion?.nombre || "Reunión de sección"
-                        : cita.destinatario.nombre}
-                    </p>
-                    <p className="text-sm text-text-secondary">
-                      {cita.tipo === "seccion"
-                        ? `Responsable: ${cita.destinatario.nombre} · ${cita.destinatario.funcion}`
+                        ? cita.seccion?.nombre || "Sección convocada"
                         : cita.destinatario.funcion}
                     </p>
-                    <p className="mt-1 text-sm text-text-secondary">
+                    {cita.tipo === "seccion" ? (
+                      <p className="mt-1 text-sm text-text-muted">{cita.destinatario.nombre} · {cita.destinatario.funcion}</p>
+                    ) : null}
+                    <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-text-secondary">
+                      <CalendarClock size={15} aria-hidden="true" />
                       {new Date(cita.fecha).toLocaleDateString("es-PE", {
                         day: "2-digit",
                         month: "short",
                         year: "numeric",
                       })}
-                      {" · "}
+                      <span aria-hidden="true">·</span>
+                      <Clock3 size={15} aria-hidden="true" />
                       {cita.hora_inicio} – {cita.hora_fin}
                     </p>
                     <p className="mt-1 text-sm text-text-muted">
@@ -135,14 +180,22 @@ export default function CitasPage() {
                       </p>
                     )}
                   </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getEstadoStyle(
-                      cita.estado,
-                    )}`}
-                  >
-                    {cita.estado}
-                  </span>
                 </div>
+                {cita.permisos?.cancelar ? (
+                  cancelId === cita.id_cita ? (
+                    <div className="mt-4 border-t border-border pt-4">
+                      <label className="block text-xs font-semibold text-text-secondary" htmlFor={`cancel-${cita.id_cita}`}>Motivo de cancelación</label>
+                      <textarea id={`cancel-${cita.id_cita}`} value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} rows={2} className="portal-field mt-1 min-h-20 resize-y" />
+                      {error ? <p role="alert" className="mt-2 rounded-lg bg-danger-soft p-2 text-xs text-danger">{error}</p> : null}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" disabled={saving} onClick={() => void cancelAppointment(cita.id_cita)} className="portal-button flex-1 bg-danger hover:bg-danger">{saving ? "Cancelando…" : "Confirmar cancelación"}</button>
+                        <button type="button" onClick={() => { setCancelId(null); setCancelReason(""); setError(""); }} className="portal-button portal-button-secondary">Volver</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => { setCancelId(cita.id_cita); setError(""); }} className="portal-button portal-button-secondary mt-3">Cancelar cita</button>
+                  )
+                ) : null}
               </div>
             ))
           )}
